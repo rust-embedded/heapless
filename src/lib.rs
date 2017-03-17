@@ -125,6 +125,7 @@ impl<T, A> Vec<T, A>
             unsafe {
                 *slice.as_mut_ptr().offset(self.len as isize) = elem;
             }
+            self.len += 1;
             Ok(())
         }
     }
