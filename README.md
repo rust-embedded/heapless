@@ -1,6 +1,13 @@
+[![crates.io](https://img.shields.io/crates/v/heapless.svg)](https://crates.io/crates/heapless)
+[![crates.io](https://img.shields.io/crates/d/heapless.svg)](https://crates.io/crates/heapless)
+
 # `heapless`
 
-> Heapless, `static` friendly data structures
+> `static` friendly data structures that don't require dynamic memory allocation
+
+# [Documentation](https://docs.rs/heapless)
+
+# [Change log](CHANGELOG.md)
 
 # License
 

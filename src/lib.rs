@@ -1,4 +1,5 @@
-//! Heapless, `static` friendly data structures
+//! `static` friendly data structures that don't require dynamic memory
+//! allocation
 
 #![deny(missing_docs)]
 #![deny(warnings)]
@@ -11,8 +12,9 @@ use core::slice;
 
 /// A circular buffer
 pub struct CircularBuffer<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     _marker: PhantomData<[T]>,
     array: A,
@@ -21,8 +23,9 @@ pub struct CircularBuffer<T, A>
 }
 
 impl<T, A> CircularBuffer<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     /// Creates a new empty circular buffer using `array` as backup storage
     pub const fn new(array: A) -> Self {
@@ -55,8 +58,9 @@ impl<T, A> CircularBuffer<T, A>
 }
 
 impl<T, A> Deref for CircularBuffer<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     type Target = [T];
 
@@ -73,8 +77,9 @@ impl<T, A> Deref for CircularBuffer<T, A>
 
 /// A continuous, growable array type
 pub struct Vec<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     _marker: PhantomData<[T]>,
     array: A,
@@ -82,8 +87,9 @@ pub struct Vec<T, A>
 }
 
 impl<T, A> Vec<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     /// Creates a new vector using `array` as the backup storage
     pub const fn new(array: A) -> Self {
@@ -99,6 +105,11 @@ impl<T, A> Vec<T, A>
         self.array.as_ref().len()
     }
 
+    /// Clears the vector, removing all values
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+
     /// Removes the last element from this vector and returns it, or `None` if
     /// it's empty
     pub fn pop(&mut self) -> Option<T> {
@@ -107,8 +118,12 @@ impl<T, A> Vec<T, A>
         } else {
             self.len -= 1;
             unsafe {
-                Some(*self.array.as_mut().as_mut_ptr().offset(self.len as
-                                                              isize))
+                Some(
+                    *self.array
+                         .as_mut()
+                         .as_mut_ptr()
+                         .offset(self.len as isize),
+                )
             }
         }
     }
@@ -132,8 +147,9 @@ impl<T, A> Vec<T, A>
 }
 
 impl<T, A> Deref for Vec<T, A>
-    where A: AsMut<[T]> + AsRef<[T]>,
-          T: Copy
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     type Target = [T];
 
