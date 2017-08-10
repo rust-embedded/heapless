@@ -13,3 +13,6 @@ pub use vec::Vec;
 
 mod circular_buffer;
 pub use circular_buffer::CircularBuffer;
+
+mod error;
+pub use error::{OutOfMemoryError, Result};
