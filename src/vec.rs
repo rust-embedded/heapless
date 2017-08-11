@@ -31,11 +31,14 @@ where
     /// use heapless::Vec;
     /// const LEN: usize = 16;
     /// // with let
-    /// let vec = Vec::new([0;LEN]);
+    /// let vec_let = Vec::new([0;LEN]);
     /// // with const
     /// const VEC_CONST: Vec<u8, [u8; LEN]> = Vec::new([0;LEN]);
     /// // with static
     /// static VEC: Vec<u8, [u8; LEN]> = Vec::new([0;LEN]);
+    /// // with slice
+    /// let mut array = [0_usize; 8];
+    /// let mut vec_slice = Vec::new(&mut array);
     /// ```
     pub const fn new(array: A) -> Self {
         Vec {
@@ -355,7 +358,7 @@ where
     /// Extracts the internaly used storage array.
     ///
     /// This is unsafe because the content of the array behind
-    /// the used length is not necessarily valid
+    /// the used length is not necessarily valid.
     pub unsafe fn into_inner(self) -> A {
         self.array
     }
@@ -513,6 +516,14 @@ mod test {
         let mut vec = Vec::new([Foo(0), unsafe { mem::uninitialized() }]);
         assert!(vec.push(Foo(1)).is_ok());
         assert_eq!(vec.pop(), Some(Foo(1)));
+    }
+
+    #[test]
+    fn with_slice() {
+        let mut array = [0_usize; 8];
+        let mut vec = Vec::new(&mut array);
+        assert!(vec.push(1).is_ok());
+        assert_eq!(vec[0], 1);
     }
 
 }
