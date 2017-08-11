@@ -1,7 +1,7 @@
 //! `static` friendly data structures that don't require dynamic memory
 //! allocation
 //!
-//! uses #![feature(const_fn)], so rust nightly is currently needed
+//! Uses `#![feature(const_fn)]`, so rust nightly is currently needed.
 
 #![deny(missing_docs)]
 #![deny(warnings)]

@@ -9,6 +9,8 @@ use core::borrow::{Borrow, BorrowMut};
 /// due to the backup storage array being full.
 /// It constains the rest that could not be inserted into the collection.
 pub struct OutOfMemoryError<T>(T);
+// FIXME: Should this error be used with the type alias 
+// or without the error as a simple Result<X, T>
 
 impl <T> OutOfMemoryError<T> {
 
