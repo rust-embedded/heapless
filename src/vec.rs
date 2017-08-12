@@ -429,9 +429,9 @@ where
 
     /// Sets the length of the vector.
     ///
-    /// This is unsafe because ot may expose uninitialized memory
-    /// or leak memory. It is not
-    pub unsafe fn set_len(&mut self, len: usize) {
+    /// This is unsafe because it may expose uninitialized memory
+    /// or leak memory.
+    unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
 }
