@@ -141,6 +141,15 @@ where
     /// Pushes `element` into the buffer.
     ///
     /// This will overwrite an old value if the buffer is full.
+    /// # Example
+    /// ```
+    /// use heapless::CircularBuffer;
+    /// let mut buf = CircularBuffer::new([0; 2]);
+    /// buf.push(1);
+    /// buf.push(2);
+    /// buf.push(3);
+    /// assert_eq!(&*buf, &[3,2]);
+    /// ```
     pub fn push(&mut self, element: T) {
         let len = self.len();
         let capacity = self.capacity();
@@ -152,7 +161,32 @@ where
             let slice = self.array.as_mut();
             slice[index] = element;
         }
-        unsafe { self.set_index(index + 1); }
+        unsafe { self.set_index((index + 1) as isize); }
+    }
+
+    /// Pops the most recently inserted element.
+    ///
+    /// Returns `None` if the buffer is empty.
+    ///
+    /// # Example
+    /// ```
+    /// use heapless::CircularBuffer;
+    /// let mut buf = CircularBuffer::from_array([1,2]);
+    /// assert_eq!(buf.pop(), Some(2));
+    /// assert_eq!(buf.pop(), Some(1));
+    /// assert_eq!(buf.pop(), None);
+    /// ```
+    pub fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+        let len = self.len();
+        let index = self.index() as isize;
+        unsafe {
+            self.set_len(len - 1);
+            self.set_index(index - 1);
+            Some(self.array.as_ref()[self.index()])
+        }
     }
 
     /// Sets the length of the buffer.
@@ -168,8 +202,9 @@ where
     ///
     /// This is unsafe because memory can be leaked
     /// or uninitialized memory may be exposed.
-    unsafe fn set_index(&mut self, index: usize) {
-        self.index = index % self.capacity();
+    unsafe fn set_index(&mut self, index: isize) {
+        let capactity = self.capacity() as isize;
+        self.index = ((capactity as isize + index) % capactity) as usize;
     }
 }
 
