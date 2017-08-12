@@ -68,7 +68,7 @@ where
             _marker: PhantomData,
             array: array,
             index: 0,
-            len: len
+            len: len,
         }
     }
 
@@ -109,6 +109,14 @@ where
     /// ```
     pub fn index(&self) -> usize {
         self.index
+    }
+
+    /// Returns the fist adressable index in the buffer.
+    pub fn first_index(&self) -> usize {
+        let index = self.index() as isize;
+        let len = self.len() as isize;
+        let capacity = self.capacity() as isize;
+        ((index - len + capacity) % capacity) as usize
     }
 
     /// Returns `true` if the buffer is empty.
@@ -155,13 +163,17 @@ where
         let capacity = self.capacity();
         let index = self.index();
         if len < capacity {
-            unsafe { self.set_len(len + 1); }
+            unsafe {
+                self.set_len(len + 1);
+            }
         }
         {
             let slice = self.array.as_mut();
             slice[index] = element;
         }
-        unsafe { self.set_index((index + 1) as isize); }
+        unsafe {
+            self.set_index((index + 1) as isize);
+        }
     }
 
     /// Pops the most recently inserted element.
@@ -189,6 +201,11 @@ where
         }
     }
 
+    /// Returns an iterator over the elements as `&T`
+    pub fn iter(&self) -> Iter<T, A> {
+        Iter::new(&self)
+    }
+
     /// Sets the length of the buffer.
     ///
     /// This is unsafe because no checks are performed, memory can be leaked
@@ -204,7 +221,7 @@ where
     /// or uninitialized memory may be exposed.
     unsafe fn set_index(&mut self, index: isize) {
         let capactity = self.capacity() as isize;
-        self.index = ((capactity as isize + index) % capactity) as usize;
+        self.index = ((capactity + index) % capactity) as usize;
     }
 }
 
@@ -226,7 +243,74 @@ where
     }
 }
 
+/// Iterator for Circular buffer
+pub struct Iter<'a, T, A>
+where
+    A: 'a + AsMut<[T]> + AsRef<[T]>,
+    T: 'a + Copy,
+{
+    buffer: &'a CircularBuffer<T, A>,
+    next_index: Option<usize>,
+}
+
+impl<'a, T, A> Iter<'a, T, A>
+where
+    A: 'a + AsMut<[T]> + AsRef<[T]>,
+    T: 'a + Copy,
+{
+    /// Creates a new iterator with a buffer
+    pub fn new(buf: &'a CircularBuffer<T, A>) -> Self {
+        Iter {
+            buffer: buf,
+            next_index: if buf.is_empty() {
+                None
+            } else {
+                Some(buf.first_index())
+            },
+        }
+    }
+}
+
+impl<'a, T, A> Iterator for Iter<'a, T, A>
+where
+    A: 'a + AsMut<[T]> + AsRef<[T]>,
+    T: 'a + Copy,
+{
+    type Item = &'a T;
+    fn next(&mut self) -> Option<&'a T> {
+        let next = self.next_index;
+        match next {
+            Some(index) => {
+                let buf_index = (self.buffer.index() + self.buffer.capacity() - 1)
+                    % self.buffer.capacity();
+                self.next_index = if index == buf_index {
+                    None
+                } else {
+                    Some((index + 1) % self.buffer.capacity())
+                };
+                Some(&self.buffer.array.as_ref()[index])
+            }
+            None => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-
+    use super::CircularBuffer;
+    #[test]
+    fn iter() {
+        let mut buf = CircularBuffer::new([0; 4]);
+        buf.push(1);
+        buf.push(2);
+        buf.push(3);
+        buf.push(4);
+        buf.push(5);
+        let _ = buf.pop();
+        let mut iter = buf.iter();
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&4));
+        assert_eq!(iter.next(), None);
+    }
 }
