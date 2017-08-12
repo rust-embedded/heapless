@@ -5,6 +5,7 @@
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
+use core::cmp;
 
 /// A continuous, growable array type
 pub struct Vec<T, A>
@@ -89,6 +90,13 @@ where
     /// ```
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    /// Returns the number currently available backup storage.
+    ///
+    /// this is equal to `self.capacity() - self.len()`
+    pub fn available(&self) -> usize {
+        self.capacity() - self.len()
     }
 
     /// Returns `true` if the vector contains no elements.
@@ -226,6 +234,74 @@ where
                 ptr::write(p, element);
                 self.set_len(len + 1);
             }
+        }
+        Ok(())
+    }
+
+    /// Copies all the elements of `other` into the vector.
+    ///
+    /// Does not insert any elements into the vector
+    /// if it could not hold all of them.
+    /// Use `vec.append_force(&other)` to force insertion.
+    ///
+    /// # Example
+    /// ```
+    /// use heapless::Vec;
+    /// let mut vec = Vec::new([0;16]);
+    /// let other = [3, 4];
+    /// assert!(vec.push(1).is_ok());
+    /// assert!(vec.push(2).is_ok());
+    /// assert!(vec.append(&other).is_ok());
+    /// assert_eq!(vec.as_slice(), &[1, 2, 3, 4]);
+    /// ```
+    pub fn append<S>(&mut self, other: &S) -> Result<(), ()>
+    where
+        S: AsRef<[T]>,
+    {
+        if self.available() < other.as_ref().len() {
+            return Err(());
+        }
+        // FIXME: use mem::copy instead of iter.cloned()
+        for x in other.as_ref().iter().cloned() {
+            match self.push(x) {
+                Ok(_) => {}
+                // Error can not occure as available length was checked
+                _ => unreachable!(),
+            }
+        }
+        Ok(())
+    }
+
+    /// Copies as much elements of `other` into the vector as possible.
+    ///
+    /// Returns Err(rest) if not all elements could be inserted.
+    /// `rest` is the remaining slice.
+    /// Use `vec.append(&other)` if other is known to fit into self.
+    /// # Example
+    /// ```
+    /// use heapless::Vec;
+    /// let mut vec = Vec::new([0;4]);
+    /// let other = [3, 4, 5];
+    /// assert!(vec.push(1).is_ok());
+    /// assert!(vec.push(2).is_ok());
+    /// assert_eq!(vec.append_force(&other), Err([5].as_ref()));
+    /// assert_eq!(vec.as_slice(), &[1, 2, 3, 4]);
+    /// ```
+    pub fn append_force<'a, S>(&mut self, other: &'a S) -> Result<(), &'a [T]>
+    where
+        S: AsRef<[T]>,
+    {
+        let to_insert = cmp::min(self.available(), other.as_ref().len());
+        // FIXME: use mem::copy instead of iter.cloned()
+        for x in other.as_ref().iter().cloned().take(to_insert) {
+            match self.push(x) {
+                Ok(_) => {}
+                // Error can not occure as available length was checked
+                _ => unreachable!(),
+            }
+        }
+        if to_insert < other.as_ref().len() {
+            return Err(other.as_ref()[to_insert..].as_ref());
         }
         Ok(())
     }
@@ -491,10 +567,7 @@ mod test {
         let mut vec = Vec::new([0; LEN]);
         assert!(vec.push(1).is_ok());
         assert!(vec.push(2).is_ok());
-        assert_eq!(
-            vec.insert(1, 10),
-            Err(10)
-        );
+        assert_eq!(vec.insert(1, 10), Err(10));
         assert_eq!(vec.deref(), &[1, 2]);
     }
 
@@ -514,6 +587,16 @@ mod test {
         let mut vec = Vec::new(&mut array);
         assert!(vec.push(1).is_ok());
         assert_eq!(vec[0], 1);
+    }
+
+    #[test]
+    fn append_fails() {
+        let mut vec = Vec::new([0; 3]);
+        let other = [3, 4];
+        assert!(vec.push(1).is_ok());
+        assert!(vec.push(2).is_ok());
+        assert!(vec.append(&other).is_err());
+        assert_eq!(vec.as_slice(), &[1, 2]);
     }
 
 }
