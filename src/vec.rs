@@ -5,14 +5,12 @@
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
-use core::mem;
-
-use super::OutOfMemoryError;
 
 /// A continuous, growable array type
 pub struct Vec<T, A>
 where
     A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     _marker: PhantomData<[T]>,
     array: A,
@@ -22,6 +20,7 @@ where
 impl<T, A> Vec<T, A>
 where
     A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     /// Creates a new vector using `array` as the backup storage
     ///
@@ -104,7 +103,7 @@ where
         self.len() == 0
     }
 
-    /// Returns `true` if the vector uses the complete backup storage
+    /// Returns `true` if the vector uses the complete backup storage.
     ///
     /// # Example
     /// ```
@@ -117,7 +116,6 @@ where
     }
 
     /// Clears the vector, removing all values.
-    /// Calls `drop()` on all trucated values.
     ///
     /// `v.truncate(0)` has the same effect as `v.clear()`.
     /// # Example
@@ -147,29 +145,24 @@ where
             None
         } else {
             let len = self.len();
-            // FIXME: how does moving work here?
-            // What is the state of the array?
             unsafe {
                 self.set_len(len - 1);
-                Some(mem::replace(
-                    &mut self.array.as_mut()[len - 1],
-                    mem::uninitialized(),
-                ))
             }
+            Some(self.array.as_ref()[len - 1])
         }
     }
 
     /// Appends an `elem`ent to the back of the collection
     ///
-    /// This method returns `Err` if the vector is full.
-    pub fn push(&mut self, elem: T) -> super::Result<(), T> {
+    /// This method returns `Err(element)` if the vector is full.
+    pub fn push(&mut self, element: T) -> Result<(), T> {
         if self.is_full() {
-            Err(OutOfMemoryError::new(elem))
+            Err(element)
         } else {
             let len = self.len();
             {
                 let slice = self.array.as_mut();
-                slice[len] = elem;
+                slice[len] = element;
             }
             unsafe {
                 self.set_len(len + 1);
@@ -200,7 +193,7 @@ where
     /// Inserts an element at position `index` within the vector, shifting all
     /// elements after it to the right.
     ///
-    /// Returns Err((OutOfMemoryError, element)) if backup storage is full.
+    /// Returns Err(element) if backup storage is full.
     ///
     /// # Panics
     /// Panics if `index` is out of bounds.
@@ -214,9 +207,9 @@ where
     /// assert!(vec.insert(1, 10).is_ok());
     /// assert_eq!(vec.as_slice(), &[1, 10, 2]);
     /// ```
-    pub fn insert(&mut self, index: usize, element: T) -> super::Result<(), T> {
+    pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         if self.is_full() {
-            return Err(OutOfMemoryError::new(element));
+            return Err(element);
         }
         let len = self.len();
         assert!(index <= len);
@@ -231,8 +224,8 @@ where
                 // Write it in, overwriting the first copy of the `index`th
                 // element.
                 ptr::write(p, element);
+                self.set_len(len + 1);
             }
-            self.len += 1;
         }
         Ok(())
     }
@@ -266,17 +259,15 @@ where
                 // copy it out, unsafely having a copy of the value on
                 // the stack and in the vector at the same time.
                 ret = ptr::read(ptr);
-
                 // Shift everything down to fill in that spot.
                 ptr::copy(ptr.offset(1), ptr, len - index - 1);
+                self.set_len(len - 1);
             }
-            self.len -= 1;
             ret
         }
     }
 
     /// Shortens the vector, keeping the first `len` elements.
-    /// Calls `drop()` on all trucatd values.
     ///
     /// If `len` is greater than the vector's current length, this has no
     /// effect.
@@ -291,17 +282,9 @@ where
     /// assert_eq!(vec.as_slice(), &[1,2]);
     /// ```
     pub fn truncate(&mut self, len: usize) {
-        let old_len = self.len();
-        let new_len = len;
-        if new_len <= old_len {
+        if len <= self.len() {
             unsafe {
-                // drop all the values that are truncated
-                for i in len..old_len {
-                    // replace them with garbage
-                    let x = mem::replace(&mut self.as_mut_slice()[i], mem::uninitialized());
-                    drop(x);
-                }
-                self.len = new_len;
+                self.set_len(len);
             }
         }
     }
@@ -360,13 +343,18 @@ where
     /// This is unsafe because the content of the array behind
     /// the used length is not necessarily valid.
     pub unsafe fn into_inner(self) -> A {
-        self.array
+        let Vec {
+            _marker: _,
+            array,
+            len: _,
+        } = self;
+        array
     }
 
     /// Sets the length of the vector.
     ///
     /// This is unsafe because ot may expose uninitialized memory
-    /// or leak memory without dropping.
+    /// or leak memory. It is not
     pub unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
@@ -375,6 +363,7 @@ where
 impl<T, A> Deref for Vec<T, A>
 where
     A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     type Target = [T];
 
@@ -386,6 +375,7 @@ where
 impl<T, A> DerefMut for Vec<T, A>
 where
     A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
 {
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
@@ -502,13 +492,13 @@ mod test {
         assert!(vec.push(1).is_ok());
         assert!(vec.push(2).is_ok());
         assert_eq!(
-            vec.insert(1, 10).map_err(|e| e.into_inner()).err(),
-            Some(10)
+            vec.insert(1, 10),
+            Err(10)
         );
         assert_eq!(vec.deref(), &[1, 2]);
     }
 
-    #[test]
+    /* #[test]
     fn push_pop_non_copy() {
         use core::mem;
         #[derive(Debug, PartialEq, Eq)]
@@ -516,7 +506,7 @@ mod test {
         let mut vec = Vec::new([Foo(0), unsafe { mem::uninitialized() }]);
         assert!(vec.push(Foo(1)).is_ok());
         assert_eq!(vec.pop(), Some(Foo(1)));
-    }
+    } */
 
     #[test]
     fn with_slice() {
