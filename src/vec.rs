@@ -4,6 +4,7 @@
 
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
+use core::convert::{AsRef, AsMut};
 use core::ptr;
 use core::cmp;
 
@@ -454,6 +455,27 @@ where
     T: Copy,
 {
     fn deref_mut(&mut self) -> &mut [T] {
+        self.as_mut_slice()
+    }
+}
+
+impl<T, A> AsRef<[T]> for Vec<T, A>
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
+{
+
+    fn as_ref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<T, A> AsMut<[T]> for Vec<T, A>
+where
+    A: AsMut<[T]> + AsRef<[T]>,
+    T: Copy,
+{
+    fn as_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
 }
