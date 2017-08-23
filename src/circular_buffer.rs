@@ -42,6 +42,7 @@ where
     /// let mut array = [0_usize; 8];
     /// let mut buf_slice = CircularBuffer::new(&mut array);
     /// ```
+    #[inline]
     pub const fn new(array: A) -> Self {
         CircularBuffer {
             _marker: PhantomData,
@@ -62,6 +63,7 @@ where
     /// let buf = CircularBuffer::from_array([1,2,3]);
     /// assert!(buf.is_full());
     /// ```
+    #[inline]
     pub fn from_array(array: A) -> Self {
         let len = array.as_ref().len();
         CircularBuffer {
@@ -82,6 +84,7 @@ where
     /// let buf = CircularBuffer::new([0;LEN]);
     /// assert_eq!(buf.capacity(), LEN);
     /// ```
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.array.as_ref().len()
     }
@@ -94,6 +97,7 @@ where
     /// let buf = CircularBuffer::from_array([1,2,3]);
     /// assert_eq!(buf.len(), 3);
     /// ```
+    #[inline]
     pub fn len(&self) -> usize {
         self.len
     }
@@ -107,11 +111,13 @@ where
     /// let buf = CircularBuffer::from_array([1,2,3]);
     /// assert_eq!(buf.index(), 0);
     /// ```
+    #[inline]
     pub fn index(&self) -> usize {
         self.index
     }
 
     /// Returns the fist adressable index in the buffer.
+    #[inline]
     pub fn first_index(&self) -> usize {
         let index = self.index() as isize;
         let len = self.len() as isize;
@@ -127,6 +133,7 @@ where
     /// let buf = CircularBuffer::new([0;8]);
     /// assert!(buf.is_empty());
     /// ```
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -142,6 +149,7 @@ where
     /// let buf = CircularBuffer::from_array([1,2,3]);
     /// assert!(buf.is_full());
     /// ```
+    #[inline]
     pub fn is_full(&self) -> bool {
         self.len() == self.capacity()
     }
@@ -158,6 +166,7 @@ where
     /// buf.push(3);
     /// assert_eq!(&*buf, &[3,2]);
     /// ```
+    #[inline]
     pub fn push(&mut self, element: T) {
         let len = self.len();
         let capacity = self.capacity();
@@ -188,6 +197,7 @@ where
     /// assert_eq!(buf.pop(), Some(1));
     /// assert_eq!(buf.pop(), None);
     /// ```
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.is_empty() {
             return None;
@@ -202,6 +212,7 @@ where
     }
 
     /// Returns an iterator over the elements as `&T`
+    #[inline]
     pub fn iter(&self) -> Iter<T, A> {
         Iter::new(&self)
     }
@@ -210,6 +221,7 @@ where
     ///
     /// This is unsafe because no checks are performed, memory can be leaked
     /// or uninitialized memory may be exposed.
+    #[inline]
     unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
@@ -219,6 +231,7 @@ where
     ///
     /// This is unsafe because memory can be leaked
     /// or uninitialized memory may be exposed.
+    #[inline]
     unsafe fn set_index(&mut self, index: isize) {
         let capactity = self.capacity() as isize;
         self.index = ((capactity + index) % capactity) as usize;
@@ -232,6 +245,7 @@ where
 {
     type Target = [T];
 
+    #[inline]
     fn deref(&self) -> &[T] {
         let slice = self.array.as_ref();
 
@@ -259,6 +273,7 @@ where
     T: 'a + Copy,
 {
     /// Creates a new iterator with a buffer
+    #[inline]
     pub fn new(buf: &'a CircularBuffer<T, A>) -> Self {
         Iter {
             buffer: buf,
@@ -277,6 +292,7 @@ where
     T: 'a + Copy,
 {
     type Item = &'a T;
+    #[inline]
     fn next(&mut self) -> Option<&'a T> {
         let next = self.next_index;
         match next {

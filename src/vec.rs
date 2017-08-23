@@ -41,6 +41,7 @@ where
     /// let mut array = [0_usize; 8];
     /// let mut vec_slice = Vec::new(&mut array);
     /// ```
+    #[inline]
     pub const fn new(array: A) -> Self {
         Vec {
             _marker: PhantomData,
@@ -59,7 +60,9 @@ where
     /// let vec = Vec::from_array([1,2,3]);
     /// assert!(vec.is_full());
     /// ```
+    #[inline]
     pub fn from_array(array: A) -> Self {
+        // FIXME: support const fn here if possible
         let len = array.as_ref().len();
         Vec {
             _marker: PhantomData,
@@ -77,6 +80,7 @@ where
     /// let vec = Vec::new([0;LEN]);
     /// assert_eq!(vec.capacity(), LEN);
     /// ```
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.array.as_ref().len()
     }
@@ -89,6 +93,7 @@ where
     /// let vec = Vec::from_array([1,2,3]);
     /// assert_eq!(vec.len(), 3);
     /// ```
+    #[inline]
     pub fn len(&self) -> usize {
         self.len
     }
@@ -96,6 +101,7 @@ where
     /// Returns the number currently available backup storage.
     ///
     /// this is equal to `self.capacity() - self.len()`
+    #[inline]
     pub fn available(&self) -> usize {
         self.capacity() - self.len()
     }
@@ -108,6 +114,7 @@ where
     /// let vec = Vec::new([0;8]);
     /// assert!(vec.is_empty());
     /// ```
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -120,6 +127,7 @@ where
     /// let vec = Vec::from_array([1,2,3]);
     /// assert!(vec.is_full());
     /// ```
+    #[inline]
     pub fn is_full(&self) -> bool {
         self.len() == self.capacity()
     }
@@ -134,6 +142,7 @@ where
     /// vec.clear();
     /// assert_eq!(vec.as_slice(), &[]);
     /// ```
+    #[inline]
     pub fn clear(&mut self) {
         self.truncate(0);
     }
@@ -149,6 +158,7 @@ where
     /// assert_eq!(vec.pop(), Some(1));
     /// assert_eq!(vec.pop(), None);
     /// ```
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -164,6 +174,7 @@ where
     /// Appends an `elem`ent to the back of the collection
     ///
     /// This method returns `Err(element)` if the vector is full.
+    #[inline]
     pub fn push(&mut self, element: T) -> Result<(), T> {
         if self.is_full() {
             Err(element)
@@ -193,6 +204,7 @@ where
     /// assert_eq!(vec.swap_remove(2), 2);
     /// assert_eq!(vec.as_slice(), &[0, 1, 3]);
     /// ```
+    #[inline]
     pub fn swap_remove(&mut self, index: usize) -> T {
         let last = self.len() - 1;
         self.as_mut_slice().swap(index, last);
@@ -216,6 +228,7 @@ where
     /// assert!(vec.insert(1, 10).is_ok());
     /// assert_eq!(vec.as_slice(), &[1, 10, 2]);
     /// ```
+    #[inline]
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         if self.is_full() {
             return Err(element);
@@ -255,6 +268,7 @@ where
     /// assert!(vec.append(&other).is_ok());
     /// assert_eq!(vec.as_slice(), &[1, 2, 3, 4]);
     /// ```
+    #[inline]
     pub fn append<S>(&mut self, other: &S) -> Result<(), ()>
     where
         S: AsRef<[T]>,
@@ -288,6 +302,7 @@ where
     /// assert_eq!(vec.append_force(&other), Err([5].as_ref()));
     /// assert_eq!(vec.as_slice(), &[1, 2, 3, 4]);
     /// ```
+    #[inline]
     pub fn append_force<'a, S>(&mut self, other: &'a S) -> Result<(), &'a [T]>
     where
         S: AsRef<[T]>,
@@ -324,6 +339,7 @@ where
     /// vec.remove(1);
     /// assert_eq!(vec.as_slice(), &[1, 3]);
     /// ```
+    #[inline]
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len();
         assert!(index < len);
@@ -358,6 +374,7 @@ where
     /// vec.truncate(2);
     /// assert_eq!(vec.as_slice(), &[1,2]);
     /// ```
+    #[inline]
     pub fn truncate(&mut self, len: usize) {
         if len <= self.len() {
             unsafe {
@@ -379,6 +396,7 @@ where
     /// vec.retain(|&x| x % 2 == 0);
     /// assert_eq!(vec.as_slice(), &[0, 2]);
     /// ```
+    #[inline]
     pub fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(&T) -> bool,
@@ -403,6 +421,7 @@ where
 
     /// Extracts a slice containing the entire vector.
     /// Equivialent to `v.deref()`
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         let len = self.len();
         self.array.as_ref()[..len].as_ref()
@@ -410,6 +429,7 @@ where
 
     /// Extracts a mutable slice containing the entire vector.
     /// Equivialent to `v.deref_mut()`
+    #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         let len = self.len();
         self.array.as_mut()[..len].as_mut()
@@ -419,6 +439,7 @@ where
     ///
     /// This is unsafe because the content of the array behind
     /// the used length is not necessarily valid.
+    #[inline]
     pub unsafe fn into_inner(self) -> A {
         let Vec {
             _marker: _,
@@ -432,6 +453,7 @@ where
     ///
     /// This is unsafe because it may expose uninitialized memory
     /// or leak memory.
+    #[inline]
     unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
@@ -444,6 +466,7 @@ where
 {
     type Target = [T];
 
+    #[inline]
     fn deref(&self) -> &[T] {
         self.as_slice()
     }
@@ -454,6 +477,7 @@ where
     A: AsMut<[T]> + AsRef<[T]>,
     T: Copy,
 {
+    #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
@@ -465,6 +489,7 @@ where
     T: Copy,
 {
 
+    #[inline]
     fn as_ref(&self) -> &[T] {
         self.as_slice()
     }
@@ -475,6 +500,7 @@ where
     A: AsMut<[T]> + AsRef<[T]>,
     T: Copy,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
