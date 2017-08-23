@@ -43,27 +43,26 @@ where
     /// ```
     #[inline]
     pub const fn new(array: A) -> Self {
-        Vec {
-            _marker: PhantomData,
-            array: array,
-            len: 0,
-        }
+        unsafe { Self::with_len(array, 0) }
     }
 
     /// Creates a new vector using `array` as the backup storage.
     /// Keeps the values and length of the array.
-    /// The backup storage is completly used upon creation.
+    /// The backup storage is used up to the provided length upon creation.
+    /// This function can be used to quickly initialize the vector.
+    ///
+    /// The initial length must be passed,
+    /// because the length of the array might not be determined
+    /// at compile time.
     ///
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let vec = Vec::from_array([1,2,3]);
+    /// let vec = unsafe{ Vec::with_len([1,2,3], 3) };
     /// assert!(vec.is_full());
     /// ```
     #[inline]
-    pub fn from_array(array: A) -> Self {
-        // FIXME: support const fn here if possible
-        let len = array.as_ref().len();
+    pub const unsafe fn with_len(array: A, len: usize) -> Self {
         Vec {
             _marker: PhantomData,
             array: array,
@@ -90,8 +89,9 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let vec = Vec::from_array([1,2,3]);
-    /// assert_eq!(vec.len(), 3);
+    /// let mut vec = Vec::new([0;8]);
+    /// vec.push(1);
+    /// assert_eq!(vec.len(), 1);
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
@@ -124,7 +124,9 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let vec = Vec::from_array([1,2,3]);
+    /// let mut vec = Vec::new([0;2]);
+    /// vec.push(1);
+    /// vec.push(2);
     /// assert!(vec.is_full());
     /// ```
     #[inline]
@@ -138,7 +140,8 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let mut vec = Vec::from_array([0,1,2,3]);
+    /// let mut vec = Vec::new([0; 8]);
+    /// vec.push(1);
     /// vec.clear();
     /// assert_eq!(vec.as_slice(), &[]);
     /// ```
@@ -153,7 +156,9 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let mut vec = Vec::from_array([1,2]);
+    /// let mut vec = Vec::new([0;8]);
+    /// vec.push(1);
+    /// vec.push(2);
     /// assert_eq!(vec.pop(), Some(2));
     /// assert_eq!(vec.pop(), Some(1));
     /// assert_eq!(vec.pop(), None);
@@ -200,7 +205,7 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let mut vec = Vec::from_array([0, 1, 2, 3]);
+    /// let mut vec = unsafe{ Vec::with_len([0, 1, 2, 3], 4) };
     /// assert_eq!(vec.swap_remove(2), 2);
     /// assert_eq!(vec.as_slice(), &[0, 1, 3]);
     /// ```
@@ -370,7 +375,7 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let mut vec = Vec::from_array([1,2,3,4]);
+    /// let mut vec = unsafe { Vec::with_len([1,2,3,4], 4) };
     /// vec.truncate(2);
     /// assert_eq!(vec.as_slice(), &[1,2]);
     /// ```
@@ -392,7 +397,7 @@ where
     /// # Example
     /// ```
     /// use heapless::Vec;
-    /// let mut vec = Vec::from_array([0, 1, 2, 3]);
+    /// let mut vec = unsafe { Vec::with_len([0, 1, 2, 3], 4) };
     /// vec.retain(|&x| x % 2 == 0);
     /// assert_eq!(vec.as_slice(), &[0, 2]);
     /// ```
@@ -516,7 +521,7 @@ mod test {
 
     #[test]
     fn deref_mut_reverse() {
-        let mut vec = Vec::from_array([1, 2, 3]);
+        let mut vec = unsafe { Vec::with_len([1, 2, 3], 3) };
         vec.reverse();
         assert_eq!(vec.as_slice(), &[3, 2, 1]);
     }
@@ -543,9 +548,9 @@ mod test {
     }
 
     #[test]
-    fn initial_length_from_array() {
+    fn initial_length_with_len() {
         const LEN: usize = 16;
-        let vec = Vec::from_array([0; LEN]);
+        let vec = unsafe { Vec::with_len([0; LEN], LEN) };
         assert_eq!(vec.capacity(), LEN);
         assert_eq!(vec.len(), LEN);
     }
@@ -618,16 +623,6 @@ mod test {
         assert_eq!(vec.insert(1, 10), Err(10));
         assert_eq!(vec.deref(), &[1, 2]);
     }
-
-    /* #[test]
-    fn push_pop_non_copy() {
-        use core::mem;
-        #[derive(Debug, PartialEq, Eq)]
-        struct Foo(i32);
-        let mut vec = Vec::new([Foo(0), unsafe { mem::uninitialized() }]);
-        assert!(vec.push(Foo(1)).is_ok());
-        assert_eq!(vec.pop(), Some(Foo(1)));
-    } */
 
     #[test]
     fn with_slice() {
