@@ -281,15 +281,7 @@ where
         if self.available() < other.as_ref().len() {
             return Err(());
         }
-        // FIXME: use mem::copy instead of iter.cloned()
-        for x in other.as_ref().iter().cloned() {
-            match self.push(x) {
-                Ok(_) => {}
-                // Error can not occure as available length was checked
-                _ => unreachable!(),
-            }
-        }
-        Ok(())
+        self.append_force(other).map_err(|_| ())
     }
 
     /// Copies as much elements of `other` into the vector as possible.
@@ -312,16 +304,16 @@ where
     where
         S: AsRef<[T]>,
     {
-        let to_insert = cmp::min(self.available(), other.as_ref().len());
-        // FIXME: use mem::copy instead of iter.cloned()
-        for x in other.as_ref().iter().cloned().take(to_insert) {
-            match self.push(x) {
-                Ok(_) => {}
-                // Error can not occure as available length was checked
-                _ => unreachable!(),
-            }
+        let len = self.len();
+        let other_len = other.as_ref().len();
+        let to_insert = cmp::min(self.available(), other_len);
+        self.array.as_mut()[len..(len + to_insert)]
+            .copy_from_slice(other.as_ref()[..to_insert].as_ref());
+        unsafe {
+            self.set_len(len + to_insert);
         }
-        if to_insert < other.as_ref().len() {
+
+        if to_insert < other_len {
             return Err(other.as_ref()[to_insert..].as_ref());
         }
         Ok(())
