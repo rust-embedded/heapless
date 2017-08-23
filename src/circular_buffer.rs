@@ -3,8 +3,6 @@
 #![deny(warnings)]
 
 use core::marker::PhantomData;
-use core::ops::Deref;
-use core::slice;
 
 /// A circular buffer
 pub struct CircularBuffer<T, A>
@@ -164,7 +162,9 @@ where
     /// buf.push(1);
     /// buf.push(2);
     /// buf.push(3);
-    /// assert_eq!(&*buf, &[3,2]);
+    /// assert_eq!(buf.pop(), Some(3));
+    /// assert_eq!(buf.pop(), Some(2));
+    /// assert_eq!(buf.pop(), None);
     /// ```
     #[inline]
     pub fn push(&mut self, element: T) {
@@ -235,25 +235,6 @@ where
     unsafe fn set_index(&mut self, index: isize) {
         let capactity = self.capacity() as isize;
         self.index = ((capactity + index) % capactity) as usize;
-    }
-}
-
-impl<T, A> Deref for CircularBuffer<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    type Target = [T];
-
-    #[inline]
-    fn deref(&self) -> &[T] {
-        let slice = self.array.as_ref();
-
-        if self.len == slice.len() {
-            slice
-        } else {
-            unsafe { slice::from_raw_parts(slice.as_ptr(), self.len) }
-        }
     }
 }
 
