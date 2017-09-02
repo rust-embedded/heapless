@@ -1,7 +1,4 @@
 
-#![deny(missing_docs)]
-#![deny(warnings)]
-
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 use core::convert::{AsRef, AsMut};
@@ -239,7 +236,7 @@ where
             return Err(element);
         }
         let len = self.len();
-        assert!(index <= len);
+        assert!(index <= len, "index out of bounds");
         unsafe {
             // infallible
             // The spot to put the new value
@@ -339,7 +336,7 @@ where
     #[inline]
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len();
-        assert!(index < len);
+        assert!(index < len, "index out of bounds");
         unsafe {
             // infallible
             let ret;

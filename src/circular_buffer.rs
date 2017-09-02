@@ -1,7 +1,4 @@
 
-#![deny(missing_docs)]
-#![deny(warnings)]
-
 use core::marker::PhantomData;
 
 /// A circular buffer
@@ -73,7 +70,6 @@ where
     }
 
     /// Returns the capacity of this buffer.
-    ///
     ///
     /// # Example
     /// ```
@@ -213,7 +209,7 @@ where
 
     /// Returns an iterator over the elements as `&T`
     #[inline]
-    pub fn iter(&self) -> Iter<T, A> {
+    pub fn iter<'a>(&'a self) -> Iter<'a, T, A> {
         Iter::new(&self)
     }
 
