@@ -5,11 +5,13 @@
 
 > `static` friendly data structures that don't require dynamic memory allocation
 
-# [Documentation](https://docs.rs/heapless)
+## [Documentation](https://docs.rs/heapless)
 
-# [Change log](CHANGELOG.md)
+## Example 
 
-# License
+## [Change log](CHANGELOG.md)
+
+## License
 
 Licensed under either of
 
