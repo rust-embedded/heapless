@@ -23,3 +23,5 @@ main() {
             ;;
     esac
 }
+
+main
