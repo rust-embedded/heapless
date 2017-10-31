@@ -1,159 +1,163 @@
 //! `static` friendly data structures that don't require dynamic memory
 //! allocation
+//!
+//! # Examples
+//!
+//! ## `Vec`
+//!
+//! ```
+//! use heapless::Vec;
+//!
+//! let mut xs: Vec<u8, [u8; 4]> = Vec::new();
+//!
+//! assert!(xs.push(0).is_ok());
+//! assert!(xs.push(1).is_ok());
+//! assert!(xs.push(2).is_ok());
+//! assert!(xs.push(3).is_ok());
+//! assert!(xs.push(4).is_err()); // full
+//!
+//! assert_eq!(xs.pop(), Some(3));
+//! ```
+//!
+//! ## `RingBuffer`
+//!
+//! ```
+//! use heapless::RingBuffer;
+//!
+//! let mut rb: RingBuffer<u8, [u8; 4]> = RingBuffer::new();
+//!
+//! assert!(rb.enqueue(0).is_ok());
+//! assert!(rb.enqueue(1).is_ok());
+//! assert!(rb.enqueue(2).is_ok());
+//! assert!(rb.enqueue(3).is_err()); // full
+//!
+//! assert_eq!(rb.dequeue(), Some(0));
+//! ```
+//!
+//! ### Single producer single consumer mode
+//!
+//! For use in *single core* systems like microcontrollers
+//!
+//! ```
+//! use heapless::RingBuffer;
+//!
+//! static mut RB: RingBuffer<Event, [Event; 4]> = RingBuffer::new();
+//!
+//! enum Event { A, B }
+//!
+//! fn main() {
+//!     // NOTE(unsafe) beware of aliasing the `consumer` end point
+//!     let mut consumer = unsafe { RB.split().1 };
+//!
+//!     loop {
+//!         // `dequeue` is a lockless operation
+//!         match consumer.dequeue() {
+//!             Some(Event::A) => { /* .. */ },
+//!             Some(Event::B) => { /* .. */ },
+//!             None => { /* sleep */},
+//!         }
+//! #       break
+//!     }
+//! }
+//!
+//! // this is a different execution context that can preempt `main`
+//! fn interrupt_handler() {
+//!     // NOTE(unsafe) beware of aliasing the `producer` end point
+//!     let mut producer = unsafe { RB.split().0 };
+//! #   let condition = true;
+//!
+//!     // ..
+//!
+//!     if condition {
+//!         producer.enqueue(Event::A).unwrap();
+//!     } else {
+//!         producer.enqueue(Event::B).unwrap();
+//!     }
+//!
+//!     // ..
+//! }
+//! ```
+//!
+//! # `Send`-ness
+//!
+//! Collections of `Send`-able things are `Send`
+//!
+//! ```
+//! use heapless::{RingBuffer, Vec};
+//! use heapless::ring_buffer::{Consumer, Producer};
+//!
+//! struct IsSend;
+//!
+//! unsafe impl Send for IsSend {}
+//!
+//! fn is_send<T>() where T: Send {}
+//!
+//! is_send::<Consumer<IsSend, [IsSend; 4]>>();
+//! is_send::<Producer<IsSend, [IsSend; 4]>>();
+//! is_send::<RingBuffer<IsSend, [IsSend; 4]>>();
+//! is_send::<Vec<IsSend, [IsSend; 4]>>();
+//! ```
+//!
+//! Collections of not `Send`-able things are *not* `Send`
+//!
+//! ``` compile_fail
+//! use std::marker::PhantomData;
+//! use heapless::ring_buffer::Consumer;
+//!
+//! type NotSend = PhantomData<*const ()>;
+//!
+//! fn is_send<T>() where T: Send {}
+//!
+//! is_send::<Consumer<NotSend, [NotSend; 4]>>();
+//! ```
+//!
+//! ``` compile_fail
+//! use std::marker::PhantomData;
+//! use heapless::ring_buffer::Producer;
+//!
+//! type NotSend = PhantomData<*const ()>;
+//!
+//! fn is_send<T>() where T: Send {}
+//!
+//! is_send::<Producer<NotSend, [NotSend; 4]>>();
+//! ```
+//!
+//! ``` compile_fail
+//! use std::marker::PhantomData;
+//! use heapless::RingBuffer;
+//!
+//! type NotSend = PhantomData<*const ()>;
+//!
+//! fn is_send<T>() where T: Send {}
+//!
+//! is_send::<RingBuffer<NotSend, [NotSend; 4]>>();
+//! ```
+//!
+//! ``` compile_fail
+//! use std::marker::PhantomData;
+//! use heapless::Vec;
+//!
+//! type NotSend = PhantomData<*const ()>;
+//!
+//! fn is_send<T>() where T: Send {}
+//!
+//! is_send::<Vec<NotSend, [NotSend; 4]>>();
+//! ```
 
 #![deny(missing_docs)]
-#![deny(warnings)]
 #![feature(const_fn)]
+#![feature(shared)]
+#![feature(unsize)]
 #![no_std]
 
-use core::marker::PhantomData;
-use core::ops::Deref;
-use core::slice;
+extern crate untagged_option;
 
-/// A circular buffer
-pub struct CircularBuffer<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    _marker: PhantomData<[T]>,
-    array: A,
-    index: usize,
-    len: usize,
-}
+pub use vec::Vec;
+pub use ring_buffer::RingBuffer;
 
-impl<T, A> CircularBuffer<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    /// Creates a new empty circular buffer using `array` as backup storage
-    pub const fn new(array: A) -> Self {
-        CircularBuffer {
-            _marker: PhantomData,
-            array: array,
-            index: 0,
-            len: 0,
-        }
-    }
+pub mod ring_buffer;
+mod vec;
 
-    /// Returns the capacity of this buffer
-    pub fn capacity(&self) -> usize {
-        self.array.as_ref().len()
-    }
-
-    /// Pushes `elem`ent into the buffer
-    ///
-    /// This will overwrite an old value if the buffer is full
-    pub fn push(&mut self, elem: T) {
-        let slice = self.array.as_mut();
-        if self.len < slice.len() {
-            self.len += 1;
-        }
-
-        unsafe { *slice.as_mut_ptr().offset(self.index as isize) = elem };
-
-        self.index = (self.index + 1) % slice.len();
-    }
-}
-
-impl<T, A> Deref for CircularBuffer<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    type Target = [T];
-
-    fn deref(&self) -> &[T] {
-        let slice = self.array.as_ref();
-
-        if self.len == slice.len() {
-            slice
-        } else {
-            unsafe { slice::from_raw_parts(slice.as_ptr(), self.len) }
-        }
-    }
-}
-
-/// A continuous, growable array type
-pub struct Vec<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    _marker: PhantomData<[T]>,
-    array: A,
-    len: usize,
-}
-
-impl<T, A> Vec<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    /// Creates a new vector using `array` as the backup storage
-    pub const fn new(array: A) -> Self {
-        Vec {
-            _marker: PhantomData,
-            array: array,
-            len: 0,
-        }
-    }
-
-    /// Returns the capacity of this vector
-    pub fn capacity(&self) -> usize {
-        self.array.as_ref().len()
-    }
-
-    /// Clears the vector, removing all values
-    pub fn clear(&mut self) {
-        self.len = 0;
-    }
-
-    /// Removes the last element from this vector and returns it, or `None` if
-    /// it's empty
-    pub fn pop(&mut self) -> Option<T> {
-        if self.len == 0 {
-            None
-        } else {
-            self.len -= 1;
-            unsafe {
-                Some(
-                    *self.array
-                         .as_mut()
-                         .as_mut_ptr()
-                         .offset(self.len as isize),
-                )
-            }
-        }
-    }
-
-    /// Appends an `elem`ent to the back of the collection
-    ///
-    /// This method returns `Err` if the vector is full
-    pub fn push(&mut self, elem: T) -> Result<(), ()> {
-        let slice = self.array.as_mut();
-
-        if self.len == slice.len() {
-            Err(())
-        } else {
-            unsafe {
-                *slice.as_mut_ptr().offset(self.len as isize) = elem;
-            }
-            self.len += 1;
-            Ok(())
-        }
-    }
-}
-
-impl<T, A> Deref for Vec<T, A>
-where
-    A: AsMut<[T]> + AsRef<[T]>,
-    T: Copy,
-{
-    type Target = [T];
-
-    fn deref(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.array.as_ref().as_ptr(), self.len) }
-    }
-}
+/// Error raised when the buffer is full
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BufferFullError;
