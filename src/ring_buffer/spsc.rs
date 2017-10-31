@@ -1,5 +1,7 @@
 use core::ptr::{self, Shared};
 use core::marker::Unsize;
+#[cfg(target_has_atomic = "ptr")]
+use core::sync::atomic::Ordering;
 
 use BufferFullError;
 use ring_buffer::RingBuffer;
@@ -10,8 +12,11 @@ where
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
     ///
-    /// *Warning* the current implementation only supports single core processors. It's also fine to
-    /// use both end points on the same core of a multi-core processor.
+    /// **Warning** the current single producer single consumer implementation only supports
+    /// multi-core systems where `cfg(target_has_atomic = "ptr")` holds for all the cores. For
+    /// example, a dual core system where one core is Cortex-M0 core and the other is Cortex-M3 core
+    /// is not supported because Cortex-M0 (`thumbv6m-none-eabi`) doesn't satisfy
+    /// `cfg(target_has_atomic = "ptr")`. All single core systems are supported.
     pub fn split(&'static mut self) -> (Producer<T, A>, Consumer<T, A>) {
         (
             Producer {
@@ -39,8 +44,30 @@ where
     A: Unsize<[T]>,
 {
     /// Returns the item in the front of the queue, or `None` if the queue is empty
+    #[cfg(target_has_atomic = "ptr")]
+    pub fn dequeue(&mut self) -> Option<T> {
+        let rb = unsafe { self.rb.as_ref() };
+
+        let tail = rb.tail.load(Ordering::Relaxed);
+        let head = rb.head.load(Ordering::Acquire);
+
+        let n = rb.capacity() + 1;
+        let buffer: &[T] = unsafe { rb.buffer.as_ref() };
+
+        if head != tail {
+            let item = unsafe { ptr::read(buffer.get_unchecked(head)) };
+            rb.head.store((head + 1) % n, Ordering::Release);
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    #[cfg(not(target_has_atomic = "ptr"))]
     pub fn dequeue(&mut self) -> Option<T> {
         let rb = unsafe { self.rb.as_mut() };
+
         let n = rb.capacity() + 1;
         let buffer: &[T] = unsafe { rb.buffer.as_ref() };
 
@@ -80,8 +107,36 @@ where
     /// Adds an `item` to the end of the queue
     ///
     /// Returns `BufferFullError` if the queue is full
+    #[cfg(target_has_atomic = "ptr")]
     pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
         let rb = unsafe { self.rb.as_mut() };
+
+        let head = rb.head.load(Ordering::Relaxed);
+        let tail = rb.tail.load(Ordering::Acquire);
+
+        let n = rb.capacity() + 1;
+        let next_tail = (tail + 1) % n;
+
+        let buffer: &mut [T] = unsafe { rb.buffer.as_mut() };
+
+        if next_tail != head {
+            // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
+            // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
+            unsafe { ptr::write(buffer.get_unchecked_mut(tail), item) }
+            rb.tail.store(next_tail, Ordering::Release);
+            Ok(())
+        } else {
+            Err(BufferFullError)
+        }
+    }
+
+    /// Adds an `item` to the end of the queue
+    ///
+    /// Returns `BufferFullError` if the queue is full
+    #[cfg(not(target_has_atomic = "ptr"))]
+    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
+        let rb = unsafe { self.rb.as_mut() };
+
         let n = rb.capacity() + 1;
         let buffer: &mut [T] = unsafe { rb.buffer.as_mut() };
 
