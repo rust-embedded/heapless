@@ -43,7 +43,7 @@ where
         // NOTE(volatile) the value of `tail` can change at any time in the context of the consumer
         // so we inform this to the compiler using a volatile load
         if rb.head != unsafe { ptr::read_volatile(&rb.tail) } {
-            let item = unsafe { ptr::read(&buffer[rb.head]) };
+            let item = unsafe { ptr::read(buffer.as_ptr().offset(rb.head as isize)) };
             rb.head = (rb.head + 1) % n;
             Some(item)
         } else {
@@ -78,7 +78,7 @@ where
         if next_tail != unsafe { ptr::read_volatile(&rb.head) } {
             // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
             // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-            unsafe { ptr::write(&mut buffer[rb.tail], item) }
+            unsafe { ptr::write(buffer.as_mut_ptr().offset(rb.tail as isize), item) }
             rb.tail = next_tail;
             Ok(())
         } else {
