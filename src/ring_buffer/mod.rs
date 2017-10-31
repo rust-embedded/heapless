@@ -52,7 +52,7 @@ where
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
 
         if self.head != self.tail {
-            let item = unsafe { ptr::read(buffer.as_ptr().offset(self.head as isize)) };
+            let item = unsafe { ptr::read(buffer.get_unchecked(self.head)) };
             self.head = (self.head + 1) % n;
             Some(item)
         } else {
@@ -71,7 +71,7 @@ where
         if next_tail != self.head {
             // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
             // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-            unsafe { ptr::write(buffer.as_mut_ptr().offset(self.tail as isize), item) }
+            unsafe { ptr::write(buffer.get_unchecked_mut(self.tail), item) }
             self.tail = next_tail;
             Ok(())
         } else {
