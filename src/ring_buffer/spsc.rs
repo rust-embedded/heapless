@@ -144,8 +144,7 @@ where
         // NOTE(volatile) the value of `head` can change at any time in the execution context of the
         // producer so we inform this to the compiler using a volatile load
         if next_tail != unsafe { ptr::read_volatile(&rb.head) } {
-            // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
-            // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
+            // NOTE(ptr::write) see the other `enqueue` implementation above for details
             unsafe { ptr::write(buffer.get_unchecked_mut(rb.tail), item) }
             rb.tail = next_tail;
             Ok(())

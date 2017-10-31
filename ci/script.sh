@@ -7,7 +7,9 @@ main() {
             ;;
         x86_64-unknown-linux-gnu)
             cargo check --target $TARGET
+
             cargo test --target $TARGET
+            cargo test --target $TARGET --release
 
             export TSAN_OPTIONS="suppressions=$(pwd)/blacklist.txt"
             export RUSTFLAGS="-Z sanitizer=thread"

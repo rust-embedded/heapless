@@ -28,6 +28,7 @@ where
     // this is where we enqueue new items
     #[cfg(target_has_atomic = "ptr")] tail: AtomicUsize,
     #[cfg(not(target_has_atomic = "ptr"))] tail: usize,
+
     buffer: UntaggedOption<A>,
 }
 
