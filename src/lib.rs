@@ -1,6 +1,7 @@
 //! `static` friendly data structures that don't require dynamic memory
 //! allocation
 
+#![deny(missing_docs)]
 #![feature(const_fn)]
 #![feature(shared)]
 #![feature(unsize)]
@@ -14,8 +15,6 @@ pub use ring_buffer::RingBuffer;
 pub mod ring_buffer;
 mod vec;
 
-/// Error
+/// Error raised when the buffer is full
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Error {
-    Full,
-}
+pub struct BufferFullError;

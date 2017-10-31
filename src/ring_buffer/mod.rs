@@ -1,15 +1,17 @@
+//! Ring buffer
+
 use core::marker::{PhantomData, Unsize};
 use core::ptr;
 
 use untagged_option::UntaggedOption;
 
-use Error;
+use BufferFullError;
 
 pub use self::spsc::{Consumer, Producer};
 
 mod spsc;
 
-/// An statically allocated ring buffer backed by an array with type `A`
+/// An statically allocated ring buffer backed by an array `A`
 pub struct RingBuffer<T, A>
 where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
@@ -38,11 +40,13 @@ where
         }
     }
 
+    /// Returns the maximum number of elements the ring buffer can hold
     pub fn capacity(&self) -> usize {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
         buffer.len() - 1
     }
 
+    /// Returns the item in the front of the queue, or `None` if the queue is empty
     pub fn dequeue(&mut self) -> Option<T> {
         let n = self.capacity() + 1;
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
@@ -56,7 +60,10 @@ where
         }
     }
 
-    pub fn enqueue(&mut self, item: T) -> Result<(), Error> {
+    /// Adds an `item` to the end of the queue
+    ///
+    /// Returns `BufferFullError` if the queue is full
+    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
         let n = self.capacity() + 1;
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
 
@@ -68,10 +75,11 @@ where
             self.tail = next_tail;
             Ok(())
         } else {
-            Err(Error::Full)
+            Err(BufferFullError)
         }
     }
 
+    /// Returns the number of elements in the queue
     pub fn len(&self) -> usize {
         if self.head > self.tail {
             self.head - self.tail
@@ -89,7 +97,7 @@ where
         }
     }
 
-    /// Mutable version of `iter`
+    /// Returns an iterator that allows modifying each value.
     pub fn iter_mut(&mut self) -> IterMut<T, A> {
         let len = self.len();
         IterMut {
@@ -137,6 +145,7 @@ where
     }
 }
 
+/// An iterator over a ring buffer items
 pub struct Iter<'a, T, A>
 where
     A: Unsize<[T]> + 'a,
@@ -147,6 +156,7 @@ where
     len: usize,
 }
 
+/// A mutable iterator over a ring buffer items
 pub struct IterMut<'a, T, A>
 where
     A: Unsize<[T]> + 'a,

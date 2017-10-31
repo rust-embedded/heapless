@@ -3,9 +3,9 @@ use core::{ops, ptr, slice};
 
 use untagged_option::UntaggedOption;
 
-use Error;
+use BufferFullError;
 
-/// [`Vec`] backed by a fixed size array
+/// A [`Vec`], *vector*, backed by a fixed size array
 ///
 /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
 pub struct Vec<T, A>
@@ -22,6 +22,7 @@ impl<T, A> Vec<T, A>
 where
     A: Unsize<[T]>,
 {
+    /// Constructs a new, empty `Vec<T>` backed by the array `A`
     pub const fn new() -> Self {
         Vec {
             _marker: PhantomData,
@@ -30,19 +31,13 @@ where
         }
     }
 
+    /// Returns the maximum number of elements the vector can hold
     pub fn capacity(&self) -> usize {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
         buffer.len()
     }
 
-    pub fn iter(&self) -> slice::Iter<T> {
-        (**self).iter()
-    }
-
-    pub fn iter_mut(&mut self) -> slice::IterMut<T> {
-        (**self).iter_mut()
-    }
-
+    /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
 
@@ -55,7 +50,10 @@ where
         }
     }
 
-    pub fn push(&mut self, item: T) -> Result<(), Error> {
+    /// Appends an element to the back of the collection
+    ///
+    /// Returns `BufferFullError` if the vector is full
+    pub fn push(&mut self, item: T) -> Result<(), BufferFullError> {
         let capacity = self.capacity();
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
 
@@ -66,7 +64,7 @@ where
             self.len += 1;
             Ok(())
         } else {
-            Err(Error::Full)
+            Err(BufferFullError)
         }
     }
 }
@@ -152,7 +150,6 @@ mod tests {
 
         static mut COUNT: i32 = 0;
 
-
         {
             let mut v: Vec<Droppable, [Droppable; 2]> = Vec::new();
             v.push(Droppable::new()).unwrap();
@@ -231,5 +228,4 @@ mod tests {
 
         assert_eq!(v.pop(), None);
     }
-
 }
