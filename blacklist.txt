@@ -1,0 +1,6 @@
+# false positives from thread::spawn (?)
+race:<alloc::arc::Arc<T>>::drop_slow
+race:__GI___call_tls_dtors
+race:alloc::heap::{{impl}}::dealloc
+race:core::ptr::drop_in_place<core::option::Option<core::result::Result<(), alloc::boxed::Box<Any>>>>
+race:core::ptr::drop_in_place<core::result::Result<(), alloc::boxed::Box<Any>>>
