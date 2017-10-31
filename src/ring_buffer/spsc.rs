@@ -56,6 +56,12 @@ where
     }
 }
 
+unsafe impl<T, A> Send for Consumer<T, A>
+where
+    A: Unsize<[T]>,
+    T: Send,
+{
+}
 
 /// A ring buffer "producer"; it can enqueue items into the ring buffer
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
@@ -92,6 +98,13 @@ where
             Err(BufferFullError)
         }
     }
+}
+
+unsafe impl<T, A> Send for Producer<T, A>
+where
+    A: Unsize<[T]>,
+    T: Send,
+{
 }
 
 #[cfg(test)]
