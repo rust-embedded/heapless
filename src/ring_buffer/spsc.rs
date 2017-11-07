@@ -6,6 +6,14 @@ use core::sync::atomic::Ordering;
 use BufferFullError;
 use ring_buffer::RingBuffer;
 
+// Compiler barrier
+#[cfg(not(target_has_atomic = "ptr"))]
+macro_rules! barrier {
+    () => {
+        unsafe { asm!("" ::: "memory") }
+    }
+}
+
 impl<T, A> RingBuffer<T, A>
 where
     A: Unsize<[T]>,
@@ -75,6 +83,12 @@ where
         // consumer so we inform this to the compiler using a volatile load
         if rb.head != unsafe { ptr::read_volatile(&rb.tail) } {
             let item = unsafe { ptr::read(buffer.get_unchecked(rb.head)) };
+
+            // NOTE(barrier!) this ensures that the compiler won't place the instructions to read
+            // the data *before* the instructions to increment the `head` pointer -- note that this
+            // won't be enough on architectures that allow out of order execution
+            barrier!();
+
             rb.head = (rb.head + 1) % n;
             Some(item)
         } else {
@@ -146,6 +160,10 @@ where
         if next_tail != unsafe { ptr::read_volatile(&rb.head) } {
             // NOTE(ptr::write) see the other `enqueue` implementation above for details
             unsafe { ptr::write(buffer.get_unchecked_mut(rb.tail), item) }
+
+            // NOTE(barrier!) see the NOTE(barrier!) above
+            barrier!();
+
             rb.tail = next_tail;
             Ok(())
         } else {

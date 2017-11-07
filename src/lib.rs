@@ -144,6 +144,7 @@
 //! is_send::<Vec<NotSend, [NotSend; 4]>>();
 //! ```
 
+#![cfg_attr(not(target_has_atomic = "ptr"), feature(asm))]
 #![cfg_attr(target_has_atomic = "ptr", feature(const_atomic_usize_new))]
 #![deny(missing_docs)]
 #![feature(cfg_target_has_atomic)]
