@@ -1,9 +1,8 @@
 //! Ring buffer
 
+use core::cell::UnsafeCell;
 use core::marker::{PhantomData, Unsize};
-use core::ptr;
-#[cfg(target_has_atomic = "ptr")]
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::{intrinsics, ptr};
 
 use untagged_option::UntaggedOption;
 
@@ -12,6 +11,36 @@ use BufferFullError;
 pub use self::spsc::{Consumer, Producer};
 
 mod spsc;
+
+// AtomicUsize with no CAS operations that works on targets that have "no atomic support" according
+// to their specification
+struct AtomicUsize {
+    v: UnsafeCell<usize>,
+}
+
+impl AtomicUsize {
+    pub const fn new(v: usize) -> AtomicUsize {
+        AtomicUsize {
+            v: UnsafeCell::new(v),
+        }
+    }
+
+    pub fn get_mut(&mut self) -> &mut usize {
+        unsafe { &mut *self.v.get() }
+    }
+
+    pub fn load_acquire(&self) -> usize {
+        unsafe { intrinsics::atomic_load_acq(self.v.get()) }
+    }
+
+    pub fn load_relaxed(&self) -> usize {
+        unsafe { intrinsics::atomic_load_relaxed(self.v.get()) }
+    }
+
+    pub fn store_release(&self, val: usize) {
+        unsafe { intrinsics::atomic_store_rel(self.v.get(), val) }
+    }
+}
 
 /// An statically allocated ring buffer backed by an array `A`
 pub struct RingBuffer<T, A>
@@ -22,12 +51,10 @@ where
     _marker: PhantomData<[T]>,
 
     // this is from where we dequeue items
-    #[cfg(target_has_atomic = "ptr")] head: AtomicUsize,
-    #[cfg(not(target_has_atomic = "ptr"))] head: usize,
+    head: AtomicUsize,
 
     // this is where we enqueue new items
-    #[cfg(target_has_atomic = "ptr")] tail: AtomicUsize,
-    #[cfg(not(target_has_atomic = "ptr"))] tail: usize,
+    tail: AtomicUsize,
 
     buffer: UntaggedOption<A>,
 }
@@ -42,14 +69,8 @@ where
         RingBuffer {
             _marker: PhantomData,
             buffer: UntaggedOption::none(),
-            #[cfg(target_has_atomic = "ptr")]
             head: AtomicUsize::new(0),
-            #[cfg(not(target_has_atomic = "ptr"))]
-            head: 0,
-            #[cfg(target_has_atomic = "ptr")]
             tail: AtomicUsize::new(0),
-            #[cfg(not(target_has_atomic = "ptr"))]
-            tail: 0,
         }
     }
 
@@ -63,15 +84,8 @@ where
     pub fn dequeue(&mut self) -> Option<T> {
         let n = self.capacity() + 1;
 
-        #[cfg(target_has_atomic = "ptr")]
         let head = self.head.get_mut();
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let head = &mut self.head;
-
-        #[cfg(target_has_atomic = "ptr")]
         let tail = self.tail.get_mut();
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let tail = &mut self.tail;
 
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
 
@@ -90,15 +104,8 @@ where
     pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
         let n = self.capacity() + 1;
 
-        #[cfg(target_has_atomic = "ptr")]
         let head = self.head.get_mut();
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let head = &mut self.head;
-
-        #[cfg(target_has_atomic = "ptr")]
         let tail = self.tail.get_mut();
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let tail = &mut self.tail;
 
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
 
@@ -116,15 +123,8 @@ where
 
     /// Returns the number of elements in the queue
     pub fn len(&self) -> usize {
-        #[cfg(target_has_atomic = "ptr")]
-        let head = self.head.load(Ordering::Relaxed);
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let head = self.head;
-
-        #[cfg(target_has_atomic = "ptr")]
-        let tail = self.tail.load(Ordering::Relaxed);
-        #[cfg(not(target_has_atomic = "ptr"))]
-        let tail = self.tail;
+        let head = self.head.load_relaxed();
+        let tail = self.tail.load_relaxed();
 
         if head > tail {
             head - tail
@@ -221,10 +221,7 @@ where
 
     fn next(&mut self) -> Option<&'a T> {
         if self.index < self.len {
-            #[cfg(not(target_has_atomic = "ptr"))]
-            let head = self.rb.head;
-            #[cfg(target_has_atomic = "ptr")]
-            let head = self.rb.head.load(Ordering::Relaxed);
+            let head = self.rb.head.load_relaxed();
 
             let buffer: &[T] = unsafe { self.rb.buffer.as_ref() };
             let ptr = buffer.as_ptr();
@@ -246,10 +243,7 @@ where
 
     fn next(&mut self) -> Option<&'a mut T> {
         if self.index < self.len {
-            #[cfg(not(target_has_atomic = "ptr"))]
-            let head = self.rb.head;
-            #[cfg(target_has_atomic = "ptr")]
-            let head = self.rb.head.load(Ordering::Relaxed);
+            let head = self.rb.head.load_relaxed();
 
             let capacity = self.rb.capacity() + 1;
             let buffer: &mut [T] = unsafe { self.rb.buffer.as_mut() };
