@@ -29,10 +29,6 @@ impl AtomicUsize {
         unsafe { &mut *self.v.get() }
     }
 
-    pub fn load_acquire(&self) -> usize {
-        unsafe { intrinsics::atomic_load_acq(self.v.get()) }
-    }
-
     pub fn load_relaxed(&self) -> usize {
         unsafe { intrinsics::atomic_load_relaxed(self.v.get()) }
     }

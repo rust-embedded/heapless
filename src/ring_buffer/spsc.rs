@@ -43,7 +43,7 @@ where
         let buffer: &[T] = unsafe { rb.buffer.as_ref() };
 
         let tail = rb.tail.load_relaxed();
-        let head = rb.head.load_acquire();
+        let head = rb.head.load_relaxed();
         if head != tail {
             let item = unsafe { ptr::read(buffer.get_unchecked(head)) };
             rb.head.store_release((head + 1) % n);
@@ -85,7 +85,7 @@ where
         let buffer: &mut [T] = unsafe { rb.buffer.as_mut() };
 
         let head = rb.head.load_relaxed();
-        let tail = rb.tail.load_acquire();
+        let tail = rb.tail.load_relaxed();
         let next_tail = (tail + 1) % n;
         if next_tail != head {
             // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
