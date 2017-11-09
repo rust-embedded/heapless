@@ -17,3 +17,6 @@ version = "0.2.0"
 
 [dependencies]
 untagged-option = "0.1.1"
+
+[dev-dependencies]
+scoped_threadpool = "0.1.8"

@@ -1,0 +1,7 @@
+# false positives in thread::spawn (?)
+race:*dealloc
+race:*drop_slow*
+race:__call_tls_dtors
+
+# false positives in scoped_threadpool (?)
+race:*drop*

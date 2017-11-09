@@ -1,7 +1,8 @@
 //! Ring buffer
 
+use core::cell::UnsafeCell;
 use core::marker::{PhantomData, Unsize};
-use core::ptr;
+use core::{intrinsics, ptr};
 
 use untagged_option::UntaggedOption;
 
@@ -11,6 +12,32 @@ pub use self::spsc::{Consumer, Producer};
 
 mod spsc;
 
+// AtomicUsize with no CAS operations that works on targets that have "no atomic support" according
+// to their specification
+struct AtomicUsize {
+    v: UnsafeCell<usize>,
+}
+
+impl AtomicUsize {
+    pub const fn new(v: usize) -> AtomicUsize {
+        AtomicUsize {
+            v: UnsafeCell::new(v),
+        }
+    }
+
+    pub fn get_mut(&mut self) -> &mut usize {
+        unsafe { &mut *self.v.get() }
+    }
+
+    pub fn load_relaxed(&self) -> usize {
+        unsafe { intrinsics::atomic_load_relaxed(self.v.get()) }
+    }
+
+    pub fn store_release(&self, val: usize) {
+        unsafe { intrinsics::atomic_store_rel(self.v.get(), val) }
+    }
+}
+
 /// An statically allocated ring buffer backed by an array `A`
 pub struct RingBuffer<T, A>
 where
@@ -18,11 +45,14 @@ where
     A: Unsize<[T]>,
 {
     _marker: PhantomData<[T]>,
-    buffer: UntaggedOption<A>,
+
     // this is from where we dequeue items
-    head: usize,
+    head: AtomicUsize,
+
     // this is where we enqueue new items
-    tail: usize,
+    tail: AtomicUsize,
+
+    buffer: UntaggedOption<A>,
 }
 
 impl<T, A> RingBuffer<T, A>
@@ -35,8 +65,8 @@ where
         RingBuffer {
             _marker: PhantomData,
             buffer: UntaggedOption::none(),
-            head: 0,
-            tail: 0,
+            head: AtomicUsize::new(0),
+            tail: AtomicUsize::new(0),
         }
     }
 
@@ -49,11 +79,15 @@ where
     /// Returns the item in the front of the queue, or `None` if the queue is empty
     pub fn dequeue(&mut self) -> Option<T> {
         let n = self.capacity() + 1;
+
+        let head = self.head.get_mut();
+        let tail = self.tail.get_mut();
+
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
 
-        if self.head != self.tail {
-            let item = unsafe { ptr::read(buffer.get_unchecked(self.head)) };
-            self.head = (self.head + 1) % n;
+        if *head != *tail {
+            let item = unsafe { ptr::read(buffer.get_unchecked(*head)) };
+            *head = (*head + 1) % n;
             Some(item)
         } else {
             None
@@ -65,14 +99,18 @@ where
     /// Returns `BufferFullError` if the queue is full
     pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
         let n = self.capacity() + 1;
+
+        let head = self.head.get_mut();
+        let tail = self.tail.get_mut();
+
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
 
-        let next_tail = (self.tail + 1) % n;
-        if next_tail != self.head {
+        let next_tail = (*tail + 1) % n;
+        if next_tail != *head {
             // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
             // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-            unsafe { ptr::write(buffer.get_unchecked_mut(self.tail), item) }
-            self.tail = next_tail;
+            unsafe { ptr::write(buffer.get_unchecked_mut(*tail), item) }
+            *tail = next_tail;
             Ok(())
         } else {
             Err(BufferFullError)
@@ -81,10 +119,13 @@ where
 
     /// Returns the number of elements in the queue
     pub fn len(&self) -> usize {
-        if self.head > self.tail {
-            self.head - self.tail
+        let head = self.head.load_relaxed();
+        let tail = self.tail.load_relaxed();
+
+        if head > tail {
+            head - tail
         } else {
-            self.tail - self.head
+            tail - head
         }
     }
 
@@ -176,9 +217,11 @@ where
 
     fn next(&mut self) -> Option<&'a T> {
         if self.index < self.len {
+            let head = self.rb.head.load_relaxed();
+
             let buffer: &[T] = unsafe { self.rb.buffer.as_ref() };
             let ptr = buffer.as_ptr();
-            let i = (self.rb.head + self.index) % (self.rb.capacity() + 1);
+            let i = (head + self.index) % (self.rb.capacity() + 1);
             self.index += 1;
             Some(unsafe { &*ptr.offset(i as isize) })
         } else {
@@ -196,10 +239,12 @@ where
 
     fn next(&mut self) -> Option<&'a mut T> {
         if self.index < self.len {
+            let head = self.rb.head.load_relaxed();
+
             let capacity = self.rb.capacity() + 1;
             let buffer: &mut [T] = unsafe { self.rb.buffer.as_mut() };
             let ptr: *mut T = buffer.as_mut_ptr();
-            let i = (self.rb.head + self.index) % capacity;
+            let i = (head + self.index) % capacity;
             self.index += 1;
             Some(unsafe { &mut *ptr.offset(i as isize) })
         } else {

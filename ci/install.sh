@@ -11,7 +11,11 @@ main() {
             rustup component list | grep 'rust-src.*installed' || \
                 rustup component add rust-src
             ;;
+        x86_64-unknown-linux-gnu)
+            ;;
         *)
+            # unhandled case
+            exit 1
             ;;
     esac
 }
