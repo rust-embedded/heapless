@@ -36,8 +36,6 @@
 //!
 //! ### Single producer single consumer mode
 //!
-//! For use in *single core* systems like microcontrollers
-//!
 //! ```
 //! use heapless::RingBuffer;
 //!
@@ -77,72 +75,6 @@
 //!     // ..
 //! }
 //! ```
-//!
-//! # `Send`-ness
-//!
-//! Collections of `Send`-able things are `Send`
-//!
-//! ```
-//! use heapless::{RingBuffer, Vec};
-//! use heapless::ring_buffer::{Consumer, Producer};
-//!
-//! struct IsSend;
-//!
-//! unsafe impl Send for IsSend {}
-//!
-//! fn is_send<T>() where T: Send {}
-//!
-//! is_send::<Consumer<IsSend, [IsSend; 4]>>();
-//! is_send::<Producer<IsSend, [IsSend; 4]>>();
-//! is_send::<RingBuffer<IsSend, [IsSend; 4]>>();
-//! is_send::<Vec<IsSend, [IsSend; 4]>>();
-//! ```
-//!
-//! Collections of not `Send`-able things are *not* `Send`
-//!
-//! ``` compile_fail
-//! use std::marker::PhantomData;
-//! use heapless::ring_buffer::Consumer;
-//!
-//! type NotSend = PhantomData<*const ()>;
-//!
-//! fn is_send<T>() where T: Send {}
-//!
-//! is_send::<Consumer<NotSend, [NotSend; 4]>>();
-//! ```
-//!
-//! ``` compile_fail
-//! use std::marker::PhantomData;
-//! use heapless::ring_buffer::Producer;
-//!
-//! type NotSend = PhantomData<*const ()>;
-//!
-//! fn is_send<T>() where T: Send {}
-//!
-//! is_send::<Producer<NotSend, [NotSend; 4]>>();
-//! ```
-//!
-//! ``` compile_fail
-//! use std::marker::PhantomData;
-//! use heapless::RingBuffer;
-//!
-//! type NotSend = PhantomData<*const ()>;
-//!
-//! fn is_send<T>() where T: Send {}
-//!
-//! is_send::<RingBuffer<NotSend, [NotSend; 4]>>();
-//! ```
-//!
-//! ``` compile_fail
-//! use std::marker::PhantomData;
-//! use heapless::Vec;
-//!
-//! type NotSend = PhantomData<*const ()>;
-//!
-//! fn is_send<T>() where T: Send {}
-//!
-//! is_send::<Vec<NotSend, [NotSend; 4]>>();
-//! ```
 
 #![deny(missing_docs)]
 #![feature(const_fn)]
@@ -157,8 +89,9 @@ extern crate untagged_option;
 pub use vec::Vec;
 pub use ring_buffer::RingBuffer;
 
-pub mod ring_buffer;
+mod cfail;
 mod vec;
+pub mod ring_buffer;
 
 /// Error raised when the buffer is full
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,10 +1,12 @@
 #![deny(warnings)]
 
 extern crate heapless;
+extern crate scoped_threadpool;
 
 use std::thread;
 
 use heapless::RingBuffer;
+use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
@@ -47,4 +49,27 @@ fn twice() {
         c.dequeue().unwrap();
         c.dequeue().unwrap();
     });
+}
+
+#[test]
+fn scoped() {
+    let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+
+    rb.enqueue(0).unwrap();
+
+    {
+        let (mut p, mut c) = rb.split();
+
+        Pool::new(2).scoped(move |scope| {
+            scope.execute(move || {
+                p.enqueue(1).unwrap();
+            });
+
+            scope.execute(move || {
+                c.dequeue().unwrap();
+            });
+        });
+    }
+
+    rb.dequeue().unwrap();
 }

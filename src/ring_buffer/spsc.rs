@@ -1,5 +1,5 @@
 use core::ptr::{self, Shared};
-use core::marker::Unsize;
+use core::marker::{PhantomData, Unsize};
 
 use BufferFullError;
 use ring_buffer::RingBuffer;
@@ -9,13 +9,15 @@ where
     A: Unsize<[T]>,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
-    pub fn split(&'static mut self) -> (Producer<T, A>, Consumer<T, A>) {
+    pub fn split(&mut self) -> (Producer<T, A>, Consumer<T, A>) {
         (
             Producer {
                 rb: unsafe { Shared::new_unchecked(self) },
+                _marker: PhantomData,
             },
             Consumer {
                 rb: unsafe { Shared::new_unchecked(self) },
+                _marker: PhantomData,
             },
         )
     }
@@ -23,15 +25,16 @@ where
 
 /// A ring buffer "consumer"; it can dequeue items from the ring buffer
 // NOTE the consumer semantically owns the `head` pointer of the ring buffer
-pub struct Consumer<T, A>
+pub struct Consumer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
     // XXX do we need to use `Shared` (for soundness) here?
     rb: Shared<RingBuffer<T, A>>,
+    _marker: PhantomData<&'a ()>,
 }
 
-impl<T, A> Consumer<T, A>
+impl<'a, T, A> Consumer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
@@ -54,7 +57,7 @@ where
     }
 }
 
-unsafe impl<T, A> Send for Consumer<T, A>
+unsafe impl<'a, T, A> Send for Consumer<'a, T, A>
 where
     A: Unsize<[T]>,
     T: Send,
@@ -63,15 +66,16 @@ where
 
 /// A ring buffer "producer"; it can enqueue items into the ring buffer
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
-pub struct Producer<T, A>
+pub struct Producer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
     // XXX do we need to use `Shared` (for soundness) here?
     rb: Shared<RingBuffer<T, A>>,
+    _marker: PhantomData<&'a ()>,
 }
 
-impl<T, A> Producer<T, A>
+impl<'a, T, A> Producer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
@@ -99,7 +103,7 @@ where
     }
 }
 
-unsafe impl<T, A> Send for Producer<T, A>
+unsafe impl<'a, T, A> Send for Producer<'a, T, A>
 where
     A: Unsize<[T]>,
     T: Send,
