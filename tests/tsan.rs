@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 extern crate heapless;
 
 use std::thread;
@@ -8,14 +10,20 @@ use heapless::RingBuffer;
 fn once() {
     static mut RB: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
 
-    unsafe { RB.split() }.0.enqueue(0).unwrap();
+    let rb = unsafe { &mut RB };
 
-    thread::spawn(|| {
-        unsafe { RB.split() }.0.enqueue(1).unwrap();
+    rb.enqueue(0).unwrap();
+
+    let (mut p, mut c) = rb.split();
+
+    p.enqueue(1).unwrap();
+
+    thread::spawn(move || {
+        p.enqueue(1).unwrap();
     });
 
-    thread::spawn(|| {
-        unsafe { RB.split() }.1.dequeue().unwrap();
+    thread::spawn(move || {
+        c.dequeue().unwrap();
     });
 }
 
@@ -23,16 +31,20 @@ fn once() {
 fn twice() {
     static mut RB: RingBuffer<i32, [i32; 8]> = RingBuffer::new();
 
-    unsafe { RB.split() }.0.enqueue(0).unwrap();
-    unsafe { RB.split() }.0.enqueue(1).unwrap();
+    let rb = unsafe { &mut RB };
 
-    thread::spawn(|| {
-        unsafe { RB.split() }.0.enqueue(2).unwrap();
-        unsafe { RB.split() }.0.enqueue(3).unwrap();
+    rb.enqueue(0).unwrap();
+    rb.enqueue(1).unwrap();
+
+    let (mut p, mut c) = rb.split();
+
+    thread::spawn(move || {
+        p.enqueue(2).unwrap();
+        p.enqueue(3).unwrap();
     });
 
-    thread::spawn(|| {
-        unsafe { RB.split() }.1.dequeue().unwrap();
-        unsafe { RB.split() }.1.dequeue().unwrap();
+    thread::spawn(move || {
+        c.dequeue().unwrap();
+        c.dequeue().unwrap();
     });
 }
