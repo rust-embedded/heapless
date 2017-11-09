@@ -88,8 +88,8 @@ where
         let n = rb.capacity() + 1;
         let buffer: &mut [T] = unsafe { rb.buffer.as_mut() };
 
-        let head = rb.head.load_relaxed();
         let tail = rb.tail.load_relaxed();
+        let head = rb.head.load_acquire();
         let next_tail = (tail + 1) % n;
         if next_tail != head {
             // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
