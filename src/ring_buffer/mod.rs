@@ -129,6 +129,11 @@ where
         }
     }
 
+    /// Returns `true` if the ring buffer has a length of 0
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Iterates from the front of the queue to the back
     pub fn iter(&self) -> Iter<T, A> {
         Iter {
