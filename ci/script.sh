@@ -11,8 +11,9 @@ main() {
             cargo test --target $TARGET
             cargo test --target $TARGET --release
 
-            export TSAN_OPTIONS="suppressions=$(pwd)/blacklist.txt"
             export RUSTFLAGS="-Z sanitizer=thread"
+            export RUST_TEST_THREADS=1
+            export TSAN_OPTIONS="suppressions=$(pwd)/blacklist.txt"
 
             cargo test --test tsan --target $TARGET
             cargo test --test tsan --target $TARGET --release

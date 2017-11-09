@@ -73,3 +73,48 @@ fn scoped() {
 
     rb.dequeue().unwrap();
 }
+
+#[test]
+fn contention() {
+    const N: usize = 1024;
+
+    let mut rb: RingBuffer<u8, [u8; N]> = RingBuffer::new();
+
+    {
+        let (mut p, mut c) = rb.split();
+
+        Pool::new(2).scoped(move |scope| {
+            scope.execute(move || {
+                let mut sum: u32 = 0;
+
+                for i in 0..N {
+                    let i = i as u8;
+                    sum = sum.wrapping_add(i as u32);
+                    while let Err(_) = p.enqueue(i) {}
+                }
+
+                println!("producer: {}", sum);
+            });
+
+            scope.execute(move || {
+                let mut sum: u32 = 0;
+
+                for _ in 0..N {
+                    loop {
+                        match c.dequeue() {
+                            Some(v) => {
+                                sum = sum.wrapping_add(v as u32);
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                println!("consumer: {}", sum);
+            });
+        });
+    }
+
+    assert!(rb.is_empty());
+}

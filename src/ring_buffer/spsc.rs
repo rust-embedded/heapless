@@ -45,7 +45,7 @@ where
         let n = rb.capacity() + 1;
         let buffer: &[T] = unsafe { rb.buffer.as_ref() };
 
-        let tail = rb.tail.load_relaxed();
+        let tail = rb.tail.load_acquire();
         let head = rb.head.load_relaxed();
         if head != tail {
             let item = unsafe { ptr::read(buffer.get_unchecked(head)) };

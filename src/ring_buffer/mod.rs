@@ -29,6 +29,10 @@ impl AtomicUsize {
         unsafe { &mut *self.v.get() }
     }
 
+    pub fn load_acquire(&self) -> usize {
+        unsafe { intrinsics::atomic_load_acq(self.v.get()) }
+    }
+
     pub fn load_relaxed(&self) -> usize {
         unsafe { intrinsics::atomic_load_relaxed(self.v.get()) }
     }
@@ -127,6 +131,11 @@ where
         } else {
             tail - head
         }
+    }
+
+    /// Returns `true` if the ring buffer has a length of 0
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Iterates from the front of the queue to the back
