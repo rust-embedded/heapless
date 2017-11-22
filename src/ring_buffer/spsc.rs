@@ -1,5 +1,5 @@
-use core::ptr::{self, Shared};
 use core::marker::{PhantomData, Unsize};
+use core::ptr::{self, Shared};
 
 use BufferFullError;
 use ring_buffer::RingBuffer;
@@ -89,6 +89,10 @@ where
         let buffer: &mut [T] = unsafe { rb.buffer.as_mut() };
 
         let tail = rb.tail.load_relaxed();
+        // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method would be
+        // sound on most architectures but that change would result in UB according to the C++
+        // memory model, which is what Rust currently uses, so we err on the side of caution and
+        // stick to `load_acquire`. Check issue google#sanitizers#882 for more details.
         let head = rb.head.load_acquire();
         let next_tail = (tail + 1) % n;
         if next_tail != head {
