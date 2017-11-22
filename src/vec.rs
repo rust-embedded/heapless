@@ -37,6 +37,11 @@ where
         buffer.len()
     }
 
+    /// Clears the vector, removing all values.
+    pub fn clear(&mut self) {
+        self.truncate(0);
+    }
+
     /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
@@ -65,6 +70,20 @@ where
             Ok(())
         } else {
             Err(BufferFullError)
+        }
+    }
+
+    /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    pub fn truncate(&mut self, len: usize) {
+        unsafe {
+            // drop any extra elements
+            while len < self.len {
+                // decrement len before the drop_in_place(), so a panic on Drop
+                // doesn't re-drop the just-failed value.
+                self.len -= 1;
+                let len = self.len;
+                ptr::drop_in_place(self.get_unchecked_mut(len));
+            }
         }
     }
 }

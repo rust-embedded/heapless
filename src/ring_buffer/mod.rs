@@ -6,9 +6,8 @@ use core::{intrinsics, ptr};
 
 use untagged_option::UntaggedOption;
 
-use BufferFullError;
-
 pub use self::spsc::{Consumer, Producer};
+use BufferFullError;
 
 mod spsc;
 
