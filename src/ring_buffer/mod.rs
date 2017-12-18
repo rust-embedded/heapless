@@ -1,4 +1,6 @@
 //! Ring buffer
+//!
+//! Note: the current implementation will only work correctly on single-core devices.
 
 use core::cell::UnsafeCell;
 use core::marker::{PhantomData, Unsize};
@@ -42,6 +44,9 @@ impl AtomicUsize {
 }
 
 /// An statically allocated ring buffer backed by an array `A`
+///
+/// Note: the current implementation will only work correctly on single-core devices.
+
 pub struct RingBuffer<T, A>
 where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
