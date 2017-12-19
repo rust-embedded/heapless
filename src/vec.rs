@@ -86,6 +86,29 @@ where
             }
         }
     }
+
+    /// Resizes the Vec in-place so that len is equal to new_len.
+    ///
+    /// If new_len is greater than len, the Vec is extended by the
+    /// difference, with each additional slot filled with value. If
+    /// new_len is less than len, the Vec is simply truncated.
+    pub fn resize(&mut self, new_len: usize, value: T)
+    -> Result<(), BufferFullError>
+    where T: Clone {
+        if new_len > self.capacity() {
+            return Err(BufferFullError);
+        }
+
+        if new_len > self.len {
+            while self.len < new_len {
+                self.push(value.clone())?;
+            }
+        } else {
+            self.truncate(new_len);
+        }
+
+        Ok(())
+    }
 }
 
 impl<T, A> Drop for Vec<T, A>
@@ -251,5 +274,65 @@ mod tests {
 
         assert_eq!(v.pop(), None);
         assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn resize_size_limit() {
+        let mut v: Vec<u8, [u8; 4]> = Vec::new();
+
+        v.resize(0, 0).unwrap();
+        v.resize(4, 0).unwrap();
+        v.resize(5, 0).err().expect("BufferFullError");
+    }
+
+    #[test]
+    fn resize_length_cases() {
+        let mut v: Vec<u8, [u8; 4]> = Vec::new();
+
+        assert_eq!(v.len(), 0);
+
+        // Grow by 1
+        v.resize(1, 0).unwrap();
+        assert_eq!(v.len(), 1);
+
+        // Grow by 2
+        v.resize(3, 0).unwrap();
+        assert_eq!(v.len(), 3);
+
+        // Resize to current size
+        v.resize(3, 0).unwrap();
+        assert_eq!(v.len(), 3);
+
+        // Shrink by 1
+        v.resize(2, 0).unwrap();
+        assert_eq!(v.len(), 2);
+
+
+        // Shrink by 2
+        v.resize(0, 0).unwrap();
+        assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn resize_contents() {
+        let mut v: Vec<u8, [u8; 4]> = Vec::new();
+
+        // New entries take supplied value when growing
+        v.resize(1, 17).unwrap();
+        assert_eq!(v[0], 17);
+
+        // Old values aren't changed when growing
+        v.resize(2, 18).unwrap();
+        assert_eq!(v[0], 17);
+        assert_eq!(v[1], 18);
+
+        // Old values aren't changed when length unchanged
+        v.resize(2, 0).unwrap();
+        assert_eq!(v[0], 17);
+        assert_eq!(v[1], 18);
+
+        // Old values aren't changed when shrinking
+        v.resize(1, 0).unwrap();
+        assert_eq!(v[0], 17);
     }
 }
