@@ -92,6 +92,8 @@ where
     /// If new_len is greater than len, the Vec is extended by the
     /// difference, with each additional slot filled with value. If
     /// new_len is less than len, the Vec is simply truncated.
+    ///
+    /// See also [`resize_default`].
     pub fn resize(&mut self, new_len: usize, value: T)
     -> Result<(), BufferFullError>
     where T: Clone {
@@ -108,6 +110,19 @@ where
         }
 
         Ok(())
+    }
+
+    /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
+    ///
+    /// If `new_len` is greater than `len`, the `Vec` is extended by the
+    /// difference, with each additional slot filled with `Default::default()`.
+    /// If `new_len` is less than `len`, the `Vec` is simply truncated.
+    ///
+    /// See also [`resize`].
+    pub fn resize_default(&mut self, new_len: usize)
+    -> Result<(), BufferFullError>
+    where T: Clone + Default {
+        self.resize(new_len, T::default())
     }
 }
 
@@ -334,5 +349,15 @@ mod tests {
         // Old values aren't changed when shrinking
         v.resize(1, 0).unwrap();
         assert_eq!(v[0], 17);
+    }
+
+    #[test]
+    fn resize_default() {
+        let mut v: Vec<u8, [u8; 4]> = Vec::new();
+
+        // resize_default is implemented using resize, so just check the
+        // correct value is being written.
+        v.resize_default(1).unwrap();
+        assert_eq!(v[0], 0);
     }
 }
