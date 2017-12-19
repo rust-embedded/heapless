@@ -236,15 +236,20 @@ mod tests {
     }
 
     #[test]
-    fn sanity() {
+    fn push_and_pop() {
         let mut v: Vec<i32, [i32; 4]> = Vec::new();
+        assert_eq!(v.len(), 0);
 
         assert_eq!(v.pop(), None);
+        assert_eq!(v.len(), 0);
 
         v.push(0).unwrap();
+        assert_eq!(v.len(), 1);
 
         assert_eq!(v.pop(), Some(0));
+        assert_eq!(v.len(), 0);
 
         assert_eq!(v.pop(), None);
+        assert_eq!(v.len(), 0);
     }
 }
