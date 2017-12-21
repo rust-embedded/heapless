@@ -33,7 +33,11 @@ script:
 
 after_script: set +e
 
-cache: cargo
+cache:
+  cargo: true
+  directories:
+    - $HOME/.xargo
+
 before_cache:
   # Travis can't cache files that are not readable by "others"
   - chmod -R a+r $HOME/.cargo
