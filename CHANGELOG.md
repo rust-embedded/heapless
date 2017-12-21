@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.1] - 2017-12-21
+
+### Added
+
+- `Vec` now implements both `fmt::Debug`, `PartialEq` and `Eq`.
+
+- `resize` and `resize_default` methods to `Vec`.
+
 ## [v0.2.0] - 2017-11-22
 
 ### Added
@@ -29,5 +37,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.1...HEAD
+[v0.2.1]: https://github.com/japaric/heapless/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/japaric/heapless/compare/v0.1.0...v0.2.0
