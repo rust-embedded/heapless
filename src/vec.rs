@@ -1,5 +1,5 @@
 use core::marker::{PhantomData, Unsize};
-use core::{ops, ptr, slice};
+use core::{fmt, ops, ptr, slice};
 
 use untagged_option::UntaggedOption;
 
@@ -94,9 +94,10 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`].
-    pub fn resize(&mut self, new_len: usize, value: T)
-    -> Result<(), BufferFullError>
-    where T: Clone {
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), BufferFullError>
+    where
+        T: Clone,
+    {
         if new_len > self.capacity() {
             return Err(BufferFullError);
         }
@@ -119,10 +120,22 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`].
-    pub fn resize_default(&mut self, new_len: usize)
-    -> Result<(), BufferFullError>
-    where T: Clone + Default {
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), BufferFullError>
+    where
+        T: Clone + Default,
+    {
         self.resize(new_len, T::default())
+    }
+}
+
+impl<T, A> fmt::Debug for Vec<T, A>
+where
+    A: Unsize<[T]>,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let slice: &[T] = &**self;
+        slice.fmt(f)
     }
 }
 
@@ -157,6 +170,24 @@ where
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
+}
+
+impl<T, A, B> PartialEq<Vec<T, B>> for Vec<T, A>
+where
+    A: Unsize<[T]>,
+    B: Unsize<[T]>,
+    T: PartialEq,
+{
+    fn eq(&self, rhs: &Vec<T, B>) -> bool {
+        PartialEq::eq(&**self, &**rhs)
+    }
+}
+
+impl<T, A> Eq for Vec<T, A>
+where
+    A: Unsize<[T]>,
+    T: Eq,
+{
 }
 
 impl<T, A> ops::Deref for Vec<T, A>
@@ -223,6 +254,19 @@ mod tests {
         }
 
         assert_eq!(unsafe { COUNT }, 0);
+    }
+
+    #[test]
+    fn eq() {
+        let mut xs: Vec<i32, [i32; 4]> = Vec::new();
+        let mut ys: Vec<i32, [i32; 8]> = Vec::new();
+
+        assert_eq!(xs, ys);
+
+        xs.push(1).unwrap();
+        ys.push(1).unwrap();
+
+        assert_eq!(xs, ys);
     }
 
     #[test]
@@ -321,7 +365,6 @@ mod tests {
         // Shrink by 1
         v.resize(2, 0).unwrap();
         assert_eq!(v.len(), 2);
-
 
         // Shrink by 2
         v.resize(0, 0).unwrap();
