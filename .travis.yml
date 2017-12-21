@@ -6,8 +6,7 @@ matrix:
       rust: nightly
 
     - env: TARGET=thumbv6m-none-eabi
-      # work around rust-lang/rust#45802
-      rust: nightly-2017-11-01
+      rust: nightly
       addons:
         apt:
           sources:
@@ -34,7 +33,11 @@ script:
 
 after_script: set +e
 
-cache: cargo
+cache:
+  cargo: true
+  directories:
+    - $HOME/.xargo
+
 before_cache:
   # Travis can't cache files that are not readable by "others"
   - chmod -R a+r $HOME/.cargo
