@@ -76,7 +76,7 @@ where
     /// Returns the maximum number of elements the ring buffer can hold
     pub fn capacity(&self) -> usize {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
-        buffer.len() - 1
+        buffer.len()
     }
 
     /// Returns the item in the front of the queue, or `None` if the queue is empty
