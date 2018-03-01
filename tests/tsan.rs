@@ -87,7 +87,7 @@ fn contention() {
             scope.execute(move || {
                 let mut sum: u32 = 0;
 
-                for i in 0..(2*N) {
+                for i in 0..(2 * N) {
                     let i = i as u8;
                     sum = sum.wrapping_add(i as u32);
                     while let Err(_) = p.enqueue(i) {}
@@ -99,7 +99,7 @@ fn contention() {
             scope.execute(move || {
                 let mut sum: u32 = 0;
 
-                for _ in 0..(2*N) {
+                for _ in 0..(2 * N) {
                     loop {
                         match c.dequeue() {
                             Some(v) => {

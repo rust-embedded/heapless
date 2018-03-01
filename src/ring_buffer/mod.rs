@@ -286,7 +286,6 @@ mod tests {
 
         static mut COUNT: i32 = 0;
 
-
         {
             let mut v: RingBuffer<Droppable, [Droppable; 4]> = RingBuffer::new();
             v.enqueue(Droppable::new()).unwrap();
