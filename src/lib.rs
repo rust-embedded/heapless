@@ -1,5 +1,4 @@
-//! `static` friendly data structures that don't require dynamic memory
-//! allocation
+//! `static` friendly data structures that don't require dynamic memory allocation
 //!
 //! # Examples
 //!
@@ -17,6 +16,20 @@
 //! assert!(xs.push(4).is_err()); // full
 //!
 //! assert_eq!(xs.pop(), Some(3));
+//! ```
+//!
+//! ## `String`
+//!
+//! ```
+//! use std::fmt::Write;
+//!
+//! use heapless::String;
+//!
+//! let mut s = String::<[u8; 8]>::new();
+//!
+//! write!(s, "hello").unwrap();
+//!
+//! assert_eq!(s.as_bytes(), b"hello");
 //! ```
 //!
 //! ## `RingBuffer`

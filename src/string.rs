@@ -5,9 +5,6 @@ use core::str::Utf8Error;
 use {BufferFullError, Vec};
 
 /// A String backed by a fixed size `heapless::Vec`
-///
-/// String: https://doc.rust-lang.org/std/string/struct.String.html
-
 pub struct String<A>
 where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
@@ -20,7 +17,7 @@ impl<A> String<A>
 where
     A: Unsize<[u8]>,
 {
-    /// Constructs a new, empty `String` backed by a `Vec<u8,[u8;N]>`
+    /// Constructs a new, empty `String`
     ///
     /// # Examples
     ///
@@ -36,7 +33,7 @@ where
         String { vec: Vec::new() }
     }
 
-    /// Converts a vector of bytes to a `String`.
+    /// Converts a vector of bytes into a `String`.
     ///
     /// A string slice ([`&str`]) is made of bytes ([`u8`]), and a vector of bytes
     /// ([`Vec<u8>`]) is made of bytes, so this function converts between the

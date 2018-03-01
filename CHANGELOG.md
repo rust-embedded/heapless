@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.2] - 2018-03-01
+
+### Added
+
+- Fixed size version of `std::String`
+
 ## [v0.2.1] - 2017-12-21
 
 ### Added
@@ -37,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.2...HEAD
+[v0.2.2]: https://github.com/japaric/heapless/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/japaric/heapless/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/japaric/heapless/compare/v0.1.0...v0.2.0

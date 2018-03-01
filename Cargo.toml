@@ -13,7 +13,7 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.2.1"
+version = "0.2.2"
 
 [dependencies]
 untagged-option = "0.1.1"
