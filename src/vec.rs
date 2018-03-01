@@ -13,9 +13,9 @@ where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
     A: Unsize<[T]>,
 {
-    pub(crate) _marker: PhantomData<[T]>,
-    pub(crate) buffer: UntaggedOption<A>,
-    pub(crate) len: usize,
+    _marker: PhantomData<[T]>,
+    buffer: UntaggedOption<A>,
+    len: usize,
 }
 
 impl<T, A> Vec<T, A>
@@ -63,7 +63,7 @@ where
     {
         if self.len() + other.len() > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
-            Err(BufferFullError);
+            Err(BufferFullError)
         } else {
             for elem in other {
                 self.push(elem.clone())?

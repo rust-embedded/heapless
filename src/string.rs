@@ -37,39 +37,6 @@ where
         String { vec: Vec::new() }
     }
 
-    /// Constructs a new, empty `String` backed by a `Vec<u8,[u8;N]>` from an `&str`.
-    ///
-    /// Cannot be called from a `static` context (not a `const fn`).
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    ///
-    /// let s: String<[u8; 4]> = String::from("123");
-    /// assert!(s.len() == 3);
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// Panics if capacity of the String would be exceeded.
-    ///
-    /// ``` should_panic
-    /// use heapless::String;
-    ///
-    /// let s: String<[_; 4]> = String::from("12345"); // <- Would `panic!`
-    /// ```
-    //
-    // Todo, Trait implementation?
-    #[inline]
-    pub fn from(s: &str) -> Self {
-        let mut new = String::new();
-        new.push_str(s).unwrap();
-        new
-    }
-
     /// Converts a vector of bytes to a `String`.
     ///
     /// A string slice ([`&str`]) is made of bytes ([`u8`]), and a vector of bytes
@@ -336,8 +303,11 @@ where
     /// ```
     pub fn pop(&mut self) -> Option<char> {
         let ch = self.chars().rev().next()?;
-        let newlen = self.len() - ch.len_utf8();
-        self.vec.len = newlen;
+
+        // pop bytes that correspond to `ch`
+        for _ in 0..ch.len_utf8() {
+            self.vec.pop();
+        }
 
         Some(ch)
     }
@@ -362,7 +332,7 @@ where
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.vec.len == 0
+        self.len() == 0
     }
 
     /// Truncates this `String`, removing all contents.
@@ -404,7 +374,18 @@ where
     /// assert_eq!(a.len(), 3);
     /// ```
     pub fn len(&self) -> usize {
-        self.vec.len
+        self.vec.len()
+    }
+}
+
+impl<'a, A> From<&'a str> for String<A>
+where
+    A: Unsize<[u8]>,
+{
+    fn from(s: &'a str) -> Self {
+        let mut new = String::new();
+        new.push_str(s).unwrap();
+        new
     }
 }
 
@@ -423,14 +404,12 @@ where
     A: Unsize<[u8]>,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).unwrap();
-        Ok(())
+        self.push_str(s).map_err(|_| fmt::Error)
     }
 
-    // fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-    //     self.push(c);
-    //     Ok(())
-    // }
+    fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
+        self.push(c).map_err(|_| fmt::Error)
+    }
 }
 
 impl<A> ops::Deref for String<A>
