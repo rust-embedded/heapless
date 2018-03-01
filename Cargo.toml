@@ -1,5 +1,8 @@
 [package]
-authors = ["Jorge Aparicio <jorge@japaric.io>"]
+authors = [
+  "Jorge Aparicio <jorge@japaric.io>",
+  "Per Lindgren <per.lindgren@ltu.se>",
+]
 categories = [
     "data-structures",
     "no-std",
