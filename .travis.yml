@@ -44,11 +44,8 @@ before_cache:
 
 branches:
   only:
-    # release tags
-    - /^v\d+\.\d+\.\d+.*$/
-    - auto
-    - master
-    - try
+    - staging
+    - trying
 
 notifications:
   email:
