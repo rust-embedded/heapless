@@ -1,5 +1,5 @@
 use core::marker::{PhantomData, Unsize};
-use core::ptr::{self, Shared};
+use core::ptr::{self, NonNull};
 
 use BufferFullError;
 use ring_buffer::RingBuffer;
@@ -12,11 +12,11 @@ where
     pub fn split(&mut self) -> (Producer<T, A>, Consumer<T, A>) {
         (
             Producer {
-                rb: unsafe { Shared::new_unchecked(self) },
+                rb: unsafe { NonNull::new_unchecked(self) },
                 _marker: PhantomData,
             },
             Consumer {
-                rb: unsafe { Shared::new_unchecked(self) },
+                rb: unsafe { NonNull::new_unchecked(self) },
                 _marker: PhantomData,
             },
         )
@@ -29,8 +29,8 @@ pub struct Consumer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
-    // XXX do we need to use `Shared` (for soundness) here?
-    rb: Shared<RingBuffer<T, A>>,
+    // XXX do we need to use `NonNull` (for soundness) here?
+    rb: NonNull<RingBuffer<T, A>>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -70,8 +70,8 @@ pub struct Producer<'a, T, A>
 where
     A: Unsize<[T]>,
 {
-    // XXX do we need to use `Shared` (for soundness) here?
-    rb: Shared<RingBuffer<T, A>>,
+    // XXX do we need to use `NonNull` (for soundness) here?
+    rb: NonNull<RingBuffer<T, A>>,
     _marker: PhantomData<&'a ()>,
 }
 

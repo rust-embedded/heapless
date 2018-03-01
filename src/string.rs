@@ -3,9 +3,8 @@ use core::{fmt, ops, str};
 use core::str::Utf8Error;
 
 use {BufferFullError, Vec};
-//use core::ops::Deref;
 
-/// A String, backed by a fixed size array `heapless::Vec`
+/// A String backed by a fixed size `heapless::Vec`
 ///
 /// String: https://doc.rust-lang.org/std/string/struct.String.html
 
@@ -35,39 +34,6 @@ where
     #[inline]
     pub const fn new() -> Self {
         String { vec: Vec::new() }
-    }
-
-    /// Constructs a new, empty `String` backed by a `Vec<u8,[u8;N]>` from an `&str`.
-    ///
-    /// Cannot be called from a `static` context (not a `const fn`).
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    ///
-    /// let s: String<[u8; 4]> = String::from("123");
-    /// assert!(s.len() == 3);
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// Panics if capacity of the String would be exceeded.
-    ///
-    /// ``` should_panic
-    /// use heapless::String;
-    ///
-    /// let s: String<[_; 4]> = String::from("12345"); // <- Would `panic!`
-    /// ```
-    //
-    // Todo, Trait implementation?
-    #[inline]
-    pub fn from(s: &str) -> Self {
-        let mut new = String::new();
-        new.push_str(s).unwrap();
-        new
     }
 
     /// Converts a vector of bytes to a `String`.
@@ -111,17 +77,16 @@ where
     /// ```
     #[inline]
     pub fn from_utf8(vec: Vec<u8, A>) -> Result<(String<A>), Utf8Error> {
-        {
-            let buffer: &[u8] = unsafe { vec.buffer.as_ref() };
-            str::from_utf8(&buffer[0..vec.len])?;
-        }
+        // validate input
+        str::from_utf8(&*vec)?;
+
         Ok(String { vec: vec })
     }
 
     /// Converts a vector of bytes to a `String` without checking that the
     /// string contains valid UTF-8.
     ///
-    /// See the safe version, [`from_utf8`], for more details.
+    /// See the safe version, `from_utf8`, for more details.
     #[inline]
     pub unsafe fn from_utf8_unchecked(vec: Vec<u8, A>) -> String<A> {
         String { vec: vec }
@@ -166,8 +131,7 @@ where
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
-        let buffer: &[u8] = unsafe { self.vec.buffer.as_ref() };
-        unsafe { str::from_utf8_unchecked(&buffer[..self.vec.len]) }
+        unsafe { str::from_utf8_unchecked(&*self.vec) }
     }
 
     /// Converts a `String` into a mutable string slice.
@@ -185,12 +149,10 @@ where
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
-        let buffer: &mut [u8] = unsafe { self.vec.buffer.as_mut() };
-        unsafe { str::from_utf8_unchecked_mut(&mut buffer[..self.vec.len]) }
+        unsafe { str::from_utf8_unchecked_mut(&mut *self.vec) }
     }
 
     /// Appends a given string slice onto the end of this `String`.
-    /// Returns with a Result<(), BufferFullError>.
     ///
     /// # Examples
     ///
@@ -207,23 +169,9 @@ where
     ///
     /// assert!(s.push_str("tender").is_err());
     /// ```
-    //
-    // TODO, should be implemented using `extend_from_slice` on Vec
-    // (this is not yet implemented in Vec, so we implement it here)
     #[inline]
-    pub fn push_str(&mut self, s: &str) -> Result<(), BufferFullError> {
-        let buffer: &mut [u8] = unsafe { self.vec.buffer.as_mut() };
-        let start = self.vec.len;
-        let new_len = start + s.len();
-        if new_len <= buffer.len() {
-            self.vec.len = new_len;
-            buffer[start..self.vec.len].copy_from_slice(
-                &s.as_bytes()[0..self.vec.len.saturating_sub(start)],
-            );
-            Ok(())
-        } else {
-            Err(BufferFullError)
-        }
+    pub fn push_str(&mut self, string: &str) -> Result<(), BufferFullError> {
+        self.vec.extend_from_slice(string.as_bytes())
     }
 
     /// Returns the maximum number of elements the String can hold
@@ -240,12 +188,10 @@ where
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        let buffer: &[u8] = unsafe { self.vec.buffer.as_ref() };
-        buffer.len()
+        self.vec.capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
-    /// Assumes ch.len_utf8() == 1
     ///
     /// [`char`]: ../../std/primitive.char.html
     ///
@@ -268,7 +214,11 @@ where
     /// ```
     #[inline]
     pub fn push(&mut self, c: char) -> Result<(), BufferFullError> {
-        self.vec.push(c as u8)
+        match c.len_utf8() {
+            1 => self.vec.push(c as u8),
+            _ => self.vec
+                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
+        }
     }
 
     /// Returns a byte slice of this `String`'s contents.
@@ -350,8 +300,11 @@ where
     /// ```
     pub fn pop(&mut self) -> Option<char> {
         let ch = self.chars().rev().next()?;
-        let newlen = self.len() - ch.len_utf8();
-        self.vec.len = newlen;
+
+        // pop bytes that correspond to `ch`
+        for _ in 0..ch.len_utf8() {
+            self.vec.pop();
+        }
 
         Some(ch)
     }
@@ -376,7 +329,7 @@ where
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.vec.len == 0
+        self.len() == 0
     }
 
     /// Truncates this `String`, removing all contents.
@@ -418,7 +371,18 @@ where
     /// assert_eq!(a.len(), 3);
     /// ```
     pub fn len(&self) -> usize {
-        self.vec.len
+        self.vec.len()
+    }
+}
+
+impl<'a, A> From<&'a str> for String<A>
+where
+    A: Unsize<[u8]>,
+{
+    fn from(s: &'a str) -> Self {
+        let mut new = String::new();
+        new.push_str(s).unwrap();
+        new
     }
 }
 
@@ -437,14 +401,12 @@ where
     A: Unsize<[u8]>,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).unwrap();
-        Ok(())
+        self.push_str(s).map_err(|_| fmt::Error)
     }
 
-    // fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-    //     self.push(c);
-    //     Ok(())
-    // }
+    fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
+        self.push(c).map_err(|_| fmt::Error)
+    }
 }
 
 impl<A> ops::Deref for String<A>
@@ -521,16 +483,18 @@ mod tests {
     use {String, Vec};
 
     #[test]
-
     fn debug() {
         extern crate std;
+
         use core::fmt::Write;
-        let mut s: String<[u8; 8]> = String::from("abcd");
+
+        let s: String<[u8; 8]> = String::from("abcd");
         let mut std_s = std::string::String::new();
-        write!(std_s, "{:?}", s);
+        write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
     }
 
+    #[test]
     fn empty() {
         let s: String<[u8; 4]> = String::new();
         assert!(s.capacity() == 4);
@@ -587,12 +551,15 @@ mod tests {
     #[test]
     fn from_utf8_unchecked() {
         let mut v: Vec<u8, [u8; 8]> = Vec::new();
-        v.push(0).unwrap();
-        v.push(159).unwrap();
-        v.push(146).unwrap();
-        v.push(150).unwrap();
+        v.push(104).unwrap();
+        v.push(101).unwrap();
+        v.push(108).unwrap();
+        v.push(108).unwrap();
+        v.push(111).unwrap();
 
         let s = unsafe { String::from_utf8_unchecked(v) };
+
+        assert_eq!(s, "hello");
     }
 
     #[test]
