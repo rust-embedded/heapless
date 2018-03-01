@@ -217,9 +217,8 @@ where
         let new_len = start + s.len();
         if new_len <= buffer.len() {
             self.vec.len = new_len;
-            buffer[start..self.vec.len].copy_from_slice(
-                &s.as_bytes()[0..self.vec.len.saturating_sub(start)],
-            );
+            buffer[start..self.vec.len]
+                .copy_from_slice(&s.as_bytes()[0..self.vec.len.saturating_sub(start)]);
             Ok(())
         } else {
             Err(BufferFullError)
@@ -521,16 +520,18 @@ mod tests {
     use {String, Vec};
 
     #[test]
-
     fn debug() {
         extern crate std;
+
         use core::fmt::Write;
-        let mut s: String<[u8; 8]> = String::from("abcd");
+
+        let s: String<[u8; 8]> = String::from("abcd");
         let mut std_s = std::string::String::new();
-        write!(std_s, "{:?}", s);
+        write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
     }
 
+    #[test]
     fn empty() {
         let s: String<[u8; 4]> = String::new();
         assert!(s.capacity() == 4);
@@ -587,12 +588,15 @@ mod tests {
     #[test]
     fn from_utf8_unchecked() {
         let mut v: Vec<u8, [u8; 8]> = Vec::new();
-        v.push(0).unwrap();
-        v.push(159).unwrap();
-        v.push(146).unwrap();
-        v.push(150).unwrap();
+        v.push(104).unwrap();
+        v.push(101).unwrap();
+        v.push(108).unwrap();
+        v.push(108).unwrap();
+        v.push(111).unwrap();
 
         let s = unsafe { String::from_utf8_unchecked(v) };
+
+        assert_eq!(s, "hello");
     }
 
     #[test]
