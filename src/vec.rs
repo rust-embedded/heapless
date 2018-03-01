@@ -42,6 +42,31 @@ where
         self.truncate(0);
     }
 
+    /// Clones and appends all elements in a slice to the `Vec`.
+    ///
+    /// Iterates over the slice `other`, clones each element, and then appends
+    /// it to this `Vec`. The `other` vector is traversed in-order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec = Vec::<u8, [u8; 8]>::new();
+    /// vec.push(1).unwrap();
+    /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
+    /// assert_eq!(*vec, [1, 2, 3, 4]);
+    /// ```
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), BufferFullError>
+    where
+        T: Clone,
+    {
+        for elem in other {
+            self.push(elem.clone())?
+        }
+        Ok(())
+    }
+
     /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };

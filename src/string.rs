@@ -111,10 +111,9 @@ where
     /// ```
     #[inline]
     pub fn from_utf8(vec: Vec<u8, A>) -> Result<(String<A>), Utf8Error> {
-        {
-            let buffer: &[u8] = unsafe { vec.buffer.as_ref() };
-            str::from_utf8(&buffer[0..vec.len])?;
-        }
+        // validate input
+        str::from_utf8(&*vec)?;
+
         Ok(String { vec: vec })
     }
 
@@ -166,8 +165,7 @@ where
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
-        let buffer: &[u8] = unsafe { self.vec.buffer.as_ref() };
-        unsafe { str::from_utf8_unchecked(&buffer[..self.vec.len]) }
+        unsafe { str::from_utf8_unchecked(&*self.vec) }
     }
 
     /// Converts a `String` into a mutable string slice.
@@ -185,8 +183,7 @@ where
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
-        let buffer: &mut [u8] = unsafe { self.vec.buffer.as_mut() };
-        unsafe { str::from_utf8_unchecked_mut(&mut buffer[..self.vec.len]) }
+        unsafe { str::from_utf8_unchecked_mut(&mut *self.vec) }
     }
 
     /// Appends a given string slice onto the end of this `String`.
@@ -239,7 +236,7 @@ where
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        let buffer: &[u8] = unsafe { self.vec.buffer.as_ref() };
+        let buffer: &[u8] = unsafe { &self.vec.buffer.some };
         buffer.len()
     }
 
@@ -267,7 +264,11 @@ where
     /// ```
     #[inline]
     pub fn push(&mut self, c: char) -> Result<(), BufferFullError> {
-        self.vec.push(c as u8)
+        match c.len_utf8() {
+            1 => self.vec.push(c as u8),
+            _ => self.vec
+                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
+        }
     }
 
     /// Returns a byte slice of this `String`'s contents.
