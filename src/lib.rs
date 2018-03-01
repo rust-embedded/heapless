@@ -88,9 +88,11 @@ extern crate untagged_option;
 
 pub use vec::Vec;
 pub use ring_buffer::RingBuffer;
+pub use string::String;
 
 mod cfail;
 mod vec;
+mod string;
 pub mod ring_buffer;
 
 /// Error raised when the buffer is full

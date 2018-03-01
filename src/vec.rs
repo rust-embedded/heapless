@@ -13,9 +13,9 @@ where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
     A: Unsize<[T]>,
 {
-    _marker: PhantomData<[T]>,
-    buffer: UntaggedOption<A>,
-    len: usize,
+    pub(crate) _marker: PhantomData<[T]>,
+    pub(crate) buffer: UntaggedOption<A>,
+    pub(crate) len: usize,
 }
 
 impl<T, A> Vec<T, A>
