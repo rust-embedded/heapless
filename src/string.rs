@@ -427,10 +427,7 @@ where
     A: Unsize<[u8]>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let slice: &str = match str::from_utf8(&*self.vec) {
-            Ok(s) => s,
-            Err(_) => "could not convert to String",
-        };
+        let slice: &str = &**self;
         slice.fmt(f)
     }
 }
@@ -524,6 +521,16 @@ mod tests {
     use {String, Vec};
 
     #[test]
+
+    fn debug() {
+        extern crate std;
+        use core::fmt::Write;
+        let mut s: String<[u8; 8]> = String::from("abcd");
+        let mut std_s = std::string::String::new();
+        write!(std_s, "{:?}", s);
+        assert_eq!("\"abcd\"", std_s);
+    }
+
     fn empty() {
         let s: String<[u8; 4]> = String::new();
         assert!(s.capacity() == 4);
