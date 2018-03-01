@@ -3,7 +3,6 @@ use core::{fmt, ops, str};
 use core::str::Utf8Error;
 
 use {BufferFullError, Vec};
-//use core::ops::Deref;
 
 /// A String, backed by a fixed size array `heapless::Vec`
 ///
