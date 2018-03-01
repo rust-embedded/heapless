@@ -11,6 +11,7 @@ main() {
         sh -s -- \
            --force \
            --git japaric/xargo \
+           --target x86_64-unknown-linux-musl \
            --tag $tag
 
     rustup component list | grep 'rust-src.*installed' || \
