@@ -4,7 +4,7 @@ use core::str::Utf8Error;
 
 use {BufferFullError, Vec};
 
-/// A String, backed by a fixed size array `heapless::Vec`
+/// A String backed by a fixed size `heapless::Vec`
 ///
 /// String: https://doc.rust-lang.org/std/string/struct.String.html
 
@@ -86,7 +86,7 @@ where
     /// Converts a vector of bytes to a `String` without checking that the
     /// string contains valid UTF-8.
     ///
-    /// See the safe version, [`from_utf8`], for more details.
+    /// See the safe version, `from_utf8`, for more details.
     #[inline]
     pub unsafe fn from_utf8_unchecked(vec: Vec<u8, A>) -> String<A> {
         String { vec: vec }
@@ -153,7 +153,6 @@ where
     }
 
     /// Appends a given string slice onto the end of this `String`.
-    /// Returns with a Result<(), BufferFullError>.
     ///
     /// # Examples
     ///
@@ -193,7 +192,6 @@ where
     }
 
     /// Appends the given [`char`] to the end of this `String`.
-    /// Assumes ch.len_utf8() == 1
     ///
     /// [`char`]: ../../std/primitive.char.html
     ///
