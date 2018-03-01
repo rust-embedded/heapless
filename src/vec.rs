@@ -61,10 +61,15 @@ where
     where
         T: Clone,
     {
-        for elem in other {
-            self.push(elem.clone())?
+        if self.len() + other.len() > self.capacity() {
+            // won't fit in the `Vec`; don't modify anything and return an error
+            Err(BufferFullError);
+        } else {
+            for elem in other {
+                self.push(elem.clone())?
+            }
+            Ok(())
         }
-        Ok(())
     }
 
     /// Removes the last element from a vector and return it, or `None` if it's empty

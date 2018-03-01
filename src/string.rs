@@ -204,22 +204,9 @@ where
     ///
     /// assert!(s.push_str("tender").is_err());
     /// ```
-    //
-    // TODO, should be implemented using `extend_from_slice` on Vec
-    // (this is not yet implemented in Vec, so we implement it here)
     #[inline]
-    pub fn push_str(&mut self, s: &str) -> Result<(), BufferFullError> {
-        let buffer: &mut [u8] = unsafe { self.vec.buffer.as_mut() };
-        let start = self.vec.len;
-        let new_len = start + s.len();
-        if new_len <= buffer.len() {
-            self.vec.len = new_len;
-            buffer[start..self.vec.len]
-                .copy_from_slice(&s.as_bytes()[0..self.vec.len.saturating_sub(start)]);
-            Ok(())
-        } else {
-            Err(BufferFullError)
-        }
+    pub fn push_str(&mut self, string: &str) -> Result<(), BufferFullError> {
+        self.vec.extend_from_slice(string.as_bytes())
     }
 
     /// Returns the maximum number of elements the String can hold
@@ -236,8 +223,7 @@ where
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        let buffer: &[u8] = unsafe { &self.vec.buffer.some };
-        buffer.len()
+        self.vec.capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
