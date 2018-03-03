@@ -92,9 +92,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![feature(const_fn)]
-#![feature(const_unsafe_cell_new)]
 #![feature(core_intrinsics)]
-#![feature(shared)]
 #![feature(unsize)]
 #![no_std]
 
