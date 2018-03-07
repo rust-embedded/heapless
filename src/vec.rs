@@ -243,6 +243,46 @@ where
     }
 }
 
+impl<T, A> AsRef<Vec<T, A>> for Vec<T, A>
+where
+    A: Unsize<[T]>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Vec<T, A> {
+        self
+    }
+}
+
+impl<T, A> AsMut<Vec<T, A>> for Vec<T, A>
+where
+    A: Unsize<[T]>,
+{
+    #[inline]
+    fn as_mut(&mut self) -> &mut Vec<T, A> {
+        self
+    }
+}
+
+impl<T, A> AsRef<[T]> for Vec<T, A>
+where
+    A: Unsize<[T]>,
+{
+    #[inline]
+    fn as_ref(&self) -> &[T] {
+        self
+    }
+}
+
+impl<T, A> AsMut<[T]> for Vec<T, A>
+where
+    A: Unsize<[T]>,
+{
+    #[inline]
+    fn as_mut(&mut self) -> &mut [T] {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use Vec;

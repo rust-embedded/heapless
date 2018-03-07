@@ -426,6 +426,26 @@ where
     }
 }
 
+impl<A> AsRef<str> for String<A>
+where
+    A: Unsize<[u8]>,
+{
+    #[inline]
+    fn as_ref(&self) -> &str {
+        self
+    }
+}
+
+impl<A> AsRef<[u8]> for String<A>
+where
+    A: Unsize<[u8]>,
+{
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
 impl<A, B> PartialEq<String<B>> for String<A>
 where
     A: Unsize<[u8]>,
