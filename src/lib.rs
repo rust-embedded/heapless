@@ -32,6 +32,26 @@
 //! assert_eq!(s.as_bytes(), b"hello");
 //! ```
 //!
+//! ## `LinearMap`
+//!
+//! ```
+//! use heapless::LinearMap;
+//!
+//! let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+//!
+//! map.insert("a", 1);
+//! map.insert("b", 2);
+//! map.insert("c", 3);
+//!
+//! assert_eq!(map["a"], 1);
+//!
+//! map["b"] += 1;
+//! assert_eq!(map["b"], 3);
+//!
+//! map.remove("c");
+//! assert_eq!(map.len(), 2);
+//! ```
+//!
 //! ## `RingBuffer`
 //!
 //! ```
@@ -93,18 +113,21 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(core_intrinsics)]
+#![feature(conservative_impl_trait)]
 #![feature(unsize)]
 #![no_std]
 
 extern crate untagged_option;
 
-pub use vec::Vec;
+pub use linear_map::LinearMap;
 pub use ring_buffer::RingBuffer;
 pub use string::String;
+pub use vec::Vec;
 
+mod linear_map;
 mod cfail;
-mod vec;
 mod string;
+mod vec;
 pub mod ring_buffer;
 
 /// Error raised when the buffer is full
