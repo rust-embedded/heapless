@@ -156,6 +156,39 @@ where
     {
         self.resize(new_len, T::default())
     }
+
+    /// Removes an element from the vector and returns it.
+    ///
+    /// The removed element is replaced by the last element of the vector.
+    ///
+    /// This does not preserve ordering, but is O(1).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, [_; 8]> = Vec::new();
+    /// v.push("foo").unwrap();
+    /// v.push("bar").unwrap();
+    /// v.push("baz").unwrap();
+    /// v.push("qux").unwrap();
+    ///
+    /// assert_eq!(v.swap_remove(1), "bar");
+    /// assert_eq!(&*v, ["foo", "qux", "baz"]);
+    ///
+    /// assert_eq!(v.swap_remove(0), "foo");
+    /// assert_eq!(&*v, ["baz", "qux"]);
+    /// ```
+    pub fn swap_remove(&mut self, index: usize) -> T {
+        let length = self.len();
+        self.swap(index, length - 1);
+        self.pop().unwrap()
+    }
 }
 
 impl<T, A> fmt::Debug for Vec<T, A>
