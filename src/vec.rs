@@ -170,8 +170,6 @@ where
     /// # Examples
     ///
     /// ```
-    /// extern crate heapless;
-    ///
     /// use heapless::Vec;
     ///
     /// let mut v: Vec<_, [_; 8]> = Vec::new();
