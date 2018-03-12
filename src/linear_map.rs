@@ -29,7 +29,7 @@ where
     ///
     /// let mut map: LinearMap<&str, isize, [_; 8]> = LinearMap::new();
     /// ```
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         LinearMap { buffer: Vec::new() }
     }
 
