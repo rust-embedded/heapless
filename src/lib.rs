@@ -111,6 +111,7 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![allow(stable_features)]
 #![feature(const_fn)]
 #![feature(core_intrinsics)]
 #![feature(conservative_impl_trait)]
