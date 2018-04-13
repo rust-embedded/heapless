@@ -1,6 +1,6 @@
 use core::marker::Unsize;
-use core::{fmt, ops, str};
 use core::str::Utf8Error;
+use core::{fmt, ops, str};
 
 use {BufferFullError, Vec};
 
@@ -461,16 +461,19 @@ where
 }
 
 macro_rules! impl_eq {
-    ($lhs:ty, $rhs: ty) => {
-
+    ($lhs:ty, $rhs:ty) => {
         impl<'a, 'b, A> PartialEq<$rhs> for $lhs
         where
             A: Unsize<[u8]>,
         {
             #[inline]
-            fn eq(&self, other: &$rhs) -> bool { PartialEq::eq(&self[..], &other[..]) }
+            fn eq(&self, other: &$rhs) -> bool {
+                PartialEq::eq(&self[..], &other[..])
+            }
             #[inline]
-            fn ne(&self, other: &$rhs) -> bool { PartialEq::ne(&self[..], &other[..]) }
+            fn ne(&self, other: &$rhs) -> bool {
+                PartialEq::ne(&self[..], &other[..])
+            }
         }
 
         impl<'a, 'b, A> PartialEq<$lhs> for $rhs
@@ -478,12 +481,15 @@ macro_rules! impl_eq {
             A: Unsize<[u8]>,
         {
             #[inline]
-            fn eq(&self, other: &$lhs) -> bool { PartialEq::eq(&self[..], &other[..]) }
+            fn eq(&self, other: &$lhs) -> bool {
+                PartialEq::eq(&self[..], &other[..])
+            }
             #[inline]
-            fn ne(&self, other: &$lhs) -> bool { PartialEq::ne(&self[..], &other[..]) }
+            fn ne(&self, other: &$lhs) -> bool {
+                PartialEq::ne(&self[..], &other[..])
+            }
         }
-
-    }
+    };
 }
 
 impl_eq! { String<A>, str }

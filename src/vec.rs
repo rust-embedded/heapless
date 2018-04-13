@@ -261,7 +261,9 @@ where
 
     fn deref(&self) -> &[T] {
         let buffer: &[T] = unsafe { self.buffer.as_ref() };
-        &buffer[..self.len]
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &buffer[..self.len]
+        unsafe { slice::from_raw_parts(buffer.as_ptr(), self.len) }
     }
 }
 
@@ -272,7 +274,9 @@ where
     fn deref_mut(&mut self) -> &mut [T] {
         let len = self.len();
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
-        &mut buffer[..len]
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &mut buffer[..len]
+        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr(), len) }
     }
 }
 
