@@ -113,7 +113,6 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(core_intrinsics)]
-#![feature(conservative_impl_trait)]
 #![feature(unsize)]
 #![no_std]
 
@@ -124,11 +123,11 @@ pub use ring_buffer::RingBuffer;
 pub use string::String;
 pub use vec::Vec;
 
-mod linear_map;
 mod cfail;
+mod linear_map;
+pub mod ring_buffer;
 mod string;
 mod vec;
-pub mod ring_buffer;
 
 /// Error raised when the buffer is full
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

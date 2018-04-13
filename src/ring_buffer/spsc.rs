@@ -1,15 +1,15 @@
 use core::marker::{PhantomData, Unsize};
 use core::ptr::{self, NonNull};
 
-use BufferFullError;
 use ring_buffer::RingBuffer;
+use BufferFullError;
 
 impl<T, A> RingBuffer<T, A>
 where
     A: Unsize<[T]>,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
-    pub fn split(&mut self) -> (Producer<T, A>, Consumer<T, A>) {
+    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, A>, Consumer<'rb, T, A>) {
         (
             Producer {
                 rb: unsafe { NonNull::new_unchecked(self) },
