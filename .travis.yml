@@ -33,10 +33,7 @@ script:
 
 after_script: set +e
 
-cache:
-  cargo: true
-  directories:
-    - $HOME/.xargo
+cache: cargo
 
 before_cache:
   # Travis can't cache files that are not readable by "others"
