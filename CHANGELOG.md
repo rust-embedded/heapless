@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.5] - 2018-04-13
+
+### Fixed
+
+- Dereferencing `heapless::Vec` no longer incurs in a bounds check.
+
 ## [v0.2.4] - 2018-03-12
 
 ### Fixed
@@ -57,7 +63,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.5...HEAD
+[v0.2.5]: https://github.com/japaric/heapless/compare/v0.2.4...v0.2.5
 [v0.2.4]: https://github.com/japaric/heapless/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/japaric/heapless/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/japaric/heapless/compare/v0.2.1...v0.2.2
