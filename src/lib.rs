@@ -74,6 +74,7 @@
 //!
 //! static mut RB: RingBuffer<Event, [Event; 4]> = RingBuffer::new();
 //!
+//! #[derive(Debug)]
 //! enum Event { A, B }
 //!
 //! fn main() {
@@ -130,5 +131,8 @@ mod string;
 mod vec;
 
 /// Error raised when the buffer is full
+///
+/// If ownership of an item was given to a push-like function it will be
+/// returned in this struct, otherwise this will contain `()`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct BufferFullError;
+pub struct BufferFullError<T> (T);

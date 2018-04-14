@@ -99,8 +99,8 @@ where
 
     /// Adds an `item` to the end of the queue
     ///
-    /// Returns `BufferFullError` if the queue is full
-    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
+    /// Returns a `BufferFullError` containing `item` if the queue is full
+    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError<T>> {
         let n = self.capacity() + 1;
 
         let head = self.head.get_mut();
@@ -116,7 +116,7 @@ where
             *tail = next_tail;
             Ok(())
         } else {
-            Err(BufferFullError)
+            Err(BufferFullError(item))
         }
     }
 
@@ -267,6 +267,7 @@ mod tests {
 
     #[test]
     fn drop() {
+        #[derive(Debug)]
         struct Droppable;
         impl Droppable {
             fn new() -> Self {
