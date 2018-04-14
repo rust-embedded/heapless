@@ -81,8 +81,8 @@ where
 {
     /// Adds an `item` to the end of the queue
     ///
-    /// Returns `BufferFullError` if the queue is full
-    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
+    /// Returns a `BufferFullError` containing `item` if the queue is full
+    pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError<T>> {
         let rb = unsafe { self.rb.as_mut() };
 
         let n = rb.capacity() + 1;
@@ -102,7 +102,7 @@ where
             rb.tail.store_release(next_tail);
             Ok(())
         } else {
-            Err(BufferFullError)
+            Err(BufferFullError(item))
         }
     }
 }

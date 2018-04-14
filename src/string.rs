@@ -167,7 +167,7 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str(&mut self, string: &str) -> Result<(), BufferFullError> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), BufferFullError<()>> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -210,11 +210,12 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> Result<(), BufferFullError> {
+    pub fn push(&mut self, c: char) -> Result<(), BufferFullError<char>> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8),
+            1 => self.vec.push(c as u8).map_err(|_| BufferFullError(c)),
             _ => self.vec
-                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
+                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes())
+                .map_err(|_| BufferFullError(c)),
         }
     }
 

@@ -57,16 +57,17 @@ where
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), BufferFullError>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), BufferFullError<()>>
     where
         T: Clone,
     {
         if self.len() + other.len() > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
-            Err(BufferFullError)
+            Err(BufferFullError(()))
         } else {
             for elem in other {
-                self.push(elem.clone())?
+                // in the event of an error throw away the returned clone
+                self.push(elem.clone()).map_err(|_| BufferFullError(()))?
             }
             Ok(())
         }
@@ -87,8 +88,8 @@ where
 
     /// Appends an element to the back of the collection
     ///
-    /// Returns `BufferFullError` if the vector is full
-    pub fn push(&mut self, item: T) -> Result<(), BufferFullError> {
+    /// Returns `BufferFullError` containing `item` if the vector is full
+    pub fn push(&mut self, item: T) -> Result<(), BufferFullError<T>> {
         let capacity = self.capacity();
         let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
 
@@ -99,7 +100,7 @@ where
             self.len += 1;
             Ok(())
         } else {
-            Err(BufferFullError)
+            Err(BufferFullError(item))
         }
     }
 
@@ -124,12 +125,12 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`].
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), BufferFullError>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), BufferFullError<T>>
     where
         T: Clone,
     {
         if new_len > self.capacity() {
-            return Err(BufferFullError);
+            return Err(BufferFullError(value));
         }
 
         if new_len > self.len {
@@ -150,11 +151,12 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`].
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), BufferFullError>
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), BufferFullError<()>>
     where
         T: Clone + Default,
     {
-        self.resize(new_len, T::default())
+        // in the event of an error throw away the created default
+        self.resize(new_len, T::default()).map_err(|_| BufferFullError(()))
     }
 
     /// Removes an element from the vector and returns it.
@@ -322,6 +324,7 @@ mod tests {
 
     #[test]
     fn drop() {
+        #[derive(Debug)]
         struct Droppable;
         impl Droppable {
             fn new() -> Self {
