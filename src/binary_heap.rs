@@ -1,0 +1,460 @@
+//! A priority queue implemented with a binary heap.
+//!
+//! Insertion and popping the largest element have `O(log n)` time complexity. Checking the largest
+//! / smallest element is `O(1)`.
+
+// not yet implemented
+// Converting a vector to a binary heap can be done in-place, and has `O(n)` complexity. A binary
+// heap can also be converted to a sorted vector in-place, allowing it to be used for an `O(n log
+// n)` in-place heapsort.
+
+use core::cmp::Ordering;
+use core::marker::{PhantomData, Unsize};
+use core::{mem, ptr, slice};
+
+use {BufferFullError, Vec};
+
+/// Min-heap
+pub enum Min {}
+
+/// Max-heap
+pub enum Max {}
+
+/// The binary heap kind: min-heap or max-heap
+///
+/// Do *not* implement this trait yourself!
+pub unsafe trait Kind {
+    #[doc(hidden)]
+    fn ordering() -> Ordering;
+}
+
+unsafe impl Kind for Min {
+    fn ordering() -> Ordering {
+        Ordering::Less
+    }
+}
+
+unsafe impl Kind for Max {
+    fn ordering() -> Ordering {
+        Ordering::Greater
+    }
+}
+
+/// A priority queue implemented with a binary heap.
+///
+/// This can be either a min-heap or a max-heap.
+///
+/// It is a logic error for an item to be modified in such a way that the item's ordering relative
+/// to any other item, as determined by the `Ord` trait, changes while it is in the heap. This is
+/// normally only possible through `Cell`, `RefCell`, global state, I/O, or unsafe code.
+///
+/// ```
+///
+/// use heapless::binary_heap::{BinaryHeap, Max};
+///
+/// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+///
+/// // We can use peek to look at the next item in the heap. In this case,
+/// // there's no items in there yet so we get None.
+/// assert_eq!(heap.peek(), None);
+///
+/// // Let's add some scores...
+/// heap.push(1).unwrap();
+/// heap.push(5).unwrap();
+/// heap.push(2).unwrap();
+///
+/// // Now peek shows the most important item in the heap.
+/// assert_eq!(heap.peek(), Some(&5));
+///
+/// // We can check the length of a heap.
+/// assert_eq!(heap.len(), 3);
+///
+/// // We can iterate over the items in the heap, although they are returned in
+/// // a random order.
+/// for x in &heap {
+///     println!("{}", x);
+/// }
+///
+/// // If we instead pop these scores, they should come back in order.
+/// assert_eq!(heap.pop(), Some(5));
+/// assert_eq!(heap.pop(), Some(2));
+/// assert_eq!(heap.pop(), Some(1));
+/// assert_eq!(heap.pop(), None);
+///
+/// // We can clear the heap of any remaining items.
+/// heap.clear();
+///
+/// // The heap should now be empty.
+/// assert!(heap.is_empty())
+/// ```
+pub struct BinaryHeap<T, ARRAY, KIND>
+where
+    ARRAY: Unsize<[T]>,
+    KIND: Kind,
+    T: Ord,
+{
+    _kind: PhantomData<KIND>,
+    data: Vec<T, ARRAY>,
+}
+
+impl<T, A, K> BinaryHeap<T, A, K>
+where
+    A: Unsize<[T]>,
+    K: Kind,
+    T: Ord,
+{
+    /* Constructors */
+    /// Creates an empty BinaryHeap as a $K-heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(4).unwrap();
+    /// ```
+    pub const fn new() -> Self {
+        BinaryHeap {
+            _kind: PhantomData,
+            data: Vec::new(),
+        }
+    }
+
+    /* Public API */
+    /// Drops all items from the binary heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(3).unwrap();
+    ///
+    /// assert!(!heap.is_empty());
+    ///
+    /// heap.clear();
+    ///
+    /// assert!(heap.is_empty());
+    /// ```
+    pub fn clear(&mut self) {
+        self.data.clear()
+    }
+
+    /// Returns the length of the binary heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(3).unwrap();
+    ///
+    /// assert_eq!(heap.len(), 2);
+    /// ```
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Checks if the binary heap is empty.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    ///
+    /// assert!(heap.is_empty());
+    ///
+    /// heap.push(3).unwrap();
+    /// heap.push(5).unwrap();
+    /// heap.push(1).unwrap();
+    ///
+    /// assert!(!heap.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns an iterator visiting all values in the underlying vector, in arbitrary order.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(2).unwrap();
+    /// heap.push(3).unwrap();
+    /// heap.push(4).unwrap();
+    ///
+    /// // Print 1, 2, 3, 4 in arbitrary order
+    /// for x in heap.iter() {
+    ///     println!("{}", x);
+    ///
+    /// }
+    /// ```
+    pub fn iter(&self) -> slice::Iter<T> {
+        self.data.iter()
+    }
+
+    /// Returns the *top* (greatest if max-heap, smallest if min-heap) item in the binary heap, or
+    /// None if it is empty.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// assert_eq!(heap.peek(), None);
+    ///
+    /// heap.push(1).unwrap();
+    /// heap.push(5).unwrap();
+    /// heap.push(2).unwrap();
+    /// assert_eq!(heap.peek(), Some(&5));
+    /// ```
+    pub fn peek(&self) -> Option<&T> {
+        self.data.get(0)
+    }
+
+    /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
+    /// returns it, or None if it is empty.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(3).unwrap();
+    ///
+    /// assert_eq!(heap.pop(), Some(3));
+    /// assert_eq!(heap.pop(), Some(1));
+    /// assert_eq!(heap.pop(), None);
+    /// ```
+    pub fn pop(&mut self) -> Option<T> {
+        self.data.pop().map(|mut item| {
+            if !self.is_empty() {
+                mem::swap(&mut item, &mut self.data[0]);
+                self.sift_down_to_bottom(0);
+            }
+            item
+        })
+    }
+
+    /// Pushes an item onto the binary heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// heap.push(3).unwrap();
+    /// heap.push(5).unwrap();
+    /// heap.push(1).unwrap();
+    ///
+    /// assert_eq!(heap.len(), 3);
+    /// assert_eq!(heap.peek(), Some(&5));
+    /// ```
+    pub fn push(&mut self, item: T) -> Result<(), BufferFullError> {
+        let old_len = self.len();
+        self.data.push(item)?;
+        self.sift_up(0, old_len);
+        Ok(())
+    }
+
+    /* Private API */
+    fn sift_down_to_bottom(&mut self, mut pos: usize) {
+        let end = self.len();
+        let start = pos;
+        unsafe {
+            let mut hole = Hole::new(&mut self.data, pos);
+            let mut child = 2 * pos + 1;
+            while child < end {
+                let right = child + 1;
+                // compare with the greater of the two children
+                if right < end && hole.get(child).cmp(hole.get(right)) != K::ordering() {
+                    child = right;
+                }
+                hole.move_to(child);
+                child = 2 * hole.pos() + 1;
+            }
+            pos = hole.pos;
+        }
+        self.sift_up(start, pos);
+    }
+
+    fn sift_up(&mut self, start: usize, pos: usize) -> usize {
+        unsafe {
+            // Take out the value at `pos` and create a hole.
+            let mut hole = Hole::new(&mut self.data, pos);
+
+            while hole.pos() > start {
+                let parent = (hole.pos() - 1) / 2;
+                if hole.element().cmp(hole.get(parent)) != K::ordering() {
+                    break;
+                }
+                hole.move_to(parent);
+            }
+            hole.pos()
+        }
+    }
+}
+
+/// Hole represents a hole in a slice i.e. an index without valid value
+/// (because it was moved from or duplicated).
+/// In drop, `Hole` will restore the slice by filling the hole
+/// position with the value that was originally removed.
+struct Hole<'a, T: 'a> {
+    data: &'a mut [T],
+    /// `elt` is always `Some` from new until drop.
+    elt: Option<T>,
+    pos: usize,
+}
+
+impl<'a, T> Hole<'a, T> {
+    /// Create a new Hole at index `pos`.
+    ///
+    /// Unsafe because pos must be within the data slice.
+    #[inline]
+    unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
+        debug_assert!(pos < data.len());
+        let elt = ptr::read(&data[pos]);
+        Hole {
+            data,
+            elt: Some(elt),
+            pos,
+        }
+    }
+
+    #[inline]
+    fn pos(&self) -> usize {
+        self.pos
+    }
+
+    /// Returns a reference to the element removed.
+    #[inline]
+    fn element(&self) -> &T {
+        self.elt.as_ref().unwrap()
+    }
+
+    /// Returns a reference to the element at `index`.
+    ///
+    /// Unsafe because index must be within the data slice and not equal to pos.
+    #[inline]
+    unsafe fn get(&self, index: usize) -> &T {
+        debug_assert!(index != self.pos);
+        debug_assert!(index < self.data.len());
+        self.data.get_unchecked(index)
+    }
+
+    /// Move hole to new location
+    ///
+    /// Unsafe because index must be within the data slice and not equal to pos.
+    #[inline]
+    unsafe fn move_to(&mut self, index: usize) {
+        debug_assert!(index != self.pos);
+        debug_assert!(index < self.data.len());
+        let index_ptr: *const _ = self.data.get_unchecked(index);
+        let hole_ptr = self.data.get_unchecked_mut(self.pos);
+        ptr::copy_nonoverlapping(index_ptr, hole_ptr, 1);
+        self.pos = index;
+    }
+}
+
+impl<'a, T> Drop for Hole<'a, T> {
+    #[inline]
+    fn drop(&mut self) {
+        // fill the hole again
+        unsafe {
+            let pos = self.pos;
+            ptr::write(self.data.get_unchecked_mut(pos), self.elt.take().unwrap());
+        }
+    }
+}
+
+impl<'a, T, A, K> IntoIterator for &'a BinaryHeap<T, A, K>
+where
+    A: Unsize<[T]>,
+    K: Kind,
+    T: Ord,
+{
+    type Item = &'a T;
+    type IntoIter = slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::vec::Vec;
+
+    use binary_heap::{self, BinaryHeap};
+
+    #[test]
+    fn min() {
+        let mut heap = BinaryHeap::<_, [i32; 16], binary_heap::Min>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+
+        assert_eq!(
+            heap.iter().cloned().collect::<Vec<_>>(),
+            [1, 2, 3, 17, 19, 36, 7, 25, 100]
+        );
+
+        assert_eq!(heap.pop(), Some(1));
+
+        assert_eq!(
+            heap.iter().cloned().collect::<Vec<_>>(),
+            [2, 17, 3, 25, 19, 36, 7, 100]
+        );
+
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), Some(3));
+        assert_eq!(heap.pop(), Some(7));
+        assert_eq!(heap.pop(), Some(17));
+        assert_eq!(heap.pop(), Some(19));
+        assert_eq!(heap.pop(), Some(25));
+        assert_eq!(heap.pop(), Some(36));
+        assert_eq!(heap.pop(), Some(100));
+        assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    fn max() {
+        let mut heap = BinaryHeap::<_, [i32; 16], binary_heap::Max>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+
+        assert_eq!(
+            heap.iter().cloned().collect::<Vec<_>>(),
+            [100, 36, 19, 25, 3, 2, 7, 1, 17]
+        );
+
+        assert_eq!(heap.pop(), Some(100));
+
+        assert_eq!(
+            heap.iter().cloned().collect::<Vec<_>>(),
+            [36, 25, 19, 17, 3, 2, 7, 1]
+        );
+
+        assert_eq!(heap.pop(), Some(36));
+        assert_eq!(heap.pop(), Some(25));
+        assert_eq!(heap.pop(), Some(19));
+        assert_eq!(heap.pop(), Some(17));
+        assert_eq!(heap.pop(), Some(7));
+        assert_eq!(heap.pop(), Some(3));
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+    }
+}

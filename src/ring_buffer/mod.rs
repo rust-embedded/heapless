@@ -42,6 +42,63 @@ impl AtomicUsize {
 }
 
 /// An statically allocated ring buffer backed by an array `A`
+///
+/// # Examples
+///
+/// ```
+/// use heapless::RingBuffer;
+///
+/// let mut rb: RingBuffer<u8, [u8; 4]> = RingBuffer::new();
+///
+/// assert!(rb.enqueue(0).is_ok());
+/// assert!(rb.enqueue(1).is_ok());
+/// assert!(rb.enqueue(2).is_ok());
+/// assert!(rb.enqueue(3).is_err()); // full
+///
+/// assert_eq!(rb.dequeue(), Some(0));
+/// ```
+///
+/// ### Single producer single consumer mode
+///
+/// ```
+/// use heapless::RingBuffer;
+///
+/// static mut RB: RingBuffer<Event, [Event; 4]> = RingBuffer::new();
+///
+/// enum Event { A, B }
+///
+/// fn main() {
+///     // NOTE(unsafe) beware of aliasing the `consumer` end point
+///     let mut consumer = unsafe { RB.split().1 };
+///
+///     loop {
+///         // `dequeue` is a lockless operation
+///         match consumer.dequeue() {
+///             Some(Event::A) => { /* .. */ },
+///             Some(Event::B) => { /* .. */ },
+///             None => { /* sleep */},
+///         }
+/// #       break
+///     }
+/// }
+///
+/// // this is a different execution context that can preempt `main`
+/// fn interrupt_handler() {
+///     // NOTE(unsafe) beware of aliasing the `producer` end point
+///     let mut producer = unsafe { RB.split().0 };
+/// #   let condition = true;
+///
+///     // ..
+///
+///     if condition {
+///         producer.enqueue(Event::A).unwrap();
+///     } else {
+///         producer.enqueue(Event::B).unwrap();
+///     }
+///
+///     // ..
+/// }
+/// ```
 pub struct RingBuffer<T, A>
 where
     // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
