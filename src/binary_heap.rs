@@ -120,6 +120,11 @@ where
     }
 
     /* Public API */
+    /// Returns the capacity of the binary heap.
+    pub fn capacity(&self) -> usize {
+        self.data.capacity()
+    }
+
     /// Drops all items from the binary heap.
     ///
     /// ```
@@ -192,6 +197,14 @@ where
     /// ```
     pub fn iter(&self) -> slice::Iter<T> {
         self.data.iter()
+    }
+
+    /// Returns a mutable iterator visiting all values in the underlying vector, in arbitrary order.
+    ///
+    /// **WARNING** Mutating the items in the binary heap can leave the heap in an inconsistent
+    /// state.
+    pub fn iter_mut(&mut self) -> slice::IterMut<T> {
+        self.data.iter_mut()
     }
 
     /// Returns the *top* (greatest if max-heap, smallest if min-heap) item in the binary heap, or
