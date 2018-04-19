@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.6] - 2018-04-18
+
+### Added
+
+- A `BinaryHeap` implementation. `BinaryHeap` is a priority queue implemented with a binary heap.
+
 ## [v0.2.5] - 2018-04-13
 
 ### Fixed
@@ -63,7 +69,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.6...HEAD
+[v0.2.6]: https://github.com/japaric/heapless/compare/v0.2.5...v0.2.6
 [v0.2.5]: https://github.com/japaric/heapless/compare/v0.2.4...v0.2.5
 [v0.2.4]: https://github.com/japaric/heapless/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/japaric/heapless/compare/v0.2.2...v0.2.3
