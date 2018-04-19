@@ -273,50 +273,43 @@ where
     len: usize,
 }
 
-impl<'a, T, A> Iterator for Iter<'a, T, A>
-where
-    A: Unsize<[T]> + 'a,
-    T: 'a,
-{
-    type Item = &'a T;
+macro_rules! iterator {
+    (struct $name:ident -> $elem:ty, $buffer:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident)=> {
+        impl<'a, T, A> Iterator for $name<'a, T, A>
+        where
+            A: Unsize<[T]> + 'a,
+            T: 'a,
+        {
+            type Item = $elem;
 
-    fn next(&mut self) -> Option<&'a T> {
-        if self.index < self.len {
-            let head = self.rb.head.load_relaxed();
+            fn next(&mut self) -> Option<$elem> {
+                if self.index < self.len {
+                    let head = self.rb.head.load_relaxed();
 
-            let buffer: &[T] = unsafe { self.rb.buffer.as_ref() };
-            let ptr = buffer.as_ptr();
-            let i = (head + self.index) % (self.rb.capacity() + 1);
-            self.index += 1;
-            Some(unsafe { &*ptr.offset(i as isize) })
-        } else {
-            None
+                    let capacity = self.rb.capacity() + 1;
+                    let buffer: $buffer = unsafe { self.rb.buffer.$asref() };
+                    let ptr: $ptr = buffer.$asptr();
+                    let i = (head + self.index) % capacity;
+                    self.index += 1;
+                    Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
+                } else {
+                    None
+                }
+            }
         }
     }
 }
 
-impl<'a, T, A> Iterator for IterMut<'a, T, A>
-where
-    A: Unsize<[T]> + 'a,
-    T: 'a,
-{
-    type Item = &'a mut T;
-
-    fn next(&mut self) -> Option<&'a mut T> {
-        if self.index < self.len {
-            let head = self.rb.head.load_relaxed();
-
-            let capacity = self.rb.capacity() + 1;
-            let buffer: &mut [T] = unsafe { self.rb.buffer.as_mut() };
-            let ptr: *mut T = buffer.as_mut_ptr();
-            let i = (head + self.index) % capacity;
-            self.index += 1;
-            Some(unsafe { &mut *ptr.offset(i as isize) })
-        } else {
-            None
-        }
-    }
+macro_rules! make_ref {
+    ($e:expr) => {& ($e)}
 }
+
+macro_rules! make_ref_mut {
+    ($e:expr) => {&mut ($e)}
+}
+
+iterator!(struct Iter -> &'a T, &[T], *const T, as_ref, as_ptr, make_ref);
+iterator!(struct IterMut -> &'a mut T, &mut [T], *mut T, as_mut, as_mut_ptr, make_ref_mut);
 
 #[cfg(test)]
 mod tests {
