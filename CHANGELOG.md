@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.2.7] - 2018-04-20
+
+### Added
+
+- Unchecked methods to dequeue and enqueue items into a `RingBuffer` via the `Consumer` and
+  `Producer` end points.
+
+### Changed
+
+- `RingBuffer` now has a generic index type, which default to `usize` for backward compatibility.
+  Changing the index type to `u8` or `u16` reduces the footprint of the `RingBuffer` but limits its
+  maximum capacity (254 and 65534, respectively).
+
 ## [v0.2.6] - 2018-04-18
 
 ### Added
@@ -69,7 +82,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.7...HEAD
+[v0.2.7]: https://github.com/japaric/heapless/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/japaric/heapless/compare/v0.2.5...v0.2.6
 [v0.2.5]: https://github.com/japaric/heapless/compare/v0.2.4...v0.2.5
 [v0.2.4]: https://github.com/japaric/heapless/compare/v0.2.3...v0.2.4
