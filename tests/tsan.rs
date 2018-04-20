@@ -118,3 +118,38 @@ fn contention() {
 
     assert!(rb.is_empty());
 }
+
+#[test]
+fn unchecked() {
+    const N: usize = 1024;
+
+    let mut rb: RingBuffer<u8, [u8; 2 * N + 1]> = RingBuffer::new();
+
+    for _ in 0..N {
+        rb.enqueue(1).unwrap();
+    }
+
+    {
+        let (mut p, mut c) = rb.split();
+
+        Pool::new(2).scoped(move |scope| {
+            scope.execute(move || {
+                for _ in 0..N {
+                    p.enqueue_unchecked(2);
+                }
+            });
+
+            scope.execute(move || {
+                let mut sum: usize = 0;
+
+                for _ in 0..N {
+                    sum = sum.wrapping_add(usize::from(unsafe { c.dequeue_unchecked() }));
+                }
+
+                assert_eq!(sum, N);
+            });
+        });
+    }
+
+    assert_eq!(rb.len(), N);
+}
