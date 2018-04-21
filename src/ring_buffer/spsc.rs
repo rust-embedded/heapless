@@ -1,16 +1,17 @@
-use core::marker::{PhantomData, Unsize};
+use core::marker::PhantomData;
 use core::ptr::{self, NonNull};
 
-use ring_buffer::{RingBuffer, Uxx};
-use BufferFullError;
+use generic_array::ArrayLength;
 
-impl<T, A, U> RingBuffer<T, A, U>
+use ring_buffer::{RingBuffer, Uxx};
+
+impl<T, N, U> RingBuffer<T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
-    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, A, U>, Consumer<'rb, T, A, U>) {
+    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, N, U>, Consumer<'rb, T, N, U>) {
         (
             Producer {
                 rb: unsafe { NonNull::new_unchecked(self) },
@@ -26,19 +27,19 @@ where
 
 /// A ring buffer "consumer"; it can dequeue items from the ring buffer
 // NOTE the consumer semantically owns the `head` pointer of the ring buffer
-pub struct Consumer<'a, T, A, U = usize>
+pub struct Consumer<'a, T, N, U = usize>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     // XXX do we need to use `NonNull` (for soundness) here?
-    rb: NonNull<RingBuffer<T, A, U>>,
+    rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, A, U> Send for Consumer<'a, T, A, U>
+unsafe impl<'a, T, N, U> Send for Consumer<'a, T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {
@@ -46,19 +47,19 @@ where
 
 /// A ring buffer "producer"; it can enqueue items into the ring buffer
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
-pub struct Producer<'a, T, A, U = usize>
+pub struct Producer<'a, T, N, U = usize>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     // XXX do we need to use `NonNull` (for soundness) here?
-    rb: NonNull<RingBuffer<T, A, U>>,
+    rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, A, U> Send for Producer<'a, T, A, U>
+unsafe impl<'a, T, N, U> Send for Producer<'a, T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {
@@ -66,9 +67,9 @@ where
 
 macro_rules! impl_ {
     ($uxx:ident) => {
-        impl<'a, T, A> Consumer<'a, T, A, $uxx>
+        impl<'a, T, N> Consumer<'a, T, N, $uxx>
         where
-            A: Unsize<[T]>,
+            N: ArrayLength<T>,
         {
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
@@ -105,14 +106,14 @@ macro_rules! impl_ {
             }
         }
 
-        impl<'a, T, A> Producer<'a, T, A, $uxx>
+        impl<'a, T, N> Producer<'a, T, N, $uxx>
         where
-            A: Unsize<[T]>,
+            N: ArrayLength<T>,
         {
             /// Adds an `item` to the end of the queue
             ///
-            /// Returns `BufferFullError` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
+            /// Returns back the `item` if the queue is full
+            pub fn enqueue(&mut self, item: T) -> Result<(), T> {
                 let n = unsafe { self.rb.as_ref().capacity() + 1 };
                 let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
                 // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method
@@ -126,7 +127,7 @@ macro_rules! impl_ {
                     unsafe { self._enqueue(tail, item) };
                     Ok(())
                 } else {
-                    Err(BufferFullError)
+                    Err(item)
                 }
             }
 
@@ -169,11 +170,12 @@ impl_!(usize);
 
 #[cfg(test)]
 mod tests {
+    use consts::*;
     use RingBuffer;
 
     #[test]
     fn sanity() {
-        static mut RB: RingBuffer<i32, [i32; 2]> = RingBuffer::new();
+        static mut RB: RingBuffer<i32, U2> = RingBuffer::new();
 
         let (mut p, mut c) = unsafe { RB.split() };
 

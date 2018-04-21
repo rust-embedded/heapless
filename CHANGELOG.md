@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.0] - 2018-04-22
+
+### Changed
+
+- [breaking-change] The capacity of all data structures must now be specified using type level
+  integers (cf. `typenum`). See documentation for details.
+
+- [breaking-change] `BufferFullError` has been removed in favor of (a) returning ownership of the
+  item that couldn't be added to the collection (cf. `Vec.push`), or (b) returning the unit type
+  when the argument was not consumed (cf. `Vec.extend_from_slice`).
+
 ## [v0.2.7] - 2018-04-20
 
 ### Added
@@ -82,7 +93,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/japaric/heapless/compare/v0.2.7...v0.3.0
 [v0.2.7]: https://github.com/japaric/heapless/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/japaric/heapless/compare/v0.2.5...v0.2.6
 [v0.2.5]: https://github.com/japaric/heapless/compare/v0.2.4...v0.2.5

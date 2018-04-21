@@ -16,10 +16,10 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.2.7"
-
-[dependencies]
-untagged-option = "0.1.1"
+version = "0.3.0"
 
 [dev-dependencies]
 scoped_threadpool = "0.1.8"
+
+[dependencies]
+generic-array = "0.11.0"

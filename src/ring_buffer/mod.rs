@@ -1,13 +1,13 @@
 //! Ring buffer
 
 use core::cell::UnsafeCell;
-use core::marker::{PhantomData, Unsize};
 use core::{intrinsics, ptr};
 
-use untagged_option::UntaggedOption;
+use generic_array::typenum::{B1, UInt};
+use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
-use BufferFullError;
+use __core::mem::{self, ManuallyDrop};
 
 mod spsc;
 
@@ -83,7 +83,7 @@ where
     }
 }
 
-/// An statically allocated ring buffer backed by an array `A`
+/// A statically allocated ring buffer with a capacity of `N`
 ///
 /// By default `RingBuffer` will use `usize` integers to hold the indices to its head and tail. For
 /// small ring buffers `usize` may be overkill. However, `RingBuffer`'s index type is generic and
@@ -97,8 +97,9 @@ where
 ///
 /// ```
 /// use heapless::RingBuffer;
+/// use heapless::consts::*;
 ///
-/// let mut rb: RingBuffer<u8, [u8; 4]> = RingBuffer::new();
+/// let mut rb: RingBuffer<u8, U3> = RingBuffer::new();
 ///
 /// assert!(rb.enqueue(0).is_ok());
 /// assert!(rb.enqueue(1).is_ok());
@@ -112,8 +113,9 @@ where
 ///
 /// ```
 /// use heapless::RingBuffer;
+/// use heapless::consts::*;
 ///
-/// static mut RB: RingBuffer<Event, [Event; 4]> = RingBuffer::new();
+/// static mut RB: RingBuffer<Event, U4> = RingBuffer::new();
 ///
 /// enum Event { A, B }
 ///
@@ -141,41 +143,36 @@ where
 ///     // ..
 ///
 ///     if condition {
-///         producer.enqueue(Event::A).unwrap();
+///         producer.enqueue(Event::A).ok().unwrap();
 ///     } else {
-///         producer.enqueue(Event::B).unwrap();
+///         producer.enqueue(Event::B).ok().unwrap();
 ///     }
 ///
 ///     // ..
 /// }
 /// ```
-pub struct RingBuffer<T, A, U = usize>
+pub struct RingBuffer<T, N, U = usize>
 where
-    // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
-    _marker: PhantomData<[T]>,
-
     // this is from where we dequeue items
     head: Atomic<U>,
 
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: UntaggedOption<A>,
+    buffer: ManuallyDrop<GenericArray<T, UInt<N, B1>>>,
 }
 
-impl<T, A, U> RingBuffer<T, A, U>
+impl<T, N, U> RingBuffer<T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     /// Returns the maximum number of elements the ring buffer can hold
     pub fn capacity(&self) -> U {
-        let buffer: &[T] = unsafe { self.buffer.as_ref() };
-
-        U::truncate(buffer.len() - 1)
+        U::truncate(N::to_usize())
     }
 
     /// Returns `true` if the ring buffer has a length of 0
@@ -184,7 +181,7 @@ where
     }
 
     /// Iterates from the front of the queue to the back
-    pub fn iter(&self) -> Iter<T, A, U> {
+    pub fn iter(&self) -> Iter<T, N, U> {
         Iter {
             rb: self,
             index: 0,
@@ -193,7 +190,7 @@ where
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMut<T, A, U> {
+    pub fn iter_mut(&mut self) -> IterMut<T, N, U> {
         let len = self.len_usize();
         IterMut {
             rb: self,
@@ -214,9 +211,9 @@ where
     }
 }
 
-impl<T, A, U> Drop for RingBuffer<T, A, U>
+impl<T, N, U> Drop for RingBuffer<T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     fn drop(&mut self) {
@@ -228,26 +225,26 @@ where
     }
 }
 
-impl<'a, T, A, U> IntoIterator for &'a RingBuffer<T, A, U>
+impl<'a, T, N, U> IntoIterator for &'a RingBuffer<T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a T;
-    type IntoIter = Iter<'a, T, A, U>;
+    type IntoIter = Iter<'a, T, N, U>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, T, A, U> IntoIterator for &'a mut RingBuffer<T, A, U>
+impl<'a, T, N, U> IntoIterator for &'a mut RingBuffer<T, N, U>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a mut T;
-    type IntoIter = IterMut<'a, T, A, U>;
+    type IntoIter = IterMut<'a, T, N, U>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -256,16 +253,14 @@ where
 
 macro_rules! impl_ {
     ($uxx:ident) => {
-        impl<T, A> RingBuffer<T, A, $uxx>
+        impl<T, N> RingBuffer<T, N, $uxx>
         where
-            A: Unsize<[T]>,
+            N: ArrayLength<T>,
         {
-            /// Creates an empty ring buffer with capacity equals to the length of the array `A`
-            /// *minus one*.
+            /// Creates an empty ring buffer with a fixed capacity of `N`
             pub const fn $uxx() -> Self {
                 RingBuffer {
-                    _marker: PhantomData,
-                    buffer: UntaggedOption::none(),
+                    buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
                 }
@@ -278,7 +273,7 @@ macro_rules! impl_ {
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
 
-                let buffer: &[T] = unsafe { self.buffer.as_ref() };
+                let buffer = self.buffer.as_slice();
 
                 if *head != *tail {
                     let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head))) };
@@ -291,14 +286,14 @@ macro_rules! impl_ {
 
             /// Adds an `item` to the end of the queue
             ///
-            /// Returns `BufferFullError` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> Result<(), BufferFullError> {
+            /// Returns back the `item` if the queue is full
+            pub fn enqueue(&mut self, item: T) -> Result<(), T> {
                 let n = self.capacity() + 1;
 
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
 
-                let buffer: &mut [T] = unsafe { self.buffer.as_mut() };
+                let buffer = self.buffer.as_mut_slice();
 
                 let next_tail = (*tail + 1) % n;
                 if next_tail != *head {
@@ -309,7 +304,7 @@ macro_rules! impl_ {
                     *tail = next_tail;
                     Ok(())
                 } else {
-                    Err(BufferFullError)
+                    Err(item)
                 }
             }
 
@@ -325,12 +320,12 @@ macro_rules! impl_ {
                 }
             }
         }
-    }
+    };
 }
 
-impl<T, A> RingBuffer<T, A, usize>
+impl<T, N> RingBuffer<T, N, usize>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
 {
     /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
     pub const fn new() -> Self {
@@ -343,34 +338,34 @@ impl_!(u16);
 impl_!(usize);
 
 /// An iterator over a ring buffer items
-pub struct Iter<'a, T, A, U>
+pub struct Iter<'a, T, N, U>
 where
-    A: Unsize<[T]> + 'a,
+    N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + Uxx,
 {
-    rb: &'a RingBuffer<T, A, U>,
+    rb: &'a RingBuffer<T, N, U>,
     index: usize,
     len: usize,
 }
 
 /// A mutable iterator over a ring buffer items
-pub struct IterMut<'a, T, A, U>
+pub struct IterMut<'a, T, N, U>
 where
-    A: Unsize<[T]> + 'a,
+    N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + Uxx,
 {
-    rb: &'a mut RingBuffer<T, A, U>,
+    rb: &'a mut RingBuffer<T, N, U>,
     index: usize,
     len: usize,
 }
 
 macro_rules! iterator {
-    (struct $name:ident -> $elem:ty, $buffer:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident)=> {
-        impl<'a, T, A, U> Iterator for $name<'a, T, A, U>
-            where
-            A: Unsize<[T]> + 'a,
+    (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
+        impl<'a, T, N, U> Iterator for $name<'a, T, N, U>
+        where
+            N: ArrayLength<T> + 'a,
             T: 'a,
             U: 'a + Uxx,
         {
@@ -381,7 +376,7 @@ macro_rules! iterator {
                     let head = self.rb.head.load_relaxed().into();
 
                     let capacity = self.rb.capacity().into() + 1;
-                    let buffer: $buffer = unsafe { self.rb.buffer.$asref() };
+                    let buffer = self.rb.buffer.$asref();
                     let ptr: $ptr = buffer.$asptr();
                     let i = (head + self.index) % capacity;
                     self.index += 1;
@@ -391,22 +386,27 @@ macro_rules! iterator {
                 }
             }
         }
-    }
+    };
 }
 
 macro_rules! make_ref {
-    ($e:expr) => {& ($e)}
+    ($e:expr) => {
+        &($e)
+    };
 }
 
 macro_rules! make_ref_mut {
-    ($e:expr) => {&mut ($e)}
+    ($e:expr) => {
+        &mut ($e)
+    };
 }
 
-iterator!(struct Iter -> &'a T, &[T], *const T, as_ref, as_ptr, make_ref);
-iterator!(struct IterMut -> &'a mut T, &mut [T], *mut T, as_mut, as_mut_ptr, make_ref_mut);
+iterator!(struct Iter -> &'a T, *const T, as_slice, as_ptr, make_ref);
+iterator!(struct IterMut -> &'a mut T, *mut T, as_mut_slice, as_mut_ptr, make_ref_mut);
 
 #[cfg(test)]
 mod tests {
+    use consts::*;
     use RingBuffer;
 
     #[test]
@@ -420,6 +420,7 @@ mod tests {
                 Droppable
             }
         }
+
         impl Drop for Droppable {
             fn drop(&mut self) {
                 unsafe {
@@ -431,18 +432,18 @@ mod tests {
         static mut COUNT: i32 = 0;
 
         {
-            let mut v: RingBuffer<Droppable, [Droppable; 4]> = RingBuffer::new();
-            v.enqueue(Droppable::new()).unwrap();
-            v.enqueue(Droppable::new()).unwrap();
+            let mut v: RingBuffer<Droppable, U4> = RingBuffer::new();
+            v.enqueue(Droppable::new()).ok().unwrap();
+            v.enqueue(Droppable::new()).ok().unwrap();
             v.dequeue().unwrap();
         }
 
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: RingBuffer<Droppable, [Droppable; 4]> = RingBuffer::new();
-            v.enqueue(Droppable::new()).unwrap();
-            v.enqueue(Droppable::new()).unwrap();
+            let mut v: RingBuffer<Droppable, U4> = RingBuffer::new();
+            v.enqueue(Droppable::new()).ok().unwrap();
+            v.enqueue(Droppable::new()).ok().unwrap();
         }
 
         assert_eq!(unsafe { COUNT }, 0);
@@ -450,7 +451,7 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U3> = RingBuffer::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -461,7 +462,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -477,7 +478,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -493,7 +494,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
 
         assert_eq!(rb.dequeue(), None);
 
@@ -506,7 +507,7 @@ mod tests {
 
     #[test]
     fn u8() {
-        let mut rb: RingBuffer<u8, [u8; 256], _> = RingBuffer::u8();
+        let mut rb: RingBuffer<u8, U256, _> = RingBuffer::u8();
 
         for _ in 0..254 {
             rb.enqueue(0).unwrap();
@@ -517,7 +518,7 @@ mod tests {
 
     #[test]
     fn wrap_around() {
-        let mut rb: RingBuffer<i32, [i32; 4]> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U3> = RingBuffer::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
