@@ -3,16 +3,18 @@
 //! Insertion and popping the largest element have `O(log n)` time complexity. Checking the largest
 //! / smallest element is `O(1)`.
 
-// not yet implemented
+// TODO not yet implemented
 // Converting a vector to a binary heap can be done in-place, and has `O(n)` complexity. A binary
 // heap can also be converted to a sorted vector in-place, allowing it to be used for an `O(n log
 // n)` in-place heapsort.
 
 use core::cmp::Ordering;
-use core::marker::{PhantomData, Unsize};
+use core::marker::PhantomData;
 use core::{mem, ptr, slice};
 
-use {BufferFullError, Vec};
+use generic_array::ArrayLength;
+
+use Vec;
 
 /// Min-heap
 pub enum Min {}
@@ -49,10 +51,10 @@ unsafe impl Kind for Max {
 /// normally only possible through `Cell`, `RefCell`, global state, I/O, or unsafe code.
 ///
 /// ```
-///
 /// use heapless::binary_heap::{BinaryHeap, Max};
+/// use heapless::consts::*;
 ///
-/// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+/// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
 ///
 /// // We can use peek to look at the next item in the heap. In this case,
 /// // there's no items in there yet so we get None.
@@ -87,29 +89,30 @@ unsafe impl Kind for Max {
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, ARRAY, KIND>
+pub struct BinaryHeap<T, N, KIND>
 where
-    ARRAY: Unsize<[T]>,
-    KIND: Kind,
     T: Ord,
+    N: ArrayLength<T>,
+    KIND: Kind,
 {
     _kind: PhantomData<KIND>,
-    data: Vec<T, ARRAY>,
+    data: Vec<T, N>,
 }
 
-impl<T, A, K> BinaryHeap<T, A, K>
+impl<T, N, K> BinaryHeap<T, N, K>
 where
-    A: Unsize<[T]>,
-    K: Kind,
     T: Ord,
+    N: ArrayLength<T>,
+    K: Kind,
 {
     /* Constructors */
     /// Creates an empty BinaryHeap as a $K-heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(4).unwrap();
     /// ```
     pub const fn new() -> Self {
@@ -129,8 +132,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
@@ -148,8 +152,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
@@ -163,8 +168,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     ///
     /// assert!(heap.is_empty());
     ///
@@ -182,8 +188,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(2).unwrap();
     /// heap.push(3).unwrap();
@@ -212,8 +219,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// assert_eq!(heap.peek(), None);
     ///
     /// heap.push(1).unwrap();
@@ -230,8 +238,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
@@ -253,8 +262,9 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, [_; 8], Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(3).unwrap();
     /// heap.push(5).unwrap();
     /// heap.push(1).unwrap();
@@ -262,7 +272,7 @@ where
     /// assert_eq!(heap.len(), 3);
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
-    pub fn push(&mut self, item: T) -> Result<(), BufferFullError> {
+    pub fn push(&mut self, item: T) -> Result<(), T> {
         let old_len = self.len();
         self.data.push(item)?;
         self.sift_up(0, old_len);
@@ -379,9 +389,9 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
-impl<'a, T, A, K> IntoIterator for &'a BinaryHeap<T, A, K>
+impl<'a, T, N, K> IntoIterator for &'a BinaryHeap<T, N, K>
 where
-    A: Unsize<[T]>,
+    N: ArrayLength<T>,
     K: Kind,
     T: Ord,
 {
@@ -397,11 +407,12 @@ where
 mod tests {
     use std::vec::Vec;
 
-    use binary_heap::{self, BinaryHeap};
+    use binary_heap::{self, BinaryHeap, Min};
+    use consts::*;
 
     #[test]
     fn min() {
-        let mut heap = BinaryHeap::<_, [i32; 16], binary_heap::Min>::new();
+        let mut heap = BinaryHeap::<_, U16, Min>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();
@@ -437,7 +448,7 @@ mod tests {
 
     #[test]
     fn max() {
-        let mut heap = BinaryHeap::<_, [i32; 16], binary_heap::Max>::new();
+        let mut heap = BinaryHeap::<_, U16, binary_heap::Max>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();

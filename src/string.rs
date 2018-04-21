@@ -1,23 +1,23 @@
-use core::marker::Unsize;
 use core::str::Utf8Error;
 use core::{fmt, ops, str};
 
-use {BufferFullError, Vec};
+use generic_array::ArrayLength;
 
-/// A String backed by a fixed size `heapless::Vec`
-pub struct String<A>
+use Vec;
+
+/// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+pub struct String<N>
 where
-    // FIXME(rust-lang/rust#44580) use "const generics" instead of `Unsize`
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
-    vec: Vec<u8, A>,
+    vec: Vec<u8, N>,
 }
 
-impl<A> String<A>
+impl<N> String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
-    /// Constructs a new, empty `String`
+    /// Constructs a new, empty `String` with a fixed capacity of `N`
     ///
     /// # Examples
     ///
@@ -25,8 +25,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 4]> = String::new();
+    /// let mut s: String<U4> = String::new();
     /// ```
     #[inline]
     pub const fn new() -> Self {
@@ -49,8 +50,9 @@ where
     ///
     /// ```
     /// use heapless::{String, Vec};
+    /// use heapless::consts::*;
     ///
-    /// let mut v: Vec<u8, [u8; 8]> = Vec::new();
+    /// let mut v: Vec<u8, U8> = Vec::new();
     /// v.push('a' as u8).unwrap();
     /// v.push('b' as u8).unwrap();
     ///
@@ -62,10 +64,11 @@ where
     ///
     /// ```
     /// use heapless::{String, Vec};
+    /// use heapless::consts::*;
     ///
     /// // some invalid bytes, in a vector
     ///
-    /// let mut v: Vec<u8, [u8; 8]> = Vec::new();
+    /// let mut v: Vec<u8, U8> = Vec::new();
     /// v.push(0).unwrap();
     /// v.push(159).unwrap();
     /// v.push(146).unwrap();
@@ -73,7 +76,7 @@ where
     /// assert!(String::from_utf8(v).is_err());
     /// ```
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, A>) -> Result<(String<A>), Utf8Error> {
+    pub fn from_utf8(vec: Vec<u8, N>) -> Result<(String<N>), Utf8Error> {
         // validate input
         str::from_utf8(&*vec)?;
 
@@ -85,7 +88,7 @@ where
     ///
     /// See the safe version, `from_utf8`, for more details.
     #[inline]
-    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, A>) -> String<A> {
+    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> String<N> {
         String { vec: vec }
     }
 
@@ -99,15 +102,16 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let s: String<[_; 4]> = String::from("ab");
+    /// let s: String<U4> = String::from("ab");
     /// let b = s.into_bytes();
     /// assert!(b.len() == 2);
     ///
     /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, A> {
+    pub fn into_bytes(self) -> Vec<u8, N> {
         self.vec
     }
 
@@ -119,8 +123,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[_; 4]> = String::from("ab");
+    /// let mut s: String<U4> = String::from("ab");
     /// assert!(s.as_str() == "ab");
     ///
     /// let _s = s.as_str();
@@ -139,8 +144,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[_; 4]> = String::from("ab");
+    /// let mut s: String<U4> = String::from("ab");
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
     /// ```
@@ -157,8 +163,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 8]> = String::from("foo");
+    /// let mut s: String<U8> = String::from("foo");
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
@@ -167,7 +174,7 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str(&mut self, string: &str) -> Result<(), BufferFullError> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -179,8 +186,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 4]> = String::new();
+    /// let mut s: String<U4> = String::new();
     /// assert!(s.capacity() == 4);
     /// ```
     #[inline]
@@ -198,8 +206,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 8]> = String::from("abc");
+    /// let mut s: String<U8> = String::from("abc");
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -210,9 +219,9 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> Result<(), BufferFullError> {
+    pub fn push(&mut self, c: char) -> Result<(), ()> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8),
+            1 => self.vec.push(c as u8).map_err(|_| {}),
             _ => self.vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
         }
@@ -230,8 +239,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let s: String<[u8; 8]> = String::from("hello");
+    /// let s: String<U8> = String::from("hello");
     ///
     /// assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     #[inline]
@@ -259,8 +269,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 8]> = String::from("hello");
+    /// let mut s: String<U8> = String::from("hello");
     ///
     /// s.truncate(2);
     ///
@@ -286,8 +297,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 8]> = String::from("foo");
+    /// let mut s: String<U8> = String::from("foo");
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
@@ -317,8 +329,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut v: String<[u8; 8]> = String::new();
+    /// let mut v: String<U8> = String::new();
     /// assert!(v.is_empty());
     ///
     /// v.push('a');
@@ -340,8 +353,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let mut s: String<[u8; 8]> = String::from("foo");
+    /// let mut s: String<U8> = String::from("foo");
     ///
     /// s.clear();
     ///
@@ -362,8 +376,9 @@ where
     ///
     /// ```
     /// use heapless::String;
+    /// use heapless::consts::*;
     ///
-    /// let a: String<[u8; 8]> = String::from("foo");
+    /// let a: String<U8> = String::from("foo");
     ///
     /// assert_eq!(a.len(), 3);
     /// ```
@@ -372,9 +387,9 @@ where
     }
 }
 
-impl<'a, A> From<&'a str> for String<A>
+impl<'a, N> From<&'a str> for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     fn from(s: &'a str) -> Self {
         let mut new = String::new();
@@ -383,9 +398,9 @@ where
     }
 }
 
-impl<A> fmt::Debug for String<A>
+impl<N> fmt::Debug for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let slice: &str = &**self;
@@ -393,9 +408,9 @@ where
     }
 }
 
-impl<A> fmt::Write for String<A>
+impl<N> fmt::Write for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
@@ -406,9 +421,9 @@ where
     }
 }
 
-impl<A> ops::Deref for String<A>
+impl<N> ops::Deref for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     type Target = str;
 
@@ -417,18 +432,18 @@ where
     }
 }
 
-impl<A> ops::DerefMut for String<A>
+impl<N> ops::DerefMut for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<A> AsRef<str> for String<A>
+impl<N> AsRef<str> for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     #[inline]
     fn as_ref(&self) -> &str {
@@ -436,9 +451,9 @@ where
     }
 }
 
-impl<A> AsRef<[u8]> for String<A>
+impl<N> AsRef<[u8]> for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -446,25 +461,25 @@ where
     }
 }
 
-impl<A, B> PartialEq<String<B>> for String<A>
+impl<N1, N2> PartialEq<String<N2>> for String<N1>
 where
-    A: Unsize<[u8]>,
-    B: Unsize<[u8]>,
+    N1: ArrayLength<u8>,
+    N2: ArrayLength<u8>,
 {
-    fn eq(&self, rhs: &String<B>) -> bool {
+    fn eq(&self, rhs: &String<N2>) -> bool {
         PartialEq::eq(&**self, &**rhs)
     }
 
-    fn ne(&self, rhs: &String<B>) -> bool {
+    fn ne(&self, rhs: &String<N2>) -> bool {
         PartialEq::ne(&**self, &**rhs)
     }
 }
 
 macro_rules! impl_eq {
     ($lhs:ty, $rhs:ty) => {
-        impl<'a, 'b, A> PartialEq<$rhs> for $lhs
+        impl<'a, 'b, N> PartialEq<$rhs> for $lhs
         where
-            A: Unsize<[u8]>,
+            N: ArrayLength<u8>,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -476,9 +491,9 @@ macro_rules! impl_eq {
             }
         }
 
-        impl<'a, 'b, A> PartialEq<$lhs> for $rhs
+        impl<'a, 'b, N> PartialEq<$lhs> for $rhs
         where
-            A: Unsize<[u8]>,
+            N: ArrayLength<u8>,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -492,17 +507,18 @@ macro_rules! impl_eq {
     };
 }
 
-impl_eq! { String<A>, str }
-impl_eq! { String<A>, &'a str }
+impl_eq! { String<N>, str }
+impl_eq! { String<N>, &'a str }
 
-impl<A> Eq for String<A>
+impl<N> Eq for String<N>
 where
-    A: Unsize<[u8]>,
+    N: ArrayLength<u8>,
 {
 }
 
 #[cfg(test)]
 mod tests {
+    use consts::*;
     use {String, Vec};
 
     #[test]
@@ -511,7 +527,7 @@ mod tests {
 
         use core::fmt::Write;
 
-        let s: String<[u8; 8]> = String::from("abcd");
+        let s: String<U8> = String::from("abcd");
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
@@ -519,7 +535,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let s: String<[u8; 4]> = String::new();
+        let s: String<U4> = String::new();
         assert!(s.capacity() == 4);
         assert_eq!(s, "");
         assert_eq!(s.len(), 0);
@@ -528,7 +544,7 @@ mod tests {
 
     #[test]
     fn from() {
-        let s: String<[u8; 4]> = String::from("123");
+        let s: String<U4> = String::from("123");
         assert!(s.len() == 3);
         assert_eq!(s, "123");
     }
@@ -536,12 +552,12 @@ mod tests {
     #[test]
     #[should_panic]
     fn from_panic() {
-        let _: String<[u8; 4]> = String::from("12345");
+        let _: String<U4> = String::from("12345");
     }
 
     #[test]
     fn from_utf8() {
-        let mut v: Vec<u8, [u8; 8]> = Vec::new();
+        let mut v: Vec<u8, U8> = Vec::new();
         v.push('a' as u8).unwrap();
         v.push('b' as u8).unwrap();
 
@@ -551,7 +567,7 @@ mod tests {
 
     #[test]
     fn from_utf8_uenc() {
-        let mut v: Vec<u8, [u8; 8]> = Vec::new();
+        let mut v: Vec<u8, U8> = Vec::new();
         v.push(240).unwrap();
         v.push(159).unwrap();
         v.push(146).unwrap();
@@ -562,7 +578,7 @@ mod tests {
 
     #[test]
     fn from_utf8_uenc_err() {
-        let mut v: Vec<u8, [u8; 8]> = Vec::new();
+        let mut v: Vec<u8, U8> = Vec::new();
         v.push(0).unwrap();
         v.push(159).unwrap();
         v.push(146).unwrap();
@@ -573,7 +589,7 @@ mod tests {
 
     #[test]
     fn from_utf8_unchecked() {
-        let mut v: Vec<u8, [u8; 8]> = Vec::new();
+        let mut v: Vec<u8, U8> = Vec::new();
         v.push(104).unwrap();
         v.push(101).unwrap();
         v.push(108).unwrap();
@@ -587,15 +603,15 @@ mod tests {
 
     #[test]
     fn into_bytes() {
-        let s: String<[_; 4]> = String::from("ab");
-        let b: Vec<u8, [u8; 4]> = s.into_bytes();
+        let s: String<U4> = String::from("ab");
+        let b: Vec<u8, U4> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     }
 
     #[test]
     fn as_str() {
-        let s: String<[_; 4]> = String::from("ab");
+        let s: String<U4> = String::from("ab");
 
         assert_eq!(s.as_str(), "ab");
         // should be moved to fail test
@@ -605,7 +621,7 @@ mod tests {
 
     #[test]
     fn as_mut_str() {
-        let mut s: String<[_; 4]> = String::from("ab");
+        let mut s: String<U4> = String::from("ab");
         let s = s.as_mut_str();
         s.make_ascii_uppercase();
         assert_eq!(s, "AB");
@@ -613,7 +629,7 @@ mod tests {
 
     #[test]
     fn push_str() {
-        let mut s: String<[u8; 8]> = String::from("foo");
+        let mut s: String<U8> = String::from("foo");
         assert!(s.push_str("bar").is_ok());
         assert_eq!("foobar", s);
         assert!(s.push_str("tender").is_err());
@@ -622,7 +638,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let mut s: String<[u8; 6]> = String::from("abc");
+        let mut s: String<U6> = String::from("abc");
         s.push('1').is_ok();
         s.push('2').is_ok();
         s.push('3').is_ok();
@@ -632,13 +648,13 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let s: String<[u8; 8]> = String::from("hello");
+        let s: String<U8> = String::from("hello");
         assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     }
 
     #[test]
     fn truncate() {
-        let mut s: String<[u8; 8]> = String::from("hello");
+        let mut s: String<U8> = String::from("hello");
         s.truncate(6);
         assert_eq!(s.len(), 5);
         s.truncate(2);
@@ -649,7 +665,7 @@ mod tests {
 
     #[test]
     fn pop() {
-        let mut s: String<[u8; 8]> = String::from("foo");
+        let mut s: String<U8> = String::from("foo");
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('f'));
@@ -658,7 +674,7 @@ mod tests {
 
     #[test]
     fn pop_uenc() {
-        let mut s: String<[u8; 8]> = String::from("é");
+        let mut s: String<U8> = String::from("é");
         assert_eq!(s.len(), 3);
         match s.pop() {
             Some(c) => {
@@ -672,7 +688,7 @@ mod tests {
 
     #[test]
     fn is_empty() {
-        let mut v: String<[u8; 8]> = String::new();
+        let mut v: String<U8> = String::new();
         assert!(v.is_empty());
         let _ = v.push('a');
         assert!(!v.is_empty());
@@ -680,7 +696,7 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut s: String<[u8; 8]> = String::from("foo");
+        let mut s: String<U8> = String::from("foo");
         s.clear();
         assert!(s.is_empty());
         assert_eq!(0, s.len());

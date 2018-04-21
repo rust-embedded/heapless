@@ -1,23 +1,24 @@
 use core::borrow::Borrow;
-use core::marker::Unsize;
 use core::{mem, ops, slice};
 
-use {BufferFullError, Vec};
+use generic_array::ArrayLength;
 
-/// A map / dictionary backed by an array that performs lookups via linear search
+use Vec;
+
+/// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
-pub struct LinearMap<KEY, VALUE, ARRAY>
+pub struct LinearMap<K, V, N>
 where
-    ARRAY: Unsize<[(KEY, VALUE)]>,
-    KEY: Eq,
+    N: ArrayLength<(K, V)>,
+    K: Eq,
 {
-    buffer: Vec<(KEY, VALUE), ARRAY>,
+    buffer: Vec<(K, V), N>,
 }
 
-impl<K, V, A> LinearMap<K, V, A>
+impl<K, V, N> LinearMap<K, V, N>
 where
-    A: Unsize<[(K, V)]>,
+    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     /// Creates an empty `LinearMap`
@@ -26,8 +27,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<&str, isize, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
     /// ```
     pub const fn new() -> Self {
         LinearMap { buffer: Vec::new() }
@@ -41,8 +43,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<&str, isize, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
     /// assert_eq!(map.capacity(), 8);
     /// ```
     pub fn capacity(&mut self) -> usize {
@@ -57,8 +60,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// map.clear();
     /// assert!(map.is_empty());
@@ -75,8 +79,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.contains_key(&1), true);
     /// assert_eq!(map.contains_key(&2), false);
@@ -93,8 +98,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.get(&1), Some(&"a"));
     /// assert_eq!(map.get(&2), None);
@@ -117,8 +123,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// if let Some(x) = map.get_mut(&1) {
     ///     *x = "b";
@@ -143,8 +150,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut a: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, U8> = LinearMap::new();
     /// assert_eq!(a.len(), 0);
     /// a.insert(1, "a").unwrap();
     /// assert_eq!(a.len(), 1);
@@ -165,8 +173,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// assert_eq!(map.insert(37, "a").unwrap(), None);
     /// assert_eq!(map.is_empty(), false);
     ///
@@ -174,7 +183,7 @@ where
     /// assert_eq!(map.insert(37, "c").unwrap(), Some("b"));
     /// assert_eq!(map[&37], "c");
     /// ```
-    pub fn insert(&mut self, key: K, mut value: V) -> Result<Option<V>, BufferFullError> {
+    pub fn insert(&mut self, key: K, mut value: V) -> Result<Option<V>, (K, V)> {
         if let Some((_, v)) = self.iter_mut().find(|&(k, _)| *k == key) {
             mem::swap(v, &mut value);
             return Ok(Some(value));
@@ -192,8 +201,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut a: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, U8> = LinearMap::new();
     /// assert!(a.is_empty());
     /// a.insert(1, "a").unwrap();
     /// assert!(!a.is_empty());
@@ -208,8 +218,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -231,8 +242,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -258,8 +270,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -281,8 +294,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.remove(&1), Some("a"));
     /// assert_eq!(map.remove(&1), None);
@@ -306,8 +320,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -326,8 +341,9 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
+    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, [_; 8]> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -345,9 +361,9 @@ where
     }
 }
 
-impl<'a, K, V, A, Q> ops::Index<&'a Q> for LinearMap<K, V, A>
+impl<'a, K, V, N, Q> ops::Index<&'a Q> for LinearMap<K, V, N>
 where
-    A: Unsize<[(K, V)]>,
+    N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
     V: 'a,
@@ -359,9 +375,9 @@ where
     }
 }
 
-impl<'a, K, V, A, Q> ops::IndexMut<&'a Q> for LinearMap<K, V, A>
+impl<'a, K, V, N, Q> ops::IndexMut<&'a Q> for LinearMap<K, V, N>
 where
-    A: Unsize<[(K, V)]>,
+    N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
     V: 'a,
@@ -371,9 +387,9 @@ where
     }
 }
 
-impl<'a, K, V, A> IntoIterator for &'a LinearMap<K, V, A>
+impl<'a, K, V, N> IntoIterator for &'a LinearMap<K, V, N>
 where
-    A: Unsize<[(K, V)]>,
+    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     type Item = (&'a K, &'a V);
