@@ -1,7 +1,7 @@
 set -euxo pipefail
 
 main() {
-    if [ $TARGET != x86_64-unknown-linux-gnu || $TRAVIS_BRANCH != master ]; then
+    if [ $TARGET != x86_64-unknown-linux-gnu ] || [ $TRAVIS_BRANCH != master ]; then
         return
     fi
 

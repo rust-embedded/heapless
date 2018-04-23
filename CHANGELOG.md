@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.1] - 2018-04-23
+
+### Added
+
+- Fixed capacity implementations of `IndexMap` and `IndexSet`.
+- A `Extend` implementation to `Vec`
+- More `PartialEq` implementations to `Vec`
+
 ## [v0.3.0] - 2018-04-22
 
 ### Changed
@@ -93,7 +101,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.1...HEAD
+[v0.3.1]: https://github.com/japaric/heapless/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/japaric/heapless/compare/v0.2.7...v0.3.0
 [v0.2.7]: https://github.com/japaric/heapless/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/japaric/heapless/compare/v0.2.5...v0.2.6
