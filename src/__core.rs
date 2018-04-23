@@ -1,6 +1,8 @@
 /// Temporary fork of some stuff in `core` that's doesn't have a `const fn` API
 
 pub mod mem {
+    pub use core::mem::{replace, zeroed};
+
     use core::ops::{Deref, DerefMut};
 
     #[allow(unions_with_drop_fields)]

@@ -17,6 +17,7 @@ impl<T, N> Vec<T, N>
 where
     N: ArrayLength<T>,
 {
+    /* Constructors */
     /// Constructs a new, empty vector with a fixed capacity of `N`
     pub const fn new() -> Self {
         Vec {
@@ -25,9 +26,10 @@ where
         }
     }
 
+    /* Public API */
     /// Returns the maximum number of elements the vector can hold
     pub fn capacity(&self) -> usize {
-        self.buffer.as_slice().len()
+        N::to_usize()
     }
 
     /// Clears the vector, removing all values.
@@ -68,33 +70,42 @@ where
 
     /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        let buffer = self.buffer.as_slice();
-
         if self.len != 0 {
-            self.len -= 1;
-            let item = unsafe { ptr::read(&buffer[self.len]) };
-            Some(item)
+            Some(unsafe { self.pop_unchecked() })
         } else {
             None
         }
+    }
+
+    pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
+        debug_assert!(!self.is_empty());
+
+        let buffer = self.buffer.as_slice();
+
+        self.len -= 1;
+        let item = ptr::read(buffer.get_unchecked(self.len));
+        item
     }
 
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        let capacity = self.capacity();
-        let buffer = self.buffer.as_mut_slice();
-
-        if self.len < capacity {
-            // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
-            // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-            unsafe { ptr::write(&mut buffer[self.len], item) }
-            self.len += 1;
+        if self.len < self.capacity() {
+            unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
             Err(item)
         }
+    }
+
+    pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
+        let buffer = self.buffer.as_mut_slice();
+
+        // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
+        // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
+        ptr::write(buffer.get_unchecked_mut(self.len), item);
+        self.len += 1;
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
@@ -180,9 +191,23 @@ where
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
+        assert!(index < self.len());
+        unsafe { self.swap_remove_unchecked(index) }
+    }
+
+    pub(crate) unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         let length = self.len();
-        self.swap(index, length - 1);
-        self.pop().unwrap()
+        debug_assert!(index < length);
+        ptr::swap(
+            self.get_unchecked_mut(index),
+            self.get_unchecked_mut(length - 1),
+        );
+        self.pop_unchecked()
+    }
+
+    /* Private API */
+    pub(crate) fn is_full(&self) -> bool {
+        self.capacity() == self.len()
     }
 }
 
