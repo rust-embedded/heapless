@@ -40,32 +40,41 @@
 //! List of currently implemented data structures:
 //!
 //! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
+//! - [`IndexMap`](struct.IndexMap.html) -- hash table
+//! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
 //! - [`RingBuffer`](ring_buffer/struct.RingBuffer.html) -- single producer single consumer lockless
 //! queue
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
 
-#![allow(stable_features)]
+#![allow(warnings)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(core_intrinsics)]
+#![feature(nll)]
+#![feature(nonzero)]
 #![feature(untagged_unions)]
 #![no_std]
 
 extern crate generic_array;
+extern crate hash32;
 #[cfg(test)]
 extern crate std;
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
+pub use indexmap::{FnvIndexMap, IndexMap};
+pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 pub use ring_buffer::RingBuffer;
 pub use string::String;
 pub use vec::Vec;
 
 mod cfail;
+mod indexmap;
+mod indexset;
 mod linear_map;
 mod string;
 mod vec;
