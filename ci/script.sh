@@ -16,4 +16,6 @@ main() {
     fi
 }
 
-main
+if [ $TRAVIS_BRANCH != master ]; then
+    main
+fi
