@@ -8,7 +8,7 @@ categories = [
     "no-std",
 ]
 description = "`static` friendly data structures that don't require dynamic memory allocation"
-documentation = "https://docs.rs/heapless"
+documentation = "https://japaric.github.io/heapless/heapless/index.html"
 keywords = [
     "static",
     "no-heap",

@@ -5,7 +5,7 @@
 
 > `static` friendly data structures that don't require dynamic memory allocation
 
-# [Documentation](https://docs.rs/heapless)
+# [Documentation](https://japaric.github.io/heapless/heapless/index.html)
 
 # [Change log](CHANGELOG.md)
 
