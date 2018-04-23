@@ -5,6 +5,34 @@ use generic_array::{ArrayLength, GenericArray};
 use __core::mem::{self, ManuallyDrop};
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
+///
+/// # Examples
+///
+/// ```
+/// use heapless::Vec;
+/// use heapless::consts::*;
+///
+/// // A vector with a fixed capacity of 8 elements allocated on the stack
+/// let mut vec = Vec::<_, U8>::new();
+/// vec.push(1);
+/// vec.push(2);
+///
+/// assert_eq!(vec.len(), 2);
+/// assert_eq!(vec[0], 1);
+///
+/// assert_eq!(vec.pop(), Some(2));
+/// assert_eq!(vec.len(), 1);
+///
+/// vec[0] = 7;
+/// assert_eq!(vec[0], 7);
+///
+/// vec.extend([1, 2, 3].iter().cloned());
+///
+/// for x in &vec {
+///     println!("{}", x);
+/// }
+/// assert_eq!(vec, [7, 1, 2, 3]);
+/// ```
 pub struct Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -231,6 +259,33 @@ where
     }
 }
 
+impl<T, N> Extend<T> for Vec<T, N>
+where
+    N: ArrayLength<T>,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        for elem in iter {
+            self.push(elem).ok().unwrap()
+        }
+    }
+}
+
+impl<'a, T, N> Extend<&'a T> for Vec<T, N>
+where
+    T: 'a + Copy,
+    N: ArrayLength<T>,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = &'a T>,
+    {
+        self.extend(iter.into_iter().cloned())
+    }
+}
+
 impl<'a, T, N> IntoIterator for &'a Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -255,16 +310,48 @@ where
     }
 }
 
-impl<T, N1, N2> PartialEq<Vec<T, N2>> for Vec<T, N1>
+impl<A, B, N1, N2> PartialEq<Vec<B, N2>> for Vec<A, N1>
 where
-    N1: ArrayLength<T>,
-    N2: ArrayLength<T>,
-    T: PartialEq,
+    N1: ArrayLength<A>,
+    N2: ArrayLength<B>,
+    A: PartialEq<B>,
 {
-    fn eq(&self, rhs: &Vec<T, N2>) -> bool {
-        PartialEq::eq(&**self, &**rhs)
+    fn eq(&self, other: &Vec<B, N2>) -> bool {
+        self[..] == other[..]
     }
 }
+
+macro_rules! eq {
+    ($Lhs:ty, $Rhs:ty) => {
+        impl<'a, 'b, A, B, N> PartialEq<$Rhs> for $Lhs
+        where
+            A: PartialEq<B>,
+            N: ArrayLength<A>,
+        {
+            fn eq(&self, other: &$Rhs) -> bool {
+                self[..] == other[..]
+            }
+        }
+    };
+}
+
+eq!(Vec<A, N>, [B]);
+eq!(Vec<A, N>, &'a [B]);
+eq!(Vec<A, N>, &'a mut [B]);
+
+macro_rules! array {
+    ($($N:expr),+) => {
+        $(
+            eq!(Vec<A, N>, [B; $N]);
+            eq!(Vec<A, N>, &'a [B; $N]);
+        )+
+    }
+}
+
+array!(
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32
+);
 
 impl<T, N> Eq for Vec<T, N>
 where

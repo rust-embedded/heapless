@@ -274,7 +274,7 @@ where
 /// use heapless::FnvIndexMap;
 /// use heapless::consts::*;
 ///
-/// // A hash map with a capacity of 16 key-value pairs
+/// // A hash map with a capacity of 16 key-value pairs allocated on the stack
 /// let mut book_reviews = FnvIndexMap::<_, _, U16>::new();
 ///
 /// // review some books.
