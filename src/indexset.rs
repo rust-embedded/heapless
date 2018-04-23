@@ -21,7 +21,7 @@ pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
 /// use heapless::FnvIndexSet;
 /// use heapless::consts::*;
 ///
-/// // A hash set with a capacity of 16 elements
+/// // A hash set with a capacity of 16 elements allocated on the stack
 /// let mut books = FnvIndexSet::<_, U16>::new();
 ///
 /// // Add some books.
