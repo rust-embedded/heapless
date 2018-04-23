@@ -638,6 +638,18 @@ where
     /// Same as [`swap_remove`](struct.IndexMap.html#method.swap_remove)
     ///
     /// Computes in **O(1)** time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    /// use heapless::consts::*;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, U8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// assert_eq!(map.remove(&1), Some("a"));
+    /// assert_eq!(map.remove(&1), None);
+    /// ```
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
