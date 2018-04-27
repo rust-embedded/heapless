@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.2] - 2018-04-27
+
+### Added
+
+- A re-export of `generic_array::ArrayLength`, for convenience.
+
 ## [v0.3.1] - 2018-04-23
 
 ### Added
@@ -101,7 +107,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.2...HEAD
+[v0.3.2]: https://github.com/japaric/heapless/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/japaric/heapless/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/japaric/heapless/compare/v0.2.7...v0.3.0
 [v0.2.7]: https://github.com/japaric/heapless/compare/v0.2.6...v0.2.7
