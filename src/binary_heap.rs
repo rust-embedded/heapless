@@ -250,13 +250,23 @@ where
     /// assert_eq!(heap.pop(), None);
     /// ```
     pub fn pop(&mut self) -> Option<T> {
-        self.data.pop().map(|mut item| {
-            if !self.is_empty() {
-                mem::swap(&mut item, &mut self.data[0]);
-                self.sift_down_to_bottom(0);
-            }
-            item
-        })
+        if self.is_empty() {
+            None
+        } else {
+            Some(unsafe { self.pop_unchecked() })
+        }
+    }
+
+    /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
+    /// returns it, without checking if the binary heap is empty.
+    pub unsafe fn pop_unchecked(&mut self) -> T {
+        let mut item = self.data.pop_unchecked();
+
+        if !self.is_empty() {
+            mem::swap(&mut item, &mut self.data[0]);
+            self.sift_down_to_bottom(0);
+        }
+        item
     }
 
     /// Pushes an item onto the binary heap.
