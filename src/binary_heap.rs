@@ -335,7 +335,7 @@ impl<'a, T> Hole<'a, T> {
     #[inline]
     unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
         debug_assert!(pos < data.len());
-        let elt = ptr::read(&data[pos]);
+        let elt = ptr::read(data.get_unchecked(pos));
         Hole {
             data,
             elt: Some(elt),
