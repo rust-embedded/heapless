@@ -273,10 +273,19 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        let old_len = self.len();
-        self.data.push(item)?;
-        self.sift_up(0, old_len);
+        if self.data.is_full() {
+            return Err(item);
+        }
+
+        unsafe { self.push_unchecked(item) }
         Ok(())
+    }
+
+    /// Pushes an item onto the binary heap without first checking if it's full.
+    pub unsafe fn push_unchecked(&mut self, item: T) {
+        let old_len = self.len();
+        self.data.push_unchecked(item);
+        self.sift_up(0, old_len);
     }
 
     /* Private API */
