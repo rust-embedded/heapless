@@ -64,8 +64,8 @@ extern crate hash32;
 extern crate std;
 
 pub use binary_heap::BinaryHeap;
-pub use generic_array::ArrayLength;
 pub use generic_array::typenum::consts;
+pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
