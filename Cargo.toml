@@ -16,7 +16,7 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.3.3"
+version = "0.3.4"
 
 [dev-dependencies]
 scoped_threadpool = "0.1.8"

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.4] - 2018-04-28
+
+### Added
+
+- `BinaryHeap.pop_unchecked` an unchecked version of `BinaryHeap.pop`
+
 ## [v0.3.3] - 2018-04-28
 
 ### Added
@@ -113,7 +119,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.4...HEAD
+[v0.3.4]: https://github.com/japaric/heapless/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/japaric/heapless/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/japaric/heapless/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/japaric/heapless/compare/v0.3.0...v0.3.1
