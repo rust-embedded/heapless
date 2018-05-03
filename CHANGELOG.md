@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.5] - 2018-05-03
+
+### Added
+
+- `RingBuffer.enqueue_unchecked` an unchecked version of `RingBuffer.enqueue`
+
 ## [v0.3.4] - 2018-04-28
 
 ### Added
