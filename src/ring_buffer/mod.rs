@@ -290,22 +290,36 @@ macro_rules! impl_ {
             pub fn enqueue(&mut self, item: T) -> Result<(), T> {
                 let n = self.capacity() + 1;
 
-                let head = self.head.get_mut();
+                let head = *self.head.get_mut();
+                let tail = *self.tail.get_mut();
+
+                let next_tail = (tail + 1) % n;
+                if next_tail != head {
+                    self.enqueue_unchecked(item);
+                    Ok(())
+                } else {
+                    Err(item)
+                }
+            }
+
+            /// Adds an `item` to the end of the queue, without checking if it's full
+            ///
+            /// **WARNING** If the queue is full this operation will make the queue appear empty to
+            /// the `Consumer`, thus *leaking* (destructors won't run) all the elements that were in
+            /// the queue.
+            pub fn enqueue_unchecked(&mut self, item: T) {
+                let n = self.capacity() + 1;
+
                 let tail = self.tail.get_mut();
 
                 let buffer = self.buffer.as_mut_slice();
 
                 let next_tail = (*tail + 1) % n;
-                if next_tail != *head {
-                    // NOTE(ptr::write) the memory slot that we are about to write to is
-                    // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
-                    // uninitialized memory
-                    unsafe { ptr::write(buffer.get_unchecked_mut(usize::from(*tail)), item) }
-                    *tail = next_tail;
-                    Ok(())
-                } else {
-                    Err(item)
-                }
+                // NOTE(ptr::write) the memory slot that we are about to write to is
+                // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
+                // uninitialized memory
+                unsafe { ptr::write(buffer.get_unchecked_mut(usize::from(*tail)), item) }
+                *tail = next_tail;
             }
 
             /// Returns the number of elements in the queue
