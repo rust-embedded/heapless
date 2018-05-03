@@ -202,9 +202,13 @@ where
         probe_loop!(probe < self.indices.len(), {
             let pos = unsafe { self.indices.get_unchecked_mut(probe) };
 
+            let mut is_none = true; // work around lack of NLL
             if let Some(pos) = pos.as_mut() {
                 old_pos = mem::replace(pos, old_pos);
-            } else {
+                is_none = false;
+            }
+
+            if is_none {
                 *pos = Some(old_pos);
                 break;
             }
