@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.6] - 2018-05-04
+
+### Fixed
+
+- The capacity of `RingBuffer`. It should be the requested capacity plus not twice that plus one.
+
 ## [v0.3.5] - 2018-05-03
 
 ### Added
