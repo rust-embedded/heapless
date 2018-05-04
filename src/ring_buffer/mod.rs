@@ -1,9 +1,10 @@
 //! Ring buffer
 
 use core::cell::UnsafeCell;
+use core::ops::Add;
 use core::{intrinsics, ptr};
 
-use generic_array::typenum::{B1, UInt};
+use generic_array::typenum::{Sum, U1, Unsigned};
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
@@ -153,7 +154,8 @@ where
 /// ```
 pub struct RingBuffer<T, N, U = usize>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     // this is from where we dequeue items
@@ -162,12 +164,13 @@ where
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: ManuallyDrop<GenericArray<T, UInt<N, B1>>>,
+    buffer: ManuallyDrop<GenericArray<T, Sum<N, U1>>>,
 }
 
 impl<T, N, U> RingBuffer<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     /// Returns the maximum number of elements the ring buffer can hold
@@ -213,7 +216,8 @@ where
 
 impl<T, N, U> Drop for RingBuffer<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     fn drop(&mut self) {
@@ -227,7 +231,8 @@ where
 
 impl<'a, T, N, U> IntoIterator for &'a RingBuffer<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a T;
@@ -240,7 +245,8 @@ where
 
 impl<'a, T, N, U> IntoIterator for &'a mut RingBuffer<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a mut T;
@@ -255,7 +261,8 @@ macro_rules! impl_ {
     ($uxx:ident) => {
         impl<T, N> RingBuffer<T, N, $uxx>
         where
-            N: ArrayLength<T>,
+            N: Add<U1> + Unsigned,
+            Sum<N, U1>: ArrayLength<T>,
         {
             /// Creates an empty ring buffer with a fixed capacity of `N`
             pub const fn $uxx() -> Self {
@@ -339,7 +346,8 @@ macro_rules! impl_ {
 
 impl<T, N> RingBuffer<T, N, usize>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
 {
     /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
     pub const fn new() -> Self {
@@ -354,7 +362,8 @@ impl_!(usize);
 /// An iterator over a ring buffer items
 pub struct Iter<'a, T, N, U>
 where
-    N: ArrayLength<T> + 'a,
+    N: Add<U1> + Unsigned + 'a,
+    Sum<N, U1>: ArrayLength<T>,
     T: 'a,
     U: 'a + Uxx,
 {
@@ -366,7 +375,8 @@ where
 /// A mutable iterator over a ring buffer items
 pub struct IterMut<'a, T, N, U>
 where
-    N: ArrayLength<T> + 'a,
+    N: Add<U1> + Unsigned + 'a,
+    Sum<N, U1>: ArrayLength<T>,
     T: 'a,
     U: 'a + Uxx,
 {
@@ -379,7 +389,8 @@ macro_rules! iterator {
     (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
         impl<'a, T, N, U> Iterator for $name<'a, T, N, U>
         where
-            N: ArrayLength<T> + 'a,
+            N: Add<U1> + Unsigned,
+            Sum<N, U1>: ArrayLength<T>,
             T: 'a,
             U: 'a + Uxx,
         {

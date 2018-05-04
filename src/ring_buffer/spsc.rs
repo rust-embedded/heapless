@@ -1,13 +1,16 @@
 use core::marker::PhantomData;
+use core::ops::Add;
 use core::ptr::{self, NonNull};
 
+use generic_array::typenum::{Sum, U1, Unsigned};
 use generic_array::ArrayLength;
 
 use ring_buffer::{RingBuffer, Uxx};
 
 impl<T, N, U> RingBuffer<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
@@ -29,7 +32,8 @@ where
 // NOTE the consumer semantically owns the `head` pointer of the ring buffer
 pub struct Consumer<'a, T, N, U = usize>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     // XXX do we need to use `NonNull` (for soundness) here?
@@ -39,7 +43,8 @@ where
 
 unsafe impl<'a, T, N, U> Send for Consumer<'a, T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {
@@ -49,7 +54,8 @@ where
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
 pub struct Producer<'a, T, N, U = usize>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     U: Uxx,
 {
     // XXX do we need to use `NonNull` (for soundness) here?
@@ -59,7 +65,8 @@ where
 
 unsafe impl<'a, T, N, U> Send for Producer<'a, T, N, U>
 where
-    N: ArrayLength<T>,
+    N: Add<U1> + Unsigned,
+    Sum<N, U1>: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {
@@ -69,7 +76,8 @@ macro_rules! impl_ {
     ($uxx:ident) => {
         impl<'a, T, N> Consumer<'a, T, N, $uxx>
         where
-            N: ArrayLength<T>,
+            N: Add<U1> + Unsigned,
+            Sum<N, U1>: ArrayLength<T>,
         {
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
@@ -108,7 +116,8 @@ macro_rules! impl_ {
 
         impl<'a, T, N> Producer<'a, T, N, $uxx>
         where
-            N: ArrayLength<T>,
+            N: Add<U1> + Unsigned,
+            Sum<N, U1>: ArrayLength<T>,
         {
             /// Adds an `item` to the end of the queue
             ///
