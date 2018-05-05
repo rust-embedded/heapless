@@ -310,6 +310,42 @@ where
     }
 }
 
+/// An iterator that moves out of an [`Vec`][`Vec`].
+///
+/// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
+///
+/// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
+///
+pub struct IntoIter<T, N>
+where
+    N: ArrayLength<T>,
+{
+    vec_rev: Vec<T, N>
+}
+
+impl <T, N> Iterator for IntoIter<T, N>
+where
+    N: ArrayLength<T>,
+{
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.vec_rev.pop()
+    }
+}
+
+impl <T, N> IntoIterator for Vec<T, N>
+where
+    N: ArrayLength<T>,
+{
+    type Item = T;
+    type IntoIter = IntoIter<T, N>;
+
+    fn into_iter(mut self) -> Self::IntoIter {
+        self.reverse();
+        IntoIter { vec_rev: self }
+    }
+}
+
 impl<A, B, N1, N2> PartialEq<Vec<B, N2>> for Vec<A, N1>
 where
     N1: ArrayLength<A>,
@@ -530,6 +566,23 @@ mod tests {
         assert_eq!(items.next(), Some(&mut 1));
         assert_eq!(items.next(), Some(&mut 2));
         assert_eq!(items.next(), Some(&mut 3));
+        assert_eq!(items.next(), None);
+    }
+
+    #[test]
+    fn iter_move() {
+        let mut v: Vec<i32, U4> = Vec::new();
+        v.push(0).unwrap();
+        v.push(1).unwrap();
+        v.push(2).unwrap();
+        v.push(3).unwrap();
+
+        let mut items = v.into_iter();
+
+        assert_eq!(items.next(), Some(0));
+        assert_eq!(items.next(), Some(1));
+        assert_eq!(items.next(), Some(2));
+        assert_eq!(items.next(), Some(3));
         assert_eq!(items.next(), None);
     }
 
