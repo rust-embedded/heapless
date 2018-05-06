@@ -4,6 +4,8 @@ use generic_array::{ArrayLength, GenericArray};
 
 use __core::mem::{self, ManuallyDrop};
 
+use core::iter::FromIterator;
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
 /// # Examples
@@ -310,6 +312,23 @@ where
     }
 }
 
+impl<T, N> FromIterator<T> for Vec<T, N>
+where
+    N: ArrayLength<T>,
+    T: fmt::Debug,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut vec = Vec::new();
+        for i in iter {
+            vec.push(i).unwrap();
+        }
+        vec
+    }
+}
+
 impl<A, B, N1, N2> PartialEq<Vec<B, N2>> for Vec<A, N1>
 where
     N1: ArrayLength<A>,
@@ -531,6 +550,20 @@ mod tests {
         assert_eq!(items.next(), Some(&mut 2));
         assert_eq!(items.next(), Some(&mut 3));
         assert_eq!(items.next(), None);
+    }
+
+    #[test]
+    fn collect_from_iter() {
+        let slice = &[1, 2, 3];
+        let vec = slice.iter().cloned().collect::<Vec<_, U4>>();
+        assert_eq!(vec, slice);
+    }
+
+    #[test]
+    #[should_panic]
+    fn collect_from_iter_overfull() {
+        let slice = &[1, 2, 3];
+        let _vec = slice.iter().cloned().collect::<Vec<_, U2>>();
     }
 
     #[test]
