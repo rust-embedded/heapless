@@ -315,7 +315,6 @@ where
 impl<T, N> FromIterator<T> for Vec<T, N>
 where
     N: ArrayLength<T>,
-    T: fmt::Debug,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -323,7 +322,10 @@ where
     {
         let mut vec = Vec::new();
         for i in iter {
-            vec.push(i).unwrap();
+            match vec.push(i) {
+                Ok(()) => {},
+                Err(_) => panic!("Vec::from_iter overflow")
+            }
         }
         vec
     }
