@@ -320,7 +320,8 @@ pub struct IntoIter<T, N>
 where
     N: ArrayLength<T>,
 {
-    vec_rev: Vec<T, N>
+    vec: Vec<T, N>,
+    next: usize,
 }
 
 impl <T, N> Iterator for IntoIter<T, N>
@@ -329,7 +330,28 @@ where
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
-        self.vec_rev.pop()
+        if self.next < self.vec.len() {
+            let buffer = self.vec.buffer.as_slice();
+            let item = unsafe {ptr::read(buffer.get_unchecked(self.next))};
+            self.next += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+impl <T, N> Drop for IntoIter<T, N>
+where
+    N: ArrayLength<T>,
+{
+    fn drop(&mut self) {
+        unsafe {
+            // Drop all the elements that have not been moved out of vec
+            ptr::drop_in_place(&mut self.vec[self.next..]);
+            // Prevent dropping of other elements
+            self.vec.len = 0;
+        }
     }
 }
 
@@ -340,9 +362,11 @@ where
     type Item = T;
     type IntoIter = IntoIter<T, N>;
 
-    fn into_iter(mut self) -> Self::IntoIter {
-        self.reverse();
-        IntoIter { vec_rev: self }
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            vec: self,
+            next: 0,
+        }
     }
 }
 
@@ -469,26 +493,33 @@ mod tests {
     use consts::*;
     use Vec;
 
+    macro_rules! droppable {
+        () => (
+            struct Droppable;
+            impl Droppable {
+                fn new() -> Self {
+                    unsafe {
+                        COUNT += 1;
+                    }
+                    Droppable
+                }
+            }
+            impl Drop for Droppable {
+                fn drop(&mut self) {
+                    unsafe {
+                        COUNT -= 1;
+                    }
+                }
+            }
+
+            static mut COUNT: i32 = 0;
+        )
+    }
+
     #[test]
     fn drop() {
-        struct Droppable;
-        impl Droppable {
-            fn new() -> Self {
-                unsafe {
-                    COUNT += 1;
-                }
-                Droppable
-            }
-        }
-        impl Drop for Droppable {
-            fn drop(&mut self) {
-                unsafe {
-                    COUNT -= 1;
-                }
-            }
-        }
 
-        static mut COUNT: i32 = 0;
+        droppable!();
 
         {
             let mut v: Vec<Droppable, U2> = Vec::new();
@@ -584,6 +615,45 @@ mod tests {
         assert_eq!(items.next(), Some(2));
         assert_eq!(items.next(), Some(3));
         assert_eq!(items.next(), None);
+    }
+
+    #[test]
+    fn iter_move_drop() {
+
+        droppable!();
+
+        {
+            let mut vec: Vec<Droppable, U2> = Vec::new();
+            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).ok().unwrap();
+            let mut items = vec.into_iter();
+            // Move all
+            let _ = items.next();
+            let _ = items.next();
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
+        {
+            let mut vec: Vec<Droppable, U2> = Vec::new();
+            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).ok().unwrap();
+            let _items = vec.into_iter();
+            // Move none
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
+        {
+            let mut vec: Vec<Droppable, U2> = Vec::new();
+            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).ok().unwrap();
+            let mut items = vec.into_iter();
+            let _ = items.next(); // Move partly
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
     }
 
     #[test]
