@@ -4,6 +4,8 @@ use generic_array::{ArrayLength, GenericArray};
 
 use __core::mem::{self, ManuallyDrop};
 
+use core::iter::FromIterator;
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
 /// # Examples
@@ -310,6 +312,23 @@ where
     }
 }
 
+
+impl<T, N> FromIterator<T> for Vec<T, N>
+where
+    N: ArrayLength<T>,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut vec = Vec::new();
+        for i in iter {
+            vec.push(i).ok().expect("Vec::from_iter overflow");
+        }
+        vec
+    }
+}
+
 /// An iterator that moves out of an [`Vec`][`Vec`].
 ///
 /// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
@@ -601,6 +620,20 @@ mod tests {
     }
 
     #[test]
+    fn collect_from_iter() {
+        let slice = &[1, 2, 3];
+        let vec = slice.iter().cloned().collect::<Vec<_, U4>>();
+        assert_eq!(vec, slice);
+    }
+
+    #[test]
+    #[should_panic]
+    fn collect_from_iter_overfull() {
+        let slice = &[1, 2, 3];
+        let _vec = slice.iter().cloned().collect::<Vec<_, U2>>();
+    }
+
+    #[test]
     fn iter_move() {
         let mut v: Vec<i32, U4> = Vec::new();
         v.push(0).unwrap();
@@ -653,7 +686,6 @@ mod tests {
         }
 
         assert_eq!(unsafe { COUNT }, 0);
-
     }
 
     #[test]
