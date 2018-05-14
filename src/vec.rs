@@ -620,7 +620,6 @@ mod tests {
     }
 
     #[test]
-
     fn collect_from_iter() {
         let slice = &[1, 2, 3];
         let vec = slice.iter().cloned().collect::<Vec<_, U4>>();
@@ -634,6 +633,7 @@ mod tests {
         let _vec = slice.iter().cloned().collect::<Vec<_, U2>>();
     }
 
+    #[test]
     fn iter_move() {
         let mut v: Vec<i32, U4> = Vec::new();
         v.push(0).unwrap();
