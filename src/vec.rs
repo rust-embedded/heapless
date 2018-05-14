@@ -322,10 +322,7 @@ where
     {
         let mut vec = Vec::new();
         for i in iter {
-            match vec.push(i) {
-                Ok(()) => {},
-                Err(_) => panic!("Vec::from_iter overflow")
-            }
+            vec.push(i).expect("Vec::from_iter overflow");
         }
         vec
     }
