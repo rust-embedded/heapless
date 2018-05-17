@@ -39,13 +39,13 @@
 //!
 //! List of currently implemented data structures:
 //!
-//! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
-//! - [`IndexMap`](struct.IndexMap.html) -- hash table
-//! - [`IndexSet`](struct.IndexSet.html) -- hash set
-//! - [`LinearMap`](struct.LinearMap.html)
-//! - [`RingBuffer`](ring_buffer/struct.RingBuffer.html) -- single producer single consumer lockless
-//! queue
-//! - [`String`](struct.String.html)
+//! - [`BinaryHeap`] -- priority queue
+//! - [`IndexMap`] -- hash table
+//! - [`IndexSet`] -- hash set
+//! - [`LinearMap`]
+//! - [`ObjectPool`] -- an object / memory pool
+//! - [`RingBuffer`] -- single producer single consumer lockless queue
+//! - [`String`]
 //! - [`Vec`](struct.Vec.html)
 
 #![allow(warnings)]
@@ -59,16 +59,20 @@
 
 extern crate generic_array;
 extern crate hash32;
+extern crate stable_deref_trait;
 #[cfg(test)]
 extern crate std;
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
-pub use generic_array::ArrayLength;
+pub use generic_array::{ArrayLength, GenericArray};
 pub use indexmap::{FnvIndexMap, IndexMap};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
+pub use object_pool::ObjectPool;
 pub use ring_buffer::RingBuffer;
+#[doc(hidden)]
+pub use stable_deref_trait::StableDeref;
 pub use string::String;
 pub use vec::Vec;
 
@@ -79,7 +83,8 @@ mod linear_map;
 mod string;
 mod vec;
 
+#[doc(hidden)]
+pub mod __core;
 pub mod binary_heap;
+pub mod object_pool;
 pub mod ring_buffer;
-
-mod __core;

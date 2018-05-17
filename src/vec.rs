@@ -312,7 +312,6 @@ where
     }
 }
 
-
 impl<T, N> FromIterator<T> for Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -343,7 +342,7 @@ where
     next: usize,
 }
 
-impl <T, N> Iterator for IntoIter<T, N>
+impl<T, N> Iterator for IntoIter<T, N>
 where
     N: ArrayLength<T>,
 {
@@ -351,7 +350,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
             let buffer = self.vec.buffer.as_slice();
-            let item = unsafe {ptr::read(buffer.get_unchecked(self.next))};
+            let item = unsafe { ptr::read(buffer.get_unchecked(self.next)) };
             self.next += 1;
             Some(item)
         } else {
@@ -360,7 +359,7 @@ where
     }
 }
 
-impl <T, N> Drop for IntoIter<T, N>
+impl<T, N> Drop for IntoIter<T, N>
 where
     N: ArrayLength<T>,
 {
@@ -374,7 +373,7 @@ where
     }
 }
 
-impl <T, N> IntoIterator for Vec<T, N>
+impl<T, N> IntoIterator for Vec<T, N>
 where
     N: ArrayLength<T>,
 {
@@ -382,10 +381,7 @@ where
     type IntoIter = IntoIter<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        IntoIter {
-            vec: self,
-            next: 0,
-        }
+        IntoIter { vec: self, next: 0 }
     }
 }
 
@@ -513,7 +509,7 @@ mod tests {
     use Vec;
 
     macro_rules! droppable {
-        () => (
+        () => {
             struct Droppable;
             impl Droppable {
                 fn new() -> Self {
@@ -532,12 +528,11 @@ mod tests {
             }
 
             static mut COUNT: i32 = 0;
-        )
+        };
     }
 
     #[test]
     fn drop() {
-
         droppable!();
 
         {
@@ -652,7 +647,6 @@ mod tests {
 
     #[test]
     fn iter_move_drop() {
-
         droppable!();
 
         {

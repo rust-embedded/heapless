@@ -24,3 +24,7 @@ scoped_threadpool = "0.1.8"
 [dependencies]
 generic-array = "0.11.0"
 hash32 = "0.1.0"
+
+[dependencies.stable_deref_trait]
+default-features = false
+version = "1.0.0"

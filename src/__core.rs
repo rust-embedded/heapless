@@ -43,3 +43,7 @@ pub mod mem {
         U { none: () }.some
     }
 }
+
+pub mod ops {
+    pub use core::ops::{Deref, DerefMut};
+}
