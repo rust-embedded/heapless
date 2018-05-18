@@ -61,11 +61,13 @@ impl<U> Atomic<U>
 where
     U: Uxx,
 {
-    const fn new(v: U) -> Atomic<U> {
-        Atomic {
-            v: UnsafeCell::new(v),
+    const_fn!(
+        const fn new(v: U) -> Atomic<U> {
+            Atomic {
+                v: UnsafeCell::new(v),
+            }
         }
-    }
+    );
 
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
@@ -265,13 +267,15 @@ macro_rules! impl_ {
             Sum<N, U1>: ArrayLength<T>,
         {
             /// Creates an empty ring buffer with a fixed capacity of `N`
-            pub const fn $uxx() -> Self {
-                RingBuffer {
-                    buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
-                    head: Atomic::new(0),
-                    tail: Atomic::new(0),
+            const_fn!(
+                pub const fn $uxx() -> Self {
+                    RingBuffer {
+                        buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                        head: Atomic::new(0),
+                        tail: Atomic::new(0),
+                    }
                 }
-            }
+            );
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
@@ -350,9 +354,11 @@ where
     Sum<N, U1>: ArrayLength<T>,
 {
     /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
-    pub const fn new() -> Self {
-        RingBuffer::usize()
-    }
+    const_fn!(
+        pub const fn new() -> Self {
+            RingBuffer::usize()
+        }
+    );
 }
 
 impl_!(u8);

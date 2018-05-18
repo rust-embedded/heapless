@@ -116,12 +116,14 @@ where
     /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
     /// heap.push(4).unwrap();
     /// ```
-    pub const fn new() -> Self {
-        BinaryHeap {
-            _kind: PhantomData,
-            data: Vec::new(),
+    const_fn!(
+        pub const fn new() -> Self {
+            BinaryHeap {
+                _kind: PhantomData,
+                data: Vec::new(),
+            }
         }
-    }
+    );
 
     /* Public API */
     /// Returns the capacity of the binary heap.

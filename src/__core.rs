@@ -12,9 +12,11 @@ pub mod mem {
 
     impl<T> ManuallyDrop<T> {
         #[inline]
-        pub const fn new(value: T) -> ManuallyDrop<T> {
-            ManuallyDrop { value: value }
-        }
+        const_fn!(
+            pub const fn new(value: T) -> ManuallyDrop<T> {
+                ManuallyDrop { value: value }
+            }
+        );
     }
 
     impl<T> Deref for ManuallyDrop<T> {
@@ -33,13 +35,15 @@ pub mod mem {
         }
     }
 
-    pub const unsafe fn uninitialized<T>() -> T {
-        #[allow(unions_with_drop_fields)]
-        union U<T> {
-            none: (),
-            some: T,
-        }
+    const_fn!(
+        pub const unsafe fn uninitialized<T>() -> T {
+            #[allow(unions_with_drop_fields)]
+            union U<T> {
+                none: (),
+                some: T,
+            }
 
-        U { none: () }.some
-    }
+            U { none: () }.some
+        }
+    );
 }

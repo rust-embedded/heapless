@@ -30,9 +30,11 @@ where
     /// let mut s: String<U4> = String::new();
     /// ```
     #[inline]
-    pub const fn new() -> Self {
-        String { vec: Vec::new() }
-    }
+    const_fn!(
+        pub const fn new() -> Self {
+            String { vec: Vec::new() }
+        }
+    );
 
     /// Converts a vector of bytes into a `String`.
     ///

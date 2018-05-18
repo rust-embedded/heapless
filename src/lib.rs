@@ -49,9 +49,9 @@
 //! - [`Vec`](struct.Vec.html)
 
 #![allow(warnings)]
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(const_fn)]
+#![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![feature(core_intrinsics)]
 #![feature(nonzero)]
 #![feature(untagged_unions)]
@@ -61,6 +61,9 @@ extern crate generic_array;
 extern crate hash32;
 #[cfg(test)]
 extern crate std;
+
+#[macro_use]
+mod const_fn;
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;

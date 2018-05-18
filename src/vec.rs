@@ -49,12 +49,14 @@ where
 {
     /* Constructors */
     /// Constructs a new, empty vector with a fixed capacity of `N`
-    pub const fn new() -> Self {
-        Vec {
-            buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
-            len: 0,
+    const_fn!(
+        pub const fn new() -> Self {
+            Vec {
+                buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                len: 0,
+            }
         }
-    }
+    );
 
     /* Public API */
     /// Returns the maximum number of elements the vector can hold

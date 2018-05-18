@@ -31,9 +31,11 @@ where
     ///
     /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
     /// ```
-    pub const fn new() -> Self {
-        LinearMap { buffer: Vec::new() }
-    }
+    const_fn!(
+        pub const fn new() -> Self {
+            LinearMap { buffer: Vec::new() }
+        }
+    );
 
     /// Returns the number of elements that the map can hold
     ///
