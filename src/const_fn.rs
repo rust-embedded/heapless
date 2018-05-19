@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+
 macro_rules! const_fn {
     ($(#[$attr:meta])* pub const unsafe fn $($f:tt)*) => (
 

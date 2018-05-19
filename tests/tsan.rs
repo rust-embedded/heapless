@@ -4,6 +4,7 @@ extern crate generic_array;
 extern crate heapless;
 extern crate scoped_threadpool;
 
+#[cfg(feature = "const-fn")]
 use std::thread;
 
 use generic_array::typenum::Unsigned;

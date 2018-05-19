@@ -184,9 +184,9 @@ mod tests {
 
     #[test]
     fn sanity() {
-        static mut RB: RingBuffer<i32, U2> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U2> = RingBuffer::new();
 
-        let (mut p, mut c) = unsafe { RB.split() };
+        let (mut p, mut c) = rb.split();
 
         assert_eq!(c.dequeue(), None);
 

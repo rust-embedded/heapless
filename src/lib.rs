@@ -8,6 +8,21 @@
 //! via their type parameter `N`. This means that you can instantiate a `heapless` data structure on
 //! the stack, in a `static` variable, or even in the heap.
 //!
+//! There is a feature gate `const-fn` which enables the nightly `const_fn` feature.
+//! You can enable it in `Cargo.toml`.
+//!
+//! ```text
+//! # Cargo.toml
+//! ...
+//! [dependencies]
+//! heapless = { version = "0.4.0", features = ["const-fn"] }
+//! ...
+//!
+//! ```
+//! When enabled, you can use most `new` methods to initialize `static`
+//! variables at compile time.
+//!
+//!
 //! ```
 //! use heapless::Vec; // fixed capacity `std::Vec`
 //! use heapless::consts::U8; // type level integer used to specify capacity
@@ -18,7 +33,14 @@
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
-//! static mut XS: Vec<u8, U8> = Vec::new();
+//! // static mut XS: Vec<u8, U8> = Vec::new(); // requires feature `const-fn`
+//!
+//! // work around
+//! static mut XS: Option<Vec<u8, U8>> = None;
+//! unsafe { XS = Some(Vec::new()) };
+//!
+//! unsafe { XS.as_mut().unwrap().push(42) };
+//! unsafe { assert_eq!(XS.as_mut().unwrap().pop(), Some(42)) };
 //!
 //! // in the heap (though kind of pointless because no reallocation)
 //! let mut ys: Box<Vec<u8, U8>> = Box::new(Vec::new());

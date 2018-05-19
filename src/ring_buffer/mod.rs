@@ -118,13 +118,16 @@ where
 /// use heapless::RingBuffer;
 /// use heapless::consts::*;
 ///
-/// static mut RB: RingBuffer<Event, U4> = RingBuffer::new();
+/// // static mut RB: RingBuffer<Event, U4> = RingBuffer::new(); // requires feature `const-fn`
+///
+/// static mut RB: Option<RingBuffer<Event, U4>>  = None;
 ///
 /// enum Event { A, B }
 ///
 /// fn main() {
+///     unsafe { RB = Some(RingBuffer::new()) };
 ///     // NOTE(unsafe) beware of aliasing the `consumer` end point
-///     let mut consumer = unsafe { RB.split().1 };
+///     let mut consumer = unsafe { RB.as_mut().unwrap().split().1 };
 ///
 ///     loop {
 ///         // `dequeue` is a lockless operation
@@ -140,7 +143,7 @@ where
 /// // this is a different execution context that can preempt `main`
 /// fn interrupt_handler() {
 ///     // NOTE(unsafe) beware of aliasing the `producer` end point
-///     let mut producer = unsafe { RB.split().0 };
+///     let mut producer = unsafe { RB.as_mut().unwrap().split().0 };
 /// #   let condition = true;
 ///
 ///     // ..
