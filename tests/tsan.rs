@@ -11,6 +11,7 @@ use heapless::consts::*;
 use heapless::RingBuffer;
 use scoped_threadpool::Pool;
 
+#[cfg(feature = "const-fn")]
 #[test]
 fn once() {
     static mut RB: RingBuffer<i32, U4> = RingBuffer::new();
@@ -32,6 +33,7 @@ fn once() {
     });
 }
 
+#[cfg(feature = "const-fn")]
 #[test]
 fn twice() {
     static mut RB: RingBuffer<i32, U8> = RingBuffer::new();

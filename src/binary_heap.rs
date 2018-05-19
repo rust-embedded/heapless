@@ -107,16 +107,17 @@ where
     K: Kind,
 {
     /* Constructors */
-    /// Creates an empty BinaryHeap as a $K-heap.
-    ///
-    /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
-    ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
-    /// heap.push(4).unwrap();
-    /// ```
+
     const_fn!(
+        /// Creates an empty BinaryHeap as a $K-heap.
+        ///
+        /// ```
+        /// use heapless::binary_heap::{BinaryHeap, Max};
+        /// use heapless::consts::*;
+        ///
+        /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+        /// heap.push(4).unwrap();
+        /// ```
         pub const fn new() -> Self {
             BinaryHeap {
                 _kind: PhantomData,

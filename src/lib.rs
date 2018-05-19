@@ -49,7 +49,7 @@
 //! - [`Vec`](struct.Vec.html)
 
 #![allow(warnings)]
-//#![deny(missing_docs)]
+#![deny(missing_docs)]
 #![deny(warnings)]
 #![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![feature(core_intrinsics)]

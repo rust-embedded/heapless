@@ -48,8 +48,8 @@ where
     N: ArrayLength<T>,
 {
     /* Constructors */
-    /// Constructs a new, empty vector with a fixed capacity of `N`
     const_fn!(
+        /// Constructs a new, empty vector with a fixed capacity of `N`
         pub const fn new() -> Self {
             Vec {
                 buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),

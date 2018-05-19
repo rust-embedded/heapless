@@ -21,17 +21,18 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq,
 {
-    /// Creates an empty `LinearMap`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::LinearMap;
-    /// use heapless::consts::*;
-    ///
-    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
-    /// ```
+
     const_fn!(
+        /// Creates an empty `LinearMap`
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use heapless::LinearMap;
+        /// use heapless::consts::*;
+        ///
+        /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
+        /// ```
         pub const fn new() -> Self {
             LinearMap { buffer: Vec::new() }
         }

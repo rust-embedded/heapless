@@ -266,8 +266,9 @@ macro_rules! impl_ {
             N: Add<U1> + Unsigned,
             Sum<N, U1>: ArrayLength<T>,
         {
-            /// Creates an empty ring buffer with a fixed capacity of `N`
+
             const_fn!(
+                /// Creates an empty ring buffer with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
                     RingBuffer {
                         buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
@@ -353,8 +354,9 @@ where
     N: Add<U1> + Unsigned,
     Sum<N, U1>: ArrayLength<T>,
 {
-    /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
+
     const_fn!(
+        /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
         pub const fn new() -> Self {
             RingBuffer::usize()
         }
