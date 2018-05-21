@@ -1,4 +1,7 @@
-
+// Make functions `const` if the `const-fn` feature is active.
+// The meta attributes are in place to keep doc comments with the functions.
+// The function definition incl. annotations and doc comments must be enclodes
+// by the marco invocation.
 macro_rules! const_fn {
     ($(#[$attr:meta])* pub const unsafe fn $($f:tt)*) => (
 

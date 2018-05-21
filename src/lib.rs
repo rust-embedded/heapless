@@ -8,21 +8,6 @@
 //! via their type parameter `N`. This means that you can instantiate a `heapless` data structure on
 //! the stack, in a `static` variable, or even in the heap.
 //!
-//! There is a feature gate `const-fn` which enables the nightly `const_fn` feature.
-//! You can enable it in `Cargo.toml`.
-//!
-//! ```text
-//! # Cargo.toml
-//! ...
-//! [dependencies]
-//! heapless = { version = "0.4.0", features = ["const-fn"] }
-//! ...
-//!
-//! ```
-//! When enabled, you can use most `new` methods to initialize `static`
-//! variables at compile time.
-//!
-//!
 //! ```
 //! use heapless::Vec; // fixed capacity `std::Vec`
 //! use heapless::consts::U8; // type level integer used to specify capacity
@@ -38,9 +23,10 @@
 //! // work around
 //! static mut XS: Option<Vec<u8, U8>> = None;
 //! unsafe { XS = Some(Vec::new()) };
+//! let xs = unsafe { XS.as_mut().unwrap() };
 //!
-//! unsafe { XS.as_mut().unwrap().push(42) };
-//! unsafe { assert_eq!(XS.as_mut().unwrap().pop(), Some(42)) };
+//! xs.push(42);
+//! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in the heap (though kind of pointless because no reallocation)
 //! let mut ys: Box<Vec<u8, U8>> = Box::new(Vec::new());
@@ -69,6 +55,29 @@
 //! queue
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
+//!
+//!
+//! In order to target the Rust stable toolchain, there are some feature gates.
+//! The features need to be enabled in `Cargo.toml` in order to use them.
+//! Once the underlaying features in Rust are stable,
+//! these feature gates might be activated by default.
+//!
+//! Example of `Cargo.toml`:
+//!
+//! ```text
+//! ...
+//! [dependencies]
+//! heapless = { version = "0.4.0", features = ["const-fn"] }
+//! ...
+//!
+//! ```
+//!
+//! Currently the following features are availbale and not active by default:
+//!
+//! - `"const-fn"` -- Enable the nightly `const_fn` feature and make most `new` methods `const`.
+//!      This way they can be used to initialize static memory at compile time.
+//!
+
 
 #![allow(warnings)]
 #![deny(missing_docs)]
