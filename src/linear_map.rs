@@ -442,3 +442,18 @@ where
         self.iter.next().map(|&mut (ref k, ref mut v)| (k, v))
     }
 }
+
+
+#[cfg(feature = "const-fn")] // Remove this if there are more tests
+#[cfg(test)]
+mod test {
+    use consts::*;
+    use LinearMap;
+
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _L: LinearMap<i32, i32, U8>= LinearMap::new();
+    }
+
+}

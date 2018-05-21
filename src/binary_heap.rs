@@ -433,6 +433,12 @@ mod tests {
     use binary_heap::{self, BinaryHeap, Min};
     use consts::*;
 
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap::new();
+    }
+
     #[test]
     fn min() {
         let mut heap = BinaryHeap::<_, U16, Min>::new();

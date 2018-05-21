@@ -445,6 +445,12 @@ mod tests {
     use consts::*;
     use RingBuffer;
 
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _R: RingBuffer<i32, U4> = RingBuffer::new();
+    }
+
     #[test]
     fn drop() {
         struct Droppable;

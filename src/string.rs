@@ -524,6 +524,12 @@ mod tests {
     use consts::*;
     use {String, Vec};
 
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _S: String<U8> = String::new();
+    }
+
     #[test]
     fn debug() {
         extern crate std;

@@ -514,6 +514,12 @@ mod tests {
     use consts::*;
     use Vec;
 
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _V: Vec<i32, U4> = Vec::new();
+    }
+
     macro_rules! droppable {
         () => (
             struct Droppable;
