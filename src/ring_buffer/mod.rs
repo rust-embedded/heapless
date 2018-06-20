@@ -335,7 +335,7 @@ macro_rules! impl_ {
                 let tail = self.tail.load_relaxed();
 
                 if head > tail {
-                    head - tail
+                    self.capacity() + 1 - head + tail
                 } else {
                     tail - head
                 }

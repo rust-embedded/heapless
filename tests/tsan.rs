@@ -155,3 +155,20 @@ fn unchecked() {
 
     assert_eq!(rb.len(), N::to_usize() / 2);
 }
+
+#[test]
+fn len_properly_wraps() {
+    type N = U3;
+    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+
+    rb.enqueue(1).unwrap();
+    assert_eq!(rb.len(), 1);
+    rb.dequeue();
+    assert_eq!(rb.len(), 0);
+    rb.enqueue(2).unwrap();
+    assert_eq!(rb.len(), 1);
+    rb.enqueue(3).unwrap();
+    assert_eq!(rb.len(), 2);
+    rb.enqueue(4).unwrap();
+    assert_eq!(rb.len(), 3);
+}
