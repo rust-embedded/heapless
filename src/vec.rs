@@ -48,13 +48,15 @@ where
     N: ArrayLength<T>,
 {
     /* Constructors */
-    /// Constructs a new, empty vector with a fixed capacity of `N`
-    pub const fn new() -> Self {
-        Vec {
-            buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
-            len: 0,
+    const_fn!(
+        /// Constructs a new, empty vector with a fixed capacity of `N`
+        pub const fn new() -> Self {
+            Vec {
+                buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                len: 0,
+            }
         }
-    }
+    );
 
     /* Public API */
     /// Returns the maximum number of elements the vector can hold
@@ -511,6 +513,12 @@ where
 mod tests {
     use consts::*;
     use Vec;
+
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _V: Vec<i32, U4> = Vec::new();
+    }
 
     macro_rules! droppable {
         () => (

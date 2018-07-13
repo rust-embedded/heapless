@@ -13,9 +13,10 @@ use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
-    static mut RB: RingBuffer<i32, U4> = RingBuffer::new();
+    static mut RB: Option<RingBuffer<i32, U4>> = None;
+    unsafe{ RB = Some(RingBuffer::new()) };
 
-    let rb = unsafe { &mut RB };
+    let rb = unsafe { RB.as_mut().unwrap() };
 
     rb.enqueue(0).unwrap();
 
@@ -34,9 +35,10 @@ fn once() {
 
 #[test]
 fn twice() {
-    static mut RB: RingBuffer<i32, U8> = RingBuffer::new();
+    static mut RB: Option<RingBuffer<i32, U4>> = None;
+    unsafe{ RB = Some(RingBuffer::new()) };
 
-    let rb = unsafe { &mut RB };
+    let rb = unsafe { RB.as_mut().unwrap() };
 
     rb.enqueue(0).unwrap();
     rb.enqueue(1).unwrap();

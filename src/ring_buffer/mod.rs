@@ -61,11 +61,13 @@ impl<U> Atomic<U>
 where
     U: Uxx,
 {
-    const fn new(v: U) -> Atomic<U> {
-        Atomic {
-            v: UnsafeCell::new(v),
+    const_fn!(
+        const fn new(v: U) -> Atomic<U> {
+            Atomic {
+                v: UnsafeCell::new(v),
+            }
         }
-    }
+    );
 
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
@@ -116,13 +118,16 @@ where
 /// use heapless::RingBuffer;
 /// use heapless::consts::*;
 ///
-/// static mut RB: RingBuffer<Event, U4> = RingBuffer::new();
+/// // static mut RB: RingBuffer<Event, U4> = RingBuffer::new(); // requires feature `const-fn`
+///
+/// static mut RB: Option<RingBuffer<Event, U4>>  = None;
 ///
 /// enum Event { A, B }
 ///
 /// fn main() {
+///     unsafe { RB = Some(RingBuffer::new()) };
 ///     // NOTE(unsafe) beware of aliasing the `consumer` end point
-///     let mut consumer = unsafe { RB.split().1 };
+///     let mut consumer = unsafe { RB.as_mut().unwrap().split().1 };
 ///
 ///     loop {
 ///         // `dequeue` is a lockless operation
@@ -138,7 +143,7 @@ where
 /// // this is a different execution context that can preempt `main`
 /// fn interrupt_handler() {
 ///     // NOTE(unsafe) beware of aliasing the `producer` end point
-///     let mut producer = unsafe { RB.split().0 };
+///     let mut producer = unsafe { RB.as_mut().unwrap().split().0 };
 /// #   let condition = true;
 ///
 ///     // ..
@@ -264,14 +269,17 @@ macro_rules! impl_ {
             N: Add<U1> + Unsigned,
             Sum<N, U1>: ArrayLength<T>,
         {
-            /// Creates an empty ring buffer with a fixed capacity of `N`
-            pub const fn $uxx() -> Self {
-                RingBuffer {
-                    buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
-                    head: Atomic::new(0),
-                    tail: Atomic::new(0),
+
+            const_fn!(
+                /// Creates an empty ring buffer with a fixed capacity of `N`
+                pub const fn $uxx() -> Self {
+                    RingBuffer {
+                        buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                        head: Atomic::new(0),
+                        tail: Atomic::new(0),
+                    }
                 }
-            }
+            );
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
@@ -349,10 +357,13 @@ where
     N: Add<U1> + Unsigned,
     Sum<N, U1>: ArrayLength<T>,
 {
-    /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
-    pub const fn new() -> Self {
-        RingBuffer::usize()
-    }
+
+    const_fn!(
+        /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
+        pub const fn new() -> Self {
+            RingBuffer::usize()
+        }
+    );
 }
 
 impl_!(u8);
@@ -433,6 +444,12 @@ iterator!(struct IterMut -> &'a mut T, *mut T, as_mut_slice, as_mut_ptr, make_re
 mod tests {
     use consts::*;
     use RingBuffer;
+
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _R: RingBuffer<i32, U4> = RingBuffer::new();
+    }
 
     #[test]
     fn drop() {

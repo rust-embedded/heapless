@@ -17,22 +17,25 @@ impl<N> String<N>
 where
     N: ArrayLength<u8>,
 {
-    /// Constructs a new, empty `String` with a fixed capacity of `N`
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    /// use heapless::consts::*;
-    ///
-    /// let mut s: String<U4> = String::new();
-    /// ```
+
     #[inline]
-    pub const fn new() -> Self {
-        String { vec: Vec::new() }
-    }
+    const_fn!(
+        /// Constructs a new, empty `String` with a fixed capacity of `N`
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        /// use heapless::String;
+        /// use heapless::consts::*;
+        ///
+        /// let mut s: String<U4> = String::new();
+        /// ```
+        pub const fn new() -> Self {
+            String { vec: Vec::new() }
+        }
+    );
 
     /// Converts a vector of bytes into a `String`.
     ///
@@ -520,6 +523,12 @@ where
 mod tests {
     use consts::*;
     use {String, Vec};
+
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _S: String<U8> = String::new();
+    }
 
     #[test]
     fn debug() {

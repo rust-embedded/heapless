@@ -107,21 +107,24 @@ where
     K: Kind,
 {
     /* Constructors */
-    /// Creates an empty BinaryHeap as a $K-heap.
-    ///
-    /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
-    ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
-    /// heap.push(4).unwrap();
-    /// ```
-    pub const fn new() -> Self {
-        BinaryHeap {
-            _kind: PhantomData,
-            data: Vec::new(),
+
+    const_fn!(
+        /// Creates an empty BinaryHeap as a $K-heap.
+        ///
+        /// ```
+        /// use heapless::binary_heap::{BinaryHeap, Max};
+        /// use heapless::consts::*;
+        ///
+        /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+        /// heap.push(4).unwrap();
+        /// ```
+        pub const fn new() -> Self {
+            BinaryHeap {
+                _kind: PhantomData,
+                data: Vec::new(),
+            }
         }
-    }
+    );
 
     /* Public API */
     /// Returns the capacity of the binary heap.
@@ -429,6 +432,12 @@ mod tests {
 
     use binary_heap::{self, BinaryHeap, Min};
     use consts::*;
+
+    #[cfg(feature = "const-fn")]
+    #[test]
+    fn static_new() {
+        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap::new();
+    }
 
     #[test]
     fn min() {

@@ -18,7 +18,15 @@
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
-//! static mut XS: Vec<u8, U8> = Vec::new();
+//! // static mut XS: Vec<u8, U8> = Vec::new(); // requires feature `const-fn`
+//!
+//! // work around
+//! static mut XS: Option<Vec<u8, U8>> = None;
+//! unsafe { XS = Some(Vec::new()) };
+//! let xs = unsafe { XS.as_mut().unwrap() };
+//!
+//! xs.push(42);
+//! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in the heap (though kind of pointless because no reallocation)
 //! let mut ys: Box<Vec<u8, U8>> = Box::new(Vec::new());
@@ -47,11 +55,34 @@
 //! queue
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
+//!
+//!
+//! In order to target the Rust stable toolchain, there are some feature gates.
+//! The features need to be enabled in `Cargo.toml` in order to use them.
+//! Once the underlaying features in Rust are stable,
+//! these feature gates might be activated by default.
+//!
+//! Example of `Cargo.toml`:
+//!
+//! ```text
+//! ...
+//! [dependencies]
+//! heapless = { version = "0.4.0", features = ["const-fn"] }
+//! ...
+//!
+//! ```
+//!
+//! Currently the following features are availbale and not active by default:
+//!
+//! - `"const-fn"` -- Enable the nightly `const_fn` feature and make most `new` methods `const`.
+//!      This way they can be used to initialize static memory at compile time.
+//!
+
 
 #![allow(warnings)]
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(const_fn)]
+#![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![feature(core_intrinsics)]
 #![feature(untagged_unions)]
 #![no_std]
@@ -60,6 +91,9 @@ extern crate generic_array;
 extern crate hash32;
 #[cfg(test)]
 extern crate std;
+
+#[macro_use]
+mod const_fn;
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
