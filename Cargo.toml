@@ -19,6 +19,7 @@ repository = "https://github.com/japaric/heapless"
 version = "0.3.6"
 
 [features]
+default = ["const-fn"]
 const-fn = []
 
 [dev-dependencies]
