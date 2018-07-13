@@ -155,3 +155,38 @@ fn unchecked() {
 
     assert_eq!(rb.len(), N::to_usize() / 2);
 }
+
+#[test]
+fn len_properly_wraps() {
+    type N = U3;
+    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+
+    rb.enqueue(1).unwrap();
+    assert_eq!(rb.len(), 1);
+    rb.dequeue();
+    assert_eq!(rb.len(), 0);
+    rb.enqueue(2).unwrap();
+    assert_eq!(rb.len(), 1);
+    rb.enqueue(3).unwrap();
+    assert_eq!(rb.len(), 2);
+    rb.enqueue(4).unwrap();
+    assert_eq!(rb.len(), 3);
+}
+
+#[test]
+fn iterator_properly_wraps() {
+    type N = U3;
+    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+
+    rb.enqueue(1).unwrap();
+    rb.dequeue();
+    rb.enqueue(2).unwrap();
+    rb.enqueue(3).unwrap();
+    rb.enqueue(4).unwrap();
+    let expected = [2, 3, 4];
+    let mut actual = [0, 0, 0];
+    for (idx, el) in rb.iter().enumerate() {
+        actual[idx] = *el;
+    }
+    assert_eq!(expected, actual)
+}
