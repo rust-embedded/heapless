@@ -19,7 +19,7 @@ mod spsc;
 /// Types that can be used as `RingBuffer` indices: `u8`, `u16` and `usize
 ///
 /// This trait is sealed and cannot be implemented outside of `heapless`.
-pub unsafe trait Uxx: Into<usize> + Send {
+pub unsafe trait Uxx: Into<usize> + Send + private::Sealed {
     #[doc(hidden)]
     fn truncate(x: usize) -> Self;
 
@@ -52,6 +52,16 @@ pub unsafe trait Uxx: Into<usize> + Send {
     #[cfg(not(feature = "smaller-atomics"))]
     #[doc(hidden)]
     fn store_release(x: *mut Self, val: Self);
+}
+
+mod private {
+    pub trait Sealed {}
+
+    impl Sealed for usize {}
+    #[cfg(feature = "smaller-atomics")]
+    impl Sealed for u8 {}
+    #[cfg(feature = "smaller-atomics")]
+    impl Sealed for u16 {}
 }
 
 #[cfg(feature = "smaller-atomics")]
