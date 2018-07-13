@@ -79,6 +79,14 @@ macro_rules! impl_ {
             N: Add<U1> + Unsigned,
             Sum<N, U1>: ArrayLength<T>,
         {
+            /// Returns if there are any items to dequeue. When this returns true, at least the
+            /// first subsequent dequeue will succeed.
+            pub fn ready(&self) -> bool {
+                let tail = unsafe { self.rb.as_ref().tail.load_acquire() };
+                let head = unsafe { self.rb.as_ref().head.load_relaxed() };
+                return head != tail;
+            }
+
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
                 let tail = unsafe { self.rb.as_ref().tail.load_acquire() };
@@ -119,6 +127,21 @@ macro_rules! impl_ {
             N: Add<U1> + Unsigned,
             Sum<N, U1>: ArrayLength<T>,
         {
+            /// Returns if there is any space to enqueue a new item. When this returns true, at
+            /// least the first subsequent enqueue will succeed.
+            pub fn ready(&self) -> bool {
+                let n = unsafe { self.rb.as_ref().capacity() + 1 };
+                let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
+                // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method
+                // would be sound on most architectures but that change would result in UB according
+                // to the C++ memory model, which is what Rust currently uses, so we err on the side
+                // of caution and stick to `load_acquire`. Check issue google#sanitizers#882 for
+                // more details.
+                let head = unsafe { self.rb.as_ref().head.load_acquire() };
+                let next_tail = (tail + 1) % n;
+                return next_tail != head;
+            }
+
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full

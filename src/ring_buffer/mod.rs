@@ -212,7 +212,7 @@ where
         let tail = self.tail.load_relaxed().into();
 
         if head > tail {
-            head - tail
+            self.capacity().into() + 1 - head + tail
         } else {
             tail - head
         }
@@ -343,7 +343,7 @@ macro_rules! impl_ {
                 let tail = self.tail.load_relaxed();
 
                 if head > tail {
-                    head - tail
+                    self.capacity() + 1 - head + tail
                 } else {
                     tail - head
                 }
@@ -572,5 +572,33 @@ mod tests {
         rb.enqueue(4).unwrap();
 
         assert_eq!(rb.len(), 2);
+    }
+
+    #[test]
+    fn ready_flag() {
+        let mut rb: RingBuffer<i32, U2> = RingBuffer::new();
+        let (mut p, mut c) = rb.split();
+        assert_eq!(c.ready(), false);
+        assert_eq!(p.ready(), true);
+
+        p.enqueue(0).unwrap();
+
+        assert_eq!(c.ready(), true);
+        assert_eq!(p.ready(), true);
+
+        p.enqueue(1).unwrap();
+
+        assert_eq!(c.ready(), true);
+        assert_eq!(p.ready(), false);
+
+        c.dequeue().unwrap();
+
+        assert_eq!(c.ready(), true);
+        assert_eq!(p.ready(), true);
+
+        c.dequeue().unwrap();
+
+        assert_eq!(c.ready(), false);
+        assert_eq!(p.ready(), true);
     }
 }

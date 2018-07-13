@@ -84,7 +84,6 @@
 #![deny(warnings)]
 #![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![feature(core_intrinsics)]
-#![feature(nonzero)]
 #![feature(untagged_unions)]
 #![no_std]
 
