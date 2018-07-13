@@ -19,8 +19,9 @@ repository = "https://github.com/japaric/heapless"
 version = "0.3.6"
 
 [features]
-default = ["const-fn"]
+default = ["const-fn", "smaller-atomics"]
 const-fn = []
+smaller-atomics = []
 
 [dev-dependencies]
 scoped_threadpool = "0.1.8"

@@ -196,7 +196,9 @@ macro_rules! impl_ {
     };
 }
 
+#[cfg(feature = "smaller-atomics")]
 impl_!(u8);
+#[cfg(feature = "smaller-atomics")]
 impl_!(u16);
 impl_!(usize);
 

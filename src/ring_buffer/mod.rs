@@ -1,8 +1,12 @@
 //! Ring buffer
 
 use core::cell::UnsafeCell;
+#[cfg(feature = "smaller-atomics")]
+use core::intrinsics;
 use core::ops::Add;
-use core::{intrinsics, ptr};
+use core::ptr;
+#[cfg(not(feature = "smaller-atomics"))]
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use generic_array::typenum::{Sum, U1, Unsigned};
 use generic_array::{ArrayLength, GenericArray};
@@ -14,12 +18,43 @@ mod spsc;
 
 /// Types that can be used as `RingBuffer` indices: `u8`, `u16` and `usize
 ///
-/// Do not implement this trait yourself
+/// This trait is sealed and cannot be implemented outside of `heapless`.
 pub unsafe trait Uxx: Into<usize> + Send {
     #[doc(hidden)]
     fn truncate(x: usize) -> Self;
+
+    #[cfg(feature = "smaller-atomics")]
+    #[doc(hidden)]
+    fn load_acquire(x: *mut Self) -> Self {
+        unsafe { intrinsics::atomic_load_acq(x) }
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    #[doc(hidden)]
+    fn load_acquire(x: *mut Self) -> Self;
+
+    #[cfg(feature = "smaller-atomics")]
+    #[doc(hidden)]
+    fn load_relaxed(x: *mut Self) -> Self {
+        unsafe { intrinsics::atomic_load_relaxed(x) }
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    #[doc(hidden)]
+    fn load_relaxed(x: *mut Self) -> Self;
+
+    #[cfg(feature = "smaller-atomics")]
+    #[doc(hidden)]
+    fn store_release(x: *mut Self, val: Self) {
+        unsafe { intrinsics::atomic_store_rel(x, val) }
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    #[doc(hidden)]
+    fn store_release(x: *mut Self, val: Self);
 }
 
+#[cfg(feature = "smaller-atomics")]
 unsafe impl Uxx for u8 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u8::MAX;
@@ -31,6 +66,7 @@ unsafe impl Uxx for u8 {
     }
 }
 
+#[cfg(feature = "smaller-atomics")]
 unsafe impl Uxx for u16 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u16::MAX;
@@ -45,6 +81,23 @@ unsafe impl Uxx for u16 {
 unsafe impl Uxx for usize {
     fn truncate(x: usize) -> Self {
         x
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    fn load_acquire(x: *mut Self) -> Self {
+        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Acquire) }
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    fn load_relaxed(x: *mut Self) -> Self {
+        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Relaxed) }
+    }
+
+    #[cfg(not(feature = "smaller-atomics"))]
+    fn store_release(x: *mut Self, val: Self) {
+        unsafe {
+            (*(x as *mut AtomicUsize)).store(val, Ordering::Release);
+        }
     }
 }
 
@@ -61,28 +114,26 @@ impl<U> Atomic<U>
 where
     U: Uxx,
 {
-    const_fn!(
-        const fn new(v: U) -> Atomic<U> {
-            Atomic {
-                v: UnsafeCell::new(v),
-            }
+    const_fn!(const fn new(v: U) -> Atomic<U> {
+        Atomic {
+            v: UnsafeCell::new(v),
         }
-    );
+    });
 
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
     }
 
     fn load_acquire(&self) -> U {
-        unsafe { intrinsics::atomic_load_acq(self.v.get()) }
+        U::load_acquire(self.v.get())
     }
 
     fn load_relaxed(&self) -> U {
-        unsafe { intrinsics::atomic_load_relaxed(self.v.get()) }
+        U::load_relaxed(self.v.get())
     }
 
     fn store_release(&self, val: U) {
-        unsafe { intrinsics::atomic_store_rel(self.v.get(), val) }
+        U::store_release(self.v.get(), val)
     }
 }
 
@@ -269,7 +320,6 @@ macro_rules! impl_ {
             N: Add<U1> + Unsigned,
             Sum<N, U1>: ArrayLength<T>,
         {
-
             const_fn!(
                 /// Creates an empty ring buffer with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
@@ -357,7 +407,6 @@ where
     N: Add<U1> + Unsigned,
     Sum<N, U1>: ArrayLength<T>,
 {
-
     const_fn!(
         /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
         pub const fn new() -> Self {
@@ -366,7 +415,9 @@ where
     );
 }
 
+#[cfg(feature = "smaller-atomics")]
 impl_!(u8);
+#[cfg(feature = "smaller-atomics")]
 impl_!(u16);
 impl_!(usize);
 
@@ -548,6 +599,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "smaller-atomics")]
     fn u8() {
         let mut rb: RingBuffer<u8, U256, _> = RingBuffer::u8();
 
