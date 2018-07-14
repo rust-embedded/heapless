@@ -3,6 +3,18 @@ language: rust
 matrix:
   include:
     - env: TARGET=x86_64-unknown-linux-gnu
+      rust: beta
+      if: branch != master
+
+    - env: TARGET=thumbv6m-none-eabi
+      rust: beta
+      if: branch != master
+
+    - env: TARGET=thumbv7m-none-eabi
+      rust: beta
+      if: branch != master
+
+    - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly
 
     - env: TARGET=thumbv6m-none-eabi
