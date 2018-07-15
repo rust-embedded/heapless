@@ -6,7 +6,7 @@ use generic_array::typenum::PowerOfTwo;
 use generic_array::ArrayLength;
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use indexmap::{self, Bucket, IndexMap, Pos};
+use indexmap::{self, Bucket, IndexMap, OptionalPos};
 
 /// An `IndexSet` using the default FNV hasher
 pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
@@ -47,7 +47,7 @@ pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
 pub struct IndexSet<T, N, S>
 where
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     map: IndexMap<T, (), N, S>,
 }
@@ -56,7 +56,7 @@ impl<T, N, S> IndexSet<T, N, BuildHasherDefault<S>>
 where
     T: Eq + Hash,
     S: Default + Hasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos> + PowerOfTwo,
 {
     /// Creates an empty `IndexSet`
     pub fn new() -> Self {
@@ -70,7 +70,7 @@ impl<T, N, S> IndexSet<T, N, S>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     /// Returns the number of elements the set can hold
     ///
@@ -140,7 +140,7 @@ where
         other: &'a IndexSet<T, N2, S2>,
     ) -> Difference<'a, T, N2, S2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         Difference {
@@ -177,7 +177,7 @@ where
         other: &'a IndexSet<T, N2, S2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         self.difference(other).chain(other.difference(self))
@@ -208,7 +208,7 @@ where
         other: &'a IndexSet<T, N2, S2>,
     ) -> Intersection<'a, T, N2, S2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         Intersection {
@@ -242,7 +242,7 @@ where
         other: &'a IndexSet<T, N2, S2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         self.iter().chain(other.difference(self))
@@ -342,7 +342,7 @@ where
     /// ```
     pub fn is_disjoint<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         self.iter().all(|v| !other.contains(v))
@@ -368,7 +368,7 @@ where
     /// ```
     pub fn is_subset<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         self.iter().all(|v| other.contains(v))
@@ -397,7 +397,7 @@ where
     /// ```
     pub fn is_superset<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
         S2: BuildHasher,
     {
         other.is_subset(self)
@@ -458,7 +458,7 @@ impl<T, N, S> fmt::Debug for IndexSet<T, N, S>
 where
     T: Eq + Hash + fmt::Debug,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_set().entries(self.iter()).finish()
@@ -469,7 +469,7 @@ impl<T, N, S> Default for IndexSet<T, N, S>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn default() -> Self {
         IndexSet {
@@ -483,8 +483,8 @@ where
     T: Eq + Hash,
     S1: BuildHasher,
     S2: BuildHasher,
-    N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
-    N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N1: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
+    N2: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn eq(&self, other: &IndexSet<T, N2, S2>) -> bool {
         self.len() == other.len() && self.is_subset(other)
@@ -495,7 +495,7 @@ impl<T, N, S> Extend<T> for IndexSet<T, N, S>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -509,7 +509,7 @@ impl<'a, T, N, S> Extend<&'a T> for IndexSet<T, N, S>
 where
     T: 'a + Eq + Hash + Copy,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -523,7 +523,7 @@ impl<T, N, S> FromIterator<T> for IndexSet<T, N, S>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -539,7 +539,7 @@ impl<'a, T, N, S> IntoIterator for &'a IndexSet<T, N, S>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
@@ -571,7 +571,7 @@ pub struct Difference<'a, T, N, S>
 where
     S: 'a + BuildHasher,
     T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S>,
@@ -581,7 +581,7 @@ impl<'a, T, N, S> Iterator for Difference<'a, T, N, S>
 where
     S: 'a + BuildHasher,
     T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     type Item = &'a T;
 
@@ -599,7 +599,7 @@ pub struct Intersection<'a, T, N, S>
 where
     S: 'a + BuildHasher,
     T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S>,
@@ -609,7 +609,7 @@ impl<'a, T, N, S> Iterator for Intersection<'a, T, N, S>
 where
     S: 'a + BuildHasher,
     T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<OptionalPos>,
 {
     type Item = &'a T;
 

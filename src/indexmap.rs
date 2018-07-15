@@ -1,6 +1,5 @@
 use core::borrow::Borrow;
 use core::iter::FromIterator;
-use core::num::NonZeroU32;
 use core::{fmt, ops, slice};
 
 use generic_array::typenum::PowerOfTwo;
@@ -38,31 +37,85 @@ pub struct Bucket<K, V> {
 #[derive(Clone, Copy, PartialEq)]
 pub struct Pos {
     // compact representation of `{ hash_value: u16, index: u16 }`
-    // To get the most from `NonZero` we store the *value minus 1*. This way `None::Option<Pos>`
-    // is equivalent to the very unlikely value of  `{ hash_value: 0xffff, index: 0xffff }` instead
-    // the more likely of `{ hash_value: 0x00, index: 0x00 }`
-    nz: NonZeroU32,
+    // stores hash<<16 + index + 1,
+    // such that 0x00000000 can be used for optimization
+    combined: u32,
 }
 
 impl Pos {
     fn new(index: usize, hash: HashValue) -> Self {
         Pos {
-            nz: unsafe {
-                NonZeroU32::new_unchecked(
-                    ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1),
-                )
-            },
+            combined: ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1)
         }
     }
 
     fn hash(&self) -> HashValue {
-        HashValue((self.nz.get().wrapping_sub(1) >> 16) as u16)
+        HashValue((self.combined.wrapping_sub(1) >> 16) as u16)
     }
 
     fn index(&self) -> usize {
-        self.nz.get().wrapping_sub(1) as u16 as usize
+        self.combined.wrapping_sub(1) as u16 as usize
+    }
+
+}
+
+#[doc(hidden)]
+#[derive(Clone, Copy, PartialEq)]
+// optional representation of `Pos`
+// the unlikely combined value of `{ hash_value: 0xffff, index: 0xffff } + 1`,
+// which is 0x00000000, is used to represent None,
+// instead of the more likely of `{ hash_value: 0x00, index: 0x00 } + 1`
+pub struct OptionalPos(Pos);
+
+impl OptionalPos {
+    const MAGIC_NONE: u32 = 0x00000000;
+
+    fn some(index: usize, hash: HashValue) -> Result<Self, ()> {
+        Self::some_from_pos(Pos::new(index, hash))
+    }
+
+    fn some_from_pos(pos: Pos) -> Result<Self, ()> {
+        let opt = OptionalPos(pos);
+        if opt.is_some() {
+            Ok(opt)
+        } else {
+            Err(())
+        }
+    }
+
+    fn none() -> Self {
+        OptionalPos(
+            Pos {
+                combined: Self::MAGIC_NONE
+            }
+        )
+    }
+
+    fn is_some(&self) -> bool {
+        !self.is_none()
+    }
+
+    fn is_none(&self) -> bool {
+        self.0.combined == Self::MAGIC_NONE
+    }
+
+    fn hash(&self) -> Option<HashValue> {
+        if self.is_some() {
+            Some(self.0.hash())
+        } else {
+            None
+        }
+    }
+
+    fn index(&self) -> Option<usize> {
+        if self.is_some() {
+            Some(self.0.index())
+        } else {
+            None
+        }
     }
 }
+
 
 pub enum Inserted<V> {
     Done,
@@ -86,21 +139,22 @@ macro_rules! probe_loop {
 struct CoreMap<K, V, N>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     entries: Vec<Bucket<K, V>, N>,
-    indices: GenericArray<Option<Pos>, N>,
+    indices: GenericArray<OptionalPos, N>,
 }
 
 impl<K, V, N> CoreMap<K, V, N>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
     fn new() -> Self {
         CoreMap {
             entries: Vec::new(),
+            // zeroed memory represents [None ...]
             indices: unsafe { mem::zeroed() },
         }
     }
@@ -122,10 +176,11 @@ where
         let mut dist = 0;
 
         probe_loop!(probe < self.indices.len(), {
-            if let Some(pos) = self.indices[probe] {
-                let entry_hash = pos.hash();
+            let pos: OptionalPos = self.indices[probe];
+            if pos.is_some() {
+                let entry_hash = pos.hash().unwrap();
                 // NOTE(i) we use unchecked indexing below
-                let i = pos.index();
+                let i = pos.index().unwrap();
                 debug_assert!(i < self.entries.len());
 
                 if dist > entry_hash.probe_distance(Self::mask(), probe) {
@@ -155,12 +210,12 @@ where
 
         let inserted;
         probe_loop!(probe < self.indices.len(), {
-            let pos = &mut self.indices[probe];
+            let pos: &mut OptionalPos = &mut self.indices[probe];
 
-            if let Some(pos) = *pos {
-                let entry_hash = pos.hash();
+            if pos.is_some() {
+                let entry_hash = pos.hash().unwrap();
                 // NOTE(i) we use unchecked indexing below
-                let i = pos.index();
+                let i = pos.index().unwrap();
                 debug_assert!(i < self.entries.len());
 
                 let their_dist = entry_hash.probe_distance(Self::mask(), probe);
@@ -185,7 +240,9 @@ where
             } else {
                 // empty bucket, insert here
                 let index = self.entries.len();
-                *pos = Some(Pos::new(index, hash));
+                // FIXME unwrap is actually unsafe here
+                // FIXME when the combined index and hash happen to be 0xffffffff
+                *pos = OptionalPos::some(index, hash).unwrap();
                 inserted = Inserted::Done;
                 break;
             }
@@ -200,16 +257,13 @@ where
     // phase 2 is post-insert where we forward-shift `Pos` in the indices.
     fn insert_phase_2(&mut self, mut probe: usize, mut old_pos: Pos) {
         probe_loop!(probe < self.indices.len(), {
-            let pos = unsafe { self.indices.get_unchecked_mut(probe) };
-
-            let mut is_none = true; // work around lack of NLL
-            if let Some(pos) = pos.as_mut() {
-                old_pos = mem::replace(pos, old_pos);
-                is_none = false;
-            }
-
-            if is_none {
-                *pos = Some(old_pos);
+            let pos: &mut OptionalPos = unsafe { self.indices.get_unchecked_mut(probe) };
+            if pos.is_some() {
+                // swaps pos and old_pos, leavs a valid Pos in both,
+                // since both are implicitly of OptionalPos::some
+                old_pos = mem::replace(&mut pos.0, old_pos)
+            } else {
+                *pos = OptionalPos::some_from_pos(old_pos).unwrap();
                 break;
             }
         });
@@ -219,7 +273,7 @@ where
         // index `probe` and entry `found` is to be removed
         // use swap_remove, but then we need to update the index that points
         // to the other entry that has to move
-        self.indices[probe] = None;
+        self.indices[probe] = OptionalPos::none();
         let entry = unsafe { self.entries.swap_remove_unchecked(found) };
 
         // correct index that points to the entry that had to swap places
@@ -229,10 +283,12 @@ where
             let mut probe = entry.hash.desired_pos(Self::mask());
 
             probe_loop!(probe < self.indices.len(), {
-                if let Some(pos) = self.indices[probe] {
-                    if pos.index() >= self.entries.len() {
+                let pos: OptionalPos = self.indices[probe];
+                if pos.is_some() {
+                    if pos.index().unwrap() >= self.entries.len() {
                         // found it
-                        self.indices[probe] = Some(Pos::new(found, entry.hash));
+                        // FIXME unwrap is actually unsafe for 0xffffffff
+                        self.indices[probe] = OptionalPos::some(found, entry.hash).unwrap();
                         break;
                     }
                 }
@@ -251,12 +307,13 @@ where
         let mut probe = probe_at_remove + 1;
 
         probe_loop!(probe < self.indices.len(), {
-            if let Some(pos) = self.indices[probe] {
-                let entry_hash = pos.hash();
+            let pos = self.indices[probe];
+            if pos.is_some() {
+                let entry_hash = pos.hash().unwrap();
 
                 if entry_hash.probe_distance(Self::mask(), probe) > 0 {
                     unsafe { *self.indices.get_unchecked_mut(last_probe) = self.indices[probe] }
-                    self.indices[probe] = None;
+                    self.indices[probe] = OptionalPos::none();
                 } else {
                     break;
                 }
@@ -313,7 +370,7 @@ where
 pub struct IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     core: CoreMap<K, V, N>,
     build_hasher: S,
@@ -323,7 +380,7 @@ impl<K, V, N, S> IndexMap<K, V, N, BuildHasherDefault<S>>
 where
     K: Eq + Hash,
     S: Default + Hasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos> + PowerOfTwo,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
     /// Creates an empty `IndexMap`.
@@ -341,7 +398,7 @@ impl<K, V, N, S> IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     /* Public API */
     /// Returns the number of elements the map can hold
@@ -509,7 +566,7 @@ where
     pub fn clear(&mut self) {
         self.core.entries.clear();
         for pos in self.core.indices.iter_mut() {
-            *pos = None;
+            *pos = OptionalPos::none();
         }
     }
 
@@ -704,7 +761,7 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     type Output = V;
 
@@ -718,7 +775,7 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("key not found")
@@ -730,7 +787,7 @@ where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -741,7 +798,7 @@ impl<K, V, N, S> Default for IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn default() -> Self {
         IndexMap {
@@ -755,7 +812,7 @@ impl<K, V, N, S> Extend<(K, V)> for IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -772,7 +829,7 @@ where
     K: Eq + Hash + Copy,
     V: Copy,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -786,7 +843,7 @@ impl<K, V, N, S> FromIterator<(K, V)> for IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     fn from_iter<I>(iterable: I) -> Self
     where
@@ -802,7 +859,7 @@ impl<'a, K, V, N, S> IntoIterator for &'a IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     type Item = (&'a K, &'a V);
     type IntoIter = Iter<'a, K, V>;
@@ -816,7 +873,7 @@ impl<'a, K, V, N, S> IntoIterator for &'a mut IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<OptionalPos>,
 {
     type Item = (&'a K, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
