@@ -8,7 +8,6 @@ pub mod mem {
     /// extremely unsafe uniniatilized memory
     /// only use with ManuallyDrop
     #[allow(unions_with_drop_fields)]
-    #[cfg(feature = "const-fn")]
     pub(crate) union Uninit<T> {
         uninit: (),
         init: T,
