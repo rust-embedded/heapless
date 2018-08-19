@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 use core::ops::Add;
 use core::ptr::{self, NonNull};
 
-use generic_array::typenum::{Sum, U1, Unsigned};
+use generic_array::typenum::{Sum, Unsigned, U1};
 use generic_array::ArrayLength;
 
 use ring_buffer::{RingBuffer, Uxx};
@@ -47,8 +47,7 @@ where
     Sum<N, U1>: ArrayLength<T>,
     T: Send,
     U: Uxx,
-{
-}
+{}
 
 /// A ring buffer "producer"; it can enqueue items into the ring buffer
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
@@ -69,8 +68,7 @@ where
     Sum<N, U1>: ArrayLength<T>,
     T: Send,
     U: Uxx,
-{
-}
+{}
 
 macro_rules! impl_ {
     ($uxx:ident) => {
@@ -114,7 +112,7 @@ macro_rules! impl_ {
                 let rb = self.rb.as_ref();
 
                 let n = rb.capacity() + 1;
-                let buffer: &[T] = rb.buffer.as_ref();
+                let buffer = rb.buffer.get_ref();
 
                 let item = ptr::read(buffer.get_unchecked(usize::from(head)));
                 rb.head.store_release((head + 1) % n);
@@ -183,7 +181,7 @@ macro_rules! impl_ {
                 let rb = self.rb.as_mut();
 
                 let n = rb.capacity() + 1;
-                let buffer: &mut [T] = rb.buffer.as_mut();
+                let buffer = rb.buffer.get_mut();
 
                 let next_tail = (tail + 1) % n;
                 // NOTE(ptr::write) the memory slot that we are about to write to is
