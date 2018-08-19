@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.3.7] - 2018-08-19
+
+### Added
+
+- Implemented `IntoIterator` and `FromIterator` for `Vec`
+- `ready` methods to `ring_buffer::{Consumer,Producer}`
+- An opt-out "const-fn" Cargo feature that turns `const` functions into normal functions when
+  disabled.
+- An opt-out "smaller-atomics" Cargo feature that removes the ability to shrink the size of
+  `RingBuffer` when disabled.
+
+### Changed
+
+- This crate now compiles on stable when both the "const-fn" and "smaller-atomics" features are
+  disabled.
+
+### Fixed
+
+- The `RingBuffer.len` function
+- Compilation on recent nightlies
+
 ## [v0.3.6] - 2018-05-04
 
 ### Fixed
@@ -131,7 +152,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.7...HEAD
+[v0.3.7]: https://github.com/japaric/heapless/compare/v0.3.6...v0.3.7
+[v0.3.6]: https://github.com/japaric/heapless/compare/v0.3.5...v0.3.6
+[v0.3.5]: https://github.com/japaric/heapless/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/japaric/heapless/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/japaric/heapless/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/japaric/heapless/compare/v0.3.1...v0.3.2
