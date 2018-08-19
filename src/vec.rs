@@ -2,7 +2,7 @@ use core::{fmt, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
 
-use __core::mem::{self, ManuallyDrop};
+use __core::mem::{ManuallyDrop, Uninit};
 
 use core::iter::FromIterator;
 
@@ -39,7 +39,7 @@ pub struct Vec<T, N>
 where
     N: ArrayLength<T>,
 {
-    buffer: ManuallyDrop<GenericArray<T, N>>,
+    buffer: ManuallyDrop<Uninit<GenericArray<T, N>>>,
     len: usize,
 }
 
@@ -52,7 +52,7 @@ where
         /// Constructs a new, empty vector with a fixed capacity of `N`
         pub const fn new() -> Self {
             Vec {
-                buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                buffer: ManuallyDrop::new(unsafe { Uninit::new() }),
                 len: 0,
             }
         }

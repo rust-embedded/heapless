@@ -7,12 +7,13 @@ use core::ops::Add;
 use core::ptr;
 #[cfg(not(feature = "smaller-atomics"))]
 use core::sync::atomic::{AtomicUsize, Ordering};
+use __core::mem::Uninit;
 
 use generic_array::typenum::{Sum, U1, Unsigned};
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
-use __core::mem::{self, ManuallyDrop};
+use __core::mem::{ManuallyDrop};
 
 mod spsc;
 
@@ -230,7 +231,7 @@ where
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: ManuallyDrop<GenericArray<T, Sum<N, U1>>>,
+    buffer: ManuallyDrop<Uninit<GenericArray<T, Sum<N, U1>>>>,
 }
 
 impl<T, N, U> RingBuffer<T, N, U>
@@ -334,7 +335,7 @@ macro_rules! impl_ {
                 /// Creates an empty ring buffer with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
                     RingBuffer {
-                        buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                        buffer: ManuallyDrop::new(unsafe { Uninit::new() }),
                         head: Atomic::new(0),
                         tail: Atomic::new(0),
                     }

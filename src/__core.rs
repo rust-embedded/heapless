@@ -1,36 +1,90 @@
 /// Temporary fork of some stuff in `core` that's doesn't have a `const fn` API
 
 pub mod mem {
-    #[cfg(not(feature = "const-fn"))]
-    pub use core::mem::uninitialized;
-    pub use core::mem::{replace, zeroed, ManuallyDrop};
+    pub use core::mem::{replace, zeroed, ManuallyDrop, uninitialized};
+    use core::ops::{Deref, DerefMut};
+
+
+    /// extremely unsafe uniniatilized memory
+    /// only use with ManuallyDrop
+    #[allow(unions_with_drop_fields)]
+    #[cfg(feature = "const-fn")]
+    pub(crate) union Uninit<T> {
+        uninit: (),
+        init: T,
+    }
 
     #[cfg(feature = "const-fn")]
-    pub const unsafe fn uninitialized<T>() -> T {
-        #[allow(unions_with_drop_fields)]
-        union U<T> {
-            none: (),
-            some: T,
-        }
-
-        U { none: () }.some
+    impl<T> Uninit<T> {
+        const_fn!(
+            pub const unsafe fn new() -> Self {
+                Uninit {
+                    uninit: ()
+                }
+            }
+        );
     }
+
+    #[cfg(feature = "const-fn")]
+    impl<T> Deref for Uninit<T> {
+        type Target = T;
+        fn deref(&self) -> &T {
+            unsafe{ &self.init }
+        }
+    }
+
+    #[cfg(feature = "const-fn")]
+    impl<T> DerefMut for Uninit<T> {
+        fn deref_mut(&mut self) -> &mut T {
+            unsafe { &mut self.init }
+        }
+    }
+
+    /// extremely unsafe uniniatilized memory
+    /// only use with ManuallyDrop
+    #[cfg(not(feature = "const-fn"))]
+    pub(crate) struct Uninit<T>(T);
+
+    #[cfg(not(feature = "const-fn"))]
+    impl<T> Uninit<T> {
+        pub unsafe fn new() -> Self {
+            Uninit(uninitialized())
+        }
+    }
+
+    #[cfg(not(feature = "const-fn"))]
+    impl<T> Deref for Uninit<T> {
+        type Target = T;
+        fn deref(&self) -> &T {
+            &self.0
+        }
+    }
+
+    #[cfg(not(feature = "const-fn"))]
+    impl<T> DerefMut for Uninit<T> {
+        fn deref_mut(&mut self) -> &mut T {
+            &mut self.0
+        }
+    }
+
+
 }
 
 #[cfg(feature = "const-fn")] // Remove this if there are more tests
 #[cfg(test)]
 mod test {
-    use __core;
+    use __core::mem::Uninit;
     use __core::mem::ManuallyDrop;
     use core;
 
     #[cfg(feature = "const-fn")]
     #[test]
-    fn static_uninitzialized() {
-        static mut I: i32 = unsafe { __core::mem::uninitialized() };
-        // Initialize before drop
-        unsafe { core::ptr::write(&mut I as *mut i32, 42) };
-        unsafe { assert_eq!(I, 42) };
+    fn static_uninit() {
+        static mut _I: Uninit<i32> = unsafe { Uninit::new() };
+        unsafe {
+            *_I = 42;
+            assert_eq!(*_I, 42);
+        }
     }
 
     #[cfg(feature = "const-fn")]
