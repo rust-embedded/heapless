@@ -8,11 +8,11 @@ use core::ptr;
 #[cfg(not(feature = "smaller-atomics"))]
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use generic_array::typenum::{Sum, U1, Unsigned};
+use generic_array::typenum::{Sum, Unsigned, U1};
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
-use __core::mem::{self, ManuallyDrop};
+use __core::mem::MaybeUninit;
 
 mod spsc;
 
@@ -230,7 +230,7 @@ where
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: ManuallyDrop<GenericArray<T, Sum<N, U1>>>,
+    buffer: MaybeUninit<GenericArray<T, Sum<N, U1>>>,
 }
 
 impl<T, N, U> RingBuffer<T, N, U>
@@ -334,7 +334,7 @@ macro_rules! impl_ {
                 /// Creates an empty ring buffer with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
                     RingBuffer {
-                        buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                        buffer: unsafe { MaybeUninit::uninitialized() },
                         head: Atomic::new(0),
                         tail: Atomic::new(0),
                     }
@@ -348,7 +348,7 @@ macro_rules! impl_ {
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
 
-                let buffer = self.buffer.as_slice();
+                let buffer = unsafe { self.buffer.get_ref() };
 
                 if *head != *tail {
                     let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head))) };
@@ -387,7 +387,7 @@ macro_rules! impl_ {
 
                 let tail = self.tail.get_mut();
 
-                let buffer = self.buffer.as_mut_slice();
+                let buffer = unsafe { self.buffer.get_mut() };
 
                 let next_tail = (*tail + 1) % n;
                 // NOTE(ptr::write) the memory slot that we are about to write to is
@@ -473,7 +473,7 @@ macro_rules! iterator {
                     let head = self.rb.head.load_relaxed().into();
 
                     let capacity = self.rb.capacity().into() + 1;
-                    let buffer = self.rb.buffer.$asref();
+                    let buffer = unsafe { self.rb.buffer.$asref() };
                     let ptr: $ptr = buffer.$asptr();
                     let i = (head + self.index) % capacity;
                     self.index += 1;
@@ -498,8 +498,8 @@ macro_rules! make_ref_mut {
     };
 }
 
-iterator!(struct Iter -> &'a T, *const T, as_slice, as_ptr, make_ref);
-iterator!(struct IterMut -> &'a mut T, *mut T, as_mut_slice, as_mut_ptr, make_ref_mut);
+iterator!(struct Iter -> &'a T, *const T, get_ref, as_ptr, make_ref);
+iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut);
 
 #[cfg(test)]
 mod tests {

@@ -2,7 +2,7 @@ use core::{fmt, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
 
-use __core::mem::{self, ManuallyDrop};
+use __core::mem::MaybeUninit;
 
 use core::iter::FromIterator;
 
@@ -39,7 +39,7 @@ pub struct Vec<T, N>
 where
     N: ArrayLength<T>,
 {
-    buffer: ManuallyDrop<GenericArray<T, N>>,
+    buffer: MaybeUninit<GenericArray<T, N>>,
     len: usize,
 }
 
@@ -52,7 +52,7 @@ where
         /// Constructs a new, empty vector with a fixed capacity of `N`
         pub const fn new() -> Self {
             Vec {
-                buffer: ManuallyDrop::new(unsafe { mem::uninitialized() }),
+                buffer: unsafe { MaybeUninit::uninitialized() },
                 len: 0,
             }
         }
@@ -112,7 +112,7 @@ where
     pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
-        let buffer = self.buffer.as_slice();
+        let buffer = self.buffer.get_ref();
 
         self.len -= 1;
         let item = ptr::read(buffer.get_unchecked(self.len));
@@ -132,7 +132,7 @@ where
     }
 
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
-        let buffer = self.buffer.as_mut_slice();
+        let buffer = self.buffer.get_mut();
 
         // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
@@ -314,7 +314,6 @@ where
     }
 }
 
-
 impl<T, N> FromIterator<T> for Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -345,15 +344,15 @@ where
     next: usize,
 }
 
-impl <T, N> Iterator for IntoIter<T, N>
+impl<T, N> Iterator for IntoIter<T, N>
 where
     N: ArrayLength<T>,
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let buffer = self.vec.buffer.as_slice();
-            let item = unsafe {ptr::read(buffer.get_unchecked(self.next))};
+            let buffer = unsafe { self.vec.buffer.get_ref() };
+            let item = unsafe { ptr::read(buffer.get_unchecked(self.next)) };
             self.next += 1;
             Some(item)
         } else {
@@ -362,7 +361,7 @@ where
     }
 }
 
-impl <T, N> Drop for IntoIter<T, N>
+impl<T, N> Drop for IntoIter<T, N>
 where
     N: ArrayLength<T>,
 {
@@ -376,7 +375,7 @@ where
     }
 }
 
-impl <T, N> IntoIterator for Vec<T, N>
+impl<T, N> IntoIterator for Vec<T, N>
 where
     N: ArrayLength<T>,
 {
@@ -384,10 +383,7 @@ where
     type IntoIter = IntoIter<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        IntoIter {
-            vec: self,
-            next: 0,
-        }
+        IntoIter { vec: self, next: 0 }
     }
 }
 
@@ -448,7 +444,7 @@ where
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        let buffer = self.buffer.as_slice();
+        let buffer = unsafe { self.buffer.get_ref() };
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
         unsafe { slice::from_raw_parts(buffer.as_ptr(), self.len) }
@@ -461,7 +457,7 @@ where
 {
     fn deref_mut(&mut self) -> &mut [T] {
         let len = self.len();
-        let buffer = self.buffer.as_mut_slice();
+        let buffer = unsafe { self.buffer.get_mut() };
 
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..len]
@@ -521,7 +517,7 @@ mod tests {
     }
 
     macro_rules! droppable {
-        () => (
+        () => {
             struct Droppable;
             impl Droppable {
                 fn new() -> Self {
@@ -540,12 +536,11 @@ mod tests {
             }
 
             static mut COUNT: i32 = 0;
-        )
+        };
     }
 
     #[test]
     fn drop() {
-
         droppable!();
 
         {
@@ -660,7 +655,6 @@ mod tests {
 
     #[test]
     fn iter_move_drop() {
-
         droppable!();
 
         {
