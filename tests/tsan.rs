@@ -232,3 +232,34 @@ fn iterator_properly_wraps() {
     }
     assert_eq!(expected, actual)
 }
+
+#[test]
+fn pool() {
+    use heapless::pool::singleton::Pool as _;
+
+    static mut M: [u8; (N + 1) * 8] = [0; (N + 1) * 8];
+    const N: usize = 16 * 1024;
+    heapless::pool!(A: [u8; 8]);
+
+    A::grow(unsafe { &mut M });
+
+    Pool::new(2).scoped(move |scope| {
+        scope.execute(move || {
+            for _ in 0..N / 4 {
+                let a = A::alloc().unwrap();
+                let b = A::alloc().unwrap();
+                drop(a);
+                let b = b.init([1; 8]);
+                drop(b);
+            }
+        });
+
+        scope.execute(move || {
+            for _ in 0..N / 2 {
+                let a = A::alloc().unwrap();
+                let a = a.init([2; 8]);
+                drop(a);
+            }
+        });
+    });
+}

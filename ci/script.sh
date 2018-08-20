@@ -17,7 +17,6 @@ main() {
 
         if [ $TRAVIS_RUST_VERSION = nightly ]; then
             export RUSTFLAGS="-Z sanitizer=thread"
-            export RUST_TEST_THREADS=1
             export TSAN_OPTIONS="suppressions=$(pwd)/suppressions.txt"
 
             cargo test --test tsan --target $TARGET
