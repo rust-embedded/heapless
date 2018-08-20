@@ -73,7 +73,8 @@
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-#![deny(warnings)]
+// #![deny(warnings)]
+#![allow(warnings)] // FIXME
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
