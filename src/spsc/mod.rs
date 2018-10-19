@@ -1,4 +1,4 @@
-//! Ring buffer
+//! Single producer single consumer queue
 
 use core::cell::UnsafeCell;
 use core::ptr;

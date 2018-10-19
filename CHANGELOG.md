@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.0] - 2018-10-19
+
+### Changed
+
+- [breaking-change] All Cargo features are disabled by default. This crate now
+  compiles on stable by default.
+
+- [breaking-change] RingBuffer has been renamed to spsc::Queue. The ring_buffer
+  module has been renamed to spsc.
+
+- [breaking-change] The bounds on spsc::Queue have changed.
+
+### Removed
+
+- [breaking-change] The sealed `Uxx` trait has been removed from the public API.
+
 ## [v0.3.7] - 2018-08-19
 
 ### Added
@@ -152,7 +168,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.3.7...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.0...HEAD
+[v0.3.8]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
 [v0.3.7]: https://github.com/japaric/heapless/compare/v0.3.6...v0.3.7
 [v0.3.6]: https://github.com/japaric/heapless/compare/v0.3.5...v0.3.6
 [v0.3.5]: https://github.com/japaric/heapless/compare/v0.3.4...v0.3.5
