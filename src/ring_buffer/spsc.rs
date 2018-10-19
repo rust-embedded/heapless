@@ -3,12 +3,13 @@ use core::ptr::{self, NonNull};
 
 use generic_array::ArrayLength;
 
-use ring_buffer::{RingBuffer, Uxx};
+use ring_buffer::RingBuffer;
+use sealed;
 
 impl<T, N, U> RingBuffer<T, N, U>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
     pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, N, U>, Consumer<'rb, T, N, U>) {
@@ -30,7 +31,7 @@ where
 pub struct Consumer<'a, T, N, U = usize>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
@@ -40,7 +41,7 @@ unsafe impl<'a, T, N, U> Send for Consumer<'a, T, N, U>
 where
     N: ArrayLength<T>,
     T: Send,
-    U: Uxx,
+    U: sealed::Uxx,
 {}
 
 /// A ring buffer "producer"; it can enqueue items into the ring buffer
@@ -48,7 +49,7 @@ where
 pub struct Producer<'a, T, N, U = usize>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
@@ -58,7 +59,7 @@ unsafe impl<'a, T, N, U> Send for Producer<'a, T, N, U>
 where
     N: ArrayLength<T>,
     T: Send,
-    U: Uxx,
+    U: sealed::Uxx,
 {}
 
 macro_rules! impl_ {

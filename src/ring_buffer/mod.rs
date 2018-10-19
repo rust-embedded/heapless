@@ -4,123 +4,27 @@ use core::cell::UnsafeCell;
 #[cfg(feature = "smaller-atomics")]
 use core::intrinsics;
 use core::ptr;
-#[cfg(not(feature = "smaller-atomics"))]
-use core::sync::atomic::{AtomicUsize, Ordering};
 
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
 use __core::mem::MaybeUninit;
+use sealed;
 
 mod spsc;
-
-/// Types that can be used as `RingBuffer` indices: `u8`, `u16` and `usize
-///
-/// This trait is sealed and cannot be implemented outside of `heapless`.
-pub unsafe trait Uxx: Into<usize> + Send + private::Sealed {
-    #[doc(hidden)]
-    fn truncate(x: usize) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_acq(x) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_relaxed(x) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe { intrinsics::atomic_store_rel(x, val) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self);
-}
-
-mod private {
-    pub trait Sealed {}
-
-    impl Sealed for usize {}
-    #[cfg(feature = "smaller-atomics")]
-    impl Sealed for u8 {}
-    #[cfg(feature = "smaller-atomics")]
-    impl Sealed for u16 {}
-}
-
-#[cfg(feature = "smaller-atomics")]
-unsafe impl Uxx for u8 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u8::MAX;
-        if x >= usize::from(max) {
-            max
-        } else {
-            x as u8
-        }
-    }
-}
-
-#[cfg(feature = "smaller-atomics")]
-unsafe impl Uxx for u16 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u16::MAX;
-        if x >= usize::from(max) {
-            max
-        } else {
-            x as u16
-        }
-    }
-}
-
-unsafe impl Uxx for usize {
-    fn truncate(x: usize) -> Self {
-        x
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Acquire) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Relaxed) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe {
-            (*(x as *mut AtomicUsize)).store(val, Ordering::Release);
-        }
-    }
-}
 
 // Atomic{U8,U16, Usize} with no CAS operations that works on targets that have "no atomic support"
 // according to their specification
 struct Atomic<U>
 where
-    U: Uxx,
+    U: sealed::Uxx,
 {
     v: UnsafeCell<U>,
 }
 
 impl<U> Atomic<U>
 where
-    U: Uxx,
+    U: sealed::Uxx,
 {
     const_fn!(const fn new(v: U) -> Atomic<U> {
         Atomic {
@@ -226,7 +130,7 @@ where
 pub struct RingBuffer<T, N, U = usize>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     // this is from where we dequeue items
     head: Atomic<U>,
@@ -240,7 +144,7 @@ where
 impl<T, N, U> RingBuffer<T, N, U>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     /// Returns the maximum number of elements the ring buffer can hold
     pub fn capacity(&self) -> U {
@@ -282,7 +186,7 @@ where
 impl<T, N, U> Drop for RingBuffer<T, N, U>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     fn drop(&mut self) {
         for item in self {
@@ -296,7 +200,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a RingBuffer<T, N, U>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     type Item = &'a T;
     type IntoIter = Iter<'a, T, N, U>;
@@ -309,7 +213,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a mut RingBuffer<T, N, U>
 where
     N: ArrayLength<T>,
-    U: Uxx,
+    U: sealed::Uxx,
 {
     type Item = &'a mut T;
     type IntoIter = IterMut<'a, T, N, U>;
@@ -429,7 +333,7 @@ pub struct Iter<'a, T, N, U>
 where
     N: ArrayLength<T> + 'a,
     T: 'a,
-    U: 'a + Uxx,
+    U: 'a + sealed::Uxx,
 {
     rb: &'a RingBuffer<T, N, U>,
     index: usize,
@@ -441,7 +345,7 @@ pub struct IterMut<'a, T, N, U>
 where
     N: ArrayLength<T> + 'a,
     T: 'a,
-    U: 'a + Uxx,
+    U: 'a + sealed::Uxx,
 {
     rb: &'a mut RingBuffer<T, N, U>,
     index: usize,
@@ -454,7 +358,7 @@ macro_rules! iterator {
         where
             N: ArrayLength<T>,
             T: 'a,
-            U: 'a + Uxx,
+            U: 'a + sealed::Uxx,
         {
             type Item = $elem;
 

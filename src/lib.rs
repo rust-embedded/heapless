@@ -117,3 +117,4 @@ pub mod binary_heap;
 pub mod ring_buffer;
 
 mod __core;
+mod sealed;
