@@ -1,16 +1,13 @@
 use core::marker::PhantomData;
-use core::ops::Add;
 use core::ptr::{self, NonNull};
 
-use generic_array::typenum::{Sum, Unsigned, U1};
 use generic_array::ArrayLength;
 
 use ring_buffer::{RingBuffer, Uxx};
 
 impl<T, N, U> RingBuffer<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     /// Splits a statically allocated ring buffer into producer and consumer end points
@@ -32,19 +29,16 @@ where
 // NOTE the consumer semantically owns the `head` pointer of the ring buffer
 pub struct Consumer<'a, T, N, U = usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
-    // XXX do we need to use `NonNull` (for soundness) here?
     rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
 unsafe impl<'a, T, N, U> Send for Consumer<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {}
@@ -53,19 +47,16 @@ where
 // NOTE the producer semantically owns the `tail` pointer of the ring buffer
 pub struct Producer<'a, T, N, U = usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
-    // XXX do we need to use `NonNull` (for soundness) here?
     rb: NonNull<RingBuffer<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
 unsafe impl<'a, T, N, U> Send for Producer<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     T: Send,
     U: Uxx,
 {}
@@ -74,8 +65,7 @@ macro_rules! impl_ {
     ($uxx:ident) => {
         impl<'a, T, N> Consumer<'a, T, N, $uxx>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
         {
             /// Returns if there are any items to dequeue. When this returns true, at least the
             /// first subsequent dequeue will succeed.
@@ -111,24 +101,24 @@ macro_rules! impl_ {
             unsafe fn _dequeue(&mut self, head: $uxx) -> T {
                 let rb = self.rb.as_ref();
 
-                let n = rb.capacity() + 1;
+                let cap = rb.capacity();
                 let buffer = rb.buffer.get_ref();
 
-                let item = ptr::read(buffer.get_unchecked(usize::from(head)));
-                rb.head.store_release((head + 1) % n);
+                let item = ptr::read(buffer.get_unchecked(usize::from(head % cap)));
+                rb.head.store_release(head.wrapping_add(1));
                 item
             }
         }
 
         impl<'a, T, N> Producer<'a, T, N, $uxx>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
         {
             /// Returns if there is any space to enqueue a new item. When this returns true, at
             /// least the first subsequent enqueue will succeed.
             pub fn ready(&self) -> bool {
-                let n = unsafe { self.rb.as_ref().capacity() + 1 };
+                let cap = unsafe { self.rb.as_ref().capacity() };
+
                 let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
                 // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method
                 // would be sound on most architectures but that change would result in UB according
@@ -136,15 +126,14 @@ macro_rules! impl_ {
                 // of caution and stick to `load_acquire`. Check issue google#sanitizers#882 for
                 // more details.
                 let head = unsafe { self.rb.as_ref().head.load_acquire() };
-                let next_tail = (tail + 1) % n;
-                return next_tail != head;
+                return head.wrapping_add(cap) != tail;
             }
 
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
             pub fn enqueue(&mut self, item: T) -> Result<(), T> {
-                let n = unsafe { self.rb.as_ref().capacity() + 1 };
+                let cap = unsafe { self.rb.as_ref().capacity() };
                 let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
                 // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method
                 // would be sound on most architectures but that change would result in UB according
@@ -152,43 +141,40 @@ macro_rules! impl_ {
                 // of caution and stick to `load_acquire`. Check issue google#sanitizers#882 for
                 // more details.
                 let head = unsafe { self.rb.as_ref().head.load_acquire() };
-                let next_tail = (tail + 1) % n;
-                if next_tail != head {
+
+                if tail.wrapping_sub(head) > cap - 1 {
+                    Err(item)
+                } else {
                     unsafe { self._enqueue(tail, item) };
                     Ok(())
-                } else {
-                    Err(item)
                 }
             }
 
             /// Adds an `item` to the end of the queue without checking if it's full
             ///
-            /// **WARNING** If the queue is full this operation will make the queue appear empty to
-            /// the `Consumer`, thus *leaking* (destructors won't run) all the elements that were in
-            /// the queue.
-            pub fn enqueue_unchecked(&mut self, item: T) {
-                unsafe {
-                    let tail = self.rb.as_ref().tail.load_relaxed();
-                    debug_assert_ne!(
-                        (tail + 1) % (self.rb.as_ref().capacity() + 1),
-                        self.rb.as_ref().head.load_acquire()
-                    );
-                    self._enqueue(tail, item);
-                }
+            /// # Unsafety
+            ///
+            /// If the queue is full this operation will leak a value (T's destructor won't run on
+            /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
+            /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
+            /// twice.
+            pub unsafe fn enqueue_unchecked(&mut self, item: T) {
+                let tail = self.rb.as_ref().tail.load_relaxed();
+                debug_assert_ne!(tail.wrapping_add(1), self.rb.as_ref().head.load_acquire());
+                self._enqueue(tail, item);
             }
 
             unsafe fn _enqueue(&mut self, tail: $uxx, item: T) {
                 let rb = self.rb.as_mut();
 
-                let n = rb.capacity() + 1;
+                let cap = rb.capacity();
                 let buffer = rb.buffer.get_mut();
 
-                let next_tail = (tail + 1) % n;
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                ptr::write(buffer.get_unchecked_mut(usize::from(tail)), item);
-                rb.tail.store_release(next_tail);
+                ptr::write(buffer.get_unchecked_mut(usize::from(tail % cap)), item);
+                rb.tail.store_release(tail.wrapping_add(1));
             }
         }
     };

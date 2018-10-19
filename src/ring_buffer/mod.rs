@@ -3,12 +3,10 @@
 use core::cell::UnsafeCell;
 #[cfg(feature = "smaller-atomics")]
 use core::intrinsics;
-use core::ops::Add;
 use core::ptr;
 #[cfg(not(feature = "smaller-atomics"))]
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use generic_array::typenum::{Sum, Unsigned, U1};
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::spsc::{Consumer, Producer};
@@ -69,7 +67,7 @@ unsafe impl Uxx for u8 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u8::MAX;
         if x >= usize::from(max) {
-            max - 1
+            max
         } else {
             x as u8
         }
@@ -81,7 +79,7 @@ unsafe impl Uxx for u16 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u16::MAX;
         if x >= usize::from(max) {
-            max - 1
+            max
         } else {
             x as u16
         }
@@ -147,7 +145,10 @@ where
     }
 }
 
-/// A statically allocated ring buffer with a capacity of `N`
+/// A statically allocated ring buffer with a capacity of `N` elements
+///
+/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `U16`, `U32`,
+/// etc.).
 ///
 /// By default `RingBuffer` will use `usize` integers to hold the indices to its head and tail. For
 /// small ring buffers `usize` may be overkill. However, `RingBuffer`'s index type is generic and
@@ -157,18 +158,22 @@ where
 /// [`u8`]: struct.RingBuffer.html#method.u8
 /// [`u16`]: struct.RingBuffer.html#method.u16
 ///
+/// *IMPORTANT*: `RingBuffer<_, _, u8>` has a maximum capacity of 255 elements; `RingBuffer<_, _,
+/// u16>` has a maximum capacity of 65535 elements.
+///
 /// # Examples
 ///
 /// ```
 /// use heapless::RingBuffer;
 /// use heapless::consts::*;
 ///
-/// let mut rb: RingBuffer<u8, U3> = RingBuffer::new();
+/// let mut rb: RingBuffer<u8, U4> = RingBuffer::new();
 ///
 /// assert!(rb.enqueue(0).is_ok());
 /// assert!(rb.enqueue(1).is_ok());
 /// assert!(rb.enqueue(2).is_ok());
-/// assert!(rb.enqueue(3).is_err()); // full
+/// assert!(rb.enqueue(3).is_ok());
+/// assert!(rb.enqueue(4).is_err()); // full
 ///
 /// assert_eq!(rb.dequeue(), Some(0));
 /// ```
@@ -220,8 +225,7 @@ where
 /// ```
 pub struct RingBuffer<T, N, U = usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     // this is from where we dequeue items
@@ -230,13 +234,12 @@ where
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: MaybeUninit<GenericArray<T, Sum<N, U1>>>,
+    buffer: MaybeUninit<GenericArray<T, N>>,
 }
 
 impl<T, N, U> RingBuffer<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     /// Returns the maximum number of elements the ring buffer can hold
@@ -272,18 +275,13 @@ where
         let head = self.head.load_relaxed().into();
         let tail = self.tail.load_relaxed().into();
 
-        if head > tail {
-            self.capacity().into() + 1 - head + tail
-        } else {
-            tail - head
-        }
+        tail.wrapping_sub(head)
     }
 }
 
 impl<T, N, U> Drop for RingBuffer<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     fn drop(&mut self) {
@@ -297,8 +295,7 @@ where
 
 impl<'a, T, N, U> IntoIterator for &'a RingBuffer<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a T;
@@ -311,8 +308,7 @@ where
 
 impl<'a, T, N, U> IntoIterator for &'a mut RingBuffer<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
     U: Uxx,
 {
     type Item = &'a mut T;
@@ -327,8 +323,7 @@ macro_rules! impl_ {
     ($uxx:ident) => {
         impl<T, N> RingBuffer<T, N, $uxx>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
         {
             const_fn!(
                 /// Creates an empty ring buffer with a fixed capacity of `N`
@@ -343,7 +338,7 @@ macro_rules! impl_ {
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
-                let n = self.capacity() + 1;
+                let cap = self.capacity();
 
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
@@ -351,8 +346,8 @@ macro_rules! impl_ {
                 let buffer = unsafe { self.buffer.get_ref() };
 
                 if *head != *tail {
-                    let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head))) };
-                    *head = (*head + 1) % n;
+                    let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head % cap))) };
+                    *head = head.wrapping_add(1);
                     Some(item)
                 } else {
                     None
@@ -363,38 +358,37 @@ macro_rules! impl_ {
             ///
             /// Returns back the `item` if the queue is full
             pub fn enqueue(&mut self, item: T) -> Result<(), T> {
-                let n = self.capacity() + 1;
-
+                let cap = self.capacity();
                 let head = *self.head.get_mut();
                 let tail = *self.tail.get_mut();
 
-                let next_tail = (tail + 1) % n;
-                if next_tail != head {
-                    self.enqueue_unchecked(item);
-                    Ok(())
-                } else {
+                if tail.wrapping_sub(head) > cap - 1 {
                     Err(item)
+                } else {
+                    unsafe { self.enqueue_unchecked(item) }
+                    Ok(())
                 }
             }
 
             /// Adds an `item` to the end of the queue, without checking if it's full
             ///
-            /// **WARNING** If the queue is full this operation will make the queue appear empty to
-            /// the `Consumer`, thus *leaking* (destructors won't run) all the elements that were in
-            /// the queue.
-            pub fn enqueue_unchecked(&mut self, item: T) {
-                let n = self.capacity() + 1;
-
+            /// # Unsafety
+            ///
+            /// If the queue is full this operation will leak a value (T's destructor won't run on
+            /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
+            /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
+            /// twice.
+            pub unsafe fn enqueue_unchecked(&mut self, item: T) {
+                let cap = self.capacity();
                 let tail = self.tail.get_mut();
 
-                let buffer = unsafe { self.buffer.get_mut() };
+                let buffer = self.buffer.get_mut();
 
-                let next_tail = (*tail + 1) % n;
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                unsafe { ptr::write(buffer.get_unchecked_mut(usize::from(*tail)), item) }
-                *tail = next_tail;
+                ptr::write(buffer.get_unchecked_mut(usize::from(*tail % cap)), item);
+                *tail = tail.wrapping_add(1);
             }
 
             /// Returns the number of elements in the queue
@@ -403,7 +397,7 @@ macro_rules! impl_ {
                 let tail = self.tail.load_relaxed();
 
                 if head > tail {
-                    self.capacity() + 1 - head + tail
+                    tail.wrapping_sub(head)
                 } else {
                     tail - head
                 }
@@ -414,8 +408,7 @@ macro_rules! impl_ {
 
 impl<T, N> RingBuffer<T, N, usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
 {
     const_fn!(
         /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
@@ -434,8 +427,7 @@ impl_!(usize);
 /// An iterator over a ring buffer items
 pub struct Iter<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned + 'a,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + Uxx,
 {
@@ -447,8 +439,7 @@ where
 /// A mutable iterator over a ring buffer items
 pub struct IterMut<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned + 'a,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + Uxx,
 {
@@ -461,8 +452,7 @@ macro_rules! iterator {
     (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
         impl<'a, T, N, U> Iterator for $name<'a, T, N, U>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
             T: 'a,
             U: 'a + Uxx,
         {
@@ -472,10 +462,10 @@ macro_rules! iterator {
                 if self.index < self.len {
                     let head = self.rb.head.load_relaxed().into();
 
-                    let capacity = self.rb.capacity().into() + 1;
+                    let cap = self.rb.capacity().into();
                     let buffer = unsafe { self.rb.buffer.$asref() };
                     let ptr: $ptr = buffer.$asptr();
-                    let i = (head + self.index) % capacity;
+                    let i = (head + self.index) % cap;
                     self.index += 1;
                     Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
                 } else {
@@ -554,13 +544,14 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut rb: RingBuffer<i32, U3> = RingBuffer::new();
+        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
         rb.enqueue(2).unwrap();
+        rb.enqueue(3).unwrap();
 
-        assert!(rb.enqueue(3).is_err());
+        assert!(rb.enqueue(4).is_err());
     }
 
     #[test]
@@ -613,7 +604,7 @@ mod tests {
     fn u8() {
         let mut rb: RingBuffer<u8, U256, _> = RingBuffer::u8();
 
-        for _ in 0..254 {
+        for _ in 0..255 {
             rb.enqueue(0).unwrap();
         }
 
