@@ -1,134 +1,36 @@
-//! Ring buffer
+//! Single producer single consumer queue
 
 use core::cell::UnsafeCell;
-#[cfg(feature = "smaller-atomics")]
-use core::intrinsics;
-use core::ops::Add;
 use core::ptr;
-#[cfg(not(feature = "smaller-atomics"))]
-use core::sync::atomic::{AtomicUsize, Ordering};
 
-use generic_array::typenum::{Sum, Unsigned, U1};
 use generic_array::{ArrayLength, GenericArray};
 
-pub use self::spsc::{Consumer, Producer};
+pub use self::split::{Consumer, Producer};
 use __core::mem::MaybeUninit;
+use sealed;
 
-mod spsc;
-
-/// Types that can be used as `RingBuffer` indices: `u8`, `u16` and `usize
-///
-/// This trait is sealed and cannot be implemented outside of `heapless`.
-pub unsafe trait Uxx: Into<usize> + Send + private::Sealed {
-    #[doc(hidden)]
-    fn truncate(x: usize) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_acq(x) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_relaxed(x) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe { intrinsics::atomic_store_rel(x, val) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self);
-}
-
-mod private {
-    pub trait Sealed {}
-
-    impl Sealed for usize {}
-    #[cfg(feature = "smaller-atomics")]
-    impl Sealed for u8 {}
-    #[cfg(feature = "smaller-atomics")]
-    impl Sealed for u16 {}
-}
-
-#[cfg(feature = "smaller-atomics")]
-unsafe impl Uxx for u8 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u8::MAX;
-        if x >= usize::from(max) {
-            max - 1
-        } else {
-            x as u8
-        }
-    }
-}
-
-#[cfg(feature = "smaller-atomics")]
-unsafe impl Uxx for u16 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u16::MAX;
-        if x >= usize::from(max) {
-            max - 1
-        } else {
-            x as u16
-        }
-    }
-}
-
-unsafe impl Uxx for usize {
-    fn truncate(x: usize) -> Self {
-        x
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Acquire) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Relaxed) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe {
-            (*(x as *mut AtomicUsize)).store(val, Ordering::Release);
-        }
-    }
-}
+mod split;
 
 // Atomic{U8,U16, Usize} with no CAS operations that works on targets that have "no atomic support"
 // according to their specification
 struct Atomic<U>
 where
-    U: Uxx,
+    U: sealed::Uxx,
 {
     v: UnsafeCell<U>,
 }
 
 impl<U> Atomic<U>
 where
-    U: Uxx,
+    U: sealed::Uxx,
 {
-    const_fn!(const fn new(v: U) -> Atomic<U> {
-        Atomic {
-            v: UnsafeCell::new(v),
+    const_fn! {
+        const fn new(v: U) -> Atomic<U> {
+            Atomic {
+                v: UnsafeCell::new(v),
+            }
         }
-    });
+    }
 
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
@@ -147,28 +49,35 @@ where
     }
 }
 
-/// A statically allocated ring buffer with a capacity of `N`
+/// A statically allocated single producer single consumer queue with a capacity of `N` elements
 ///
-/// By default `RingBuffer` will use `usize` integers to hold the indices to its head and tail. For
-/// small ring buffers `usize` may be overkill. However, `RingBuffer`'s index type is generic and
-/// can be changed to `u8` or `u16` to reduce its footprint. The easiest to construct a `RingBuffer`
-/// with a smaller index type is to use the [`u8`] and [`u16`] constructors.
+/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `U16`, `U32`,
+/// etc.).
 ///
-/// [`u8`]: struct.RingBuffer.html#method.u8
-/// [`u16`]: struct.RingBuffer.html#method.u16
+/// By default `spsc::Queue` will use `usize` integers to hold the indices to its head and tail. For
+/// small queues `usize` indices may be overkill. However, `spsc::Queue`'s index type is generic and
+/// can be changed to `u8` or `u16` to reduce its footprint. The easiest to construct a
+/// `spsc::Queue` with a smaller index type is to use the [`u8`] and [`u16`] constructors.
+///
+/// [`u8`]: struct.Queue.html#method.u8
+/// [`u16`]: struct.Queue.html#method.u16
+///
+/// *IMPORTANT*: `spsc::Queue<_, _, u8>` has a maximum capacity of 255 elements; `spsc::Queue<_, _,
+/// u16>` has a maximum capacity of 65535 elements.
 ///
 /// # Examples
 ///
 /// ```
-/// use heapless::RingBuffer;
+/// use heapless::spsc::Queue;
 /// use heapless::consts::*;
 ///
-/// let mut rb: RingBuffer<u8, U3> = RingBuffer::new();
+/// let mut rb: Queue<u8, U4> = Queue::new();
 ///
 /// assert!(rb.enqueue(0).is_ok());
 /// assert!(rb.enqueue(1).is_ok());
 /// assert!(rb.enqueue(2).is_ok());
-/// assert!(rb.enqueue(3).is_err()); // full
+/// assert!(rb.enqueue(3).is_ok());
+/// assert!(rb.enqueue(4).is_err()); // full
 ///
 /// assert_eq!(rb.dequeue(), Some(0));
 /// ```
@@ -176,17 +85,17 @@ where
 /// ### Single producer single consumer mode
 ///
 /// ```
-/// use heapless::RingBuffer;
+/// use heapless::spsc::Queue;
 /// use heapless::consts::*;
 ///
-/// // static mut RB: RingBuffer<Event, U4> = RingBuffer::new(); // requires feature `const-fn`
+/// // static mut RB: Queue<Event, U4> = Queue::new(); // requires feature `const-fn`
 ///
-/// static mut RB: Option<RingBuffer<Event, U4>>  = None;
+/// static mut RB: Option<Queue<Event, U4>>  = None;
 ///
 /// enum Event { A, B }
 ///
 /// fn main() {
-///     unsafe { RB = Some(RingBuffer::new()) };
+///     unsafe { RB = Some(Queue::new()) };
 ///     // NOTE(unsafe) beware of aliasing the `consumer` end point
 ///     let mut consumer = unsafe { RB.as_mut().unwrap().split().1 };
 ///
@@ -218,11 +127,10 @@ where
 ///     // ..
 /// }
 /// ```
-pub struct RingBuffer<T, N, U = usize>
+pub struct Queue<T, N, U = usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
-    U: Uxx,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
 {
     // this is from where we dequeue items
     head: Atomic<U>,
@@ -230,21 +138,20 @@ where
     // this is where we enqueue new items
     tail: Atomic<U>,
 
-    buffer: MaybeUninit<GenericArray<T, Sum<N, U1>>>,
+    buffer: MaybeUninit<GenericArray<T, N>>,
 }
 
-impl<T, N, U> RingBuffer<T, N, U>
+impl<T, N, U> Queue<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
-    U: Uxx,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
 {
-    /// Returns the maximum number of elements the ring buffer can hold
+    /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
         U::truncate(N::to_usize())
     }
 
-    /// Returns `true` if the ring buffer has a length of 0
+    /// Returns `true` if the queue has a length of 0
     pub fn is_empty(&self) -> bool {
         self.len_usize() == 0
     }
@@ -272,19 +179,14 @@ where
         let head = self.head.load_relaxed().into();
         let tail = self.tail.load_relaxed().into();
 
-        if head > tail {
-            self.capacity().into() + 1 - head + tail
-        } else {
-            tail - head
-        }
+        tail.wrapping_sub(head)
     }
 }
 
-impl<T, N, U> Drop for RingBuffer<T, N, U>
+impl<T, N, U> Drop for Queue<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
-    U: Uxx,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
 {
     fn drop(&mut self) {
         for item in self {
@@ -295,11 +197,10 @@ where
     }
 }
 
-impl<'a, T, N, U> IntoIterator for &'a RingBuffer<T, N, U>
+impl<'a, T, N, U> IntoIterator for &'a Queue<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
-    U: Uxx,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
 {
     type Item = &'a T;
     type IntoIter = Iter<'a, T, N, U>;
@@ -309,11 +210,10 @@ where
     }
 }
 
-impl<'a, T, N, U> IntoIterator for &'a mut RingBuffer<T, N, U>
+impl<'a, T, N, U> IntoIterator for &'a mut Queue<T, N, U>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
-    U: Uxx,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
 {
     type Item = &'a mut T;
     type IntoIter = IterMut<'a, T, N, U>;
@@ -325,25 +225,24 @@ where
 
 macro_rules! impl_ {
     ($uxx:ident) => {
-        impl<T, N> RingBuffer<T, N, $uxx>
+        impl<T, N> Queue<T, N, $uxx>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
         {
-            const_fn!(
-                /// Creates an empty ring buffer with a fixed capacity of `N`
+            const_fn! {
+                /// Creates an empty queue with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
-                    RingBuffer {
+                    Queue {
                         buffer: unsafe { MaybeUninit::uninitialized() },
                         head: Atomic::new(0),
                         tail: Atomic::new(0),
                     }
                 }
-            );
+            }
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
-                let n = self.capacity() + 1;
+                let cap = self.capacity();
 
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
@@ -351,8 +250,8 @@ macro_rules! impl_ {
                 let buffer = unsafe { self.buffer.get_ref() };
 
                 if *head != *tail {
-                    let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head))) };
-                    *head = (*head + 1) % n;
+                    let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head % cap))) };
+                    *head = head.wrapping_add(1);
                     Some(item)
                 } else {
                     None
@@ -363,38 +262,37 @@ macro_rules! impl_ {
             ///
             /// Returns back the `item` if the queue is full
             pub fn enqueue(&mut self, item: T) -> Result<(), T> {
-                let n = self.capacity() + 1;
-
+                let cap = self.capacity();
                 let head = *self.head.get_mut();
                 let tail = *self.tail.get_mut();
 
-                let next_tail = (tail + 1) % n;
-                if next_tail != head {
-                    self.enqueue_unchecked(item);
-                    Ok(())
-                } else {
+                if tail.wrapping_sub(head) > cap - 1 {
                     Err(item)
+                } else {
+                    unsafe { self.enqueue_unchecked(item) }
+                    Ok(())
                 }
             }
 
             /// Adds an `item` to the end of the queue, without checking if it's full
             ///
-            /// **WARNING** If the queue is full this operation will make the queue appear empty to
-            /// the `Consumer`, thus *leaking* (destructors won't run) all the elements that were in
-            /// the queue.
-            pub fn enqueue_unchecked(&mut self, item: T) {
-                let n = self.capacity() + 1;
-
+            /// # Unsafety
+            ///
+            /// If the queue is full this operation will leak a value (T's destructor won't run on
+            /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
+            /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
+            /// twice.
+            pub unsafe fn enqueue_unchecked(&mut self, item: T) {
+                let cap = self.capacity();
                 let tail = self.tail.get_mut();
 
-                let buffer = unsafe { self.buffer.get_mut() };
+                let buffer = self.buffer.get_mut();
 
-                let next_tail = (*tail + 1) % n;
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                unsafe { ptr::write(buffer.get_unchecked_mut(usize::from(*tail)), item) }
-                *tail = next_tail;
+                ptr::write(buffer.get_unchecked_mut(usize::from(*tail % cap)), item);
+                *tail = tail.wrapping_add(1);
             }
 
             /// Returns the number of elements in the queue
@@ -403,7 +301,7 @@ macro_rules! impl_ {
                 let tail = self.tail.load_relaxed();
 
                 if head > tail {
-                    self.capacity() + 1 - head + tail
+                    tail.wrapping_sub(head)
                 } else {
                     tail - head
                 }
@@ -412,17 +310,16 @@ macro_rules! impl_ {
     };
 }
 
-impl<T, N> RingBuffer<T, N, usize>
+impl<T, N> Queue<T, N, usize>
 where
-    N: Add<U1> + Unsigned,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T>,
 {
-    const_fn!(
-        /// Alias for [`RingBuffer::usize`](struct.RingBuffer.html#method.usize)
+    const_fn! {
+        /// Alias for [`spsc::Queue::usize`](struct.Queue.html#method.usize)
         pub const fn new() -> Self {
-            RingBuffer::usize()
+            Queue::usize()
         }
-    );
+    }
 }
 
 #[cfg(feature = "smaller-atomics")]
@@ -431,28 +328,26 @@ impl_!(u8);
 impl_!(u16);
 impl_!(usize);
 
-/// An iterator over a ring buffer items
+/// An iterator over the items of a queue
 pub struct Iter<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned + 'a,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T> + 'a,
     T: 'a,
-    U: 'a + Uxx,
+    U: 'a + sealed::Uxx,
 {
-    rb: &'a RingBuffer<T, N, U>,
+    rb: &'a Queue<T, N, U>,
     index: usize,
     len: usize,
 }
 
-/// A mutable iterator over a ring buffer items
+/// A mutable iterator over the items of a queue
 pub struct IterMut<'a, T, N, U>
 where
-    N: Add<U1> + Unsigned + 'a,
-    Sum<N, U1>: ArrayLength<T>,
+    N: ArrayLength<T> + 'a,
     T: 'a,
-    U: 'a + Uxx,
+    U: 'a + sealed::Uxx,
 {
-    rb: &'a mut RingBuffer<T, N, U>,
+    rb: &'a mut Queue<T, N, U>,
     index: usize,
     len: usize,
 }
@@ -461,10 +356,9 @@ macro_rules! iterator {
     (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
         impl<'a, T, N, U> Iterator for $name<'a, T, N, U>
         where
-            N: Add<U1> + Unsigned,
-            Sum<N, U1>: ArrayLength<T>,
+            N: ArrayLength<T>,
             T: 'a,
-            U: 'a + Uxx,
+            U: 'a + sealed::Uxx,
         {
             type Item = $elem;
 
@@ -472,10 +366,10 @@ macro_rules! iterator {
                 if self.index < self.len {
                     let head = self.rb.head.load_relaxed().into();
 
-                    let capacity = self.rb.capacity().into() + 1;
+                    let cap = self.rb.capacity().into();
                     let buffer = unsafe { self.rb.buffer.$asref() };
                     let ptr: $ptr = buffer.$asptr();
-                    let i = (head + self.index) % capacity;
+                    let i = (head + self.index) % cap;
                     self.index += 1;
                     Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
                 } else {
@@ -504,12 +398,12 @@ iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut
 #[cfg(test)]
 mod tests {
     use consts::*;
-    use RingBuffer;
+    use spsc::Queue;
 
     #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _R: RingBuffer<i32, U4> = RingBuffer::new();
+        static mut _Q: Queue<i32, U4> = Queue::new();
     }
 
     #[test]
@@ -535,7 +429,7 @@ mod tests {
         static mut COUNT: i32 = 0;
 
         {
-            let mut v: RingBuffer<Droppable, U4> = RingBuffer::new();
+            let mut v: Queue<Droppable, U4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.dequeue().unwrap();
@@ -544,7 +438,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: RingBuffer<Droppable, U4> = RingBuffer::new();
+            let mut v: Queue<Droppable, U4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
         }
@@ -554,18 +448,19 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut rb: RingBuffer<i32, U3> = RingBuffer::new();
+        let mut rb: Queue<i32, U4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
         rb.enqueue(2).unwrap();
+        rb.enqueue(3).unwrap();
 
-        assert!(rb.enqueue(3).is_err());
+        assert!(rb.enqueue(4).is_err());
     }
 
     #[test]
     fn iter() {
-        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
+        let mut rb: Queue<i32, U4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -581,7 +476,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
+        let mut rb: Queue<i32, U4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -597,7 +492,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
+        let mut rb: Queue<i32, U4> = Queue::new();
 
         assert_eq!(rb.dequeue(), None);
 
@@ -611,9 +506,9 @@ mod tests {
     #[test]
     #[cfg(feature = "smaller-atomics")]
     fn u8() {
-        let mut rb: RingBuffer<u8, U256, _> = RingBuffer::u8();
+        let mut rb: Queue<u8, U256, _> = Queue::u8();
 
-        for _ in 0..254 {
+        for _ in 0..255 {
             rb.enqueue(0).unwrap();
         }
 
@@ -622,7 +517,7 @@ mod tests {
 
     #[test]
     fn wrap_around() {
-        let mut rb: RingBuffer<i32, U3> = RingBuffer::new();
+        let mut rb: Queue<i32, U3> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -638,7 +533,7 @@ mod tests {
 
     #[test]
     fn ready_flag() {
-        let mut rb: RingBuffer<i32, U2> = RingBuffer::new();
+        let mut rb: Queue<i32, U2> = Queue::new();
         let (mut p, mut c) = rb.split();
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);

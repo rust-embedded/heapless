@@ -21,8 +21,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq,
 {
-
-    const_fn!(
+    const_fn! {
         /// Creates an empty `LinearMap`
         ///
         /// # Examples
@@ -36,7 +35,7 @@ where
         pub const fn new() -> Self {
             LinearMap { buffer: Vec::new() }
         }
-    );
+    }
 
     /// Returns the number of elements that the map can hold
     ///
@@ -309,7 +308,8 @@ where
         K: Borrow<Q>,
         Q: Eq + ?Sized,
     {
-        let idx = self.keys()
+        let idx = self
+            .keys()
             .enumerate()
             .find(|&(_, k)| k.borrow() == key)
             .map(|(idx, _)| idx);
@@ -443,7 +443,6 @@ where
     }
 }
 
-
 #[cfg(feature = "const-fn")] // Remove this if there are more tests
 #[cfg(test)]
 mod test {
@@ -453,7 +452,7 @@ mod test {
     #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, U8>= LinearMap::new();
+        static mut _L: LinearMap<i32, i32, U8> = LinearMap::new();
     }
 
 }

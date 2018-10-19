@@ -108,7 +108,7 @@ where
 {
     /* Constructors */
 
-    const_fn!(
+    const_fn! {
         /// Creates an empty BinaryHeap as a $K-heap.
         ///
         /// ```
@@ -124,7 +124,7 @@ where
                 data: Vec::new(),
             }
         }
-    );
+    }
 
     /* Public API */
     /// Returns the capacity of the binary heap.

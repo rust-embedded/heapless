@@ -16,10 +16,9 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.3.7"
+version = "0.4.0"
 
 [features]
-default = ["const-fn", "smaller-atomics"]
 const-fn = []
 smaller-atomics = []
 

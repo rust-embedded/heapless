@@ -78,14 +78,12 @@
 //!      This way they can be used to initialize static memory at compile time.
 //!
 
-
 #![allow(warnings)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![cfg_attr(feature = "const-fn", feature(const_fn))]
-#![cfg_attr(feature = "const-fn", feature(const_manually_drop_new))]
 #![cfg_attr(feature = "const-fn", feature(untagged_unions))]
-#![cfg_attr(feature = "smaller-atomics", feature(core_intrinsics))]
+#![cfg_attr(feature = "smaller-atomics", feature(integer_atomics))]
 #![no_std]
 
 extern crate generic_array;
@@ -102,7 +100,6 @@ pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
-pub use ring_buffer::RingBuffer;
 pub use string::String;
 pub use vec::Vec;
 
@@ -114,6 +111,7 @@ mod string;
 mod vec;
 
 pub mod binary_heap;
-pub mod ring_buffer;
+pub mod spsc;
 
 mod __core;
+mod sealed;

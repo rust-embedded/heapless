@@ -131,9 +131,9 @@ where
                 if dist > entry_hash.probe_distance(Self::mask(), probe) {
                     // give up when probe distance is too long
                     return None;
-                } else if entry_hash == hash && unsafe {
-                    self.entries.get_unchecked(i).key.borrow() == query
-                } {
+                } else if entry_hash == hash
+                    && unsafe { self.entries.get_unchecked(i).key.borrow() == query }
+                {
                     return Some((probe, i));
                 }
             } else {
