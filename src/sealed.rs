@@ -36,7 +36,7 @@ unsafe impl Uxx for u8 {
     }
 
     fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) }
+        unsafe { (*(x as *const AtomicU8)).store(val, Ordering::Release) }
     }
 }
 
@@ -60,7 +60,7 @@ unsafe impl Uxx for u16 {
     }
 
     fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) }
+        unsafe { (*(x as *const AtomicU16)).store(val, Ordering::Release) }
     }
 }
 
@@ -78,6 +78,6 @@ unsafe impl Uxx for usize {
     }
 
     fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed) }
+        unsafe { (*(x as *const AtomicUsize)).store(val, Ordering::Release) }
     }
 }
