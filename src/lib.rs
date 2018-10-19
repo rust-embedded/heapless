@@ -78,7 +78,6 @@
 //!      This way they can be used to initialize static memory at compile time.
 //!
 
-
 #![allow(warnings)]
 #![deny(missing_docs)]
 #![deny(warnings)]
@@ -102,7 +101,6 @@ pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
-pub use ring_buffer::RingBuffer;
 pub use string::String;
 pub use vec::Vec;
 
@@ -114,7 +112,7 @@ mod string;
 mod vec;
 
 pub mod binary_heap;
-pub mod ring_buffer;
+pub mod spsc;
 
 mod __core;
 mod sealed;

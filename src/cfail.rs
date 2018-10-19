@@ -5,8 +5,8 @@
 //! Collections of `Send`-able things are `Send`
 //!
 //! ```
-//! use heapless::{RingBuffer, Vec};
-//! use heapless::ring_buffer::{Consumer, Producer};
+//! use heapless::Vec;
+//! use heapless::spsc::{Consumer, Queue, Producer};
 //! use heapless::consts::*;
 //!
 //! struct IsSend;
@@ -17,7 +17,7 @@
 //!
 //! is_send::<Consumer<IsSend, U4>>();
 //! is_send::<Producer<IsSend, U4>>();
-//! is_send::<RingBuffer<IsSend, U4>>();
+//! is_send::<Queue<IsSend, U4>>();
 //! is_send::<Vec<IsSend, U4>>();
 //! ```
 //!
@@ -49,13 +49,13 @@
 //!
 //! ``` compile_fail
 //! use std::marker::PhantomData;
-//! use heapless::RingBuffer;
+//! use heapless::spsc::Queue;
 //!
 //! type NotSend = PhantomData<*const ()>;
 //!
 //! fn is_send<T>() where T: Send {}
 //!
-//! is_send::<RingBuffer<NotSend, [NotSend; 4]>>();
+//! is_send::<Queue<NotSend, [NotSend; 4]>>();
 //! ```
 //!
 //! ``` compile_fail
@@ -71,12 +71,12 @@
 //!
 //! # Freeze
 //!
-//! Splitting a `RingBuffer` should invalidate the original reference.
+//! Splitting a `Queue` should invalidate the original reference.
 //!
 //! ``` compile_fail
-//! use heapless::RingBuffer;
+//! use heapless::spsc::Queue;
 //!
-//! let mut rb: RingBuffer<u8, [u8; 4]> = RingBuffer::new();
+//! let mut rb: Queue<u8, [u8; 4]> = Queue::new();
 //!
 //! let (p, c) = rb.split();
 //! rb.enqueue(0).unwrap();

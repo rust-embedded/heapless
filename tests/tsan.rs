@@ -8,13 +8,13 @@ use std::thread;
 
 use generic_array::typenum::Unsigned;
 use heapless::consts::*;
-use heapless::RingBuffer;
+use heapless::spsc;
 use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
-    static mut RB: Option<RingBuffer<i32, U4>> = None;
-    unsafe{ RB = Some(RingBuffer::new()) };
+    static mut RB: Option<spsc::Queue<i32, U4>> = None;
+    unsafe { RB = Some(spsc::Queue::new()) };
 
     let rb = unsafe { RB.as_mut().unwrap() };
 
@@ -35,8 +35,8 @@ fn once() {
 
 #[test]
 fn twice() {
-    static mut RB: Option<RingBuffer<i32, U4>> = None;
-    unsafe{ RB = Some(RingBuffer::new()) };
+    static mut RB: Option<spsc::Queue<i32, U4>> = None;
+    unsafe { RB = Some(spsc::Queue::new()) };
 
     let rb = unsafe { RB.as_mut().unwrap() };
 
@@ -58,7 +58,7 @@ fn twice() {
 
 #[test]
 fn scoped() {
-    let mut rb: RingBuffer<i32, U4> = RingBuffer::new();
+    let mut rb: spsc::Queue<i32, U4> = spsc::Queue::new();
 
     rb.enqueue(0).unwrap();
 
@@ -83,7 +83,7 @@ fn scoped() {
 fn contention() {
     type N = U1024;
 
-    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+    let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     {
         let (mut p, mut c) = rb.split();
@@ -127,7 +127,7 @@ fn contention() {
 fn unchecked() {
     type N = U1024;
 
-    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+    let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     for _ in 0..N::to_usize() / 2 {
         rb.enqueue(1).unwrap();
@@ -139,7 +139,9 @@ fn unchecked() {
         Pool::new(2).scoped(move |scope| {
             scope.execute(move || {
                 for _ in 0..N::to_usize() / 2 {
-                    p.enqueue_unchecked(2);
+                    unsafe {
+                        p.enqueue_unchecked(2);
+                    }
                 }
             });
 
@@ -161,7 +163,7 @@ fn unchecked() {
 #[test]
 fn len_properly_wraps() {
     type N = U3;
-    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+    let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
     assert_eq!(rb.len(), 1);
@@ -178,7 +180,7 @@ fn len_properly_wraps() {
 #[test]
 fn iterator_properly_wraps() {
     type N = U3;
-    let mut rb: RingBuffer<u8, N> = RingBuffer::new();
+    let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
     rb.dequeue();

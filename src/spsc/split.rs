@@ -3,15 +3,15 @@ use core::ptr::{self, NonNull};
 
 use generic_array::ArrayLength;
 
-use ring_buffer::RingBuffer;
 use sealed;
+use spsc::Queue;
 
-impl<T, N, U> RingBuffer<T, N, U>
+impl<T, N, U> Queue<T, N, U>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
 {
-    /// Splits a statically allocated ring buffer into producer and consumer end points
+    /// Splits a statically allocated queue into producer and consumer end points
     pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, N, U>, Consumer<'rb, T, N, U>) {
         (
             Producer {
@@ -26,14 +26,14 @@ where
     }
 }
 
-/// A ring buffer "consumer"; it can dequeue items from the ring buffer
-// NOTE the consumer semantically owns the `head` pointer of the ring buffer
+/// A queue "consumer"; it can dequeue items from the queue
+// NOTE the consumer semantically owns the `head` pointer of the queue
 pub struct Consumer<'a, T, N, U = usize>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
 {
-    rb: NonNull<RingBuffer<T, N, U>>,
+    rb: NonNull<Queue<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -44,14 +44,14 @@ where
     U: sealed::Uxx,
 {}
 
-/// A ring buffer "producer"; it can enqueue items into the ring buffer
-// NOTE the producer semantically owns the `tail` pointer of the ring buffer
+/// A queue "producer"; it can enqueue items into the queue
+// NOTE the producer semantically owns the `tail` pointer of the queue
 pub struct Producer<'a, T, N, U = usize>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
 {
-    rb: NonNull<RingBuffer<T, N, U>>,
+    rb: NonNull<Queue<T, N, U>>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -190,11 +190,11 @@ impl_!(usize);
 #[cfg(test)]
 mod tests {
     use consts::*;
-    use RingBuffer;
+    use spsc::Queue;
 
     #[test]
     fn sanity() {
-        let mut rb: RingBuffer<i32, U2> = RingBuffer::new();
+        let mut rb: Queue<i32, U2> = Queue::new();
 
         let (mut p, mut c) = rb.split();
 

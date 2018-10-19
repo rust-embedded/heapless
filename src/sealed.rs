@@ -8,7 +8,7 @@ pub unsafe trait Uxx: Into<usize> + Send {
     #[cfg(feature = "smaller-atomics")]
     #[doc(hidden)]
     fn load_acquire(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_acq(x) }
+        unsafe { core::intrinsics::atomic_load_acq(x) }
     }
 
     #[cfg(not(feature = "smaller-atomics"))]
@@ -18,7 +18,7 @@ pub unsafe trait Uxx: Into<usize> + Send {
     #[cfg(feature = "smaller-atomics")]
     #[doc(hidden)]
     fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { intrinsics::atomic_load_relaxed(x) }
+        unsafe { core::intrinsics::atomic_load_relaxed(x) }
     }
 
     #[cfg(not(feature = "smaller-atomics"))]
@@ -28,7 +28,7 @@ pub unsafe trait Uxx: Into<usize> + Send {
     #[cfg(feature = "smaller-atomics")]
     #[doc(hidden)]
     fn store_release(x: *mut Self, val: Self) {
-        unsafe { intrinsics::atomic_store_rel(x, val) }
+        unsafe { core::intrinsics::atomic_store_rel(x, val) }
     }
 
     #[cfg(not(feature = "smaller-atomics"))]
