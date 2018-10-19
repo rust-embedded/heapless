@@ -24,11 +24,13 @@ impl<U> Atomic<U>
 where
     U: sealed::Uxx,
 {
-    const_fn!(const fn new(v: U) -> Atomic<U> {
-        Atomic {
-            v: UnsafeCell::new(v),
+    const_fn! {
+        const fn new(v: U) -> Atomic<U> {
+            Atomic {
+                v: UnsafeCell::new(v),
+            }
         }
-    });
+    }
 
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
@@ -227,7 +229,7 @@ macro_rules! impl_ {
         where
             N: ArrayLength<T>,
         {
-            const_fn!(
+            const_fn! {
                 /// Creates an empty queue with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
                     Queue {
@@ -236,7 +238,7 @@ macro_rules! impl_ {
                         tail: Atomic::new(0),
                     }
                 }
-            );
+            }
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
@@ -312,12 +314,12 @@ impl<T, N> Queue<T, N, usize>
 where
     N: ArrayLength<T>,
 {
-    const_fn!(
+    const_fn! {
         /// Alias for [`spsc::Queue::usize`](struct.Queue.html#method.usize)
         pub const fn new() -> Self {
             Queue::usize()
         }
-    );
+    }
 }
 
 #[cfg(feature = "smaller-atomics")]

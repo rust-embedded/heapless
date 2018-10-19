@@ -17,9 +17,8 @@ impl<N> String<N>
 where
     N: ArrayLength<u8>,
 {
-
     #[inline]
-    const_fn!(
+    const_fn! {
         /// Constructs a new, empty `String` with a fixed capacity of `N`
         ///
         /// # Examples
@@ -35,7 +34,7 @@ where
         pub const fn new() -> Self {
             String { vec: Vec::new() }
         }
-    );
+    }
 
     /// Converts a vector of bytes into a `String`.
     ///
@@ -225,7 +224,8 @@ where
     pub fn push(&mut self, c: char) -> Result<(), ()> {
         match c.len_utf8() {
             1 => self.vec.push(c as u8).map_err(|_| {}),
-            _ => self.vec
+            _ => self
+                .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
         }
     }
@@ -513,11 +513,7 @@ macro_rules! impl_eq {
 impl_eq! { String<N>, str }
 impl_eq! { String<N>, &'a str }
 
-impl<N> Eq for String<N>
-where
-    N: ArrayLength<u8>,
-{
-}
+impl<N> Eq for String<N> where N: ArrayLength<u8> {}
 
 #[cfg(test)]
 mod tests {

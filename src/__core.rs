@@ -15,7 +15,7 @@ pub mod mem {
     // workaround to get this to compile on stable ("unions with non-`Copy` fields are unstable")
     #[cfg(not(feature = "const-fn"))]
     pub struct MaybeUninit<T> {
-        value: ManuallyDrop<T>
+        value: ManuallyDrop<T>,
     }
 
     impl<T> MaybeUninit<T> {
