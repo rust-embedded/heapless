@@ -1,39 +1,19 @@
-#[cfg(not(feature = "smaller-atomics"))]
+#[cfg(feature = "smaller-atomics")]
+use core::sync::atomic::{AtomicU16, AtomicU8};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub unsafe trait Uxx: Into<usize> + Send {
     #[doc(hidden)]
     fn truncate(x: usize) -> Self;
 
-    #[cfg(feature = "smaller-atomics")]
     #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { core::intrinsics::atomic_load_acq(x) }
-    }
+    fn load_acquire(x: *const Self) -> Self;
 
-    #[cfg(not(feature = "smaller-atomics"))]
     #[doc(hidden)]
-    fn load_acquire(x: *mut Self) -> Self;
+    fn load_relaxed(x: *const Self) -> Self;
 
-    #[cfg(feature = "smaller-atomics")]
     #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { core::intrinsics::atomic_load_relaxed(x) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn load_relaxed(x: *mut Self) -> Self;
-
-    #[cfg(feature = "smaller-atomics")]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe { core::intrinsics::atomic_store_rel(x, val) }
-    }
-
-    #[cfg(not(feature = "smaller-atomics"))]
-    #[doc(hidden)]
-    fn store_release(x: *mut Self, val: Self);
+    fn store_release(x: *const Self, val: Self);
 }
 
 #[cfg(feature = "smaller-atomics")]
@@ -45,6 +25,18 @@ unsafe impl Uxx for u8 {
         } else {
             x as u8
         }
+    }
+
+    fn load_acquire(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicU8)).load(Ordering::Acquire) }
+    }
+
+    fn load_relaxed(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicU8)).load(Ordering::Relaxed) }
+    }
+
+    fn store_release(x: *const Self, val: Self) {
+        unsafe { (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) }
     }
 }
 
@@ -58,6 +50,18 @@ unsafe impl Uxx for u16 {
             x as u16
         }
     }
+
+    fn load_acquire(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicU16)).load(Ordering::Acquire) }
+    }
+
+    fn load_relaxed(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicU16)).load(Ordering::Relaxed) }
+    }
+
+    fn store_release(x: *const Self, val: Self) {
+        unsafe { (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) }
+    }
 }
 
 unsafe impl Uxx for usize {
@@ -65,20 +69,15 @@ unsafe impl Uxx for usize {
         x
     }
 
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_acquire(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Acquire) }
+    fn load_acquire(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicUsize)).load(Ordering::Acquire) }
     }
 
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn load_relaxed(x: *mut Self) -> Self {
-        unsafe { (*(x as *mut AtomicUsize)).load(Ordering::Relaxed) }
+    fn load_relaxed(x: *const Self) -> Self {
+        unsafe { (*(x as *const AtomicUsize)).load(Ordering::Relaxed) }
     }
 
-    #[cfg(not(feature = "smaller-atomics"))]
-    fn store_release(x: *mut Self, val: Self) {
-        unsafe {
-            (*(x as *mut AtomicUsize)).store(val, Ordering::Release);
-        }
+    fn store_release(x: *const Self, val: Self) {
+        unsafe { (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed) }
     }
 }
