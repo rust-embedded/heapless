@@ -82,7 +82,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![cfg_attr(feature = "const-fn", feature(const_fn))]
-#![cfg_attr(feature = "const-fn", feature(const_manually_drop_new))]
 #![cfg_attr(feature = "const-fn", feature(untagged_unions))]
 #![cfg_attr(feature = "smaller-atomics", feature(integer_atomics))]
 #![no_std]
