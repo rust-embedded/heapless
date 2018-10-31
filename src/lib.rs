@@ -51,8 +51,7 @@
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
-//! - [`RingBuffer`](ring_buffer/struct.RingBuffer.html) -- single producer single consumer lockless
-//! queue
+//! - [`Queue`](spsc/struct.Queue.html) -- single producer single consumer lockless queue
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
 //!
