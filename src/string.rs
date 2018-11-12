@@ -407,7 +407,17 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let slice: &str = &**self;
-        slice.fmt(f)
+        fmt::Debug::fmt(slice, f)
+    }
+}
+
+impl<N> fmt::Display for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let slice: &str = &**self;
+        fmt::Display::fmt(slice, f)
     }
 }
 
@@ -536,6 +546,18 @@ mod tests {
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
+    }
+
+    #[test]
+    fn display() {
+        extern crate std;
+
+        use core::fmt::Write;
+
+        let s: String<U8> = String::from("abcd");
+        let mut std_s = std::string::String::new();
+        write!(std_s, "{}", s).unwrap();
+        assert_eq!("abcd", std_s);
     }
 
     #[test]
