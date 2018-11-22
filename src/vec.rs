@@ -1,4 +1,5 @@
 use core::{fmt, ops, ptr, slice};
+use core::marker::PhantomData;
 
 use generic_array::{ArrayLength, GenericArray};
 
@@ -503,6 +504,57 @@ where
     fn as_mut(&mut self) -> &mut [T] {
         self
     }
+}
+
+#[cfg(feature = "with-serde")]
+impl<'de, T, N> serde::Deserialize<'de> for Vec<T, N> where
+    N: ArrayLength<T>,
+    T: serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where
+        D: serde::Deserializer<'de>
+    {
+        // This implementation is based on the Vec implementation at serde's src/de/impls.rs as of
+        // commit version 9afc5fef.
+
+        struct VecVisitor<T, N> {
+            marker: PhantomData<T>,
+            marker_n: PhantomData<N>,
+        }
+
+        impl<'de, T, N2> serde::de::Visitor<'de> for VecVisitor<T, N2>
+        where
+            T: serde::Deserialize<'de>,
+            N2: ArrayLength<T>,
+        {
+            type Value = Vec<T, N2>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut values = Vec::new();
+
+                while let Some(value) = try!(seq.next_element()) {
+                    values.push(value).map_err(|_| unimplemented!())?;
+                }
+
+                Ok(values)
+            }
+        }
+        let visitor = VecVisitor {
+            marker: PhantomData,
+            marker_n: PhantomData,
+        };
+
+        deserializer.deserialize_seq(visitor)
+    }
+
+    // FIXME: Add deserialize_in_place -- sounds like something one'd want to have here.
 }
 
 #[cfg(test)]

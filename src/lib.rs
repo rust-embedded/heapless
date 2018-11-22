@@ -90,6 +90,9 @@ extern crate hash32;
 #[cfg(test)]
 extern crate std;
 
+#[cfg(feature = "with-serde")]
+extern crate serde;
+
 #[macro_use]
 mod const_fn;
 

@@ -21,6 +21,7 @@ version = "0.4.0"
 [features]
 const-fn = []
 smaller-atomics = []
+with-serde = ["serde"]
 
 [dev-dependencies]
 scoped_threadpool = "0.1.8"
@@ -28,3 +29,5 @@ scoped_threadpool = "0.1.8"
 [dependencies]
 generic-array = "0.11.0"
 hash32 = "0.1.0"
+
+serde = { version = "1", optional = true, default-features = false }
