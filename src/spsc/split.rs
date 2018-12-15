@@ -4,15 +4,16 @@ use core::ptr::{self, NonNull};
 use generic_array::ArrayLength;
 
 use sealed;
-use spsc::Queue;
+use spsc::{MultiCore, Queue};
 
-impl<T, N, U> Queue<T, N, U>
+impl<T, N, U, C> Queue<T, N, U, C>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     /// Splits a statically allocated queue into producer and consumer end points
-    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, N, U>, Consumer<'rb, T, N, U>) {
+    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, N, U, C>, Consumer<'rb, T, N, U, C>) {
         (
             Producer {
                 rb: unsafe { NonNull::new_unchecked(self) },
@@ -28,30 +29,34 @@ where
 
 /// A queue "consumer"; it can dequeue items from the queue
 // NOTE the consumer semantically owns the `head` pointer of the queue
-pub struct Consumer<'a, T, N, U = usize>
+pub struct Consumer<'a, T, N, U = usize, C = MultiCore>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
-    rb: NonNull<Queue<T, N, U>>,
+    rb: NonNull<Queue<T, N, U, C>>,
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, N, U> Send for Consumer<'a, T, N, U>
+unsafe impl<'a, T, N, U, C> Send for Consumer<'a, T, N, U, C>
 where
     N: ArrayLength<T>,
     T: Send,
     U: sealed::Uxx,
-{}
+    C: sealed::XCore,
+{
+}
 
 /// A queue "producer"; it can enqueue items into the queue
 // NOTE the producer semantically owns the `tail` pointer of the queue
-pub struct Producer<'a, T, N, U = usize>
+pub struct Producer<'a, T, N, U = usize, C = MultiCore>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
-    rb: NonNull<Queue<T, N, U>>,
+    rb: NonNull<Queue<T, N, U, C>>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -60,13 +65,15 @@ where
     N: ArrayLength<T>,
     T: Send,
     U: sealed::Uxx,
-{}
+{
+}
 
 macro_rules! impl_ {
     ($uxx:ident) => {
-        impl<'a, T, N> Consumer<'a, T, N, $uxx>
+        impl<'a, T, N, C> Consumer<'a, T, N, $uxx, C>
         where
             N: ArrayLength<T>,
+            C: sealed::XCore,
         {
             /// Returns if there are any items to dequeue. When this returns true, at least the
             /// first subsequent dequeue will succeed.
@@ -111,9 +118,10 @@ macro_rules! impl_ {
             }
         }
 
-        impl<'a, T, N> Producer<'a, T, N, $uxx>
+        impl<'a, T, N, C> Producer<'a, T, N, $uxx, C>
         where
             N: ArrayLength<T>,
+            C: sealed::XCore,
         {
             /// Returns if there is any space to enqueue a new item. When this returns true, at
             /// least the first subsequent enqueue will succeed.

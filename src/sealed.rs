@@ -1,19 +1,41 @@
+use core::sync::atomic::{self, AtomicUsize, Ordering};
 #[cfg(feature = "smaller-atomics")]
 use core::sync::atomic::{AtomicU16, AtomicU8};
-use core::sync::atomic::{AtomicUsize, Ordering};
+
+use spsc::{MultiCore, SingleCore};
+
+pub unsafe trait XCore {
+    fn is_multi_core() -> bool;
+}
+
+unsafe impl XCore for SingleCore {
+    fn is_multi_core() -> bool {
+        false
+    }
+}
+
+unsafe impl XCore for MultiCore {
+    fn is_multi_core() -> bool {
+        true
+    }
+}
 
 pub unsafe trait Uxx: Into<usize> + Send {
     #[doc(hidden)]
     fn truncate(x: usize) -> Self;
 
     #[doc(hidden)]
-    fn load_acquire(x: *const Self) -> Self;
+    unsafe fn load_acquire<C>(x: *const Self) -> Self
+    where
+        C: XCore;
 
     #[doc(hidden)]
     fn load_relaxed(x: *const Self) -> Self;
 
     #[doc(hidden)]
-    fn store_release(x: *const Self, val: Self);
+    unsafe fn store_release<C>(x: *const Self, val: Self)
+    where
+        C: XCore;
 }
 
 #[cfg(feature = "smaller-atomics")]
@@ -27,16 +49,33 @@ unsafe impl Uxx for u8 {
         }
     }
 
-    fn load_acquire(x: *const Self) -> Self {
-        unsafe { (*(x as *const AtomicU8)).load(Ordering::Acquire) }
+    unsafe fn load_acquire<C>(x: *const Self) -> Self
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicU8)).load(Ordering::Acquire)
+        } else {
+            let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed);
+            atomic::compiler_fence(Ordering::Acquire);
+            y
+        }
     }
 
     fn load_relaxed(x: *const Self) -> Self {
         unsafe { (*(x as *const AtomicU8)).load(Ordering::Relaxed) }
     }
 
-    fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicU8)).store(val, Ordering::Release) }
+    unsafe fn store_release<C>(x: *const Self, val: Self)
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicU8)).store(val, Ordering::Release)
+        } else {
+            atomic::compiler_fence(Ordering::Release);
+            (*(x as *const AtomicU8)).store(val, Ordering::Relaxed)
+        }
     }
 }
 
@@ -51,16 +90,33 @@ unsafe impl Uxx for u16 {
         }
     }
 
-    fn load_acquire(x: *const Self) -> Self {
-        unsafe { (*(x as *const AtomicU16)).load(Ordering::Acquire) }
+    unsafe fn load_acquire<C>(x: *const Self) -> Self
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicU16)).load(Ordering::Acquire)
+        } else {
+            let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed);
+            atomic::compiler_fence(Ordering::Acquire);
+            y
+        }
     }
 
     fn load_relaxed(x: *const Self) -> Self {
         unsafe { (*(x as *const AtomicU16)).load(Ordering::Relaxed) }
     }
 
-    fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicU16)).store(val, Ordering::Release) }
+    unsafe fn store_release<C>(x: *const Self, val: Self)
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicU16)).store(val, Ordering::Release)
+        } else {
+            atomic::compiler_fence(Ordering::Release);
+            (*(x as *const AtomicU16)).store(val, Ordering::Relaxed)
+        }
     }
 }
 
@@ -69,15 +125,32 @@ unsafe impl Uxx for usize {
         x
     }
 
-    fn load_acquire(x: *const Self) -> Self {
-        unsafe { (*(x as *const AtomicUsize)).load(Ordering::Acquire) }
+    unsafe fn load_acquire<C>(x: *const Self) -> Self
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicUsize)).load(Ordering::Acquire)
+        } else {
+            let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed);
+            atomic::compiler_fence(Ordering::Acquire);
+            y
+        }
     }
 
     fn load_relaxed(x: *const Self) -> Self {
         unsafe { (*(x as *const AtomicUsize)).load(Ordering::Relaxed) }
     }
 
-    fn store_release(x: *const Self, val: Self) {
-        unsafe { (*(x as *const AtomicUsize)).store(val, Ordering::Release) }
+    unsafe fn store_release<C>(x: *const Self, val: Self)
+    where
+        C: XCore,
+    {
+        if C::is_multi_core() {
+            (*(x as *const AtomicUsize)).store(val, Ordering::Release)
+        } else {
+            atomic::compiler_fence(Ordering::Release);
+            (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed);
+        }
     }
 }

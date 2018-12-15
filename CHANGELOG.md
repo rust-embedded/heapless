@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.1] - 2018-12-16
+
+### Changed
+
+- Add a new type parameter to `spsc::Queue` that indicates whether the queue is
+  only single-core safe, or multi-core safe. By default the queue is multi-core
+  safe; this preserves the current semantics. New `unsafe` constructors have
+  been added to create the single-core variant.
+
 ## [v0.4.0] - 2018-10-19
 
 ### Changed
@@ -168,8 +177,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.0...HEAD
-[v0.3.8]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.1...HEAD
+[v0.4.1]: https://github.com/japaric/heapless/compare/v0.4.0...v0.4.1
+[v0.4.0]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
 [v0.3.7]: https://github.com/japaric/heapless/compare/v0.3.6...v0.3.7
 [v0.3.6]: https://github.com/japaric/heapless/compare/v0.3.5...v0.3.6
 [v0.3.5]: https://github.com/japaric/heapless/compare/v0.3.4...v0.3.5
