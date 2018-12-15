@@ -1,6 +1,7 @@
 //! Single producer single consumer queue
 
 use core::cell::UnsafeCell;
+use core::marker::PhantomData;
 use core::ptr;
 
 use generic_array::{ArrayLength, GenericArray};
@@ -11,23 +12,33 @@ use sealed;
 
 mod split;
 
+/// Multi core synchronization - a memory barrier is used for synchronization
+pub struct MultiCore;
+
+/// Single core synchronization - no memory barrier synchronization, just a compiler fence
+pub struct SingleCore;
+
 // Atomic{U8,U16, Usize} with no CAS operations that works on targets that have "no atomic support"
 // according to their specification
-struct Atomic<U>
+struct Atomic<U, C>
 where
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     v: UnsafeCell<U>,
+    c: PhantomData<C>,
 }
 
-impl<U> Atomic<U>
+impl<U, C> Atomic<U, C>
 where
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     const_fn! {
-        const fn new(v: U) -> Atomic<U> {
+        const fn new(v: U) -> Self {
             Atomic {
                 v: UnsafeCell::new(v),
+                c: PhantomData,
             }
         }
     }
@@ -37,7 +48,7 @@ where
     }
 
     fn load_acquire(&self) -> U {
-        U::load_acquire(self.v.get())
+        unsafe { U::load_acquire::<C>(self.v.get()) }
     }
 
     fn load_relaxed(&self) -> U {
@@ -45,7 +56,7 @@ where
     }
 
     fn store_release(&self, val: U) {
-        U::store_release(self.v.get(), val)
+        unsafe { U::store_release::<C>(self.v.get(), val) }
     }
 }
 
@@ -64,6 +75,11 @@ where
 ///
 /// *IMPORTANT*: `spsc::Queue<_, _, u8>` has a maximum capacity of 255 elements; `spsc::Queue<_, _,
 /// u16>` has a maximum capacity of 65535 elements.
+///
+/// `spsc::Queue` also comes in a single core variant. This variant can be created using the
+/// following constructors: `u8_sc`, `u16_sc`, `usize_sc` and `new_sc`. This variant is `unsafe` to
+/// create because the programmer must make sure that the queue's consumer and producer endpoints
+/// (if split) are kept on a single core for their entire lifetime.
 ///
 /// # Examples
 ///
@@ -127,24 +143,26 @@ where
 ///     // ..
 /// }
 /// ```
-pub struct Queue<T, N, U = usize>
+pub struct Queue<T, N, U = usize, C = MultiCore>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     // this is from where we dequeue items
-    head: Atomic<U>,
+    head: Atomic<U, C>,
 
     // this is where we enqueue new items
-    tail: Atomic<U>,
+    tail: Atomic<U, C>,
 
     buffer: MaybeUninit<GenericArray<T, N>>,
 }
 
-impl<T, N, U> Queue<T, N, U>
+impl<T, N, U, C> Queue<T, N, U, C>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
@@ -157,7 +175,7 @@ where
     }
 
     /// Iterates from the front of the queue to the back
-    pub fn iter(&self) -> Iter<T, N, U> {
+    pub fn iter(&self) -> Iter<T, N, U, C> {
         Iter {
             rb: self,
             index: 0,
@@ -166,7 +184,7 @@ where
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMut<T, N, U> {
+    pub fn iter_mut(&mut self) -> IterMut<T, N, U, C> {
         let len = self.len_usize();
         IterMut {
             rb: self,
@@ -183,10 +201,11 @@ where
     }
 }
 
-impl<T, N, U> Drop for Queue<T, N, U>
+impl<T, N, U, C> Drop for Queue<T, N, U, C>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     fn drop(&mut self) {
         for item in self {
@@ -197,26 +216,28 @@ where
     }
 }
 
-impl<'a, T, N, U> IntoIterator for &'a Queue<T, N, U>
+impl<'a, T, N, U, C> IntoIterator for &'a Queue<T, N, U, C>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     type Item = &'a T;
-    type IntoIter = Iter<'a, T, N, U>;
+    type IntoIter = Iter<'a, T, N, U, C>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, T, N, U> IntoIterator for &'a mut Queue<T, N, U>
+impl<'a, T, N, U, C> IntoIterator for &'a mut Queue<T, N, U, C>
 where
     N: ArrayLength<T>,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
     type Item = &'a mut T;
-    type IntoIter = IterMut<'a, T, N, U>;
+    type IntoIter = IterMut<'a, T, N, U, C>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -224,8 +245,8 @@ where
 }
 
 macro_rules! impl_ {
-    ($uxx:ident) => {
-        impl<T, N> Queue<T, N, $uxx>
+    ($uxx:ident, $uxx_sc:ident) => {
+        impl<T, N> Queue<T, N, $uxx, MultiCore>
         where
             N: ArrayLength<T>,
         {
@@ -239,7 +260,29 @@ macro_rules! impl_ {
                     }
                 }
             }
+        }
 
+        impl<T, N> Queue<T, N, $uxx, SingleCore>
+        where
+            N: ArrayLength<T>,
+        {
+            const_fn! {
+                /// Creates an empty queue with a fixed capacity of `N` (single core variant)
+                pub const unsafe fn $uxx_sc() -> Self {
+                    Queue {
+                        buffer: MaybeUninit::uninitialized(),
+                        head: Atomic::new(0),
+                        tail: Atomic::new(0),
+                    }
+                }
+            }
+        }
+
+        impl<T, N, C> Queue<T, N, $uxx, C>
+        where
+            N: ArrayLength<T>,
+            C: sealed::XCore,
+        {
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
                 let cap = self.capacity();
@@ -310,7 +353,7 @@ macro_rules! impl_ {
     };
 }
 
-impl<T, N> Queue<T, N, usize>
+impl<T, N> Queue<T, N, usize, MultiCore>
 where
     N: ArrayLength<T>,
 {
@@ -322,43 +365,58 @@ where
     }
 }
 
+impl<T, N> Queue<T, N, usize, SingleCore>
+where
+    N: ArrayLength<T>,
+{
+    const_fn! {
+        /// Alias for [`spsc::Queue::usize_sc`](struct.Queue.html#method.usize_sc)
+        pub const unsafe fn new_sc() -> Self {
+            Queue::usize_sc()
+        }
+    }
+}
+
 #[cfg(feature = "smaller-atomics")]
-impl_!(u8);
+impl_!(u8, u8_sc);
 #[cfg(feature = "smaller-atomics")]
-impl_!(u16);
-impl_!(usize);
+impl_!(u16, u16_sc);
+impl_!(usize, usize_sc);
 
 /// An iterator over the items of a queue
-pub struct Iter<'a, T, N, U>
+pub struct Iter<'a, T, N, U, C>
 where
     N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + sealed::Uxx,
+    C: 'a + sealed::XCore,
 {
-    rb: &'a Queue<T, N, U>,
+    rb: &'a Queue<T, N, U, C>,
     index: usize,
     len: usize,
 }
 
 /// A mutable iterator over the items of a queue
-pub struct IterMut<'a, T, N, U>
+pub struct IterMut<'a, T, N, U, C>
 where
     N: ArrayLength<T> + 'a,
     T: 'a,
     U: 'a + sealed::Uxx,
+    C: 'a + sealed::XCore,
 {
-    rb: &'a mut Queue<T, N, U>,
+    rb: &'a mut Queue<T, N, U, C>,
     index: usize,
     len: usize,
 }
 
 macro_rules! iterator {
     (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
-        impl<'a, T, N, U> Iterator for $name<'a, T, N, U>
+        impl<'a, T, N, U, C> Iterator for $name<'a, T, N, U, C>
         where
             N: ArrayLength<T>,
             T: 'a,
             U: 'a + sealed::Uxx,
+            C: 'a + sealed::XCore,
         {
             type Item = $elem;
 
