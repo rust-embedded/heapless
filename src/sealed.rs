@@ -56,8 +56,8 @@ unsafe impl Uxx for u8 {
         if C::is_multi_core() {
             (*(x as *const AtomicU8)).load(Ordering::Acquire)
         } else {
-            let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed);
-            atomic::compiler_fence(Ordering::Acquire);
+            let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed); // read
+            atomic::compiler_fence(Ordering::Acquire); // ▼
             y
         }
     }
@@ -73,8 +73,8 @@ unsafe impl Uxx for u8 {
         if C::is_multi_core() {
             (*(x as *const AtomicU8)).store(val, Ordering::Release)
         } else {
-            atomic::compiler_fence(Ordering::Release);
-            (*(x as *const AtomicU8)).store(val, Ordering::Relaxed)
+            atomic::compiler_fence(Ordering::Release); // ▲
+            (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) // write
         }
     }
 }
@@ -97,8 +97,8 @@ unsafe impl Uxx for u16 {
         if C::is_multi_core() {
             (*(x as *const AtomicU16)).load(Ordering::Acquire)
         } else {
-            let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed);
-            atomic::compiler_fence(Ordering::Acquire);
+            let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed); // read
+            atomic::compiler_fence(Ordering::Acquire); // ▼
             y
         }
     }
@@ -114,8 +114,8 @@ unsafe impl Uxx for u16 {
         if C::is_multi_core() {
             (*(x as *const AtomicU16)).store(val, Ordering::Release)
         } else {
-            atomic::compiler_fence(Ordering::Release);
-            (*(x as *const AtomicU16)).store(val, Ordering::Relaxed)
+            atomic::compiler_fence(Ordering::Release); // ▲
+            (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) // write
         }
     }
 }
@@ -132,8 +132,8 @@ unsafe impl Uxx for usize {
         if C::is_multi_core() {
             (*(x as *const AtomicUsize)).load(Ordering::Acquire)
         } else {
-            let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed);
-            atomic::compiler_fence(Ordering::Acquire);
+            let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed); // read
+            atomic::compiler_fence(Ordering::Acquire); // ▼
             y
         }
     }
@@ -149,8 +149,8 @@ unsafe impl Uxx for usize {
         if C::is_multi_core() {
             (*(x as *const AtomicUsize)).store(val, Ordering::Release)
         } else {
-            atomic::compiler_fence(Ordering::Release);
-            (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed);
+            atomic::compiler_fence(Ordering::Release); // ▲
+            (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed); // write
         }
     }
 }

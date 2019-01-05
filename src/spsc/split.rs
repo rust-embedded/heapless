@@ -78,18 +78,18 @@ macro_rules! impl_ {
             /// Returns if there are any items to dequeue. When this returns true, at least the
             /// first subsequent dequeue will succeed.
             pub fn ready(&self) -> bool {
-                let tail = unsafe { self.rb.as_ref().tail.load_acquire() };
                 let head = unsafe { self.rb.as_ref().head.load_relaxed() };
+                let tail = unsafe { self.rb.as_ref().tail.load_acquire() }; // ▼
                 return head != tail;
             }
 
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
-                let tail = unsafe { self.rb.as_ref().tail.load_acquire() };
                 let head = unsafe { self.rb.as_ref().head.load_relaxed() };
+                let tail = unsafe { self.rb.as_ref().tail.load_acquire() }; // ▼
 
                 if head != tail {
-                    Some(unsafe { self._dequeue(head) })
+                    Some(unsafe { self._dequeue(head) }) // ▲
                 } else {
                     None
                 }
@@ -103,7 +103,7 @@ macro_rules! impl_ {
             pub unsafe fn dequeue_unchecked(&mut self) -> T {
                 let head = self.rb.as_ref().head.load_relaxed();
                 debug_assert_ne!(head, self.rb.as_ref().tail.load_acquire());
-                self._dequeue(head)
+                self._dequeue(head) // ▲
             }
 
             unsafe fn _dequeue(&mut self, head: $uxx) -> T {
@@ -113,7 +113,7 @@ macro_rules! impl_ {
                 let buffer = rb.buffer.get_ref();
 
                 let item = ptr::read(buffer.get_unchecked(usize::from(head % cap)));
-                rb.head.store_release(head.wrapping_add(1));
+                rb.head.store_release(head.wrapping_add(1)); // ▲
                 item
             }
         }
@@ -149,12 +149,12 @@ macro_rules! impl_ {
                 // to the C++ memory model, which is what Rust currently uses, so we err on the side
                 // of caution and stick to `load_acquire`. Check issue google#sanitizers#882 for
                 // more details.
-                let head = unsafe { self.rb.as_ref().head.load_acquire() };
+                let head = unsafe { self.rb.as_ref().head.load_acquire() }; // ▼
 
                 if tail.wrapping_sub(head) > cap - 1 {
                     Err(item)
                 } else {
-                    unsafe { self._enqueue(tail, item) };
+                    unsafe { self._enqueue(tail, item) }; // ▲
                     Ok(())
                 }
             }
@@ -170,7 +170,7 @@ macro_rules! impl_ {
             pub unsafe fn enqueue_unchecked(&mut self, item: T) {
                 let tail = self.rb.as_ref().tail.load_relaxed();
                 debug_assert_ne!(tail.wrapping_add(1), self.rb.as_ref().head.load_acquire());
-                self._enqueue(tail, item);
+                self._enqueue(tail, item); // ▲
             }
 
             unsafe fn _enqueue(&mut self, tail: $uxx, item: T) {
@@ -183,7 +183,7 @@ macro_rules! impl_ {
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
                 ptr::write(buffer.get_unchecked_mut(usize::from(tail % cap)), item);
-                rb.tail.store_release(tail.wrapping_add(1));
+                rb.tail.store_release(tail.wrapping_add(1)); // ▲
             }
         }
     };
