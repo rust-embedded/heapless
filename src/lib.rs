@@ -102,6 +102,7 @@ extern crate serde;
 mod const_fn;
 
 pub use binary_heap::BinaryHeap;
+pub use errors::*;
 pub use generic_array::typenum::consts;
 pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
@@ -111,6 +112,7 @@ pub use string::String;
 pub use vec::Vec;
 
 mod cfail;
+mod errors;
 mod indexmap;
 mod indexset;
 mod linear_map;

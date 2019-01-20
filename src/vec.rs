@@ -4,6 +4,7 @@ use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
 use __core::mem::MaybeUninit;
+use errors::CapacityError;
 
 use core::hash;
 use core::iter::FromIterator;
@@ -99,13 +100,18 @@ where
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
     where
         T: Clone,
     {
-        if self.len() + other.len() > self.capacity() {
+        let encountered = self.len() + other.len();
+
+        if encountered > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
-            Err(())
+            Err(CapacityError {
+                maximum: self.capacity(),
+                encountered,
+            })
         } else {
             for elem in other {
                 self.push(elem.clone()).ok();

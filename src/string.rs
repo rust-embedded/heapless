@@ -9,6 +9,7 @@ use generic_array::{
     ArrayLength,
 };
 
+use errors::CapacityError;
 use Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
@@ -182,7 +183,7 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), CapacityError> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -227,9 +228,13 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> Result<(), ()> {
-        match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
+    pub fn push(&mut self, c: char) -> Result<(), CapacityError> {
+        let bytelen = c.len_utf8();
+        match bytelen {
+            1 => self.vec.push(c as u8).map_err(|_| CapacityError {
+                maximum: self.capacity(),
+                encountered: self.capacity() + bytelen,
+            }),
             _ => self
                 .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
@@ -420,7 +425,7 @@ impl<N> str::FromStr for String<N>
 where
     N: ArrayLength<u8>,
 {
-    type Err = ();
+    type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut new = String::new();
@@ -673,13 +678,21 @@ mod tests {
     #[test]
     fn from_str() {
         use core::str::FromStr;
+        use errors::CapacityError;
+        use generic_array::typenum::Unsigned;
 
         let s: String<U4> = String::<U4>::from_str("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<U2>::from_str("123").unwrap_err();
-        assert_eq!(e, ());
+        let e = String::<U2>::from_str("123").unwrap_err();
+        assert_eq!(
+            e,
+            CapacityError {
+                maximum: U2::to_usize(),
+                encountered: 3,
+            }
+        );
     }
 
     #[test]
