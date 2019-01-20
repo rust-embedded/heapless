@@ -13,7 +13,7 @@ use generic_array::{
 };
 use hash32;
 
-use crate::Vec;
+use crate::{errors::CapacityError, Vec};
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
 pub struct String<N>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>>)
@@ -197,7 +197,7 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), CapacityError> {
         self.0.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -242,9 +242,12 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> Result<(), ()> {
+    pub fn push(&mut self, c: char) -> Result<(), CapacityError> {
         match c.len_utf8() {
-            1 => self.0.vec.push(c as u8).map_err(|_| {}),
+            1 => self.0.vec.push(c as u8).map_err(|_| CapacityError {
+                encountered: self.0.vec.len + 1,
+                maximum: self.0.vec.len,
+            }),
             _ => self
                 .0
                 .vec
@@ -374,7 +377,7 @@ impl<N> str::FromStr for String<N>
 where
     N: ArrayLength<u8>,
 {
-    type Err = ();
+    type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut new = String::new();
@@ -563,7 +566,7 @@ impl_from_num!(u64, U20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{consts::*, String, Vec};
+    use crate::{consts::*, errors::*, String, Vec};
 
     #[test]
     fn static_new() {
@@ -619,13 +622,20 @@ mod tests {
     #[test]
     fn from_str() {
         use core::str::FromStr;
+        use generic_array::typenum::Unsigned;
 
         let s: String<U4> = String::<U4>::from_str("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<U2>::from_str("123").unwrap_err();
-        assert_eq!(e, ());
+        let e = String::<U2>::from_str("123").unwrap_err();
+        assert_eq!(
+            e,
+            CapacityError {
+                maximum: U2::to_usize(),
+                encountered: 3,
+            }
+        );
     }
 
     #[test]

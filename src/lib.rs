@@ -68,6 +68,7 @@
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
+pub use errors::*;
 pub use generic_array::typenum::consts;
 pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
@@ -76,6 +77,7 @@ pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;
 
+mod errors;
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
 mod indexmap;
 mod indexset;

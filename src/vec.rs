@@ -1,3 +1,5 @@
+use crate::errors::CapacityError;
+
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
@@ -55,13 +57,18 @@ where
         }
     }
 
-    pub(crate) fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub(crate) fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
+        let encountered = self.len + other.len();
+
+        if encountered > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
-            Err(())
+            Err(CapacityError {
+                maximum: self.capacity(),
+                encountered,
+            })
         } else {
             for elem in other {
                 unsafe {
@@ -224,7 +231,7 @@ where
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
     where
         T: Clone,
     {
@@ -272,12 +279,15 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](struct.Vec.html#method.resize_default).
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
     where
         T: Clone,
     {
         if new_len > self.capacity() {
-            return Err(());
+            return Err(CapacityError {
+                encountered: new_len,
+                maximum: self.capacity(),
+            });
         }
 
         if new_len > self.len() {
@@ -298,7 +308,7 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](struct.Vec.html#method.resize).
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), CapacityError>
     where
         T: Clone + Default,
     {
