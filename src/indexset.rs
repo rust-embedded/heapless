@@ -454,6 +454,19 @@ where
     }
 }
 
+impl<T, N, S> Clone for IndexSet<T, N, S>
+where
+    T: Eq + Hash + Clone,
+    S: Clone,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            map: self.map.clone(),
+        }
+    }
+}
+
 impl<T, N, S> fmt::Debug for IndexSet<T, N, S>
 where
     T: Eq + Hash + fmt::Debug,
@@ -564,6 +577,17 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(k, _)| k)
+    }
+}
+
+impl<'a, T> Clone for Iter<'a, T>
+where
+    T: 'a,
+{
+    fn clone(&self) -> Self {
+        Self {
+            iter: self.iter.clone(),
+        }
     }
 }
 

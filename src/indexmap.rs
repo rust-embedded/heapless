@@ -28,6 +28,7 @@ impl HashValue {
 }
 
 #[doc(hidden)]
+#[derive(Clone)]
 pub struct Bucket<K, V> {
     hash: HashValue,
     key: K,
@@ -265,6 +266,20 @@ where
             }
             last_probe = probe;
         });
+    }
+}
+
+impl<K, V, N> Clone for CoreMap<K, V, N>
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            entries: self.entries.clone(),
+            indices: self.indices.clone(),
+        }
     }
 }
 
@@ -725,6 +740,21 @@ where
     }
 }
 
+impl<K, V, N, S> Clone for IndexMap<K, V, N, S>
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
+    S: Clone,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            core: self.core.clone(),
+            build_hasher: self.build_hasher.clone(),
+        }
+    }
+}
+
 impl<K, V, N, S> fmt::Debug for IndexMap<K, V, N, S>
 where
     K: Eq + Hash + fmt::Debug,
@@ -843,6 +873,18 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|bucket| (&bucket.key, &bucket.value))
+    }
+}
+
+impl<'a, K, V> Clone for Iter<'a, K, V>
+where
+    K: 'a,
+    V: 'a,
+{
+    fn clone(&self) -> Self {
+        Self {
+            iter: self.iter.clone(),
+        }
     }
 }
 

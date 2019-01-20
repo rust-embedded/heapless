@@ -408,6 +408,22 @@ where
     len: usize,
 }
 
+impl<'a, T, N, U, C> Clone for Iter<'a, T, N, U, C>
+where
+    N: ArrayLength<T> + 'a,
+    T: 'a,
+    U: 'a + sealed::Uxx,
+    C: 'a + sealed::XCore,
+{
+    fn clone(&self) -> Self {
+        Self {
+            rb: self.rb,
+            index: self.index,
+            len: self.len,
+        }
+    }
+}
+
 /// A mutable iterator over the items of a queue
 pub struct IterMut<'a, T, N, U, C>
 where
