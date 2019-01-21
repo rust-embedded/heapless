@@ -1,5 +1,7 @@
 use core::str::Utf8Error;
-use core::{fmt, ops, str};
+use core::{fmt, hash, ops, str};
+
+use hash32;
 
 use generic_array::ArrayLength;
 
@@ -431,6 +433,26 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let slice: &str = &**self;
         fmt::Display::fmt(slice, f)
+    }
+}
+
+impl<N> hash::Hash for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    #[inline]
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        (**self).hash(hasher)
+    }
+}
+
+impl<N> hash32::Hash for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    #[inline]
+    fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
+        (**self).hash(hasher)
     }
 }
 
