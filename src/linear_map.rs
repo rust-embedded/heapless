@@ -1,5 +1,6 @@
 use core::borrow::Borrow;
 use core::{mem, ops, slice, fmt};
+use core::iter::FromIterator;
 
 use generic_array::ArrayLength;
 
@@ -401,6 +402,55 @@ where
     }
 }
 
+impl<K, V, N> FromIterator<(K, V)> for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+    {
+        let mut out = Self::new();
+        out.buffer.extend(iter);
+        out
+    }
+}
+
+pub struct IntoIter<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    inner: <Vec<(K, V), N> as IntoIterator>::IntoIter,
+}
+
+impl<K, V, N> Iterator for IntoIter<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    type Item = (K, V);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<K, V, N> IntoIterator for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    type Item = (K, V);
+    type IntoIter = IntoIter<K, V, N>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            inner: self.buffer.into_iter(),
+        }
+    }
+}
+
 impl<'a, K, V, N> IntoIterator for &'a LinearMap<K, V, N>
 where
     N: ArrayLength<(K, V)>,
@@ -409,7 +459,7 @@ where
     type Item = (&'a K, &'a V);
     type IntoIter = Iter<'a, K, V>;
 
-    fn into_iter(self) -> Iter<'a, K, V> {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
@@ -454,6 +504,29 @@ where
     }
 }
 
+impl<K, V, N, N2> PartialEq<LinearMap<K, V, N2>> for LinearMap<K, V, N>
+where
+    K: Eq,
+    V: PartialEq,
+    N: ArrayLength<(K, V)>,
+    N2: ArrayLength<(K, V)>,
+{
+    fn eq(&self, other: &LinearMap<K, V, N2>) -> bool {
+        self.len() == other.len()
+            && self
+                .iter()
+                .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
+    }
+}
+
+impl<K, V, N> Eq for LinearMap<K, V, N>
+where
+    K: Eq,
+    V: PartialEq,
+    N: ArrayLength<(K, V)>,
+{
+}
+
 #[cfg(feature = "const-fn")] // Remove this if there are more tests
 #[cfg(test)]
 mod test {
@@ -466,4 +539,32 @@ mod test {
         static mut _L: LinearMap<i32, i32, U8> = LinearMap::new();
     }
 
+    #[test]
+    fn partial_eq() {
+        {
+            let mut a = LinearMap::<_, _, U1>::new();
+            a.insert("k1", "v1").unwrap();
+
+            let mut b = LinearMap::<_, _, U2>::new();
+            b.insert("k1", "v1").unwrap();
+
+            assert!(a == b);
+
+            b.insert("k2", "v2").unwrap();
+
+            assert!(a != b);
+        }
+
+        {
+            let mut a = LinearMap::<_, _, U2>::new();
+            a.insert("k1", "v1").unwrap();
+            a.insert("k2", "v2").unwrap();
+
+            let mut b = LinearMap::<_, _, U2>::new();
+            b.insert("k2", "v2").unwrap();
+            b.insert("k1", "v1").unwrap();
+
+            assert!(a == b);
+        }
+    }
 }
