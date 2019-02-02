@@ -1,5 +1,5 @@
 use core::borrow::Borrow;
-use core::{mem, ops, slice};
+use core::{mem, ops, slice, fmt};
 
 use generic_array::ArrayLength;
 
@@ -387,6 +387,17 @@ where
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("no entry found for key")
+    }
+}
+
+impl<K, V, N> fmt::Debug for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq + fmt::Debug,
+    V: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_map().entries(self.iter()).finish()
     }
 }
 
