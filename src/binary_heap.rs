@@ -11,7 +11,7 @@
 use core::cmp::Ordering;
 use core::marker::PhantomData;
 use core::mem::ManuallyDrop;
-use core::{mem, ptr, slice};
+use core::{mem, ptr, slice, fmt};
 
 use generic_array::ArrayLength;
 
@@ -409,6 +409,17 @@ impl<'a, T> Drop for Hole<'a, T> {
             let pos = self.pos;
             ptr::write(self.data.get_unchecked_mut(pos), ptr::read(&*self.elt));
         }
+    }
+}
+
+impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord + fmt::Debug
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
