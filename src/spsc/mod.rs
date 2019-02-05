@@ -2,7 +2,7 @@
 
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use core::ptr;
+use core::{ptr, fmt};
 
 use generic_array::{ArrayLength, GenericArray};
 
@@ -213,6 +213,18 @@ where
                 ptr::drop_in_place(item);
             }
         }
+    }
+}
+
+impl<T, N, U, C> fmt::Debug for Queue<T, N, U, C>
+where
+    N: ArrayLength<T>,
+    T: fmt::Debug,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
