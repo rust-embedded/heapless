@@ -401,6 +401,19 @@ where
     }
 }
 
+impl<N> str::FromStr for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut new = String::new();
+        new.push_str(s)?;
+        Ok(new)
+    }
+}
+
 impl<N> fmt::Debug for String<N>
 where
     N: ArrayLength<u8>,
@@ -574,6 +587,18 @@ mod tests {
         let s: String<U4> = String::from("123");
         assert!(s.len() == 3);
         assert_eq!(s, "123");
+    }
+
+    #[test]
+    fn from_str() {
+        use core::str::FromStr;
+
+        let s: String<U4> = String::<U4>::from_str("123").unwrap();
+        assert!(s.len() == 3);
+        assert_eq!(s, "123");
+
+        let e: () = String::<U2>::from_str("123").unwrap_err();
+        assert_eq!(e, ());
     }
 
     #[test]
