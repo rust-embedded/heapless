@@ -414,6 +414,17 @@ where
     }
 }
 
+impl<N> Clone for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            vec: self.vec.clone(),
+        }
+    }
+}
+
 impl<N> fmt::Debug for String<N>
 where
     N: ArrayLength<u8>,
@@ -547,6 +558,16 @@ mod tests {
     #[test]
     fn static_new() {
         static mut _S: String<U8> = String::new();
+    }
+
+    #[test]
+    fn clone() {
+        let s1: String<U20> = String::from("abcd");
+        let mut s2 = s1.clone();
+        s2.push_str(" efgh").unwrap();
+
+        assert_eq!(s1, "abcd");
+        assert_eq!(s2, "abcd efgh");
     }
 
     #[test]

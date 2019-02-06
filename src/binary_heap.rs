@@ -412,6 +412,20 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
+impl<T, N, K> Clone for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            _kind: self._kind,
+            data: self.data.clone(),
+        }
+    }
+}
+
 impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
 where
     N: ArrayLength<T>,

@@ -390,6 +390,19 @@ where
     }
 }
 
+impl<K, V, N> Clone for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq + Clone,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            buffer: self.buffer.clone(),
+        }
+    }
+}
+
 impl<K, V, N> fmt::Debug for LinearMap<K, V, N>
 where
     N: ArrayLength<(K, V)>,
@@ -431,6 +444,18 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|&(ref k, ref v)| (k, v))
+    }
+}
+
+impl<'a, K, V> Clone for Iter<'a, K, V>
+where
+    K: 'a,
+    V: 'a,
+{
+    fn clone(&self) -> Self {
+        Self {
+            iter: self.iter.clone(),
+        }
     }
 }
 

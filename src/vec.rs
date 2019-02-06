@@ -43,6 +43,18 @@ where
     len: usize,
 }
 
+impl<T, N> Clone for Vec<T, N>
+where
+    N: ArrayLength<T>,
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        let mut new = Self::new();
+        new.extend_from_slice(self.as_ref()).unwrap();
+        new
+    }
+}
+
 impl<T, N> Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -357,6 +369,19 @@ where
             Some(item)
         } else {
             None
+        }
+    }
+}
+
+impl<T, N> Clone for IntoIter<T, N>
+where
+    T: Clone,
+    N: ArrayLength<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            vec: self.vec.clone(),
+            next: self.next,
         }
     }
 }
