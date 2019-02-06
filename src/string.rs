@@ -1,9 +1,13 @@
+use core::fmt::Write;
 use core::str::Utf8Error;
 use core::{fmt, hash, ops, str};
 
 use hash32;
 
-use generic_array::ArrayLength;
+use generic_array::{
+    typenum::{consts::*, IsGreaterOrEqual},
+    ArrayLength,
+};
 
 use Vec;
 
@@ -571,6 +575,31 @@ impl_eq! { String<N>, &'a str }
 
 impl<N> Eq for String<N> where N: ArrayLength<u8> {}
 
+macro_rules! impl_from_num {
+    ($num:ty, $size:ty) => {
+        impl<N> From<$num> for String<N>
+        where
+            N: ArrayLength<u8> + IsGreaterOrEqual<$size, Output = True>,
+        {
+            fn from(s: $num) -> Self {
+                let mut new = String::new();
+                write!(&mut new, "{}", s).unwrap();
+                new
+            }
+        }
+    };
+}
+
+impl_from_num!(i8, U4);
+impl_from_num!(i16, U6);
+impl_from_num!(i32, U11);
+impl_from_num!(i64, U20);
+
+impl_from_num!(u8, U3);
+impl_from_num!(u16, U5);
+impl_from_num!(u32, U10);
+impl_from_num!(u64, U20);
+
 #[cfg(test)]
 mod tests {
     use consts::*;
@@ -694,6 +723,13 @@ mod tests {
         let s = unsafe { String::from_utf8_unchecked(v) };
 
         assert_eq!(s, "hello");
+    }
+
+    #[test]
+    fn from_num() {
+        let v = String::<U20>::from(18446744073709551615 as u64);
+
+        assert_eq!(v, "18446744073709551615");
     }
 
     #[test]
