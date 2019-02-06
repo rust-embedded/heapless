@@ -1,9 +1,11 @@
 use core::{fmt, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
+use hash32;
 
 use __core::mem::MaybeUninit;
 
+use core::hash;
 use core::iter::FromIterator;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
@@ -299,6 +301,26 @@ where
         I: IntoIterator<Item = &'a T>,
     {
         self.extend(iter.into_iter().cloned())
+    }
+}
+
+impl<T, N> hash::Hash for Vec<T, N>
+where
+    T: core::hash::Hash,
+    N: ArrayLength<T>,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        hash::Hash::hash(&**self, state)
+    }
+}
+
+impl<T, N> hash32::Hash for Vec<T, N>
+where
+    T: hash32::Hash,
+    N: ArrayLength<T>,
+{
+    fn hash<H: hash32::Hasher>(&self, state: &mut H) {
+        hash32::Hash::hash(&**self, state)
     }
 }
 
