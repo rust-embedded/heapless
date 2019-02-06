@@ -1,3 +1,4 @@
+use core::fmt::Write;
 use core::str::Utf8Error;
 use core::{fmt, hash, ops, str};
 
@@ -582,7 +583,7 @@ macro_rules! impl_from_num {
         {
             fn from(s: $num) -> Self {
                 let mut new = String::new();
-                core::fmt::Write::write_fmt(&mut new, format_args!("{}", s)).unwrap();
+                write!(&mut new, "{}", s).unwrap();
                 new
             }
         }
