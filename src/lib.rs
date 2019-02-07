@@ -89,6 +89,9 @@ extern crate hash32;
 #[cfg(test)]
 extern crate std;
 
+#[cfg(feature = "serde")]
+extern crate serde;
+
 #[macro_use]
 mod const_fn;
 
@@ -107,6 +110,11 @@ mod indexset;
 mod linear_map;
 mod string;
 mod vec;
+
+#[cfg(feature = "serde")]
+mod de;
+#[cfg(feature = "serde")]
+mod ser;
 
 pub mod binary_heap;
 pub mod spsc;
