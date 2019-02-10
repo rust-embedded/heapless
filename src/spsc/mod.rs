@@ -668,4 +668,22 @@ mod tests {
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
     }
+
+    #[test]
+    fn clone() {
+        let mut rb1: Queue<i32, U4> = Queue::new();
+        rb1.enqueue(0).unwrap();
+        rb1.enqueue(0).unwrap();
+        rb1.dequeue().unwrap();
+        rb1.enqueue(0).unwrap();
+        let rb2 = rb1.clone();
+        assert_eq!(rb1.capacity(), rb2.capacity());
+        assert_eq!(rb1.len_usize(), rb2.len_usize());
+        assert!(
+            rb1.iter()
+            .zip(rb2.iter())
+            .all(|(v1, v2)| v1 == v2)
+        );
+
+    }
 }
