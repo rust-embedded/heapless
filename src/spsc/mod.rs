@@ -362,6 +362,30 @@ macro_rules! impl_ {
                 }
             }
         }
+
+        impl<T, N, C> Clone for Queue<T, N, $uxx, C>
+        where
+            T: Clone,
+            N: ArrayLength<T>,
+            C: sealed::XCore,
+        {
+            fn clone(&self) -> Self {
+                let mut new = Queue {
+                    buffer: unsafe { MaybeUninit::uninitialized() },
+                    head: Atomic::new(0),
+                    tail: Atomic::new(0),
+                };
+                for s in self.iter() {
+                    unsafe {
+                        // NOTE(unsafe) new.capacity() == self.capacity() <= self.len()
+                        // no overflow possible
+                        new.enqueue_unchecked(s.clone());
+                    }
+                }
+                new
+            }
+        }
+
     };
 }
 
