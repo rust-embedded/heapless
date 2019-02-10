@@ -673,4 +673,30 @@ mod tests {
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
     }
+
+    #[test]
+    fn eq() {
+        // generate two queues with same content
+        // but different buffer alignment
+        let mut rb1: Queue<i32, U4> = Queue::new();
+        rb1.enqueue(0).unwrap();
+        rb1.enqueue(0).unwrap();
+        rb1.dequeue().unwrap();
+        rb1.enqueue(0).unwrap();
+        let mut rb2: Queue<i32, U4> = Queue::new();
+        rb2.enqueue(0).unwrap();
+        rb2.enqueue(0).unwrap();
+        assert!(rb1 == rb2);
+        // test for symmetry
+        assert!(rb2 == rb1);
+        // test for changes in content
+        rb1.enqueue(0).unwrap();
+        assert!(rb1 != rb2);
+        rb2.enqueue(1).unwrap();
+        assert!(rb1 != rb2);
+        // test for refexive relation
+        assert!(rb1 == rb1);
+        assert!(rb2 == rb2);
+    }
+
 }
