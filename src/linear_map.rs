@@ -391,6 +391,16 @@ where
     }
 }
 
+impl<K, V, N> Default for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K, V, N> Clone for LinearMap<K, V, N>
 where
     N: ArrayLength<(K, V)>,

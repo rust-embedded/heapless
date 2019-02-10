@@ -257,6 +257,15 @@ where
     }
 }
 
+impl<T, N> Default for Vec<T, N>
+where
+    N: ArrayLength<T>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, N> fmt::Debug for Vec<T, N>
 where
     T: fmt::Debug,

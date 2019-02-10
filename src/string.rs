@@ -396,6 +396,15 @@ where
     }
 }
 
+impl<N> Default for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a, N> From<&'a str> for String<N>
 where
     N: ArrayLength<u8>,
