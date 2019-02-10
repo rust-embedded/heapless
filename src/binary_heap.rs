@@ -412,6 +412,17 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
+impl<T, N, K> Default for BinaryHeap<T, N, K>
+where
+    T: Ord,
+    N: ArrayLength<T>,
+    K: Kind,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, N, K> Clone for BinaryHeap<T, N, K>
 where
     N: ArrayLength<T>,
