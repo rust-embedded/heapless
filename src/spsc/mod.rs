@@ -395,6 +395,35 @@ impl_!(u8, u8_sc);
 impl_!(u16, u16_sc);
 impl_!(usize, usize_sc);
 
+impl<T, N, U, C, N2, U2, C2> PartialEq<Queue<T, N2, U2, C2>> for Queue<T, N, U, C>
+where
+    T: PartialEq,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+    N2: ArrayLength<T>,
+    U2: sealed::Uxx,
+    C2: sealed::XCore,
+{
+    fn eq(&self, other: &Queue<T, N2, U2, C2>) -> bool {
+        self.len_usize() == other.len_usize()
+            && self
+                .iter()
+                .zip(other.iter())
+                .all(|(v1, v2)| v1 == v2)
+    }
+}
+
+impl<T, N, U, C> Eq for Queue<T, N, U, C>
+where
+    T: Eq,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+
+}
+
 /// An iterator over the items of a queue
 pub struct Iter<'a, T, N, U, C>
 where
