@@ -2,9 +2,10 @@
 
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use core::{ptr, fmt};
+use core::{ptr, fmt, hash};
 
 use generic_array::{ArrayLength, GenericArray};
+use hash32;
 
 pub use self::split::{Consumer, Producer};
 use __core::mem::MaybeUninit;
@@ -227,6 +228,37 @@ where
         f.debug_list().entries(self.iter()).finish()
     }
 }
+
+impl<T, N, U, C> hash::Hash for Queue<T, N, U, C>
+where
+    N: ArrayLength<T>,
+    T: hash::Hash,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        // iterate over self in order
+        for t in self.iter() {
+            hash::Hash::hash(t, state);
+        }
+    }
+}
+
+impl<T, N, U, C> hash32::Hash for Queue<T, N, U, C>
+where
+    N: ArrayLength<T>,
+    T: hash32::Hash,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+    fn hash<H: hash32::Hasher>(&self, state: &mut H) {
+        // iterate over self in order
+        for t in self.iter() {
+            hash32::Hash::hash(t, state);
+        }
+    }
+}
+
 
 impl<'a, T, N, U, C> IntoIterator for &'a Queue<T, N, U, C>
 where
@@ -644,4 +676,5 @@ mod tests {
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
     }
+
 }
