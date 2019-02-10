@@ -517,6 +517,7 @@ iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut
 mod tests {
     use consts::*;
     use spsc::Queue;
+    use hash32::Hasher;
 
     #[cfg(feature = "const-fn")]
     #[test]
@@ -675,6 +676,39 @@ mod tests {
 
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
+    }
+
+    #[test]
+    fn hash_equality() {
+        // generate two queues with same content
+        // but different buffer alignment
+        let rb1 = {
+            let mut rb1: Queue<i32, U4> = Queue::new();
+            rb1.enqueue(0).unwrap();
+            rb1.enqueue(0).unwrap();
+            rb1.dequeue().unwrap();
+            rb1.enqueue(0).unwrap();
+            rb1
+        };
+        let rb2 = {
+            let mut rb2: Queue<i32, U4> = Queue::new();
+            rb2.enqueue(0).unwrap();
+            rb2.enqueue(0).unwrap();
+            rb2
+        };
+        let hash1 = {
+            let mut hasher1 = hash32::FnvHasher::default();
+            hash32::Hash::hash(&rb1, &mut hasher1);
+            let hash1 = hasher1.finish();
+            hash1
+        };
+        let hash2 = {
+            let mut hasher2 = hash32::FnvHasher::default();
+            hash32::Hash::hash(&rb2, &mut hasher2);
+            let hash2 = hasher2.finish();
+            hash2
+        };
+        assert_eq!(hash1, hash2);
     }
 
 }
