@@ -781,6 +781,34 @@ where
     }
 }
 
+impl<K, V, N, S, N2, S2> PartialEq<IndexMap<K, V, N2, S2>> for IndexMap<K, V, N, S>
+where
+    K: Eq + Hash,
+    V: Eq,
+    S: BuildHasher,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    S2: BuildHasher,
+    N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+{
+    fn eq(&self, other: &IndexMap<K, V, N2, S2>) -> bool {
+        return self.len() == other.len()
+            && self
+            .iter()
+            .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
+    }
+}
+
+impl<K, V, N, S> Eq for IndexMap<K, V, N, S>
+where
+    K: Eq + Hash,
+    V: Eq,
+    S: BuildHasher,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+{
+
+}
+
+
 impl<K, V, N, S> Extend<(K, V)> for IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
