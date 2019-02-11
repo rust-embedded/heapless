@@ -791,10 +791,10 @@ where
     N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn eq(&self, other: &IndexMap<K, V, N2, S2>) -> bool {
-        return self.len() == other.len()
+        self.len() == other.len()
             && self
-            .iter()
-            .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
+                .iter()
+                .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
     }
 }
 
@@ -972,4 +972,35 @@ mod tests {
                 mem::size_of::<usize>() // entries.length
         )
     }
+
+
+    #[test]
+    fn partial_eq() {
+        {
+            let mut a: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
+            a.insert("k1", "v1").unwrap();
+
+            let mut b: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            b.insert("k1", "v1").unwrap();
+
+            assert!(a == b);
+
+            b.insert("k2", "v2").unwrap();
+
+            assert!(a != b);
+        }
+
+        {
+            let mut a: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            a.insert("k1", "v1").unwrap();
+            a.insert("k2", "v2").unwrap();
+
+            let mut b: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            b.insert("k2", "v2").unwrap();
+            b.insert("k1", "v1").unwrap();
+
+            assert!(a == b);
+        }
+    }
+
 }
