@@ -2,9 +2,10 @@
 
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use core::{ptr, fmt};
+use core::{ptr, fmt, hash};
 
 use generic_array::{ArrayLength, GenericArray};
+use hash32;
 
 pub use self::split::{Consumer, Producer};
 use __core::mem::MaybeUninit;
@@ -227,6 +228,37 @@ where
         f.debug_list().entries(self.iter()).finish()
     }
 }
+
+impl<T, N, U, C> hash::Hash for Queue<T, N, U, C>
+where
+    N: ArrayLength<T>,
+    T: hash::Hash,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        // iterate over self in order
+        for t in self.iter() {
+            hash::Hash::hash(t, state);
+        }
+    }
+}
+
+impl<T, N, U, C> hash32::Hash for Queue<T, N, U, C>
+where
+    N: ArrayLength<T>,
+    T: hash32::Hash,
+    U: sealed::Uxx,
+    C: sealed::XCore,
+{
+    fn hash<H: hash32::Hasher>(&self, state: &mut H) {
+        // iterate over self in order
+        for t in self.iter() {
+            hash32::Hash::hash(t, state);
+        }
+    }
+}
+
 
 impl<'a, T, N, U, C> IntoIterator for &'a Queue<T, N, U, C>
 where
@@ -509,6 +541,7 @@ iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut
 mod tests {
     use consts::*;
     use spsc::Queue;
+    use hash32::Hasher;
 
     #[cfg(feature = "const-fn")]
     #[test]
@@ -684,6 +717,39 @@ mod tests {
             .zip(rb2.iter())
             .all(|(v1, v2)| v1 == v2)
         );
-
     }
+
+    #[test]
+    fn hash_equality() {
+        // generate two queues with same content
+        // but different buffer alignment
+        let rb1 = {
+            let mut rb1: Queue<i32, U4> = Queue::new();
+            rb1.enqueue(0).unwrap();
+            rb1.enqueue(0).unwrap();
+            rb1.dequeue().unwrap();
+            rb1.enqueue(0).unwrap();
+            rb1
+        };
+        let rb2 = {
+            let mut rb2: Queue<i32, U4> = Queue::new();
+            rb2.enqueue(0).unwrap();
+            rb2.enqueue(0).unwrap();
+            rb2
+        };
+        let hash1 = {
+            let mut hasher1 = hash32::FnvHasher::default();
+            hash32::Hash::hash(&rb1, &mut hasher1);
+            let hash1 = hasher1.finish();
+            hash1
+        };
+        let hash2 = {
+            let mut hasher2 = hash32::FnvHasher::default();
+            hash32::Hash::hash(&rb2, &mut hasher2);
+            let hash2 = hasher2.finish();
+            hash2
+        };
+        assert_eq!(hash1, hash2);
+    }
+
 }
