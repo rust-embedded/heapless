@@ -394,6 +394,30 @@ macro_rules! impl_ {
                 }
             }
         }
+
+        impl<T, N, C> Clone for Queue<T, N, $uxx, C>
+        where
+            T: Clone,
+            N: ArrayLength<T>,
+            C: sealed::XCore,
+        {
+            fn clone(&self) -> Self {
+                let mut new: Queue<T, N, $uxx, C> = Queue {
+                    buffer: unsafe { MaybeUninit::uninitialized() },
+                    head: Atomic::new(0),
+                    tail: Atomic::new(0),
+                };
+                for s in self.iter() {
+                    unsafe {
+                        // NOTE(unsafe) new.capacity() == self.capacity() <= self.len()
+                        // no overflow possible
+                        new.enqueue_unchecked(s.clone());
+                    }
+                }
+                new
+            }
+        }
+
     };
 }
 
@@ -705,6 +729,23 @@ mod tests {
 
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
+    }
+
+    #[test]
+    fn clone() {
+        let mut rb1: Queue<i32, U4> = Queue::new();
+        rb1.enqueue(0).unwrap();
+        rb1.enqueue(0).unwrap();
+        rb1.dequeue().unwrap();
+        rb1.enqueue(0).unwrap();
+        let rb2 = rb1.clone();
+        assert_eq!(rb1.capacity(), rb2.capacity());
+        assert_eq!(rb1.len_usize(), rb2.len_usize());
+        assert!(
+            rb1.iter()
+            .zip(rb2.iter())
+            .all(|(v1, v2)| v1 == v2)
+        );
     }
 
     #[test]
