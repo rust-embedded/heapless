@@ -402,7 +402,7 @@ macro_rules! impl_ {
             C: sealed::XCore,
         {
             fn clone(&self) -> Self {
-                let mut new = Queue {
+                let mut new: Queue<T, N, $uxx, C> = Queue {
                     buffer: unsafe { MaybeUninit::uninitialized() },
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
