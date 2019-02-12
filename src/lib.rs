@@ -51,31 +51,37 @@
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
-//! - [`Queue`](spsc/struct.Queue.html) -- single producer single consumer lockless queue
+//! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
 //!
+//! # Minimum Supported Rust Version (MSRV)
 //!
-//! In order to target the Rust stable toolchain, there are some feature gates.
-//! The features need to be enabled in `Cargo.toml` in order to use them.
-//! Once the underlaying features in Rust are stable,
-//! these feature gates might be activated by default.
+//! This crate is guaranteed to compile on stable Rust 1.30 and up with its default set of features.
+//! It *might* compile on older versions but that may change in any new patch release.
+//!
+//! # Cargo features
+//!
+//! In order to target the Rust stable toolchain, there are some opt-in Cargo features. The features
+//! need to be enabled in `Cargo.toml` in order to use them. Once the underlying features in Rust
+//! are stable, these feature gates may be activated by default.
 //!
 //! Example of `Cargo.toml`:
 //!
-//! ```text
-//! ...
+//! ``` text
+//! # ..
 //! [dependencies]
 //! heapless = { version = "0.4.0", features = ["const-fn"] }
-//! ...
-//!
+//! # ..
 //! ```
 //!
-//! Currently the following features are availbale and not active by default:
+//! Currently the following features are available and not active by default:
 //!
-//! - `"const-fn"` -- Enable the nightly `const_fn` feature and make most `new` methods `const`.
-//!      This way they can be used to initialize static memory at compile time.
+//! - `"const-fn"` -- Enables the nightly `const_fn` and `untagged_unions` features and makes most
+//! `new` methods `const`. This way they can be used to initialize static memory at compile time.
 //!
+//! - `"smaller-atomics"` -- Lets you initialize `spsc::Queue`s with smaller head / tail indices
+//! (they default to `usize`), shrinking the overall size of the queue.
 
 #![allow(warnings)]
 #![deny(missing_docs)]
