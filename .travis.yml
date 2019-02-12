@@ -2,6 +2,11 @@ language: rust
 
 matrix:
   include:
+      # MSRV
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: 1.30.0
+      if: branch != master
+
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: stable
       if: branch != master

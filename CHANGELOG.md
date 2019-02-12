@@ -12,12 +12,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - All containers now implement `Clone`
+
 - `spsc::Queue` now implements `Debug`, `Hash`, `PartialEq` and `Eq`
+
 - `LinearMap` now implements `Debug`, `FromIterator`, `IntoIter`, `PartialEq`,
   `Eq` and `Default`
+
 - `BinaryHeap` now implements `Debug` and `Default`
+
 - `String` now implements `FromStr`, `Hash`, `From<uxx>` and `Default`
+
 - `Vec` now implements `Hash` and `Default`
+
+- A "serde" Cargo feature that when enabled adds a `serde::Serialize` and
+  `serde::Deserialize` implementations to each collection.
 
 ## [v0.4.1] - 2018-12-16
 
