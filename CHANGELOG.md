@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.2] - 2019-02-12
+
+### Added
+
+- All containers now implement `Clone`
+- `spsc::Queue` now implements `Debug`, `Hash`, `PartialEq` and `Eq`
+- `LinearMap` now implements `Debug`, `FromIterator`, `IntoIter`, `PartialEq`,
+  `Eq` and `Default`
+- `BinaryHeap` now implements `Debug` and `Default`
+- `String` now implements `FromStr`, `Hash`, `From<uxx>` and `Default`
+- `Vec` now implements `Hash` and `Default`
+
 ## [v0.4.1] - 2018-12-16
 
 ### Changed
@@ -177,7 +189,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.2...HEAD
+[v0.4.2]: https://github.com/japaric/heapless/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/japaric/heapless/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
 [v0.3.7]: https://github.com/japaric/heapless/compare/v0.3.6...v0.3.7
