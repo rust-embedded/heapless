@@ -33,3 +33,8 @@ hash32 = "0.1.0"
 version = "1"
 optional = true
 default-features = false
+
+[dependencies.failure]
+version = "0.1.5"
+default-features = false
+features = ["derive"]

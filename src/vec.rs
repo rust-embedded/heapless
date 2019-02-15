@@ -142,12 +142,16 @@ where
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
-    pub fn push(&mut self, item: T) -> Result<(), T> {
+    pub fn push(&mut self, item: T) -> Result<(), (T, CapacityError)> {
         if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
-            Err(item)
+            let err = (item, CapacityError {
+                maximum: self.capacity(),
+                encountered: self.capacity() + 1
+            });
+            Err(err)
         }
     }
 
@@ -181,12 +185,15 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](struct.Vec.html#method.resize_default).
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
     where
         T: Clone,
     {
         if new_len > self.capacity() {
-            return Err(());
+            return Err(CapacityError {
+                maximum: self.capacity(),
+                encountered: new_len,
+            });
         }
 
         if new_len > self.len {
@@ -207,7 +214,7 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](struct.Vec.html#method.resize).
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), CapacityError>
     where
         T: Clone + Default,
     {

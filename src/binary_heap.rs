@@ -16,6 +16,7 @@ use core::{mem, ptr, slice, fmt};
 use generic_array::ArrayLength;
 
 use Vec;
+use errors::CapacityError;
 
 /// Min-heap
 pub enum Min {}
@@ -286,9 +287,13 @@ where
     /// assert_eq!(heap.len(), 3);
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
-    pub fn push(&mut self, item: T) -> Result<(), T> {
+    pub fn push(&mut self, item: T) -> Result<(), (T, CapacityError)> {
         if self.data.is_full() {
-            return Err(item);
+            let err = (item, CapacityError {
+                maximum: self.capacity(),
+                encountered: self.capacity() + 1
+            });
+            return Err(err);
         }
 
         unsafe { self.push_unchecked(item) }

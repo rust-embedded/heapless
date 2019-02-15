@@ -10,6 +10,7 @@ use hash32;
 pub use self::split::{Consumer, Producer};
 use __core::mem::MaybeUninit;
 use sealed;
+use errors::CapacityError;
 
 mod split;
 
@@ -168,6 +169,10 @@ where
     /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
         U::truncate(N::to_usize())
+    }
+
+    pub(crate) fn capacity_usize(&self) -> usize {
+        N::to_usize()
     }
 
     /// Returns `true` if the queue has a length of 0
@@ -348,13 +353,17 @@ macro_rules! impl_ {
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> Result<(), T> {
+            pub fn enqueue(&mut self, item: T) -> Result<(), (T, CapacityError)> {
                 let cap = self.capacity();
                 let head = *self.head.get_mut();
                 let tail = *self.tail.get_mut();
 
                 if tail.wrapping_sub(head) > cap - 1 {
-                    Err(item)
+                    let err = (item, CapacityError {
+                        maximum: self.capacity_usize() - 1,
+                        encountered: self.capacity_usize()
+                    });
+                    Err(err)
                 } else {
                     unsafe { self.enqueue_unchecked(item) }
                     Ok(())

@@ -92,8 +92,14 @@
 
 extern crate generic_array;
 extern crate hash32;
+#[macro_use]
+extern crate failure;
+
+
+
 #[cfg(test)]
 extern crate std;
+
 
 #[cfg(feature = "serde")]
 extern crate serde;
