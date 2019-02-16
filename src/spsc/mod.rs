@@ -138,9 +138,9 @@ where
 ///     // ..
 ///
 ///     if condition {
-///         producer.enqueue(Event::A).ok().unwrap();
+///         producer.enqueue(Event::A).unwrap();
 ///     } else {
-///         producer.enqueue(Event::B).ok().unwrap();
+///         producer.enqueue(Event::B).unwrap();
 ///     }
 ///
 ///     // ..

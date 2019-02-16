@@ -776,6 +776,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn resize_size_limit() {
         let mut v: Vec<u8, U4> = Vec::new();
 

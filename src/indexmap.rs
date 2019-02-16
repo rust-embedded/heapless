@@ -634,11 +634,11 @@ where
     /// use heapless::consts::*;
     ///
     /// let mut map = FnvIndexMap::<_, _, U8>::new();
-    /// assert_eq!(map.insert(37, "a"), Ok(None));
+    /// assert_eq!(map.insert(37, "a").into_result(), Ok(None));
     /// assert_eq!(map.is_empty(), false);
     ///
     /// map.insert(37, "b");
-    /// assert_eq!(map.insert(37, "c"), Ok(Some("b")));
+    /// assert_eq!(map.insert(37, "c").into_result(), Ok(Some("b")));
     /// assert_eq!(map[&37], "c");
     /// ```
     pub fn insert(&mut self, key: K, value: V) -> CapacityResult<(K, V), Option<V>> {

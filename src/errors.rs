@@ -76,10 +76,10 @@ impl<R, T> CapacityResult<R, T> {
     /// use heapless::CapacityResult;
     /// use heapless::CapacityError;
     ///
-    /// let a: CapacityResult<i32> = CapacityResult::ok();
+    /// let a: CapacityResult<i32> = CapacityResult::ok(());
     /// assert_eq!(a.into_result(), Ok(()));
     ///
-    /// let b = CapacityResult::err(42, CapacityError::one_more_than(1));
+    /// let b: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// assert_eq!(b.into_result(), Err(CapacityError::one_more_than(1)));
     /// ```
     ///
@@ -131,7 +131,7 @@ impl<R, T> CapacityResult<R, T> {
     /// use heapless::CapacityResult;
     /// use heapless::CapacityError;
     ///
-    /// let x = CapacityResult::err(42, CapacityError::one_more_than(1));
+    /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// assert_eq!(x.into_rest(), Some(42));
     /// ```
     ///
@@ -146,7 +146,7 @@ impl<R, T> CapacityResult<R, T> {
     ///     true
     /// }
     ///
-    /// let x = CapacityResult::err(42, CapacityError::one_more_than(1));
+    /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// if let Some(r) = x.into_rest() {
     ///     if !recover(r) {
     ///         panic!("Failed while recovering");
@@ -180,7 +180,7 @@ impl<R, T> CapacityResult<R, T> {
     /// use heapless::CapacityResult;
     /// use heapless::CapacityError;
     ///
-    /// let x = CapacityResult::err(42, CapacityError::one_more_than(1));
+    /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// assert_eq!(x.into_err(), Some(CapacityError::one_more_than(1)));
     pub fn into_err(self) -> Option<CapacityError> {
         self.0.err()
@@ -194,7 +194,7 @@ impl<R, T> CapacityResult<R, T> {
     /// ```
     /// use heapless::CapacityResult;
     ///
-    /// let x: CapacityResult<i32> = CapacityResult::ok();
+    /// let x: CapacityResult<i32> = CapacityResult::ok(());
     /// assert!(x.is_ok());
     /// ```
     pub fn is_ok(&self) -> bool {
@@ -227,7 +227,7 @@ impl<R, T> CapacityResult<R, T> {
     /// ```
     /// use heapless::CapacityResult;
     ///
-    /// let x: CapacityResult<i32> = CapacityResult::ok();
+    /// let x: CapacityResult<i32> = CapacityResult::ok(());
     /// x.unwrap(); // does not panic
     /// ```
     ///
