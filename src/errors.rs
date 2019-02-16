@@ -264,6 +264,11 @@ impl<R, T> CapacityResult<R, T> {
         CapacityResult(self.0.map(f))
     }
 
+    /// Transform the error variant, ignore the contained rest
+    pub fn map_err<E, F: FnOnce(CapacityError) -> E>(self, f: F) -> Result<T, E> {
+        self.0.map_err(|(_, err)| f(err))
+    }
+
 }
 
 
