@@ -235,7 +235,7 @@ where
         match bytelen {
             1 => self.vec
                 .push(c as u8)
-                .map_rest(|_| c)
+                .map_rest(|_| c),
             _ => self.vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes())
                 .map_rest(|_| c),

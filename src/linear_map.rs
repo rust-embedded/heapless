@@ -5,7 +5,7 @@ use core::iter::FromIterator;
 use generic_array::ArrayLength;
 
 use Vec;
-use errors::CapacityError;
+use CapacityResult;
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
@@ -187,15 +187,17 @@ where
     /// assert_eq!(map.insert(37, "c").unwrap(), Some("b"));
     /// assert_eq!(map[&37], "c");
     /// ```
-    /// FIXME: this return type is unergonomic
-    pub fn insert(&mut self, key: K, mut value: V) -> Result<Option<V>, ((K, V), CapacityError)> {
+    pub fn insert(&mut self, key: K, mut value: V) -> CapacityResult<(K, V), Option<V>> {
         if let Some((_, v)) = self.iter_mut().find(|&(k, _)| *k == key) {
             mem::swap(v, &mut value);
-            return Ok(Some(value));
+            return CapacityResult::ok(Some(value))
         }
 
-        self.buffer.push((key, value)).into_inner()?;
-        Ok(None)
+        let p = self.buffer.push((key, value));
+        if p.is_err() {
+            return p.map(|_| None); // convert type
+        }
+        CapacityResult::ok(None)
     }
 
     /// Returns true if the map contains no elements

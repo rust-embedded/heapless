@@ -294,7 +294,7 @@ where
         }
 
         unsafe { self.push_unchecked(item) }
-        CapacityResult::ok()
+        CapacityResult::ok(())
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.

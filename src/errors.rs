@@ -35,36 +35,30 @@ impl CapacityError {
 /// Generic over the rest of the data, that cound not be inserted
 #[derive(Debug)]
 #[must_use = "this `Capacity result might be an error vairant and must be used"]
-pub struct CapacityResult<T> (Result<(), (T, CapacityError)>);
+pub struct CapacityResult<R, T = ()> (Result<T, (R, CapacityError)>);
 
-impl<T> CapacityResult<T>  {
+impl<R, T> CapacityResult<R, T> {
 
     /// Construct an Ok variant of this result
-    pub fn ok() -> Self {
-        CapacityResult(Ok(()))
+    pub fn ok(value: T) -> Self {
+        CapacityResult(Ok(value))
     }
 
     /// Construct an Err variant of this result
     /// containing the rest and the capacity error
-    pub fn err(rest: T, err: CapacityError) -> Self {
+    pub fn err(rest: R, err: CapacityError) -> Self {
         CapacityResult(Err((rest, err)))
     }
 
-    pub(crate) fn into_inner(self) -> Result<(), (T, CapacityError)> {
-        self.0
-    }
-
     /// Use the result as an proper core::Result with references
-    pub fn as_result(&self) -> Result<(), &CapacityError> {
+    pub fn as_result(&self) -> Result<&T , &CapacityError> {
         self.0.as_ref()
-            .map(|_| ())
             .map_err(|e| &e.1)
     }
 
     /// Use the result as a proper core::Result with mutable references
-    pub fn as_mut_result(&mut self) -> Result<(), &mut CapacityError> {
+    pub fn as_mut_result(&mut self) -> Result<&mut T, &mut CapacityError> {
         self.0.as_mut()
-            .map(|_| ())
             .map_err(|e| &mut e.1)
     }
 
@@ -103,13 +97,13 @@ impl<T> CapacityResult<T>  {
     ///
     /// do_it();
     ///
-    pub fn into_result(self) -> Result<(), CapacityError> {
+    pub fn into_result(self) -> Result<T, CapacityError> {
         self.0.map_err(|e| e.1)
     }
 
     /// Use the result as an optional reference to `rest`,
     /// which could not be inserted due to capacity errors
-    pub fn as_rest(&self) -> Option<&T> {
+    pub fn as_rest(&self) -> Option<&R> {
         self.0.as_ref()
             .err()
             .map(|e| &e.0)
@@ -117,7 +111,7 @@ impl<T> CapacityResult<T>  {
 
     /// Use the result as an optional mutable reference to `rest`,
     /// which could not be inserted due to capacity errors
-    pub fn as_mut_rest(&mut self) -> Option<&mut T> {
+    pub fn as_mut_rest(&mut self) -> Option<&mut R> {
         self.0.as_mut()
             .err()
             .map(|e| &mut e.0)
@@ -159,7 +153,7 @@ impl<T> CapacityResult<T>  {
     ///     }
     /// }
     /// ```
-    pub fn into_rest(self) -> Option<T> {
+    pub fn into_rest(self) -> Option<R> {
         self.0.err()
             .map(|e| e.0)
     }
@@ -244,16 +238,16 @@ impl<T> CapacityResult<T>  {
     /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// x.unwrap(); // panics
     /// ```
-    pub fn unwrap(self) {
-        self.into_result().unwrap();
+    pub fn unwrap(self) -> T {
+        self.into_result().unwrap()
     }
 
     /// Unwrap the result and panic with the given message if it was an error
-    pub fn expect(self, msg: &str) {
-        self.into_result().expect(msg);
+    pub fn expect(self, msg: &str) -> T {
+        self.into_result().expect(msg)
     }
 
-    /// Ingore this result, but use it.
+    /// Ignore this result, but use it.
     /// this serves the same purpose as calling `Result::ok()`
     /// but not using the value
     pub fn ignore(self) {
@@ -261,8 +255,13 @@ impl<T> CapacityResult<T>  {
     }
 
     /// If the result is an error, transform the contained rest
-    pub fn map_rest<U, F: FnOnce(T) -> U>(self, f: F) -> CapacityResult<U> {
+    pub fn map_rest<S, F: FnOnce(R) -> S>(self, f: F) -> CapacityResult<S, T> {
         CapacityResult(self.0.map_err(|(rest, err)| (f(rest), err)))
+    }
+
+    /// If the result is ok, transform the value
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> CapacityResult<R, U> {
+        CapacityResult(self.0.map(f))
     }
 
 }

@@ -364,7 +364,7 @@ macro_rules! impl_ {
                         CapacityError::one_more_than(self.capacity_usize() -1))
                 } else {
                     unsafe { self.enqueue_unchecked(item) }
-                    CapacityResult::ok()
+                    CapacityResult::ok(())
                 }
             }
 

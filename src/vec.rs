@@ -115,9 +115,9 @@ where
             })
         } else {
             for elem in other {
-                self.push(elem.clone()).ok();
+                self.push(elem.clone()).ignore();
             }
-            CapacityResult::ok()
+            CapacityResult::ok(())
         }
     }
 
@@ -146,9 +146,9 @@ where
     pub fn push(&mut self, item: T) -> CapacityResult<T> {
         if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
-            CapacityResult::ok()
+            CapacityResult::ok(())
         } else {
-            CapacityResult::err(item, CapacityError::one_more_than(self.capacity())
+            CapacityResult::err(item, CapacityError::one_more_than(self.capacity()))
         }
     }
 
@@ -201,7 +201,7 @@ where
             self.truncate(new_len);
         }
 
-        CapacityResult::ok()
+        CapacityResult::ok(())
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.

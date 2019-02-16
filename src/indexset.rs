@@ -7,7 +7,7 @@ use generic_array::ArrayLength;
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use indexmap::{self, Bucket, IndexMap, Pos};
-use errors::CapacityError;
+use CapacityResult;
 
 /// An `IndexSet` using the default FNV hasher
 pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
@@ -422,14 +422,11 @@ where
     /// assert_eq!(set.insert(2).unwrap(), false);
     /// assert_eq!(set.len(), 1);
     /// ```
-    pub fn insert(&mut self, value: T) -> Result<bool, (T, CapacityError)> {
+    pub fn insert(&mut self, value: T) -> CapacityResult<T, bool> {
         self.map
             .insert(value, ())
             .map(|old| old.is_none())
-            .map_err(|(k, _)| (k, CapacityError {
-                maximum: self.capacity(),
-                encountered: self.capacity() + 1
-            }))
+            .map_rest(|(k, _)| k)
     }
 
     /// Removes a value from the set. Returns `true` if the value was present in the set.

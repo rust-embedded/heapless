@@ -10,6 +10,7 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use Vec;
 use CapacityError;
+use CapacityResult;
 use __core::mem;
 
 /// An `IndexMap` using the default FNV hasher
@@ -640,12 +641,11 @@ where
     /// assert_eq!(map.insert(37, "c"), Ok(Some("b")));
     /// assert_eq!(map[&37], "c");
     /// ```
-    /// FIXME: this return type is unergonimic
-    pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, ((K, V), CapacityError)> {
+    pub fn insert(&mut self, key: K, value: V) -> CapacityResult<(K, V), Option<V>> {
         if self.core.entries.is_full() {
-            Err(((key, value), CapacityError::one_more_than(self.capacity()))
+            CapacityResult::err((key, value), CapacityError::one_more_than(self.capacity()))
         } else {
-            Ok(match self.insert_phase_1(key, value) {
+            CapacityResult::ok(match self.insert_phase_1(key, value) {
                 Inserted::Swapped { prev_value } => Some(prev_value),
                 Inserted::Done => None,
                 Inserted::RobinHood { probe, old_pos } => {
@@ -822,7 +822,7 @@ where
         I: IntoIterator<Item = (K, V)>,
     {
         for (k, v) in iterable {
-            self.insert(k, v).ok().unwrap();
+            self.insert(k, v).unwrap();
         }
     }
 }

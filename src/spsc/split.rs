@@ -154,11 +154,13 @@ macro_rules! impl_ {
                 let head = unsafe { self.rb.as_ref().head.load_acquire() }; // ▼
 
                 if tail.wrapping_sub(head) > cap - 1 {
-                    CapacityResult::err(item,
-                        CapacityError::one_more_than(self.rb.as_ref().capacity_usize() - 1))
+                    unsafe {
+                        CapacityResult::err(item,
+                            CapacityError::one_more_than(self.rb.as_ref().capacity_usize() - 1))
+                    }
                 } else {
                     unsafe { self._enqueue(tail, item) }; // ▲
-                    CapacityResult::ok()
+                    CapacityResult::ok(())
                 }
             }
 
