@@ -187,13 +187,14 @@ where
     /// assert_eq!(map.insert(37, "c").unwrap(), Some("b"));
     /// assert_eq!(map[&37], "c");
     /// ```
+    /// FIXME: this return type is unergonomic
     pub fn insert(&mut self, key: K, mut value: V) -> Result<Option<V>, ((K, V), CapacityError)> {
         if let Some((_, v)) = self.iter_mut().find(|&(k, _)| *k == key) {
             mem::swap(v, &mut value);
             return Ok(Some(value));
         }
 
-        self.buffer.push((key, value))?;
+        self.buffer.push((key, value)).into_inner()?;
         Ok(None)
     }
 

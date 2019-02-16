@@ -16,7 +16,8 @@ use core::{mem, ptr, slice, fmt};
 use generic_array::ArrayLength;
 
 use Vec;
-use errors::CapacityError;
+use CapacityError;
+use CapacityResult;
 
 /// Min-heap
 pub enum Min {}
@@ -287,17 +288,13 @@ where
     /// assert_eq!(heap.len(), 3);
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
-    pub fn push(&mut self, item: T) -> Result<(), (T, CapacityError)> {
+    pub fn push(&mut self, item: T) -> CapacityResult<T> {
         if self.data.is_full() {
-            let err = (item, CapacityError {
-                maximum: self.capacity(),
-                encountered: self.capacity() + 1
-            });
-            return Err(err);
+            return CapacityResult::err(item, CapacityError::one_more_than(self.capacity()))
         }
 
         unsafe { self.push_unchecked(item) }
-        Ok(())
+        CapacityResult::ok()
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.

@@ -4,7 +4,8 @@ use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
 use __core::mem::MaybeUninit;
-use errors::CapacityError;
+use CapacityError;
+use CapacityResult;
 
 use core::hash;
 use core::iter::FromIterator;
@@ -100,7 +101,7 @@ where
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
+    pub fn extend_from_slice<'a>(&mut self, other: &'a[T]) -> CapacityResult<&'a[T]>
     where
         T: Clone,
     {
@@ -108,7 +109,7 @@ where
 
         if encountered > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
-            Err(CapacityError {
+            CapacityResult::err(other, CapacityError {
                 maximum: self.capacity(),
                 encountered,
             })
@@ -116,7 +117,7 @@ where
             for elem in other {
                 self.push(elem.clone()).ok();
             }
-            Ok(())
+            CapacityResult::ok()
         }
     }
 
@@ -142,16 +143,12 @@ where
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
-    pub fn push(&mut self, item: T) -> Result<(), (T, CapacityError)> {
+    pub fn push(&mut self, item: T) -> CapacityResult<T> {
         if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
-            Ok(())
+            CapacityResult::ok()
         } else {
-            let err = (item, CapacityError {
-                maximum: self.capacity(),
-                encountered: self.capacity() + 1
-            });
-            Err(err)
+            CapacityResult::err(item, CapacityError::one_more_than(self.capacity())
         }
     }
 
@@ -185,12 +182,12 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](struct.Vec.html#method.resize_default).
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
+    pub fn resize(&mut self, new_len: usize, value: T) -> CapacityResult<T>
     where
         T: Clone,
     {
         if new_len > self.capacity() {
-            return Err(CapacityError {
+            return CapacityResult::err(value, CapacityError {
                 maximum: self.capacity(),
                 encountered: new_len,
             });
@@ -198,13 +195,13 @@ where
 
         if new_len > self.len {
             while self.len < new_len {
-                self.push(value.clone()).ok();
+                self.push(value.clone()).ignore();
             }
         } else {
             self.truncate(new_len);
         }
 
-        Ok(())
+        CapacityResult::ok()
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
@@ -214,11 +211,12 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](struct.Vec.html#method.resize).
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), CapacityError>
+    pub fn resize_default(&mut self, new_len: usize) -> CapacityResult<()>
     where
         T: Clone + Default,
     {
         self.resize(new_len, T::default())
+            .map_rest(|_| ())
     }
 
     /// Removes an element from the vector and returns it.
@@ -308,7 +306,7 @@ where
         I: IntoIterator<Item = T>,
     {
         for elem in iter {
-            self.push(elem).ok().unwrap()
+            self.push(elem).expect("Vec::extend() overflow");
         }
     }
 }
@@ -380,7 +378,7 @@ where
     {
         let mut vec = Vec::new();
         for i in iter {
-            vec.push(i).ok().expect("Vec::from_iter overflow");
+            vec.push(i).expect("Vec::from_iter overflow");
         }
         vec
     }
@@ -614,8 +612,8 @@ mod tests {
 
         {
             let mut v: Vec<Droppable, U2> = Vec::new();
-            v.push(Droppable::new()).ok().unwrap();
-            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).unwrap();
+            v.push(Droppable::new()).unwrap();
             v.pop().unwrap();
         }
 
@@ -623,8 +621,8 @@ mod tests {
 
         {
             let mut v: Vec<Droppable, U2> = Vec::new();
-            v.push(Droppable::new()).ok().unwrap();
-            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).unwrap();
+            v.push(Droppable::new()).unwrap();
         }
 
         assert_eq!(unsafe { COUNT }, 0);
@@ -728,8 +726,8 @@ mod tests {
 
         {
             let mut vec: Vec<Droppable, U2> = Vec::new();
-            vec.push(Droppable::new()).ok().unwrap();
-            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).unwrap();
+            vec.push(Droppable::new()).unwrap();
             let mut items = vec.into_iter();
             // Move all
             let _ = items.next();
@@ -740,8 +738,8 @@ mod tests {
 
         {
             let mut vec: Vec<Droppable, U2> = Vec::new();
-            vec.push(Droppable::new()).ok().unwrap();
-            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).unwrap();
+            vec.push(Droppable::new()).unwrap();
             let _items = vec.into_iter();
             // Move none
         }
@@ -750,8 +748,8 @@ mod tests {
 
         {
             let mut vec: Vec<Droppable, U2> = Vec::new();
-            vec.push(Droppable::new()).ok().unwrap();
-            vec.push(Droppable::new()).ok().unwrap();
+            vec.push(Droppable::new()).unwrap();
+            vec.push(Droppable::new()).unwrap();
             let mut items = vec.into_iter();
             let _ = items.next(); // Move partly
         }
@@ -783,7 +781,7 @@ mod tests {
 
         v.resize(0, 0).unwrap();
         v.resize(4, 0).unwrap();
-        v.resize(5, 0).err().expect("full");
+        v.resize(5, 0).expect("full");
     }
 
     #[test]

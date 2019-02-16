@@ -9,7 +9,8 @@ use generic_array::{
     ArrayLength,
 };
 
-use errors::CapacityError;
+use CapacityError;
+use CapacityResult;
 use Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
@@ -183,8 +184,9 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str(&mut self, string: &str) -> Result<(), CapacityError> {
+    pub fn push_str<'a>(&mut self, string: &'a str) -> CapacityResult<&'a str> {
         self.vec.extend_from_slice(string.as_bytes())
+            .map_rest(|_| string)
     }
 
     /// Returns the maximum number of elements the String can hold
@@ -228,16 +230,15 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> Result<(), CapacityError> {
+    pub fn push(&mut self, c: char) -> CapacityResult<char> {
         let bytelen = c.len_utf8();
         match bytelen {
-            1 => self.vec.push(c as u8).map_err(|_| CapacityError {
-                maximum: self.capacity(),
-                encountered: self.capacity() + bytelen,
-            }),
-            _ => self
-                .vec
-                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
+            1 => self.vec
+                .push(c as u8)
+                .map_rest(|_| c)
+            _ => self.vec
+                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes())
+                .map_rest(|_| c),
         }
     }
 
@@ -429,7 +430,7 @@ where
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut new = String::new();
-        new.push_str(s)?;
+        new.push_str(s).into_result()?;
         Ok(new)
     }
 }
@@ -490,11 +491,15 @@ where
     N: ArrayLength<u8>,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).map_err(|_| fmt::Error)
+        self.push_str(s)
+            .into_result()
+            .map_err(|_| fmt::Error)
     }
 
     fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.push(c).map_err(|_| fmt::Error)
+        self.push(c)
+            .into_result()
+            .map_err(|_| fmt::Error)
     }
 }
 

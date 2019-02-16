@@ -11,6 +11,7 @@ pub use self::split::{Consumer, Producer};
 use __core::mem::MaybeUninit;
 use sealed;
 use errors::CapacityError;
+use CapacityResult;
 
 mod split;
 
@@ -353,20 +354,17 @@ macro_rules! impl_ {
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> Result<(), (T, CapacityError)> {
+            pub fn enqueue(&mut self, item: T) -> CapacityResult<T> {
                 let cap = self.capacity();
                 let head = *self.head.get_mut();
                 let tail = *self.tail.get_mut();
 
                 if tail.wrapping_sub(head) > cap - 1 {
-                    let err = (item, CapacityError {
-                        maximum: self.capacity_usize() - 1,
-                        encountered: self.capacity_usize()
-                    });
-                    Err(err)
+                    CapacityResult::err(item,
+                        CapacityError::one_more_than(self.capacity_usize() -1))
                 } else {
                     unsafe { self.enqueue_unchecked(item) }
-                    Ok(())
+                    CapacityResult::ok()
                 }
             }
 
@@ -611,8 +609,8 @@ mod tests {
 
         {
             let mut v: Queue<Droppable, U4> = Queue::new();
-            v.enqueue(Droppable::new()).ok().unwrap();
-            v.enqueue(Droppable::new()).ok().unwrap();
+            v.enqueue(Droppable::new()).unwrap();
+            v.enqueue(Droppable::new()).unwrap();
             v.dequeue().unwrap();
         }
 
@@ -620,8 +618,8 @@ mod tests {
 
         {
             let mut v: Queue<Droppable, U4> = Queue::new();
-            v.enqueue(Droppable::new()).ok().unwrap();
-            v.enqueue(Droppable::new()).ok().unwrap();
+            v.enqueue(Droppable::new()).unwrap();
+            v.enqueue(Droppable::new()).unwrap();
         }
 
         assert_eq!(unsafe { COUNT }, 0);

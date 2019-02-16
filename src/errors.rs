@@ -50,6 +50,10 @@ impl<T> CapacityResult<T>  {
         CapacityResult(Err((rest, err)))
     }
 
+    pub(crate) fn into_inner(self) -> Result<(), (T, CapacityError)> {
+        self.0
+    }
+
     /// Use the result as an proper core::Result with references
     pub fn as_result(&self) -> Result<(), &CapacityError> {
         self.0.as_ref()
@@ -249,5 +253,18 @@ impl<T> CapacityResult<T>  {
         self.into_result().expect(msg);
     }
 
+    /// Ingore this result, but use it.
+    /// this serves the same purpose as calling `Result::ok()`
+    /// but not using the value
+    pub fn ignore(self) {
+        self.0.ok();
+    }
+
+    /// If the result is an error, transform the contained rest
+    pub fn map_rest<U, F: FnOnce(T) -> U>(self, f: F) -> CapacityResult<U> {
+        CapacityResult(self.0.map_err(|(rest, err)| (f(rest), err)))
+    }
+
 }
+
 

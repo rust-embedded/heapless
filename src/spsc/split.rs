@@ -5,7 +5,8 @@ use generic_array::ArrayLength;
 
 use sealed;
 use spsc::{MultiCore, Queue};
-use errors::CapacityError;
+use CapacityError;
+use CapacityResult;
 
 impl<T, N, U, C> Queue<T, N, U, C>
 where
@@ -142,7 +143,7 @@ macro_rules! impl_ {
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> Result<(), (T, CapacityError)> {
+            pub fn enqueue(&mut self, item: T) -> CapacityResult<T> {
                 let cap = unsafe { self.rb.as_ref().capacity() };
                 let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
                 // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method
@@ -153,14 +154,11 @@ macro_rules! impl_ {
                 let head = unsafe { self.rb.as_ref().head.load_acquire() }; // ▼
 
                 if tail.wrapping_sub(head) > cap - 1 {
-                    let err = unsafe { (item, CapacityError {
-                        maximum: self.rb.as_ref().capacity_usize() - 1,
-                        encountered: self.rb.as_ref().capacity_usize()
-                    }) };
-                    Err(err)
+                    CapacityResult::err(item,
+                        CapacityError::one_more_than(self.rb.as_ref().capacity_usize() - 1))
                 } else {
                     unsafe { self._enqueue(tail, item) }; // ▲
-                    Ok(())
+                    CapacityResult::ok()
                 }
             }
 

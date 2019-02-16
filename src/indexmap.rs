@@ -9,6 +9,7 @@ use generic_array::{ArrayLength, GenericArray};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use Vec;
+use CapacityError;
 use __core::mem;
 
 /// An `IndexMap` using the default FNV hasher
@@ -639,9 +640,10 @@ where
     /// assert_eq!(map.insert(37, "c"), Ok(Some("b")));
     /// assert_eq!(map[&37], "c");
     /// ```
-    pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, (K, V)> {
+    /// FIXME: this return type is unergonimic
+    pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, ((K, V), CapacityError)> {
         if self.core.entries.is_full() {
-            Err((key, value))
+            Err(((key, value), CapacityError::one_more_than(self.capacity()))
         } else {
             Ok(match self.insert_phase_1(key, value) {
                 Inserted::Swapped { prev_value } => Some(prev_value),
