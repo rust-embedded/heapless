@@ -94,7 +94,7 @@ fn contention() {
 
                 for i in 0..(2 * N::to_u32()) {
                     sum = sum.wrapping_add(i);
-                    while let Err(_) = p.enqueue(i as u8) {}
+                    while p.enqueue(i as u8).is_err() {}
                 }
 
                 println!("producer: {}", sum);
