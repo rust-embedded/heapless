@@ -10,6 +10,7 @@ pub struct CapacityError
 }
 
 impl CapacityError {
+
     /// Create an capacity error where the maximum capacity is exeeded be one
     ///
     /// # Examples
@@ -27,11 +28,13 @@ impl CapacityError {
             encountered: maximum + 1,
         }
     }
+
 }
 
 /// Result returned from insertion operation
 /// Generic over the rest of the data, that cound not be inserted
 #[derive(Debug)]
+#[must_use = "this `Capacity result might be an error vairant and must be used"]
 pub struct CapacityResult<T> (Result<(), (T, CapacityError)>);
 
 impl<T> CapacityResult<T>  {
@@ -192,6 +195,7 @@ impl<T> CapacityResult<T>  {
     ///
     /// ```
     /// use heapless::CapacityResult;
+    ///
     /// let x: CapacityResult<i32> = CapacityResult::ok();
     /// assert!(x.is_ok());
     /// ```
@@ -206,11 +210,43 @@ impl<T> CapacityResult<T>  {
     /// ```
     /// use heapless::CapacityResult;
     /// use heapless::CapacityError;
+    ///
     /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
     /// assert!(x.is_err());
     /// ```
     pub fn is_err(&self) -> bool {
         self.0.is_err()
+    }
+
+    /// Unwrap the result, panic if was an error
+    ///
+    /// # Panics
+    ///
+    /// Panics if it was an error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::CapacityResult;
+    ///
+    /// let x: CapacityResult<i32> = CapacityResult::ok();
+    /// x.unwrap(); // does not panic
+    /// ```
+    ///
+    /// ```should_panic
+    /// use heapless::CapacityResult;
+    /// use heapless::CapacityError;
+    ///
+    /// let x: CapacityResult<i32> = CapacityResult::err(42, CapacityError::one_more_than(1));
+    /// x.unwrap(); // panics
+    /// ```
+    pub fn unwrap(self) {
+        self.into_result().unwrap();
+    }
+
+    /// Unwrap the result and panic with the given message if it was an error
+    pub fn expect(self, msg: &str) {
+        self.into_result().expect(msg);
     }
 
 }
