@@ -354,7 +354,7 @@ macro_rules! impl_ {
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> CapacityResult<T> {
+            pub fn enqueue(&mut self, item: T) -> CapacityResult<(), T> {
                 let cap = self.capacity();
                 let head = *self.head.get_mut();
                 let tail = *self.tail.get_mut();

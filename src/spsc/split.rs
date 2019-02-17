@@ -143,7 +143,7 @@ macro_rules! impl_ {
             /// Adds an `item` to the end of the queue
             ///
             /// Returns back the `item` if the queue is full
-            pub fn enqueue(&mut self, item: T) -> CapacityResult<T> {
+            pub fn enqueue(&mut self, item: T) -> CapacityResult<(), T> {
                 let cap = unsafe { self.rb.as_ref().capacity() };
                 let tail = unsafe { self.rb.as_ref().tail.load_relaxed() };
                 // NOTE we could replace this `load_acquire` with a `load_relaxed` and this method

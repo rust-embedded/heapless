@@ -184,7 +184,7 @@ where
     /// assert!(s.push_str("tender").is_err());
     /// ```
     #[inline]
-    pub fn push_str<'a>(&mut self, string: &'a str) -> CapacityResult<&'a str> {
+    pub fn push_str<'a>(&mut self, string: &'a str) -> CapacityResult<(), &'a str> {
         self.vec.extend_from_slice(string.as_bytes())
             .map_rest(|_| string)
     }
@@ -230,7 +230,7 @@ where
     /// assert_eq!("abc123", s);
     /// ```
     #[inline]
-    pub fn push(&mut self, c: char) -> CapacityResult<char> {
+    pub fn push(&mut self, c: char) -> CapacityResult<(), char> {
         let bytelen = c.len_utf8();
         match bytelen {
             1 => self.vec

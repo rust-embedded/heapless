@@ -187,7 +187,7 @@ where
     /// assert_eq!(map.insert(37, "c").unwrap(), Some("b"));
     /// assert_eq!(map[&37], "c");
     /// ```
-    pub fn insert(&mut self, key: K, mut value: V) -> CapacityResult<(K, V), Option<V>> {
+    pub fn insert(&mut self, key: K, mut value: V) -> CapacityResult<Option<V>, (K, V)> {
         if let Some((_, v)) = self.iter_mut().find(|&(k, _)| *k == key) {
             mem::swap(v, &mut value);
             return CapacityResult::ok(Some(value))

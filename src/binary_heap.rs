@@ -288,7 +288,7 @@ where
     /// assert_eq!(heap.len(), 3);
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
-    pub fn push(&mut self, item: T) -> CapacityResult<T> {
+    pub fn push(&mut self, item: T) -> CapacityResult<(), T> {
         if self.data.is_full() {
             return CapacityResult::err(item, CapacityError::one_more_than(self.capacity()))
         }

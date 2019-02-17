@@ -101,7 +101,7 @@ where
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    pub fn extend_from_slice<'a>(&mut self, other: &'a[T]) -> CapacityResult<&'a[T]>
+    pub fn extend_from_slice<'a>(&mut self, other: &'a[T]) -> CapacityResult<(), &'a[T]>
     where
         T: Clone,
     {
@@ -143,7 +143,7 @@ where
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
-    pub fn push(&mut self, item: T) -> CapacityResult<T> {
+    pub fn push(&mut self, item: T) -> CapacityResult<(), T> {
         if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
             CapacityResult::ok(())
@@ -182,7 +182,7 @@ where
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](struct.Vec.html#method.resize_default).
-    pub fn resize(&mut self, new_len: usize, value: T) -> CapacityResult<T>
+    pub fn resize(&mut self, new_len: usize, value: T) -> CapacityResult<(), T>
     where
         T: Clone,
     {
@@ -211,7 +211,7 @@ where
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](struct.Vec.html#method.resize).
-    pub fn resize_default(&mut self, new_len: usize) -> CapacityResult<()>
+    pub fn resize_default(&mut self, new_len: usize) -> CapacityResult<(), ()>
     where
         T: Clone + Default,
     {

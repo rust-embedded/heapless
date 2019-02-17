@@ -641,7 +641,7 @@ where
     /// assert_eq!(map.insert(37, "c").into_result(), Ok(Some("b")));
     /// assert_eq!(map[&37], "c");
     /// ```
-    pub fn insert(&mut self, key: K, value: V) -> CapacityResult<(K, V), Option<V>> {
+    pub fn insert(&mut self, key: K, value: V) -> CapacityResult<Option<V>, (K, V)> {
         if self.core.entries.is_full() {
             CapacityResult::err((key, value), CapacityError::one_more_than(self.capacity()))
         } else {

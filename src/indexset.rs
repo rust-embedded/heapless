@@ -422,7 +422,7 @@ where
     /// assert_eq!(set.insert(2).unwrap(), false);
     /// assert_eq!(set.len(), 1);
     /// ```
-    pub fn insert(&mut self, value: T) -> CapacityResult<T, bool> {
+    pub fn insert(&mut self, value: T) -> CapacityResult<bool, T> {
         self.map
             .insert(value, ())
             .map(|old| old.is_none())
