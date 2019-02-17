@@ -201,6 +201,33 @@ impl<T, R> CapacityResult<T, R> {
             .map(|e| e.1)
     }
 
+    /// Use the result as an optional reference to an ok value
+    pub fn as_ok(&self) -> Option<&T> {
+        self.0.as_ref()
+            .ok()
+    }
+
+    /// Use the result as an optional mutable reference to an ok value
+    pub fn as_mut_ok(&mut self) -> Option<&mut T> {
+        self.0.as_mut()
+            .ok()
+    }
+
+    /// Use the result as an optional ok value
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::CapacityResult;
+    ///
+    /// let x: CapacityResult<i32, i32> = CapacityResult::ok(42);
+    /// assert_eq!(x.into_ok(), Some(42));
+    pub fn into_ok(self) -> Option<T> {
+        self.0.ok()
+    }
+
     /// Returns `true` if the result is ok.
     ///
     /// # Examples
