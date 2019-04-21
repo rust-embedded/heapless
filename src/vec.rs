@@ -123,6 +123,28 @@ where
         }
     }
 
+    /// Returns a copy of the last element in the vector, or `None` if it's
+    /// empty.
+    pub fn peek(&mut self) -> Option<T> where T: Copy {
+        let len = self.len();
+        if len >= 1 {
+            self.get(len - 1).map(|x| *x)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the last element in the vector, or `None` if
+    /// it's empty.
+    pub fn peek_ref(&mut self) -> Option<&T> {
+        let len = self.len();
+        if len >= 1 {
+            self.get(len - 1)
+        } else {
+            None
+        }
+    }
+
     pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
@@ -831,5 +853,33 @@ mod tests {
         // correct value is being written.
         v.resize_default(1).unwrap();
         assert_eq!(v[0], 0);
+    }
+
+    #[test]
+    fn peeking() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        assert_eq!(v.peek(), None);
+        v.push(1).unwrap();
+        assert_eq!(v.peek(), Some(1));
+        v.push(2).unwrap();
+        assert_eq!(v.peek(), Some(2));
+        assert_eq!(v.pop().unwrap(), 2);
+        assert_eq!(v.peek(), Some(1));
+        assert_eq!(v.pop().unwrap(), 1);
+        assert_eq!(v.peek(), None);
+    }
+
+    #[test]
+    fn peeking_ref() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        assert_eq!(v.peek_ref(), None);
+        v.push(1).unwrap();
+        assert_eq!(v.peek_ref(), Some(&1));
+        v.push(2).unwrap();
+        assert_eq!(v.peek_ref(), Some(&2));
+        assert_eq!(v.pop().unwrap(), 2);
+        assert_eq!(v.peek_ref(), Some(&1));
+        assert_eq!(v.pop().unwrap(), 1);
+        assert_eq!(v.peek_ref(), None);
     }
 }
