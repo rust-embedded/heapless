@@ -419,7 +419,9 @@ mod tests {
         #[cfg(not(feature = "min-const-fn"))]
         let POOL: Pool<[u8; 128]> = Pool::new();
 
-        unsafe { POOL.grow(&mut MEMORY) }
+        unsafe {
+            POOL.grow(&mut MEMORY);
+        }
 
         for _ in 0..7 {
             assert!(POOL.alloc().is_some());
