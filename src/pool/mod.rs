@@ -267,22 +267,22 @@ impl<T> Pool<T> {
     }
 
     fn pop(&self) -> Option<NonNull<Node<T>>> {
-        // NOTE: currently we only support single core devices (i.e. Non-Shareable memory)
-        let fetch_order = Ordering::Relaxed;
-        let set_order = Ordering::Relaxed;
+        // NOTE `Ordering`s come from crossbeam's (v0.6.0) `TreiberStack`
 
-        let mut head = self.head.load(fetch_order);
         loop {
+            let head = self.head.load(Ordering::Acquire);
             if let Some(nn_head) = NonNull::new(head) {
                 let next = unsafe { (*head).next };
 
-                match self
-                    .head
-                    .compare_exchange_weak(head, next, set_order, fetch_order)
-                {
+                match self.head.compare_exchange_weak(
+                    head,
+                    next,
+                    Ordering::Release, // success
+                    Ordering::Relaxed, // failure
+                ) {
                     Ok(_) => break Some(nn_head),
                     // head was changed by some interrupt handler
-                    Err(new_head) => head = new_head,
+                    Err(_) => continue,
                 }
             } else {
                 // stack is observed as empty
@@ -292,18 +292,18 @@ impl<T> Pool<T> {
     }
 
     fn push(&self, mut new_head: NonNull<Node<T>>) {
-        // NOTE: currently we only support single core devices (i.e. Non-Shareable memory)
-        let fetch_order = Ordering::Relaxed;
-        let set_order = Ordering::Relaxed;
+        // NOTE `Ordering`s come from crossbeam's (v0.6.0) `TreiberStack`
 
-        let mut head = self.head.load(fetch_order);
+        let mut head = self.head.load(Ordering::Relaxed);
         loop {
             unsafe { new_head.as_mut().next = head }
 
-            match self
-                .head
-                .compare_exchange_weak(head, new_head.as_ptr(), set_order, fetch_order)
-            {
+            match self.head.compare_exchange_weak(
+                head,
+                new_head.as_ptr(),
+                Ordering::Release, // success
+                Ordering::Relaxed, // failure
+            ) {
                 Ok(_) => return,
                 // head changed
                 Err(p) => head = p,
