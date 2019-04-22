@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.3] - 2019-04-22
+
+### Added
+
+- Added a memory pool that's lock-free and interrupt-safe on the ARMv7-M
+architecture.
+
+- `IndexMap` have gained `Eq` and `PartialEq` implementations.
+
 ## [v0.4.2] - 2019-02-12
 
 ### Added
@@ -197,7 +206,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.3...HEAD
+[v0.4.3]: https://github.com/japaric/heapless/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/japaric/heapless/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/japaric/heapless/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
