@@ -80,6 +80,9 @@
 //! - `"const-fn"` -- Enables the nightly `const_fn` and `untagged_unions` features and makes most
 //! `new` methods `const`. This way they can be used to initialize static memory at compile time.
 //!
+//! - `"min-const-fn"` -- Turns `Pool::new` into a const fn and makes the `pool!` macro available.
+//! This bumps the required Rust version to 1.31.0.
+//!
 //! - `"smaller-atomics"` -- Lets you initialize `spsc::Queue`s with smaller head / tail indices
 //! (they default to `usize`), shrinking the overall size of the queue.
 
@@ -90,6 +93,7 @@
 #![cfg_attr(feature = "const-fn", feature(untagged_unions))]
 #![no_std]
 
+extern crate as_slice;
 extern crate generic_array;
 extern crate hash32;
 #[cfg(test)]
@@ -123,6 +127,8 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
+#[cfg(not(armv6m))]
+pub mod pool;
 pub mod spsc;
 
 mod __core;

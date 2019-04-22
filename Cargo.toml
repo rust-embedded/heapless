@@ -16,16 +16,18 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.4.2"
+version = "0.4.3"
 
 [features]
-const-fn = []
+const-fn = ["min-const-fn"]
+min-const-fn = []
 smaller-atomics = []
 
 [dev-dependencies]
 scoped_threadpool = "0.1.8"
 
 [dependencies]
+as-slice = "0.1.0"
 generic-array = "0.11.0"
 hash32 = "0.1.0"
 
@@ -33,3 +35,6 @@ hash32 = "0.1.0"
 version = "1"
 optional = true
 default-features = false
+
+[package.metadata.docs.rs]
+features = ["const-fn", "smaller-atomics"]
