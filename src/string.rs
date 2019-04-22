@@ -779,10 +779,10 @@ mod tests {
     #[test]
     fn push() {
         let mut s: String<U6> = String::from("abc");
-        s.push('1').is_ok();
-        s.push('2').is_ok();
-        s.push('3').is_ok();
-        s.push('4').is_err();
+        assert!(s.push('1').is_ok());
+        assert!(s.push('2').is_ok());
+        assert!(s.push('3').is_ok());
+        assert!(s.push('4').is_err());
         assert!("abc123" == s.as_str());
     }
 
