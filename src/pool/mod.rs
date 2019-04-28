@@ -152,7 +152,8 @@
 
 use core::{
     cell::UnsafeCell,
-    fmt,
+    cmp, fmt,
+    hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Deref, DerefMut},
     ptr::{self, NonNull},
@@ -396,6 +397,47 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         <T as fmt::Display>::fmt(self, f)
+    }
+}
+
+impl<T> PartialEq for Box<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, rhs: &Box<T>) -> bool {
+        <T as PartialEq>::eq(self, rhs)
+    }
+}
+
+impl<T> Eq for Box<T> where T: Eq {}
+
+impl<T> PartialOrd for Box<T>
+where
+    T: PartialOrd,
+{
+    fn partial_cmp(&self, rhs: &Box<T>) -> Option<cmp::Ordering> {
+        <T as PartialOrd>::partial_cmp(self, rhs)
+    }
+}
+
+impl<T> Ord for Box<T>
+where
+    T: Ord,
+{
+    fn cmp(&self, rhs: &Box<T>) -> cmp::Ordering {
+        <T as Ord>::cmp(self, rhs)
+    }
+}
+
+impl<T> Hash for Box<T>
+where
+    T: Hash,
+{
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        <T as Hash>::hash(self, state)
     }
 }
 

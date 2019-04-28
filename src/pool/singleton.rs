@@ -2,7 +2,8 @@
 
 use core::{
     any::TypeId,
-    fmt,
+    cmp, fmt,
+    hash::{Hash, Hasher},
     marker::PhantomData,
     mem,
     ops::{Deref, DerefMut},
@@ -216,6 +217,56 @@ where
 {
     fn as_mut_slice(&mut self) -> &mut [T] {
         self.deref_mut().as_mut_slice()
+    }
+}
+
+impl<P> PartialEq for Box<P>
+where
+    P: Pool,
+    P::Data: PartialEq,
+{
+    fn eq(&self, rhs: &Box<P>) -> bool {
+        <P::Data as PartialEq>::eq(self, rhs)
+    }
+}
+
+impl<P> Eq for Box<P>
+where
+    P: Pool,
+    P::Data: Eq,
+{
+}
+
+impl<P> PartialOrd for Box<P>
+where
+    P: Pool,
+    P::Data: PartialOrd,
+{
+    fn partial_cmp(&self, rhs: &Box<P>) -> Option<cmp::Ordering> {
+        <P::Data as PartialOrd>::partial_cmp(self, rhs)
+    }
+}
+
+impl<P> Ord for Box<P>
+where
+    P: Pool,
+    P::Data: Ord,
+{
+    fn cmp(&self, rhs: &Box<P>) -> cmp::Ordering {
+        <P::Data as Ord>::cmp(self, rhs)
+    }
+}
+
+impl<P> Hash for Box<P>
+where
+    P: Pool,
+    P::Data: Hash,
+{
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        <P::Data as Hash>::hash(self, state)
     }
 }
 
