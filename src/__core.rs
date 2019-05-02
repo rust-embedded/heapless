@@ -26,7 +26,9 @@ pub mod mem {
 
         #[cfg(not(feature = "const-fn"))]
         pub unsafe fn uninitialized() -> Self {
-            mem::uninitialized()
+            MaybeUninit {
+                value: ManuallyDrop::new(mem::uninitialized()),
+            }
         }
 
         /// Get a reference to the contained value.
