@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.4.4] - 2019-05-02
+
+### Added
+
+- Implemented `PartialEq`, `PartialOrd`, `Eq`, `Ord` and `Hash` for `pool::Box`
+  and `pool::singleton::Box`.
+
+### Fixed
+
+- Fixed UB in our internal, stable re-implementation of `core::mem::MaybeUninit`
+  that occurred when using some of our data structures with types that implement
+  `Drop`.
+
 ## [v0.4.3] - 2019-04-22
 
 ### Added
@@ -206,7 +219,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.4...HEAD
+[v0.4.4]: https://github.com/japaric/heapless/compare/v0.4.3...v0.4.4
 [v0.4.3]: https://github.com/japaric/heapless/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/japaric/heapless/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/japaric/heapless/compare/v0.4.0...v0.4.1
