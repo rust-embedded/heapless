@@ -18,16 +18,17 @@ use super::{Init, Uninit};
 #[cfg(any(armv7m, armv7r, test))]
 #[macro_export]
 macro_rules! pool {
-    ($ident:ident: $ty:ty) => {
+    ($(#[$($attr:tt)*])* $ident:ident: $ty:ty) => {
         pub struct $ident;
 
         impl $crate::pool::singleton::Pool for $ident {
             type Data = $ty;
 
             fn ptr() -> &'static $crate::pool::Pool<$ty> {
-                static POOL: $crate::pool::Pool<$ty> = $crate::pool::Pool::new();
+                $(#[$($attr)*])*
+                static $ident: $crate::pool::Pool<$ty> = $crate::pool::Pool::new();
 
-                &POOL
+                &$ident
             }
         }
     };

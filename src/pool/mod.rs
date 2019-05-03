@@ -14,7 +14,11 @@
 //! use heapless::{pool, pool::singleton::Box};
 //!
 //! // instantiate a memory pool of `[u8; 128]` blocks as a global singleton
-//! pool!(A: [u8; 128]);
+//! pool!(
+//!     // attributes can be used here
+//!     // #[link_section = ".ccram.A"]
+//!     A: [u8; 128]
+//! );
 //!
 //! #[entry]
 //! fn main() -> ! {
