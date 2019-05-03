@@ -15,7 +15,7 @@ use as_slice::{AsMutSlice, AsSlice};
 use super::{Init, Uninit};
 
 /// Instantiates a pool as a global singleton
-#[cfg(all(any(armv7m, test), feature = "min-const-fn"))]
+#[cfg(any(armv7m, test))]
 #[macro_export]
 macro_rules! pool {
     ($ident:ident: $ty:ty) => {
@@ -153,7 +153,7 @@ where
     P: Pool,
     P::Data: fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <P::Data as fmt::Debug>::fmt(self, f)
     }
 }
@@ -163,7 +163,7 @@ where
     P: Pool,
     P::Data: fmt::Display,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <P::Data as fmt::Display>::fmt(self, f)
     }
 }
@@ -270,7 +270,7 @@ where
     }
 }
 
-#[cfg(all(test, feature = "min-const-fn"))]
+#[cfg(test)]
 mod tests {
     use core::{
         mem,

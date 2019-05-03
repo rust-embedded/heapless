@@ -1,15 +1,12 @@
 //! Single producer single consumer queue
 
-use core::cell::UnsafeCell;
-use core::marker::PhantomData;
-use core::{ptr, fmt, hash};
+use core::{cell::UnsafeCell, fmt, hash, marker::PhantomData, mem::MaybeUninit, ptr};
 
 use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
-pub use self::split::{Consumer, Producer};
-use __core::mem::MaybeUninit;
-use sealed;
+use crate::sealed;
+pub use split::{Consumer, Producer};
 
 mod split;
 
@@ -176,7 +173,7 @@ where
     }
 
     /// Iterates from the front of the queue to the back
-    pub fn iter(&self) -> Iter<T, N, U, C> {
+    pub fn iter(&self) -> Iter<'_, T, N, U, C> {
         Iter {
             rb: self,
             index: 0,
@@ -185,7 +182,7 @@ where
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMut<T, N, U, C> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T, N, U, C> {
         let len = self.len_usize();
         IterMut {
             rb: self,
@@ -224,7 +221,7 @@ where
     U: sealed::Uxx,
     C: sealed::XCore,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
@@ -258,7 +255,6 @@ where
         }
     }
 }
-
 
 impl<'a, T, N, U, C> IntoIterator for &'a Queue<T, N, U, C>
 where
@@ -298,7 +294,7 @@ macro_rules! impl_ {
                 /// Creates an empty queue with a fixed capacity of `N`
                 pub const fn $uxx() -> Self {
                     Queue {
-                        buffer: unsafe { MaybeUninit::uninitialized() },
+                        buffer: MaybeUninit::uninit(),
                         head: Atomic::new(0),
                         tail: Atomic::new(0),
                     }
@@ -314,7 +310,7 @@ macro_rules! impl_ {
                 /// Creates an empty queue with a fixed capacity of `N` (single core variant)
                 pub const unsafe fn $uxx_sc() -> Self {
                     Queue {
-                        buffer: MaybeUninit::uninitialized(),
+                        buffer: MaybeUninit::uninit(),
                         head: Atomic::new(0),
                         tail: Atomic::new(0),
                     }
@@ -334,10 +330,10 @@ macro_rules! impl_ {
                 let head = self.head.get_mut();
                 let tail = self.tail.get_mut();
 
-                let buffer = unsafe { self.buffer.get_ref() };
+                let p = self.buffer.as_ptr();
 
                 if *head != *tail {
-                    let item = unsafe { ptr::read(buffer.get_unchecked(usize::from(*head % cap))) };
+                    let item = unsafe { (p as *const T).add(usize::from(*head % cap)).read() };
                     *head = head.wrapping_add(1);
                     Some(item)
                 } else {
@@ -373,12 +369,12 @@ macro_rules! impl_ {
                 let cap = self.capacity();
                 let tail = self.tail.get_mut();
 
-                let buffer = self.buffer.get_mut();
-
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                ptr::write(buffer.get_unchecked_mut(usize::from(*tail % cap)), item);
+                (self.buffer.as_mut_ptr() as *mut T)
+                    .add(usize::from(*tail % cap))
+                    .write(item);
                 *tail = tail.wrapping_add(1);
             }
 
@@ -403,7 +399,7 @@ macro_rules! impl_ {
         {
             fn clone(&self) -> Self {
                 let mut new: Queue<T, N, $uxx, C> = Queue {
-                    buffer: unsafe { MaybeUninit::uninitialized() },
+                    buffer: MaybeUninit::uninit(),
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
                 };
@@ -417,7 +413,6 @@ macro_rules! impl_ {
                 new
             }
         }
-
     };
 }
 
@@ -445,9 +440,7 @@ where
     }
 }
 
-#[cfg(feature = "smaller-atomics")]
 impl_!(u8, u8_sc);
-#[cfg(feature = "smaller-atomics")]
 impl_!(u16, u16_sc);
 impl_!(usize, usize_sc);
 
@@ -463,10 +456,7 @@ where
 {
     fn eq(&self, other: &Queue<T, N2, U2, C2>) -> bool {
         self.len_usize() == other.len_usize()
-            && self
-                .iter()
-                .zip(other.iter())
-                .all(|(v1, v2)| v1 == v2)
+            && self.iter().zip(other.iter()).all(|(v1, v2)| v1 == v2)
     }
 }
 
@@ -477,16 +467,14 @@ where
     U: sealed::Uxx,
     C: sealed::XCore,
 {
-
 }
 
 /// An iterator over the items of a queue
 pub struct Iter<'a, T, N, U, C>
 where
-    N: ArrayLength<T> + 'a,
-    T: 'a,
-    U: 'a + sealed::Uxx,
-    C: 'a + sealed::XCore,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
+    C: sealed::XCore,
 {
     rb: &'a Queue<T, N, U, C>,
     index: usize,
@@ -495,10 +483,9 @@ where
 
 impl<'a, T, N, U, C> Clone for Iter<'a, T, N, U, C>
 where
-    N: ArrayLength<T> + 'a,
-    T: 'a,
-    U: 'a + sealed::Uxx,
-    C: 'a + sealed::XCore,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
+    C: sealed::XCore,
 {
     fn clone(&self) -> Self {
         Self {
@@ -512,10 +499,9 @@ where
 /// A mutable iterator over the items of a queue
 pub struct IterMut<'a, T, N, U, C>
 where
-    N: ArrayLength<T> + 'a,
-    T: 'a,
-    U: 'a + sealed::Uxx,
-    C: 'a + sealed::XCore,
+    N: ArrayLength<T>,
+    U: sealed::Uxx,
+    C: sealed::XCore,
 {
     rb: &'a mut Queue<T, N, U, C>,
     index: usize,
@@ -523,13 +509,12 @@ where
 }
 
 macro_rules! iterator {
-    (struct $name:ident -> $elem:ty, $ptr:ty, $asref:ident, $asptr:ident, $mkref:ident) => {
+    (struct $name:ident -> $elem:ty, $ptr:ty, $asptr:ident, $mkref:ident) => {
         impl<'a, T, N, U, C> Iterator for $name<'a, T, N, U, C>
         where
             N: ArrayLength<T>,
-            T: 'a,
-            U: 'a + sealed::Uxx,
-            C: 'a + sealed::XCore,
+            U: sealed::Uxx,
+            C: sealed::XCore,
         {
             type Item = $elem;
 
@@ -538,8 +523,7 @@ macro_rules! iterator {
                     let head = self.rb.head.load_relaxed().into();
 
                     let cap = self.rb.capacity().into();
-                    let buffer = unsafe { self.rb.buffer.$asref() };
-                    let ptr: $ptr = buffer.$asptr();
+                    let ptr = self.rb.buffer.$asptr() as $ptr;
                     let i = (head + self.index) % cap;
                     self.index += 1;
                     Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
@@ -563,14 +547,14 @@ macro_rules! make_ref_mut {
     };
 }
 
-iterator!(struct Iter -> &'a T, *const T, get_ref, as_ptr, make_ref);
-iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut);
+iterator!(struct Iter -> &'a T, *const T, as_ptr, make_ref);
+iterator!(struct IterMut -> &'a mut T, *mut T, as_mut_ptr, make_ref_mut);
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use spsc::Queue;
     use hash32::Hasher;
+
+    use crate::{consts::*, spsc::Queue};
 
     #[cfg(feature = "const-fn")]
     #[test]
@@ -741,11 +725,7 @@ mod tests {
         let rb2 = rb1.clone();
         assert_eq!(rb1.capacity(), rb2.capacity());
         assert_eq!(rb1.len_usize(), rb2.len_usize());
-        assert!(
-            rb1.iter()
-            .zip(rb2.iter())
-            .all(|(v1, v2)| v1 == v2)
-        );
+        assert!(rb1.iter().zip(rb2.iter()).all(|(v1, v2)| v1 == v2));
     }
 
     #[test]

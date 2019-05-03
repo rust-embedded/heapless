@@ -57,7 +57,7 @@
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
-//! This crate is guaranteed to compile on stable Rust 1.30 and up with its default set of features.
+//! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
 //! It *might* compile on older versions but that may change in any new patch release.
 //!
 //! # Cargo features
@@ -79,28 +79,14 @@
 //!
 //! - `"const-fn"` -- Enables the nightly `const_fn` and `untagged_unions` features and makes most
 //! `new` methods `const`. This way they can be used to initialize static memory at compile time.
-//!
-//! - `"min-const-fn"` -- Turns `Pool::new` into a const fn and makes the `pool!` macro available.
-//! This bumps the required Rust version to 1.31.0.
-//!
-//! - `"smaller-atomics"` -- Lets you initialize `spsc::Queue`s with smaller head / tail indices
-//! (they default to `usize`), shrinking the overall size of the queue.
 
-#![allow(warnings)]
-#![deny(missing_docs)]
-#![deny(warnings)]
 #![cfg_attr(feature = "const-fn", feature(const_fn))]
-#![cfg_attr(feature = "const-fn", feature(untagged_unions))]
-#![no_std]
-
-extern crate as_slice;
-extern crate generic_array;
-extern crate hash32;
-#[cfg(test)]
-extern crate std;
-
-#[cfg(feature = "serde")]
-extern crate serde;
+#![cfg_attr(not(test), no_std)]
+#![deny(missing_docs)]
+#![deny(rust_2018_compatibility)]
+#![deny(rust_2018_idioms)]
+#![deny(warnings)]
+#![feature(maybe_uninit)]
 
 #[macro_use]
 mod const_fn;
@@ -131,5 +117,4 @@ pub mod binary_heap;
 pub mod pool;
 pub mod spsc;
 
-mod __core;
 mod sealed;

@@ -1,12 +1,9 @@
-use core::borrow::Borrow;
-use core::fmt;
-use core::iter::FromIterator;
+use core::{borrow::Borrow, fmt, iter::FromIterator};
 
-use generic_array::typenum::PowerOfTwo;
-use generic_array::ArrayLength;
+use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use indexmap::{self, Bucket, IndexMap, Pos};
+use crate::indexmap::{self, Bucket, IndexMap, Pos};
 
 /// An `IndexSet` using the default FNV hasher
 pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
@@ -104,7 +101,7 @@ where
     ///     println!("{}", x);
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             iter: self.map.iter(),
         }
@@ -473,7 +470,7 @@ where
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_set().entries(self.iter()).finish()
     }
 }
@@ -562,17 +559,11 @@ where
     }
 }
 
-pub struct Iter<'a, T>
-where
-    T: 'a,
-{
+pub struct Iter<'a, T> {
     iter: indexmap::Iter<'a, T, ()>,
 }
 
-impl<'a, T> Iterator for Iter<'a, T>
-where
-    T: 'a,
-{
+impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -580,10 +571,7 @@ where
     }
 }
 
-impl<'a, T> Clone for Iter<'a, T>
-where
-    T: 'a,
-{
+impl<'a, T> Clone for Iter<'a, T> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
@@ -593,9 +581,9 @@ where
 
 pub struct Difference<'a, T, N, S>
 where
-    S: 'a + BuildHasher,
-    T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    S: BuildHasher,
+    T: Eq + Hash,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S>,
@@ -603,9 +591,9 @@ where
 
 impl<'a, T, N, S> Iterator for Difference<'a, T, N, S>
 where
-    S: 'a + BuildHasher,
-    T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    S: BuildHasher,
+    T: Eq + Hash,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     type Item = &'a T;
 
@@ -621,9 +609,9 @@ where
 
 pub struct Intersection<'a, T, N, S>
 where
-    S: 'a + BuildHasher,
-    T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    S: BuildHasher,
+    T: Eq + Hash,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S>,
@@ -631,9 +619,9 @@ where
 
 impl<'a, T, N, S> Iterator for Intersection<'a, T, N, S>
 where
-    S: 'a + BuildHasher,
-    T: 'a + Eq + Hash,
-    N: 'a + ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    S: BuildHasher,
+    T: Eq + Hash,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     type Item = &'a T;
 

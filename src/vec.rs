@@ -1,12 +1,7 @@
-use core::{fmt, ops, ptr, slice};
+use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
 use hash32;
-
-use __core::mem::MaybeUninit;
-
-use core::hash;
-use core::iter::FromIterator;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
@@ -66,7 +61,7 @@ where
         /// Constructs a new, empty vector with a fixed capacity of `N`
         pub const fn new() -> Self {
             Vec {
-                buffer: unsafe { MaybeUninit::uninitialized() },
+                buffer: MaybeUninit::uninit(),
                 len: 0,
             }
         }
@@ -126,11 +121,8 @@ where
     pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
-        let buffer = self.buffer.get_ref();
-
         self.len -= 1;
-        let item = ptr::read(buffer.get_unchecked(self.len));
-        item
+        (self.buffer.as_ptr() as *const T).add(self.len).read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -146,11 +138,12 @@ where
     }
 
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
-        let buffer = self.buffer.get_mut();
-
         // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-        ptr::write(buffer.get_unchecked_mut(self.len), item);
+        (self.buffer.as_mut_ptr() as *mut T)
+            .add(self.len)
+            .write(item);
+
         self.len += 1;
     }
 
@@ -271,7 +264,7 @@ where
     T: fmt::Debug,
     N: ArrayLength<T>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let slice: &[T] = &**self;
         slice.fmt(f)
     }
@@ -394,8 +387,7 @@ where
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let buffer = unsafe { self.vec.buffer.get_ref() };
-            let item = unsafe { ptr::read(buffer.get_unchecked(self.next)) };
+            let item = unsafe { (self.vec.buffer.as_ptr() as *const T).add(self.next).read() };
             self.next += 1;
             Some(item)
         } else {
@@ -500,10 +492,9 @@ where
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        let buffer = unsafe { self.buffer.get_ref() };
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(buffer.as_ptr(), self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
     }
 }
 
@@ -513,11 +504,10 @@ where
 {
     fn deref_mut(&mut self) -> &mut [T] {
         let len = self.len();
-        let buffer = unsafe { self.buffer.get_mut() };
 
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..len]
-        unsafe { slice::from_raw_parts_mut(buffer.as_mut_ptr(), len) }
+        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, len) }
     }
 }
 
@@ -563,8 +553,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use Vec;
+    use crate::{consts::*, Vec};
 
     #[cfg(feature = "const-fn")]
     #[test]

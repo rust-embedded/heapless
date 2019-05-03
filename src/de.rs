@@ -1,18 +1,14 @@
-use core::fmt;
-use core::marker::PhantomData;
+use core::{fmt, marker::PhantomData};
 
 use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
-use super::binary_heap::Kind as BinaryHeapKind;
-use super::indexmap::{Bucket, Pos};
-use BinaryHeap;
-use IndexMap;
-use IndexSet;
-use LinearMap;
-use String;
-use Vec;
+use crate::{
+    binary_heap,
+    indexmap::{Bucket, Pos},
+    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+};
 
 // Sequential containers
 
@@ -20,7 +16,7 @@ impl<'de, T, N, KIND> Deserialize<'de> for BinaryHeap<T, N, KIND>
 where
     T: Ord + Deserialize<'de>,
     N: ArrayLength<T>,
-    KIND: BinaryHeapKind,
+    KIND: binary_heap::Kind,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -32,11 +28,11 @@ where
         where
             T: Ord + Deserialize<'de>,
             N: ArrayLength<T>,
-            KIND: BinaryHeapKind,
+            KIND: binary_heap::Kind,
         {
             type Value = BinaryHeap<T, N, KIND>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
             }
 
@@ -79,7 +75,7 @@ where
         {
             type Value = IndexSet<T, N, BuildHasherDefault<S>>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
             }
 
@@ -120,7 +116,7 @@ where
         {
             type Value = Vec<T, N>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
             }
 
@@ -167,7 +163,7 @@ where
         {
             type Value = IndexMap<K, V, N, BuildHasherDefault<S>>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map")
             }
 
@@ -210,7 +206,7 @@ where
         {
             type Value = LinearMap<K, V, N>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map")
             }
 
@@ -251,7 +247,7 @@ where
         {
             type Value = String<N>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(
                     formatter,
                     "a string no more than {} bytes long",

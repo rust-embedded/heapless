@@ -8,14 +8,17 @@
 // heap can also be converted to a sorted vector in-place, allowing it to be used for an `O(n log
 // n)` in-place heapsort.
 
-use core::cmp::Ordering;
-use core::marker::PhantomData;
-use core::mem::ManuallyDrop;
-use core::{mem, ptr, slice, fmt};
+use core::{
+    cmp::Ordering,
+    fmt,
+    marker::PhantomData,
+    mem::{self, ManuallyDrop},
+    ptr, slice,
+};
 
 use generic_array::ArrayLength;
 
-use Vec;
+use crate::Vec;
 
 /// Min-heap
 pub enum Min {}
@@ -206,7 +209,7 @@ where
     ///
     /// }
     /// ```
-    pub fn iter(&self) -> slice::Iter<T> {
+    pub fn iter(&self) -> slice::Iter<'_, T> {
         self.data.iter()
     }
 
@@ -214,7 +217,7 @@ where
     ///
     /// **WARNING** Mutating the items in the binary heap can leave the heap in an inconsistent
     /// state.
-    pub fn iter_mut(&mut self) -> slice::IterMut<T> {
+    pub fn iter_mut(&mut self) -> slice::IterMut<'_, T> {
         self.data.iter_mut()
     }
 
@@ -344,7 +347,7 @@ where
 /// (because it was moved from or duplicated).
 /// In drop, `Hole` will restore the slice by filling the hole
 /// position with the value that was originally removed.
-struct Hole<'a, T: 'a> {
+struct Hole<'a, T> {
     data: &'a mut [T],
     /// `elt` is always `Some` from new until drop.
     elt: ManuallyDrop<T>,
@@ -441,9 +444,9 @@ impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
 where
     N: ArrayLength<T>,
     K: Kind,
-    T: Ord + fmt::Debug
+    T: Ord + fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
@@ -466,8 +469,10 @@ where
 mod tests {
     use std::vec::Vec;
 
-    use binary_heap::{self, BinaryHeap, Min};
-    use consts::*;
+    use crate::{
+        binary_heap::{self, BinaryHeap, Min},
+        consts::*,
+    };
 
     #[cfg(feature = "const-fn")]
     #[test]

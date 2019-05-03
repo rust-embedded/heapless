@@ -1,8 +1,6 @@
-use core::sync::atomic::{self, AtomicUsize, Ordering};
-#[cfg(feature = "smaller-atomics")]
-use core::sync::atomic::{AtomicU16, AtomicU8};
+use core::sync::atomic::{self, AtomicU16, AtomicU8, AtomicUsize, Ordering};
 
-use spsc::{MultiCore, SingleCore};
+use crate::spsc::{MultiCore, SingleCore};
 
 pub unsafe trait XCore {
     fn is_multi_core() -> bool;
@@ -38,7 +36,6 @@ pub unsafe trait Uxx: Into<usize> + Send {
         C: XCore;
 }
 
-#[cfg(feature = "smaller-atomics")]
 unsafe impl Uxx for u8 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u8::MAX;
@@ -79,7 +76,6 @@ unsafe impl Uxx for u8 {
     }
 }
 
-#[cfg(feature = "smaller-atomics")]
 unsafe impl Uxx for u16 {
     fn truncate(x: usize) -> Self {
         let max = ::core::u16::MAX;
