@@ -15,7 +15,7 @@ use as_slice::{AsMutSlice, AsSlice};
 use super::{Init, Uninit};
 
 /// Instantiates a pool as a global singleton
-#[cfg(any(armv7m, test))]
+#[cfg(any(armv7m, armv7r, test))]
 #[macro_export]
 macro_rules! pool {
     ($ident:ident: $ty:ty) => {
