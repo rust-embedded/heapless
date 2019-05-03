@@ -1,16 +1,12 @@
-use hash32::{BuildHasher, Hash};
-
 use generic_array::{typenum::PowerOfTwo, ArrayLength};
+use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
-use super::binary_heap::Kind as BinaryHeapKind;
-use super::indexmap::{Bucket, Pos};
-use BinaryHeap;
-use IndexMap;
-use IndexSet;
-use LinearMap;
-use String;
-use Vec;
+use crate::{
+    binary_heap::Kind as BinaryHeapKind,
+    indexmap::{Bucket, Pos},
+    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+};
 
 // Sequential containers
 

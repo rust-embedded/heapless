@@ -1,10 +1,11 @@
-use core::marker::PhantomData;
-use core::ptr::{self, NonNull};
+use core::{marker::PhantomData, ptr::NonNull};
 
 use generic_array::ArrayLength;
 
-use sealed;
-use spsc::{MultiCore, Queue};
+use crate::{
+    sealed,
+    spsc::{MultiCore, Queue},
+};
 
 impl<T, N, U, C> Queue<T, N, U, C>
 where
@@ -110,9 +111,10 @@ macro_rules! impl_ {
                 let rb = self.rb.as_ref();
 
                 let cap = rb.capacity();
-                let buffer = rb.buffer.get_ref();
 
-                let item = ptr::read(buffer.get_unchecked(usize::from(head % cap)));
+                let item = (rb.buffer.as_ptr() as *const T)
+                    .add(usize::from(head % cap))
+                    .read();
                 rb.head.store_release(head.wrapping_add(1)); // ▲
                 item
             }
@@ -177,28 +179,26 @@ macro_rules! impl_ {
                 let rb = self.rb.as_mut();
 
                 let cap = rb.capacity();
-                let buffer = rb.buffer.get_mut();
 
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                ptr::write(buffer.get_unchecked_mut(usize::from(tail % cap)), item);
+                (rb.buffer.as_mut_ptr() as *mut T)
+                    .add(usize::from(tail % cap))
+                    .write(item);
                 rb.tail.store_release(tail.wrapping_add(1)); // ▲
             }
         }
     };
 }
 
-#[cfg(feature = "smaller-atomics")]
 impl_!(u8);
-#[cfg(feature = "smaller-atomics")]
 impl_!(u16);
 impl_!(usize);
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use spsc::Queue;
+    use crate::{consts::*, spsc::Queue};
 
     #[test]
     fn sanity() {

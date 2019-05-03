@@ -1,15 +1,16 @@
-use core::borrow::Borrow;
-use core::iter::FromIterator;
-use core::num::NonZeroU32;
-use core::{fmt, ops, slice};
+use core::{
+    borrow::Borrow,
+    fmt,
+    iter::FromIterator,
+    mem::{self, MaybeUninit},
+    num::NonZeroU32,
+    ops, slice,
+};
 
-use generic_array::typenum::PowerOfTwo;
-use generic_array::{ArrayLength, GenericArray};
-
+use generic_array::{typenum::PowerOfTwo, ArrayLength, GenericArray};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use Vec;
-use __core::mem;
+use crate::Vec;
 
 /// An `IndexMap` using the default FNV hasher
 pub type FnvIndexMap<K, V, N> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>>;
@@ -102,7 +103,7 @@ where
     fn new() -> Self {
         CoreMap {
             entries: Vec::new(),
-            indices: unsafe { mem::zeroed() },
+            indices: unsafe { MaybeUninit::zeroed().assume_init() },
         }
     }
 
@@ -440,7 +441,7 @@ where
     ///     println!("key: {} val: {}", key, val);
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
             iter: self.core.entries.iter(),
         }
@@ -465,7 +466,7 @@ where
     ///     println!("key: {} val: {}", key, val);
     /// }
     /// ```
-    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut {
             iter: self.core.entries.iter_mut(),
         }
@@ -762,7 +763,7 @@ where
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
     }
 }
@@ -805,9 +806,7 @@ where
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
-
 }
-
 
 impl<K, V, N, S> Extend<(K, V)> for IndexMap<K, V, N, S>
 where
@@ -884,19 +883,11 @@ where
     }
 }
 
-pub struct Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, Bucket<K, V>>,
 }
 
-impl<'a, K, V> Iterator for Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -904,11 +895,7 @@ where
     }
 }
 
-impl<'a, K, V> Clone for Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Clone for Iter<'a, K, V> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
@@ -916,19 +903,11 @@ where
     }
 }
 
-pub struct IterMut<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, Bucket<K, V>>,
 }
 
-impl<'a, K, V> Iterator for IterMut<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -954,8 +933,7 @@ mod tests {
 
     use generic_array::typenum::Unsigned;
 
-    use consts::*;
-    use FnvIndexMap;
+    use crate::{consts::*, FnvIndexMap};
 
     #[test]
     fn size() {
@@ -973,14 +951,13 @@ mod tests {
         )
     }
 
-
     #[test]
     fn partial_eq() {
         {
             let mut a: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -991,11 +968,11 @@ mod tests {
         }
 
         {
-            let mut a: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            let mut a: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b: FnvIndexMap<_, _, U4>  = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 

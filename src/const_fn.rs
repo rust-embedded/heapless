@@ -33,36 +33,3 @@ macro_rules! const_fn {
         fn $($f)*
     );
 }
-
-#[cfg(not(armv6m))]
-macro_rules! min_const_fn {
-    ($(#[$attr:meta])* pub const unsafe fn $($f:tt)*) => (
-
-        $(#[$attr])*
-            #[cfg(feature = "min-const-fn")]
-        pub const unsafe fn $($f)*
-
-            $(#[$attr])*
-            #[cfg(not(feature = "min-const-fn"))]
-        pub unsafe fn $($f)*
-    );
-    ($(#[$attr:meta])* pub const fn $($f:tt)*) => (
-
-        $(#[$attr])*
-            #[cfg(feature = "min-const-fn")]
-        pub const fn $($f)*
-
-            $(#[$attr])*
-            #[cfg(not(feature = "min-const-fn"))]
-        pub fn $($f)*
-    );
-    ($(#[$attr:meta])* const fn $($f:tt)*) => (
-        $(#[$attr])*
-            #[cfg(feature = "min-const-fn")]
-        const fn $($f)*
-
-            $(#[$attr])*
-            #[cfg(not(feature = "min-const-fn"))]
-        fn $($f)*
-    );
-}

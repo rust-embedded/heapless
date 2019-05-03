@@ -1,15 +1,12 @@
-use core::fmt::Write;
-use core::str::Utf8Error;
-use core::{fmt, hash, ops, str};
-
-use hash32;
+use core::{fmt, fmt::Write, hash, ops, str, str::Utf8Error};
 
 use generic_array::{
     typenum::{consts::*, IsGreaterOrEqual},
     ArrayLength,
 };
+use hash32;
 
-use Vec;
+use crate::Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
 pub struct String<N>
@@ -444,7 +441,7 @@ impl<N> fmt::Debug for String<N>
 where
     N: ArrayLength<u8>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let slice: &str = &**self;
         fmt::Debug::fmt(slice, f)
     }
@@ -454,7 +451,7 @@ impl<N> fmt::Display for String<N>
 where
     N: ArrayLength<u8>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let slice: &str = &**self;
         fmt::Display::fmt(slice, f)
     }
@@ -611,8 +608,7 @@ impl_from_num!(u64, U20);
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use {String, Vec};
+    use crate::{consts::*, String, Vec};
 
     #[cfg(feature = "const-fn")]
     #[test]
@@ -632,8 +628,6 @@ mod tests {
 
     #[test]
     fn debug() {
-        extern crate std;
-
         use core::fmt::Write;
 
         let s: String<U8> = String::from("abcd");
@@ -644,8 +638,6 @@ mod tests {
 
     #[test]
     fn display() {
-        extern crate std;
-
         use core::fmt::Write;
 
         let s: String<U8> = String::from("abcd");

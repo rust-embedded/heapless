@@ -159,7 +159,6 @@ use core::{
     ptr::{self, NonNull},
     sync::atomic::AtomicPtr,
 };
-
 #[cfg(not(armv6m))]
 use core::{any::TypeId, mem, sync::atomic::Ordering};
 
@@ -185,14 +184,12 @@ unsafe impl<T> Sync for Pool<T> {}
 unsafe impl<T> Send for Pool<T> {}
 
 impl<T> Pool<T> {
-    min_const_fn! {
-        /// Creates a new empty pool
-        pub const fn new() -> Self {
-            Pool {
-                head: AtomicPtr::new(ptr::null_mut()),
+    /// Creates a new empty pool
+    pub const fn new() -> Self {
+        Pool {
+            head: AtomicPtr::new(ptr::null_mut()),
 
-                _not_send_or_sync: PhantomData,
-            }
+            _not_send_or_sync: PhantomData,
         }
     }
 
@@ -386,7 +383,7 @@ impl<T> fmt::Debug for Box<T>
 where
     T: fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <T as fmt::Debug>::fmt(self, f)
     }
 }
@@ -395,7 +392,7 @@ impl<T> fmt::Display for Box<T>
 where
     T: fmt::Display,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <T as fmt::Display>::fmt(self, f)
     }
 }
@@ -454,12 +451,7 @@ mod tests {
     fn grow() {
         static mut MEMORY: [u8; 1024] = [0; 1024];
 
-        #[cfg(feature = "min-const-fn")]
         static POOL: Pool<[u8; 128]> = Pool::new();
-
-        #[allow(non_snake_case)]
-        #[cfg(not(feature = "min-const-fn"))]
-        let POOL: Pool<[u8; 128]> = Pool::new();
 
         unsafe {
             POOL.grow(&mut MEMORY);
@@ -474,12 +466,7 @@ mod tests {
     fn sanity() {
         static mut MEMORY: [u8; 31] = [0; 31];
 
-        #[cfg(feature = "min-const-fn")]
         static POOL: Pool<u8> = Pool::new();
-
-        #[allow(non_snake_case)]
-        #[cfg(not(feature = "min-const-fn"))]
-        let POOL: Pool<u8> = Pool::new();
 
         // empty pool
         assert!(POOL.alloc().is_none());
@@ -519,12 +506,7 @@ mod tests {
 
         static mut MEMORY: [u8; 31] = [0; 31];
 
-        #[cfg(feature = "min-const-fn")]
         static POOL: Pool<X> = Pool::new();
-
-        #[allow(non_snake_case)]
-        #[cfg(not(feature = "min-const-fn"))]
-        let POOL: Pool<X> = Pool::new();
 
         POOL.grow(unsafe { &mut MEMORY });
 

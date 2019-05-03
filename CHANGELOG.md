@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.5.0] - 2019-06-xx
+
+### Removed
+
+- [breaking-change] The "smaller-atomics" feature has been removed. It is now
+  always enabled.
+
+- [breaking-change] The "min-const-fn" feature has been removed. It is now
+  always enabled.
+
+- [breaking-change] The MSRV has been bumped to Rust 1.36.0.
+
+- [breaking-change] The version of the `generic-array` dependency has been
+  bumped to v0.13.0.
+
 ## [v0.4.4] - 2019-05-02
 
 ### Added

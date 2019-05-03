@@ -1,10 +1,8 @@
-use core::borrow::Borrow;
-use core::{mem, ops, slice, fmt};
-use core::iter::FromIterator;
+use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
 
 use generic_array::ArrayLength;
 
-use Vec;
+use crate::Vec;
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
@@ -232,7 +230,7 @@ where
     ///     println!("key: {} val: {}", key, val);
     /// }
     /// ```
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
             iter: self.buffer.iter(),
         }
@@ -261,7 +259,7 @@ where
     ///     println!("key: {} val: {}", key, val);
     /// }
     /// ```
-    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut {
             iter: self.buffer.iter_mut(),
         }
@@ -370,7 +368,6 @@ where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
-    V: 'a,
 {
     type Output = V;
 
@@ -384,7 +381,6 @@ where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
-    V: 'a,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("no entry found for key")
@@ -420,7 +416,7 @@ where
     K: Eq + fmt::Debug,
     V: fmt::Debug,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
     }
 }
@@ -487,19 +483,11 @@ where
     }
 }
 
-pub struct Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, (K, V)>,
 }
 
-impl<'a, K, V> Iterator for Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -507,11 +495,7 @@ where
     }
 }
 
-impl<'a, K, V> Clone for Iter<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Clone for Iter<'a, K, V> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
@@ -519,19 +503,11 @@ where
     }
 }
 
-pub struct IterMut<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
 }
 
-impl<'a, K, V> Iterator for IterMut<'a, K, V>
-where
-    K: 'a,
-    V: 'a,
-{
+impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -562,11 +538,9 @@ where
 {
 }
 
-#[cfg(feature = "const-fn")] // Remove this if there are more tests
 #[cfg(test)]
 mod test {
-    use consts::*;
-    use LinearMap;
+    use crate::{consts::*, LinearMap};
 
     #[cfg(feature = "const-fn")]
     #[test]
