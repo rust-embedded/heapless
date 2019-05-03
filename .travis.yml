@@ -2,22 +2,10 @@ language: rust
 
 matrix:
   include:
-      # MSRV
-    - env: TARGET=x86_64-unknown-linux-gnu
-      rust: 1.30.0
-      if: branch != master
-
-    - env: TARGET=x86_64-unknown-linux-gnu
-      rust: stable
-      if: branch != master
-
-    - env: TARGET=thumbv6m-none-eabi
-      rust: beta
-      if: branch != master
-
-    - env: TARGET=thumbv7m-none-eabi
-      rust: stable
-      if: branch != master
+    # TODO MSRV
+    # - env: TARGET=x86_64-unknown-linux-gnu
+    #   rust: 1.36.0
+    #   if: branch != master
 
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly
