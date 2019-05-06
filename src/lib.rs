@@ -18,12 +18,11 @@
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
-//! // static mut XS: Vec<u8, U8> = Vec::new(); // requires feature `const-fn`
+//! // (because `const-fn` has not been fully stabilized you need to use the helper structs in
+//! // the `i` module, which must be wrapped in a tuple struct)
+//! static mut XS: Vec<u8, U8> = Vec(heapless::i::Vec::new());
 //!
-//! // work around
-//! static mut XS: Option<Vec<u8, U8>> = None;
-//! unsafe { XS = Some(Vec::new()) };
-//! let xs = unsafe { XS.as_mut().unwrap() };
+//! let xs = unsafe { &mut XS };
 //!
 //! xs.push(42);
 //! assert_eq!(xs.pop(), Some(42));
@@ -40,10 +39,10 @@
 //! (which is bad / unacceptable for hard real time applications).
 //!
 //! `heapless` data structures don't use a memory allocator which means no risk of an uncatchable
-//! Out Of Memory (OOM) condition (which defaults to abort) while performing operations
-//! on them. It's certainly possible to run out of capacity while growing `heapless` data
-//! structures, but the API lets you handle this possibility by returning a `Result` on operations
-//! that may exhaust the capacity of the data structure.
+//! Out Of Memory (OOM) condition while performing operations on them. It's certainly possible to
+//! run out of capacity while growing `heapless` data structures, but the API lets you handle this
+//! possibility by returning a `Result` on operations that may exhaust the capacity of the data
+//! structure.
 //!
 //! List of currently implemented data structures:
 //!
@@ -59,37 +58,13 @@
 //!
 //! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
 //! It *might* compile on older versions but that may change in any new patch release.
-//!
-//! # Cargo features
-//!
-//! In order to target the Rust stable toolchain, there are some opt-in Cargo features. The features
-//! need to be enabled in `Cargo.toml` in order to use them. Once the underlying features in Rust
-//! are stable, these feature gates may be activated by default.
-//!
-//! Example of `Cargo.toml`:
-//!
-//! ``` text
-//! # ..
-//! [dependencies]
-//! heapless = { version = "0.4.0", features = ["const-fn"] }
-//! # ..
-//! ```
-//!
-//! Currently the following features are available and not active by default:
-//!
-//! - `"const-fn"` -- Enables the nightly `const_fn` and `untagged_unions` features and makes most
-//! `new` methods `const`. This way they can be used to initialize static memory at compile time.
 
-#![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
 #![feature(maybe_uninit)]
-
-#[macro_use]
-mod const_fn;
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
@@ -113,6 +88,7 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
+pub mod i;
 #[cfg(not(armv6m))]
 pub mod pool;
 pub mod spsc;

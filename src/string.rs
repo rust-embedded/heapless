@@ -1,42 +1,50 @@
-use core::{fmt, fmt::Write, hash, ops, str, str::Utf8Error};
+use core::{fmt, fmt::Write, hash, mem, ops, str, str::Utf8Error};
 
 use generic_array::{
     typenum::{consts::*, IsGreaterOrEqual},
-    ArrayLength,
+    ArrayLength, GenericArray,
 };
 use hash32;
 
 use crate::Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
-pub struct String<N>
+pub struct String<N>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>>)
 where
-    N: ArrayLength<u8>,
-{
-    vec: Vec<u8, N>,
+    N: ArrayLength<u8>;
+
+impl<A> crate::i::String<A> {
+    /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
+    pub const fn new() -> Self {
+        Self {
+            vec: crate::i::Vec::new(),
+        }
+    }
 }
 
 impl<N> String<N>
 where
     N: ArrayLength<u8>,
 {
+    /// Constructs a new, empty `String` with a fixed capacity of `N`
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    /// use heapless::consts::*;
+    ///
+    /// // allocate the string on the stack
+    /// let mut s: String<U4> = String::new();
+    ///
+    /// // allocate the string in a static variable
+    /// static mut S: String<U4> = String(heapless::i::String::new());
+    /// ```
     #[inline]
-    const_fn! {
-        /// Constructs a new, empty `String` with a fixed capacity of `N`
-        ///
-        /// # Examples
-        ///
-        /// Basic usage:
-        ///
-        /// ```
-        /// use heapless::String;
-        /// use heapless::consts::*;
-        ///
-        /// let mut s: String<U4> = String::new();
-        /// ```
-        pub const fn new() -> Self {
-            String { vec: Vec::new() }
-        }
+    pub fn new() -> Self {
+        String(crate::i::String::new())
     }
 
     /// Converts a vector of bytes into a `String`.
@@ -85,7 +93,7 @@ where
         // validate input
         str::from_utf8(&*vec)?;
 
-        Ok(String { vec: vec })
+        Ok(unsafe { String::from_utf8_unchecked(vec) })
     }
 
     /// Converts a vector of bytes to a `String` without checking that the
@@ -93,8 +101,11 @@ where
     ///
     /// See the safe version, `from_utf8`, for more details.
     #[inline]
-    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> String<N> {
-        String { vec: vec }
+    pub unsafe fn from_utf8_unchecked(mut vec: Vec<u8, N>) -> String<N> {
+        // FIXME this may result in a memcpy at runtime
+        let vec_ = mem::replace(&mut vec.0, mem::uninitialized());
+        mem::forget(vec);
+        String(crate::i::String { vec: vec_ })
     }
 
     /// Converts a `String` into a byte vector.
@@ -117,7 +128,7 @@ where
     /// ```
     #[inline]
     pub fn into_bytes(self) -> Vec<u8, N> {
-        self.vec
+        Vec(self.0.vec)
     }
 
     /// Extracts a string slice containing the entire string.
@@ -138,7 +149,7 @@ where
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(&*self.vec) }
+        unsafe { str::from_utf8_unchecked(self.0.vec.as_slice()) }
     }
 
     /// Converts a `String` into a mutable string slice.
@@ -157,7 +168,7 @@ where
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
-        unsafe { str::from_utf8_unchecked_mut(&mut *self.vec) }
+        unsafe { str::from_utf8_unchecked_mut(self.0.vec.as_mut_slice()) }
     }
 
     /// Appends a given string slice onto the end of this `String`.
@@ -180,7 +191,7 @@ where
     /// ```
     #[inline]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
-        self.vec.extend_from_slice(string.as_bytes())
+        self.0.vec.extend_from_slice(string.as_bytes())
     }
 
     /// Returns the maximum number of elements the String can hold
@@ -198,7 +209,7 @@ where
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.capacity()
+        self.0.vec.capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
@@ -226,33 +237,12 @@ where
     #[inline]
     pub fn push(&mut self, c: char) -> Result<(), ()> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
+            1 => self.0.vec.push(c as u8).map_err(|_| {}),
             _ => self
+                .0
                 .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
         }
-    }
-
-    /// Returns a byte slice of this `String`'s contents.
-    ///
-    /// The inverse of this method is [`from_utf8`].
-    ///
-    /// [`from_utf8`]: #method.from_utf8
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    /// use heapless::consts::*;
-    ///
-    /// let s: String<U8> = String::from("hello");
-    ///
-    /// assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.vec
     }
 
     /// Shortens this `String` to the specified length.
@@ -287,7 +277,7 @@ where
     pub fn truncate(&mut self, new_len: usize) {
         if new_len <= self.len() {
             assert!(self.is_char_boundary(new_len));
-            self.vec.truncate(new_len)
+            self.0.vec.truncate(new_len)
         }
     }
 
@@ -318,34 +308,12 @@ where
 
         // pop bytes that correspond to `ch`
         for _ in 0..ch.len_utf8() {
-            self.vec.pop();
+            unsafe {
+                self.0.vec.pop_unchecked();
+            }
         }
 
         Some(ch)
-    }
-
-    ///
-    /// Returns `true` if this `String` has a length of zero.
-    ///
-    /// Returns `false` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    /// use heapless::consts::*;
-    ///
-    /// let mut v: String<U8> = String::new();
-    /// assert!(v.is_empty());
-    ///
-    /// v.push('a');
-    /// assert!(!v.is_empty());
-    /// ```
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     /// Truncates this `String`, removing all contents.
@@ -371,25 +339,7 @@ where
     /// ```
     #[inline]
     pub fn clear(&mut self) {
-        self.vec.clear()
-    }
-
-    /// Returns the length of this `String`, in bytes.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::String;
-    /// use heapless::consts::*;
-    ///
-    /// let a: String<U8> = String::from("foo");
-    ///
-    /// assert_eq!(a.len(), 3);
-    /// ```
-    pub fn len(&self) -> usize {
-        self.vec.len()
+        self.0.vec.clear()
     }
 }
 
@@ -431,9 +381,9 @@ where
     N: ArrayLength<u8>,
 {
     fn clone(&self) -> Self {
-        Self {
-            vec: self.vec.clone(),
-        }
+        Self(crate::i::String {
+            vec: self.0.vec.clone(),
+        })
     }
 }
 
@@ -442,8 +392,7 @@ where
     N: ArrayLength<u8>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let slice: &str = &**self;
-        fmt::Debug::fmt(slice, f)
+        <str as fmt::Debug>::fmt(self, f)
     }
 }
 
@@ -452,8 +401,7 @@ where
     N: ArrayLength<u8>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let slice: &str = &**self;
-        fmt::Display::fmt(slice, f)
+        <str as fmt::Display>::fmt(self, f)
     }
 }
 
@@ -463,7 +411,7 @@ where
 {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        (**self).hash(hasher)
+        <str as hash::Hash>::hash(self, hasher)
     }
 }
 
@@ -473,7 +421,7 @@ where
 {
     #[inline]
     fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
-        (**self).hash(hasher)
+        <str as hash32::Hash>::hash(self, hasher)
     }
 }
 
@@ -536,11 +484,11 @@ where
     N2: ArrayLength<u8>,
 {
     fn eq(&self, rhs: &String<N2>) -> bool {
-        PartialEq::eq(&**self, &**rhs)
+        str::eq(&**self, &**rhs)
     }
 
     fn ne(&self, rhs: &String<N2>) -> bool {
-        PartialEq::ne(&**self, &**rhs)
+        str::ne(&**self, &**rhs)
     }
 }
 
@@ -552,11 +500,11 @@ macro_rules! impl_eq {
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
-                PartialEq::eq(&self[..], &other[..])
+                str::eq(&self[..], &other[..])
             }
             #[inline]
             fn ne(&self, other: &$rhs) -> bool {
-                PartialEq::ne(&self[..], &other[..])
+                str::ne(&self[..], &other[..])
             }
         }
 
@@ -566,11 +514,11 @@ macro_rules! impl_eq {
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
-                PartialEq::eq(&self[..], &other[..])
+                str::eq(&self[..], &other[..])
             }
             #[inline]
             fn ne(&self, other: &$lhs) -> bool {
-                PartialEq::ne(&self[..], &other[..])
+                str::ne(&self[..], &other[..])
             }
         }
     };
@@ -610,10 +558,9 @@ impl_from_num!(u64, U20);
 mod tests {
     use crate::{consts::*, String, Vec};
 
-    #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _S: String<U8> = String::new();
+        static mut _S: String<U8> = String(crate::i::String::new());
     }
 
     #[test]

@@ -16,9 +16,7 @@ use core::{
     ptr, slice,
 };
 
-use generic_array::ArrayLength;
-
-use crate::Vec;
+use generic_array::{ArrayLength, GenericArray};
 
 /// Min-heap
 pub enum Min {}
@@ -43,6 +41,17 @@ unsafe impl Kind for Min {
 unsafe impl Kind for Max {
     fn ordering() -> Ordering {
         Ordering::Greater
+    }
+}
+
+impl<A, K> crate::i::BinaryHeap<A, K> {
+    /// `BinaryHeap` `const` constructor; wrap the returned value in
+    /// [`BinaryHeap`](../struct.BinaryHeap.html)
+    pub const fn new() -> Self {
+        Self {
+            _kind: PhantomData,
+            data: crate::i::Vec::new(),
+        }
     }
 }
 
@@ -93,15 +102,13 @@ unsafe impl Kind for Max {
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, N, KIND>
+pub struct BinaryHeap<T, N, KIND>(
+    #[doc(hidden)] pub crate::i::BinaryHeap<GenericArray<T, N>, KIND>,
+)
 where
     T: Ord,
     N: ArrayLength<T>,
-    KIND: Kind,
-{
-    _kind: PhantomData<KIND>,
-    data: Vec<T, N>,
-}
+    KIND: Kind;
 
 impl<T, N, K> BinaryHeap<T, N, K>
 where
@@ -110,29 +117,27 @@ where
     K: Kind,
 {
     /* Constructors */
-
-    const_fn! {
-        /// Creates an empty BinaryHeap as a $K-heap.
-        ///
-        /// ```
-        /// use heapless::binary_heap::{BinaryHeap, Max};
-        /// use heapless::consts::*;
-        ///
-        /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
-        /// heap.push(4).unwrap();
-        /// ```
-        pub const fn new() -> Self {
-            BinaryHeap {
-                _kind: PhantomData,
-                data: Vec::new(),
-            }
-        }
+    /// Creates an empty BinaryHeap as a $K-heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::consts::*;
+    ///
+    /// // allocate the binary heap on the stack
+    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// heap.push(4).unwrap();
+    ///
+    /// // allocate the binary heap in a static variable
+    /// static mut HEAP: BinaryHeap<i32, U8, Max> = BinaryHeap(heapless::i::BinaryHeap::new());
+    /// ```
+    pub fn new() -> Self {
+        BinaryHeap(crate::i::BinaryHeap::new())
     }
 
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.data.capacity()
+        self.0.data.capacity()
     }
 
     /// Drops all items from the binary heap.
@@ -152,7 +157,7 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.data.clear()
+        self.0.data.clear()
     }
 
     /// Returns the length of the binary heap.
@@ -168,7 +173,7 @@ where
     /// assert_eq!(heap.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.0.data.len
     }
 
     /// Checks if the binary heap is empty.
@@ -210,7 +215,7 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> slice::Iter<'_, T> {
-        self.data.iter()
+        self.0.data.as_slice().iter()
     }
 
     /// Returns a mutable iterator visiting all values in the underlying vector, in arbitrary order.
@@ -218,7 +223,7 @@ where
     /// **WARNING** Mutating the items in the binary heap can leave the heap in an inconsistent
     /// state.
     pub fn iter_mut(&mut self) -> slice::IterMut<'_, T> {
-        self.data.iter_mut()
+        self.0.data.as_mut_slice().iter_mut()
     }
 
     /// Returns the *top* (greatest if max-heap, smallest if min-heap) item in the binary heap, or
@@ -237,7 +242,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        self.data.get(0)
+        self.0.data.as_slice().get(0)
     }
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
@@ -266,10 +271,10 @@ where
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
     pub unsafe fn pop_unchecked(&mut self) -> T {
-        let mut item = self.data.pop_unchecked();
+        let mut item = self.0.data.pop_unchecked();
 
         if !self.is_empty() {
-            mem::swap(&mut item, &mut self.data[0]);
+            mem::swap(&mut item, self.0.data.as_mut_slice().get_unchecked_mut(0));
             self.sift_down_to_bottom(0);
         }
         item
@@ -290,7 +295,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.data.is_full() {
+        if self.0.data.is_full() {
             return Err(item);
         }
 
@@ -301,7 +306,7 @@ where
     /// Pushes an item onto the binary heap without first checking if it's full.
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
-        self.data.push_unchecked(item);
+        self.0.data.push_unchecked(item);
         self.sift_up(0, old_len);
     }
 
@@ -310,7 +315,7 @@ where
         let end = self.len();
         let start = pos;
         unsafe {
-            let mut hole = Hole::new(&mut self.data, pos);
+            let mut hole = Hole::new(self.0.data.as_mut_slice(), pos);
             let mut child = 2 * pos + 1;
             while child < end {
                 let right = child + 1;
@@ -329,7 +334,7 @@ where
     fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         unsafe {
             // Take out the value at `pos` and create a hole.
-            let mut hole = Hole::new(&mut self.data, pos);
+            let mut hole = Hole::new(self.0.data.as_mut_slice(), pos);
 
             while hole.pos() > start {
                 let parent = (hole.pos() - 1) / 2;
@@ -433,10 +438,21 @@ where
     T: Ord + Clone,
 {
     fn clone(&self) -> Self {
-        Self {
-            _kind: self._kind,
-            data: self.data.clone(),
-        }
+        BinaryHeap(crate::i::BinaryHeap {
+            _kind: self.0._kind,
+            data: self.0.data.clone(),
+        })
+    }
+}
+
+impl<T, N, K> Drop for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord,
+{
+    fn drop(&mut self) {
+        unsafe { ptr::drop_in_place(self.0.data.as_mut_slice()) }
     }
 }
 
@@ -474,10 +490,9 @@ mod tests {
         consts::*,
     };
 
-    #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap::new();
+        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap(crate::i::BinaryHeap::new());
     }
 
     #[test]
