@@ -5,14 +5,14 @@ use core::{
     cmp, fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
-    mem,
+    mem::{self, MaybeUninit},
     ops::{Deref, DerefMut},
     ptr,
 };
 
 use as_slice::{AsMutSlice, AsSlice};
 
-use super::{Init, Uninit};
+use super::{Init, Node, Uninit};
 
 /// Instantiates a pool as a global singleton
 #[cfg(any(armv7m, armv7r, test))]
@@ -64,6 +64,17 @@ pub trait Pool {
     /// This method returns the number of *new* blocks that can be allocated.
     fn grow(memory: &'static mut [u8]) -> usize {
         Self::ptr().grow(memory)
+    }
+
+    /// Increases the capacity of the pool
+    ///
+    /// Unlike [`Pool.grow`](trait.Pool.html#method.grow_exact) this method fully utilizes the given
+    /// memory block
+    fn grow_exact<A>(memory: &'static mut MaybeUninit<A>) -> usize
+    where
+        A: AsMutSlice<Element = Node<Self::Data>>,
+    {
+        Self::ptr().grow_exact(memory)
     }
 }
 
