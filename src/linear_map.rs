@@ -1,18 +1,25 @@
-use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
+use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, ptr, slice};
 
-use generic_array::ArrayLength;
+use generic_array::{ArrayLength, GenericArray};
 
 use crate::Vec;
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
-pub struct LinearMap<K, V, N>
+pub struct LinearMap<K, V, N>(#[doc(hidden)] pub crate::i::LinearMap<GenericArray<(K, V), N>>)
 where
     N: ArrayLength<(K, V)>,
-    K: Eq,
-{
-    buffer: Vec<(K, V), N>,
+    K: Eq;
+
+impl<A> crate::i::LinearMap<A> {
+    /// `LinearMap` `const` constructor; wrap the returned value in
+    /// [`LinearMap`](../struct.LinearMap.html)
+    pub const fn new() -> Self {
+        Self {
+            buffer: crate::i::Vec::new(),
+        }
+    }
 }
 
 impl<K, V, N> LinearMap<K, V, N>
@@ -20,20 +27,22 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq,
 {
-    const_fn! {
-        /// Creates an empty `LinearMap`
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use heapless::LinearMap;
-        /// use heapless::consts::*;
-        ///
-        /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
-        /// ```
-        pub const fn new() -> Self {
-            LinearMap { buffer: Vec::new() }
-        }
+    /// Creates an empty `LinearMap`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    /// use heapless::consts::*;
+    ///
+    /// // allocate the map on the stack
+    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
+    ///
+    /// // allocate the map in a static variable
+    /// static mut MAP: LinearMap<&str, isize, U8> = LinearMap(heapless::i::LinearMap::new());
+    /// ```
+    pub fn new() -> Self {
+        LinearMap(crate::i::LinearMap::new())
     }
 
     /// Returns the number of elements that the map can hold
@@ -46,11 +55,11 @@ where
     /// use heapless::LinearMap;
     /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
+    /// let map: LinearMap<&str, isize, U8> = LinearMap::new();
     /// assert_eq!(map.capacity(), 8);
     /// ```
-    pub fn capacity(&mut self) -> usize {
-        self.buffer.capacity()
+    pub fn capacity(&self) -> usize {
+        N::to_usize()
     }
 
     /// Clears the map, removing all key-value pairs
@@ -69,7 +78,7 @@ where
     /// assert!(map.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.buffer.clear()
+        self.0.buffer.clear()
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -159,7 +168,7 @@ where
     /// assert_eq!(a.len(), 1);
     /// ```
     pub fn len(&self) -> usize {
-        self.buffer.len()
+        self.0.buffer.len
     }
 
     /// Inserts a key-value pair into the map.
@@ -190,7 +199,7 @@ where
             return Ok(Some(value));
         }
 
-        self.buffer.push((key, value))?;
+        self.0.buffer.push((key, value))?;
         Ok(None)
     }
 
@@ -232,7 +241,7 @@ where
     /// ```
     pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
-            iter: self.buffer.iter(),
+            iter: self.0.buffer.as_slice().iter(),
         }
     }
 
@@ -261,7 +270,7 @@ where
     /// ```
     pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut {
-            iter: self.buffer.iter_mut(),
+            iter: self.0.buffer.as_mut_slice().iter_mut(),
         }
     }
 
@@ -313,7 +322,7 @@ where
             .find(|&(_, k)| k.borrow() == key)
             .map(|(idx, _)| idx);
 
-        idx.map(|idx| self.buffer.swap_remove(idx).1)
+        idx.map(|idx| self.0.buffer.swap_remove(idx).1)
     }
 
     /// An iterator visiting all values in arbitrary order
@@ -404,9 +413,9 @@ where
     V: Clone,
 {
     fn clone(&self) -> Self {
-        Self {
-            buffer: self.buffer.clone(),
-        }
+        Self(crate::i::LinearMap {
+            buffer: self.0.buffer.clone(),
+        })
     }
 }
 
@@ -431,7 +440,7 @@ where
         I: IntoIterator<Item = (K, V)>,
     {
         let mut out = Self::new();
-        out.buffer.extend(iter);
+        out.0.buffer.extend(iter);
         out
     }
 }
@@ -463,9 +472,13 @@ where
     type Item = (K, V);
     type IntoIter = IntoIter<K, V, N>;
 
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_iter(mut self) -> Self::IntoIter {
+        // FIXME this may result in a memcpy at runtime
+        let lm = mem::replace(&mut self.0, unsafe { mem::uninitialized() });
+        mem::forget(self);
+
         Self::IntoIter {
-            inner: self.buffer.into_iter(),
+            inner: crate::Vec(lm.buffer).into_iter(),
         }
     }
 }
@@ -500,6 +513,16 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
         Self {
             iter: self.iter.clone(),
         }
+    }
+}
+
+impl<K, V, N> Drop for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    fn drop(&mut self) {
+        unsafe { ptr::drop_in_place(self.0.buffer.as_mut_slice()) }
     }
 }
 
@@ -542,10 +565,9 @@ where
 mod test {
     use crate::{consts::*, LinearMap};
 
-    #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, U8> = LinearMap::new();
+        static mut _L: LinearMap<i32, i32, U8> = LinearMap(crate::i::LinearMap::new());
     }
 
     #[test]

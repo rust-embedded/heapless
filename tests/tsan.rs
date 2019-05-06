@@ -1,22 +1,18 @@
+#![deny(rust_2018_compatibility)]
+#![deny(rust_2018_idioms)]
 #![deny(warnings)]
-
-extern crate generic_array;
-extern crate heapless;
-extern crate scoped_threadpool;
 
 use std::thread;
 
 use generic_array::typenum::Unsigned;
-use heapless::consts::*;
-use heapless::spsc;
+use heapless::{consts::*, spsc};
 use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
-    static mut RB: Option<spsc::Queue<i32, U4>> = None;
-    unsafe { RB = Some(spsc::Queue::new()) };
+    static mut RB: spsc::Queue<i32, U4> = spsc::Queue(heapless::i::Queue::new());
 
-    let rb = unsafe { RB.as_mut().unwrap() };
+    let rb = unsafe { &mut RB };
 
     rb.enqueue(0).unwrap();
 
@@ -35,10 +31,9 @@ fn once() {
 
 #[test]
 fn twice() {
-    static mut RB: Option<spsc::Queue<i32, U4>> = None;
-    unsafe { RB = Some(spsc::Queue::new()) };
+    static mut RB: spsc::Queue<i32, U4> = spsc::Queue(heapless::i::Queue::new());
 
-    let rb = unsafe { RB.as_mut().unwrap() };
+    let rb = unsafe { &mut RB };
 
     rb.enqueue(0).unwrap();
     rb.enqueue(1).unwrap();

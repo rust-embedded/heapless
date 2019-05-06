@@ -3,6 +3,134 @@ use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
+impl<A> crate::i::Vec<A> {
+    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+    pub const fn new() -> Self {
+        Self {
+            buffer: MaybeUninit::uninit(),
+            len: 0,
+        }
+    }
+}
+
+impl<T, N> crate::i::Vec<GenericArray<T, N>>
+where
+    N: ArrayLength<T>,
+{
+    pub(crate) fn as_slice(&self) -> &[T] {
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &buffer[..self.len]
+        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+    }
+
+    pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &mut buffer[..len]
+        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
+    }
+
+    pub(crate) fn capacity(&self) -> usize {
+        N::to_usize()
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.truncate(0);
+    }
+
+    pub(crate) fn clone(&self) -> Self
+    where
+        T: Clone,
+    {
+        let mut new = Self::new();
+        new.extend_from_slice(self.as_slice()).unwrap();
+        new
+    }
+
+    pub(crate) fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        for elem in iter {
+            self.push(elem).ok().unwrap()
+        }
+    }
+
+    pub(crate) fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    where
+        T: Clone,
+    {
+        if self.len + other.len() > self.capacity() {
+            // won't fit in the `Vec`; don't modify anything and return an error
+            Err(())
+        } else {
+            for elem in other {
+                unsafe {
+                    self.push_unchecked(elem.clone());
+                }
+            }
+            Ok(())
+        }
+    }
+
+    pub(crate) fn is_full(&self) -> bool {
+        self.len == self.capacity()
+    }
+
+    pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
+        debug_assert!(!self.as_slice().is_empty());
+
+        self.len -= 1;
+        (self.buffer.as_ptr() as *const T).add(self.len).read()
+    }
+
+    pub(crate) fn push(&mut self, item: T) -> Result<(), T> {
+        if self.len < self.capacity() {
+            unsafe { self.push_unchecked(item) }
+            Ok(())
+        } else {
+            Err(item)
+        }
+    }
+
+    pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
+        // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
+        // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
+        (self.buffer.as_mut_ptr() as *mut T)
+            .add(self.len)
+            .write(item);
+
+        self.len += 1;
+    }
+
+    unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
+        let length = self.len;
+        debug_assert!(index < length);
+        ptr::swap(
+            self.as_mut_slice().get_unchecked_mut(index),
+            self.as_mut_slice().get_unchecked_mut(length - 1),
+        );
+        self.pop_unchecked()
+    }
+
+    pub(crate) fn swap_remove(&mut self, index: usize) -> T {
+        assert!(index < self.len);
+        unsafe { self.swap_remove_unchecked(index) }
+    }
+
+    pub(crate) fn truncate(&mut self, len: usize) {
+        unsafe {
+            // drop any extra elements
+            while len < self.len {
+                // decrement len before the drop_in_place(), so a panic on Drop
+                // doesn't re-drop the just-failed value.
+                self.len -= 1;
+                let len = self.len;
+                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len));
+            }
+        }
+    }
+}
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
 /// # Examples
@@ -32,13 +160,9 @@ use hash32;
 /// }
 /// assert_eq!(vec, [7, 1, 2, 3]);
 /// ```
-pub struct Vec<T, N>
+pub struct Vec<T, N>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>>)
 where
-    N: ArrayLength<T>,
-{
-    buffer: MaybeUninit<GenericArray<T, N>>,
-    len: usize,
-}
+    N: ArrayLength<T>;
 
 impl<T, N> Clone for Vec<T, N>
 where
@@ -46,9 +170,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut new = Self::new();
-        new.extend_from_slice(self.as_ref()).unwrap();
-        new
+        Vec(self.0.clone())
     }
 }
 
@@ -57,25 +179,33 @@ where
     N: ArrayLength<T>,
 {
     /* Constructors */
-    const_fn!(
-        /// Constructs a new, empty vector with a fixed capacity of `N`
-        pub const fn new() -> Self {
-            Vec {
-                buffer: MaybeUninit::uninit(),
-                len: 0,
-            }
-        }
-    );
+    /// Constructs a new, empty vector with a fixed capacity of `N`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// // allocate the vector on the stack
+    /// let mut x: Vec<u8, U16> = Vec::new();
+    ///
+    /// // allocate the vector in a static variable
+    /// static mut X: Vec<u8, U16> = Vec(heapless::i::Vec::new());
+    /// ```
+    pub fn new() -> Self {
+        Vec(crate::i::Vec::new())
+    }
 
     /* Public API */
     /// Returns the maximum number of elements the vector can hold
     pub fn capacity(&self) -> usize {
-        N::to_usize()
+        self.0.capacity()
     }
 
     /// Clears the vector, removing all values.
     pub fn clear(&mut self) {
-        self.truncate(0);
+        self.0.clear()
     }
 
     /// Clones and appends all elements in a slice to the `Vec`.
@@ -98,64 +228,38 @@ where
     where
         T: Clone,
     {
-        if self.len() + other.len() > self.capacity() {
-            // won't fit in the `Vec`; don't modify anything and return an error
-            Err(())
-        } else {
-            for elem in other {
-                self.push(elem.clone()).ok();
-            }
-            Ok(())
-        }
+        self.0.extend_from_slice(other)
     }
 
     /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        if self.len != 0 {
-            Some(unsafe { self.pop_unchecked() })
+        if self.0.len != 0 {
+            Some(unsafe { self.0.pop_unchecked() })
         } else {
             None
         }
-    }
-
-    pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
-        debug_assert!(!self.is_empty());
-
-        self.len -= 1;
-        (self.buffer.as_ptr() as *const T).add(self.len).read()
     }
 
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
-            unsafe { self.push_unchecked(item) }
-            Ok(())
-        } else {
-            Err(item)
-        }
+        self.0.push(item)
     }
 
     pub(crate) unsafe fn push_unchecked(&mut self, item: T) {
-        // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
-        // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-        (self.buffer.as_mut_ptr() as *mut T)
-            .add(self.len)
-            .write(item);
-
-        self.len += 1;
+        self.0.push_unchecked(item)
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
     pub fn truncate(&mut self, len: usize) {
         unsafe {
             // drop any extra elements
-            while len < self.len {
+            while len < self.len() {
                 // decrement len before the drop_in_place(), so a panic on Drop
                 // doesn't re-drop the just-failed value.
-                self.len -= 1;
-                let len = self.len;
+                self.0.len -= 1;
+                let len = self.len();
                 ptr::drop_in_place(self.get_unchecked_mut(len));
             }
         }
@@ -176,8 +280,8 @@ where
             return Err(());
         }
 
-        if new_len > self.len {
-            while self.len < new_len {
+        if new_len > self.len() {
+            while self.len() < new_len {
                 self.push(value.clone()).ok();
             }
         } else {
@@ -230,23 +334,15 @@ where
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
-        assert!(index < self.len());
-        unsafe { self.swap_remove_unchecked(index) }
+        self.0.swap_remove(index)
     }
 
     pub(crate) unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
-        let length = self.len();
-        debug_assert!(index < length);
-        ptr::swap(
-            self.get_unchecked_mut(index),
-            self.get_unchecked_mut(length - 1),
-        );
-        self.pop_unchecked()
+        self.0.swap_remove_unchecked(index)
     }
 
-    /* Private API */
     pub(crate) fn is_full(&self) -> bool {
-        self.capacity() == self.len()
+        self.0.is_full()
     }
 }
 
@@ -265,8 +361,7 @@ where
     N: ArrayLength<T>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let slice: &[T] = &**self;
-        slice.fmt(f)
+        <[T] as fmt::Debug>::fmt(self, f)
     }
 }
 
@@ -287,9 +382,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        for elem in iter {
-            self.push(elem).ok().unwrap()
-        }
+        self.0.extend(iter)
     }
 }
 
@@ -312,7 +405,7 @@ where
     N: ArrayLength<T>,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        hash::Hash::hash(&**self, state)
+        <[T] as hash::Hash>::hash(self, state)
     }
 }
 
@@ -322,7 +415,7 @@ where
     N: ArrayLength<T>,
 {
     fn hash<H: hash32::Hasher>(&self, state: &mut H) {
-        hash32::Hash::hash(&**self, state)
+        <[T] as hash32::Hash>::hash(self, state)
     }
 }
 
@@ -387,7 +480,11 @@ where
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe { (self.vec.buffer.as_ptr() as *const T).add(self.next).read() };
+            let item = unsafe {
+                (self.vec.0.buffer.as_ptr() as *const T)
+                    .add(self.next)
+                    .read()
+            };
             self.next += 1;
             Some(item)
         } else {
@@ -418,7 +515,7 @@ where
             // Drop all the elements that have not been moved out of vec
             ptr::drop_in_place(&mut self.vec[self.next..]);
             // Prevent dropping of other elements
-            self.vec.len = 0;
+            self.vec.0.len = 0;
         }
     }
 }
@@ -442,7 +539,7 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<B, N2>) -> bool {
-        self[..] == other[..]
+        <[A]>::eq(self, &**other)
     }
 }
 
@@ -454,7 +551,7 @@ macro_rules! eq {
             N: ArrayLength<A>,
         {
             fn eq(&self, other: &$Rhs) -> bool {
-                self[..] == other[..]
+                <[A]>::eq(self, &other[..])
             }
         }
     };
@@ -492,9 +589,7 @@ where
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+        self.0.as_slice()
     }
 }
 
@@ -503,11 +598,7 @@ where
     N: ArrayLength<T>,
 {
     fn deref_mut(&mut self) -> &mut [T] {
-        let len = self.len();
-
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..len]
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, len) }
+        self.0.as_mut_slice()
     }
 }
 
@@ -555,10 +646,9 @@ where
 mod tests {
     use crate::{consts::*, Vec};
 
-    #[cfg(feature = "const-fn")]
     #[test]
     fn static_new() {
-        static mut _V: Vec<i32, U4> = Vec::new();
+        static mut _V: Vec<i32, U4> = Vec(crate::i::Vec::new());
     }
 
     macro_rules! droppable {
