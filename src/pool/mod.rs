@@ -154,17 +154,18 @@
 //!
 //! [1]: https://static.docs.arm.com/ddi0403/eb/DDI0403E_B_armv7m_arm.pdf
 
+#[cfg(not(armv6m))]
+use core::{any::TypeId, mem, sync::atomic::Ordering};
 use core::{
     cell::UnsafeCell,
     cmp, fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
+    mem::MaybeUninit,
     ops::{Deref, DerefMut},
     ptr::{self, NonNull},
     sync::atomic::AtomicPtr,
 };
-#[cfg(not(armv6m))]
-use core::{any::TypeId, mem, sync::atomic::Ordering};
 
 use as_slice::{AsMutSlice, AsSlice};
 
@@ -268,6 +269,22 @@ impl<T> Pool<T> {
         n
     }
 
+    /// Increases the capacity of the pool
+    ///
+    /// Unlike [`Pool.grow`](struct.Pool.html#method.grow) this method fully utilizes the given
+    /// memory block
+    pub fn grow_exact<A>(&self, memory: &'static mut MaybeUninit<A>) -> usize
+    where
+        A: AsMutSlice<Element = Node<T>>,
+    {
+        let nodes = unsafe { (*memory.as_mut_ptr()).as_mut_slice() };
+        let cap = nodes.len();
+        for p in nodes {
+            self.push(NonNull::from(p))
+        }
+        cap
+    }
+
     fn pop(&self) -> Option<NonNull<Node<T>>> {
         // NOTE `Ordering`s come from crossbeam's (v0.6.0) `TreiberStack`
 
@@ -314,7 +331,9 @@ impl<T> Pool<T> {
     }
 }
 
-struct Node<T> {
+/// Unfortunate implementation detail required to use the
+/// [`Pool.grow_exact`](struct.Pool.html#method.grow_exact) method
+pub struct Node<T> {
     data: UnsafeCell<T>,
     next: *mut Node<T>,
 }
@@ -445,11 +464,11 @@ where
 #[cfg(test)]
 mod tests {
     use core::{
-        mem,
+        mem::{self, MaybeUninit},
         sync::atomic::{AtomicUsize, Ordering},
     };
 
-    use super::Pool;
+    use super::{Node, Pool};
 
     #[test]
     fn grow() {
@@ -464,6 +483,23 @@ mod tests {
         for _ in 0..7 {
             assert!(POOL.alloc().is_some());
         }
+    }
+
+    #[test]
+    fn grow_exact() {
+        const SZ: usize = 8;
+        static mut MEMORY: MaybeUninit<[Node<[u8; 128]>; SZ]> = MaybeUninit::uninit();
+
+        static POOL: Pool<[u8; 128]> = Pool::new();
+
+        unsafe {
+            POOL.grow_exact(&mut MEMORY);
+        }
+
+        for _ in 0..SZ {
+            assert!(POOL.alloc().is_some());
+        }
+        assert!(POOL.alloc().is_none());
     }
 
     #[test]
