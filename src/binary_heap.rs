@@ -9,7 +9,6 @@
 // n)` in-place heapsort.
 
 use core::{
-    cmp::Ordering,
     fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop},
@@ -18,31 +17,13 @@ use core::{
 
 use generic_array::{ArrayLength, GenericArray};
 
+use crate::sealed::binary_heap::Kind;
+
 /// Min-heap
 pub enum Min {}
 
 /// Max-heap
 pub enum Max {}
-
-/// The binary heap kind: min-heap or max-heap
-///
-/// Do *not* implement this trait yourself!
-pub unsafe trait Kind {
-    #[doc(hidden)]
-    fn ordering() -> Ordering;
-}
-
-unsafe impl Kind for Min {
-    fn ordering() -> Ordering {
-        Ordering::Less
-    }
-}
-
-unsafe impl Kind for Max {
-    fn ordering() -> Ordering {
-        Ordering::Greater
-    }
-}
 
 impl<A, K> crate::i::BinaryHeap<A, K> {
     /// `BinaryHeap` `const` constructor; wrap the returned value in

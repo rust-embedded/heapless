@@ -1,5 +1,7 @@
-use core::sync::atomic::{self, AtomicU16, AtomicU8, AtomicUsize, Ordering};
+/// Sealed traits and implementations for `spsc`
+pub mod spsc {
 
+use core::sync::atomic::{self, AtomicU16, AtomicU8, AtomicUsize, Ordering};
 use crate::spsc::{MultiCore, SingleCore};
 
 pub unsafe trait XCore {
@@ -149,4 +151,32 @@ unsafe impl Uxx for usize {
             (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed); // write
         }
     }
+}
+
+}
+
+/// Sealed traits and implementations for `binary_heap`
+pub mod binary_heap {
+
+use core::cmp::Ordering;
+use crate::binary_heap::{Min, Max};
+
+/// The binary heap kind: min-heap or max-heap
+pub unsafe trait Kind {
+    #[doc(hidden)]
+    fn ordering() -> Ordering;
+}
+
+unsafe impl Kind for Min {
+    fn ordering() -> Ordering {
+        Ordering::Less
+    }
+}
+
+unsafe impl Kind for Max {
+    fn ordering() -> Ordering {
+        Ordering::Greater
+    }
+}
+
 }

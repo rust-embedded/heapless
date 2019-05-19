@@ -5,7 +5,7 @@ use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 use crate::{
-    binary_heap,
+    sealed::binary_heap::Kind as BinaryHeapKind,
     indexmap::{Bucket, Pos},
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
@@ -16,7 +16,7 @@ impl<'de, T, N, KIND> Deserialize<'de> for BinaryHeap<T, N, KIND>
 where
     T: Ord + Deserialize<'de>,
     N: ArrayLength<T>,
-    KIND: binary_heap::Kind,
+    KIND: BinaryHeapKind,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -28,7 +28,7 @@ where
         where
             T: Ord + Deserialize<'de>,
             N: ArrayLength<T>,
-            KIND: binary_heap::Kind,
+            KIND: BinaryHeapKind,
         {
             type Value = BinaryHeap<T, N, KIND>;
 

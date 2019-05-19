@@ -5,7 +5,7 @@ use core::{cell::UnsafeCell, fmt, hash, marker::PhantomData, mem::MaybeUninit, p
 use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
-use crate::sealed;
+use crate::sealed::spsc as sealed;
 pub use split::{Consumer, Producer};
 
 mod split;
