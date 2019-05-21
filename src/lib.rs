@@ -1,5 +1,8 @@
 //! `static` friendly data structures that don't require dynamic memory allocation
 //!
+//! **HEADS UP** this is a pre-release. There may be more breaking changes before the final release
+//! of version v0.5.0.
+//!
 //! The core principle behind `heapless` is that its data structures are backed by a *static* memory
 //! allocation. For example, you can think of `heapless::Vec` as an alternative version of
 //! `std::Vec` with fixed capacity and that can't be re-allocated on the fly (e.g. via `push`).

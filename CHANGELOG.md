@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-## [v0.5.0] - 2019-06-xx
+## [v0.5.0] - 2019-07-04 (ETA)
+
+### Added
+
+- `Pool` now implements the `Sync` trait when targeting ARMv7-R.
+
+- Most data structures can now be constructed in "const context" (e.g. `static
+  [mut]` variables) using a newtype in `heapless::i`.
+
+- `Pool` has gained a `grow_exact` method to more efficiently use statically
+  allocated memory.
+
+- The `pool!` macro now accepts attributes.
+
+### Changed
+
+- [breaking-change] `binary_heap::Kind` is now a sealed trait.
 
 ### Removed
 
@@ -234,7 +250,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.0...HEAD
+[v0.5.0]: https://github.com/japaric/heapless/compare/v0.4.4...v0.5.0
 [v0.4.4]: https://github.com/japaric/heapless/compare/v0.4.3...v0.4.4
 [v0.4.3]: https://github.com/japaric/heapless/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/japaric/heapless/compare/v0.4.1...v0.4.2
