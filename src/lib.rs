@@ -64,7 +64,6 @@
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
-#![feature(maybe_uninit)]
 
 pub use binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
