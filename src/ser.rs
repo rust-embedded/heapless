@@ -3,7 +3,7 @@ use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind,
+    sealed::binary_heap::Kind as BinaryHeapKind,
     indexmap::{Bucket, Pos},
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };

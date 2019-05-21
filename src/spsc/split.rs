@@ -3,7 +3,7 @@ use core::{marker::PhantomData, ptr::NonNull};
 use generic_array::ArrayLength;
 
 use crate::{
-    sealed,
+    sealed::spsc as sealed,
     spsc::{MultiCore, Queue},
 };
 
