@@ -56,8 +56,8 @@
 //! on the target architecture (see section on ['Soundness'](#soundness) for more information). For
 //! this reason, `Pool` only implements `Sync` when compiling for ARMv7-M.
 //!
-//! Also note that ARMv6-M lacks the primitives for CAS loops so this module does *not* exist for
-//! `thumbv6m-none-eabi`.
+//! Also note that ARMv6-M architecture lacks the primitives for CAS loops so this module does *not*
+//! exist for `thumbv6m-none-eabi`.
 //!
 //! # Soundness
 //!

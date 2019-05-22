@@ -53,9 +53,11 @@
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
-//! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
+//! - [`Pool`](pool/struct.Pool.html) -- lock-free memory pool
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
+//! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
+//! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
@@ -91,6 +93,8 @@ mod ser;
 
 pub mod binary_heap;
 pub mod i;
+#[cfg(not(armv6m))]
+pub mod mpmc;
 #[cfg(not(armv6m))]
 pub mod pool;
 pub mod spsc;

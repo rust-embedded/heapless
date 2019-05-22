@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - The `pool!` macro now accepts attributes.
 
+- `mpmc::Q*` a family of fixed capacity multiple-producer multiple-consumer
+  lock-free queues.
+
 ### Changed
 
 - [breaking-change] `binary_heap::Kind` is now a sealed trait.
