@@ -54,9 +54,9 @@
 //!
 //! N| `Q8::<u8>::enqueue().ok()` (`z`) | `Q8::<u8>::dequeue()` (`z`) |
 //! -|----------------------------------|-----------------------------|
-//! 0|31                                |31                           |
-//! 1|47                                |47                           |
-//! 2|63                                |63                           |
+//! 0|34                                |35                           |
+//! 1|52                                |53                           |
+//! 2|69                                |71                           |
 //!
 //! - `N` denotes the number of *interruptions*. On Cortex-M, an interruption consists of an
 //!   interrupt handler preempting the would-be atomic section of the `enqueue` / `dequeue`

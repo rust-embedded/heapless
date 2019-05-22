@@ -1,4 +1,84 @@
-//! Single producer single consumer queue
+//! Fixed capacity Single Producer Single Consumer (SPSC) queue
+//!
+//! # Examples
+//!
+//! - `Queue` can be used as a plain queue
+//!
+//! ```
+//! use heapless::spsc::Queue;
+//! use heapless::consts::*;
+//!
+//! let mut rb: Queue<u8, U4> = Queue::new();
+//!
+//! assert!(rb.enqueue(0).is_ok());
+//! assert!(rb.enqueue(1).is_ok());
+//! assert!(rb.enqueue(2).is_ok());
+//! assert!(rb.enqueue(3).is_ok());
+//! assert!(rb.enqueue(4).is_err()); // full
+//!
+//! assert_eq!(rb.dequeue(), Some(0));
+//! ```
+//!
+//! - `Queue` can be `split` and then be used in Single Producer Single Consumer mode
+//!
+//! ```
+//! use heapless::spsc::Queue;
+//! use heapless::consts::*;
+//!
+//! static mut Q: Queue<Event, U4> = Queue(heapless::i::Queue::new());
+//!
+//! enum Event { A, B }
+//!
+//! fn main() {
+//!     // NOTE(unsafe) beware of aliasing the `consumer` end point
+//!     let mut consumer = unsafe { Q.split().1 };
+//!
+//!     loop {
+//!         // `dequeue` is a lockless operation
+//!         match consumer.dequeue() {
+//!             Some(Event::A) => { /* .. */ },
+//!             Some(Event::B) => { /* .. */ },
+//!             None => { /* sleep */},
+//!         }
+//! #       break
+//!     }
+//! }
+//!
+//! // this is a different execution context that can preempt `main`
+//! fn interrupt_handler() {
+//!     // NOTE(unsafe) beware of aliasing the `producer` end point
+//!     let mut producer = unsafe { Q.split().0 };
+//! #   let condition = true;
+//!
+//!     // ..
+//!
+//!     if condition {
+//!         producer.enqueue(Event::A).ok().unwrap();
+//!     } else {
+//!         producer.enqueue(Event::B).ok().unwrap();
+//!     }
+//!
+//!     // ..
+//! }
+//! ```
+//!
+//! # Benchmarks
+//!
+//! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles
+//!
+//!                        |`3`|
+//! -----------------------|---|
+//! `Consumer<u8>::dequeue`|15 |
+//! `Queue<u8>::dequeue`   |12 |
+//! `Producer<u8>::enqueue`|16 |
+//! `Queue<u8>::enqueue`   |14 |
+//!
+//! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
+//! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
+//! `memcpy(T)` in their successful path.
+//! - The optimization level is indicated in the first row.
+//! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
+//! and `Ok` is returned by `enqueue`).
 
 use core::{cell::UnsafeCell, fmt, hash, marker::PhantomData, mem::MaybeUninit, ptr};
 
@@ -74,66 +154,6 @@ where
 /// following constructors: `u8_sc`, `u16_sc`, `usize_sc` and `new_sc`. This variant is `unsafe` to
 /// create because the programmer must make sure that the queue's consumer and producer endpoints
 /// (if split) are kept on a single core for their entire lifetime.
-///
-/// # Examples
-///
-/// ```
-/// use heapless::spsc::Queue;
-/// use heapless::consts::*;
-///
-/// let mut rb: Queue<u8, U4> = Queue::new();
-///
-/// assert!(rb.enqueue(0).is_ok());
-/// assert!(rb.enqueue(1).is_ok());
-/// assert!(rb.enqueue(2).is_ok());
-/// assert!(rb.enqueue(3).is_ok());
-/// assert!(rb.enqueue(4).is_err()); // full
-///
-/// assert_eq!(rb.dequeue(), Some(0));
-/// ```
-///
-/// ### Single producer single consumer mode
-///
-/// ```
-/// use heapless::spsc::Queue;
-/// use heapless::consts::*;
-///
-/// static mut RB: Queue<Event, U4> = Queue(heapless::i::Queue::new());
-///
-/// enum Event { A, B }
-///
-/// fn main() {
-///     // NOTE(unsafe) beware of aliasing the `consumer` end point
-///     let mut consumer = unsafe { RB.split().1 };
-///
-///     loop {
-///         // `dequeue` is a lockless operation
-///         match consumer.dequeue() {
-///             Some(Event::A) => { /* .. */ },
-///             Some(Event::B) => { /* .. */ },
-///             None => { /* sleep */},
-///         }
-/// #       break
-///     }
-/// }
-///
-/// // this is a different execution context that can preempt `main`
-/// fn interrupt_handler() {
-///     // NOTE(unsafe) beware of aliasing the `producer` end point
-///     let mut producer = unsafe { RB.split().0 };
-/// #   let condition = true;
-///
-///     // ..
-///
-///     if condition {
-///         producer.enqueue(Event::A).ok().unwrap();
-///     } else {
-///         producer.enqueue(Event::B).ok().unwrap();
-///     }
-///
-///     // ..
-/// }
-/// ```
 pub struct Queue<T, N, U = usize, C = MultiCore>(
     #[doc(hidden)] pub crate::i::Queue<GenericArray<T, N>, U, C>,
 )
