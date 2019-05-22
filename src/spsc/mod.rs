@@ -38,7 +38,7 @@
 //!         match consumer.dequeue() {
 //!             Some(Event::A) => { /* .. */ },
 //!             Some(Event::B) => { /* .. */ },
-//!             None => { /* sleep */},
+//!             None => { /* sleep */ },
 //!         }
 //! #       break
 //!     }
@@ -66,12 +66,12 @@
 //!
 //! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles
 //!
-//!                        |`3`|
+//! `-C opt-level`         |`3`|
 //! -----------------------|---|
-//! `Consumer<u8>::dequeue`|15 |
-//! `Queue<u8>::dequeue`   |12 |
-//! `Producer<u8>::enqueue`|16 |
-//! `Queue<u8>::enqueue`   |14 |
+//! `Consumer<u8>::dequeue`| 15|
+//! `Queue<u8>::dequeue`   | 12|
+//! `Producer<u8>::enqueue`| 16|
+//! `Queue<u8>::enqueue`   | 14|
 //!
 //! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
 //! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
