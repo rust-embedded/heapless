@@ -2,10 +2,10 @@
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
-use std::thread;
+use std::{sync::mpsc, thread};
 
 use generic_array::typenum::Unsigned;
-use heapless::{consts::*, spsc};
+use heapless::{consts::*, mpmc::Q64, spsc};
 use scoped_threadpool::Pool;
 
 #[test]
@@ -116,6 +116,49 @@ fn contention() {
     }
 
     assert!(rb.is_empty());
+}
+
+#[test]
+fn mpmc_contention() {
+    const N: u32 = 64;
+
+    static Q: Q64<u32> = Q64::new();
+
+    let (s, r) = mpsc::channel();
+    Pool::new(2).scoped(|scope| {
+        let s1 = s.clone();
+        scope.execute(move || {
+            let mut sum: u32 = 0;
+
+            for i in 0..(16 * N) {
+                sum = sum.wrapping_add(i);
+                while let Err(_) = Q.enqueue(i) {}
+            }
+
+            s1.send(sum).unwrap();
+        });
+
+        let s2 = s.clone();
+        scope.execute(move || {
+            let mut sum: u32 = 0;
+
+            for _ in 0..(16 * N) {
+                loop {
+                    match Q.dequeue() {
+                        Some(v) => {
+                            sum = sum.wrapping_add(v);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            s2.send(sum).unwrap();
+        });
+    });
+
+    assert_eq!(r.recv().unwrap(), r.recv().unwrap());
 }
 
 #[test]
