@@ -2,7 +2,7 @@
 
 use std::{env, error::Error};
 
-fn main() -> Result<(), Box<Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let target = env::var("TARGET")?;
 
     if target.starts_with("thumbv6m-") {
