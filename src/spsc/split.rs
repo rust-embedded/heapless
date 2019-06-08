@@ -84,6 +84,32 @@ macro_rules! impl_ {
                 return head != tail;
             }
 
+            /// Returns the item in the front of the queue without dequeuing, or `None` if the queue is empty.
+            ///
+            /// # Examples
+            /// ```
+            /// use heapless::spsc::Queue;
+            /// use heapless::consts::*;
+            ///
+            /// let mut queue: Queue<u8, U235, _> = Queue::u8();
+            /// let (mut producer, mut consumer) = queue.split();
+            /// assert_eq!(None, consumer.peek());
+            /// producer.enqueue(1);
+            /// assert_eq!(Some(&1), consumer.peek());
+            /// assert_eq!(Some(1), consumer.dequeue());
+            /// assert_eq!(None, consumer.peek());
+            /// ```
+            pub fn peek(&self) -> Option<&T> {
+                let head = unsafe { self.rb.as_ref().0.head.load_relaxed() };
+                let tail = unsafe { self.rb.as_ref().0.tail.load_acquire() };
+
+                if head != tail {
+                    Some(unsafe { self._peek(head) })
+                } else {
+                    None
+                }
+            }
+
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
                 let head = unsafe { self.rb.as_ref().0.head.load_relaxed() };
@@ -105,6 +131,15 @@ macro_rules! impl_ {
                 let head = self.rb.as_ref().0.head.load_relaxed();
                 debug_assert_ne!(head, self.rb.as_ref().0.tail.load_acquire());
                 self._dequeue(head) // ▲
+            }
+
+            unsafe fn _peek(&self, head: $uxx) -> &T {
+                let rb = self.rb.as_ref();
+
+                let cap = rb.capacity();
+
+                let item = (rb.0.buffer.as_ptr() as *const T).add(usize::from(head % cap));
+                &*item
             }
 
             unsafe fn _dequeue(&mut self, head: $uxx) -> T {

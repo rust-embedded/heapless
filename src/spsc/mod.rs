@@ -117,6 +117,10 @@ where
     U: sealed::Uxx,
     C: sealed::XCore,
 {
+    fn get(&self) -> &U {
+        unsafe { &*self.v.get() }
+    }
+
     fn get_mut(&mut self) -> &mut U {
         unsafe { &mut *self.v.get() }
     }
@@ -341,6 +345,40 @@ macro_rules! impl_ {
             N: ArrayLength<T>,
             C: sealed::XCore,
         {
+            /// Returns a reference to the item in the front of the queue without dequeuing, or
+            /// `None` if the queue is empty.
+            ///
+            /// # Examples
+            /// ```
+            /// use heapless::spsc::Queue;
+            /// use heapless::consts::*;
+            ///
+            /// let mut queue: Queue<u8, U235, _> = Queue::u8();
+            /// let (mut producer, mut consumer) = queue.split();
+            /// assert_eq!(None, consumer.peek());
+            /// producer.enqueue(1);
+            /// assert_eq!(Some(&1), consumer.peek());
+            /// assert_eq!(Some(1), consumer.dequeue());
+            /// assert_eq!(None, consumer.peek());
+            /// ```
+            pub fn peek(&self) -> Option<&T> {
+                let cap = self.capacity();
+
+                let head = self.0.head.get();
+                let tail = self.0.tail.get();
+
+                let p = self.0.buffer.as_ptr();
+
+                if *head != *tail {
+                    let item = unsafe {
+                      &*(p as *const T).add(usize::from(*head % cap))
+                    };
+                    Some(item)
+                } else {
+                    None
+                }
+            }
+
             /// Returns the item in the front of the queue, or `None` if the queue is empty
             pub fn dequeue(&mut self) -> Option<T> {
                 let cap = self.capacity();
