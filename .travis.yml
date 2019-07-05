@@ -2,11 +2,17 @@ language: rust
 
 matrix:
   include:
-    # TODO MSRV
-    # - env: TARGET=x86_64-unknown-linux-gnu
-    #   rust: 1.36.0
-    #   if: branch != master
 
+    # MSRV: Minimum Supported Rust Version
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: 1.36.0
+      if: branch != master
+
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: stable
+      if: branch != master
+
+    # build docs on master
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly
 
