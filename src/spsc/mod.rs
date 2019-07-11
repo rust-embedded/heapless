@@ -400,12 +400,7 @@ macro_rules! impl_ {
             pub fn len(&self) -> $uxx {
                 let head = self.0.head.load_relaxed();
                 let tail = self.0.tail.load_relaxed();
-
-                if head > tail {
-                    tail.wrapping_sub(head)
-                } else {
-                    tail - head
-                }
+                tail.wrapping_sub(head)
             }
         }
 
