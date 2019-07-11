@@ -1,4 +1,10 @@
-use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, ptr, slice};
+use core::{
+    borrow::Borrow,
+    fmt,
+    iter::FromIterator,
+    mem::{self, MaybeUninit},
+    ops, ptr, slice,
+};
 
 use generic_array::{ArrayLength, GenericArray};
 
@@ -474,7 +480,7 @@ where
 
     fn into_iter(mut self) -> Self::IntoIter {
         // FIXME this may result in a memcpy at runtime
-        let lm = mem::replace(&mut self.0, unsafe { mem::uninitialized() });
+        let lm = mem::replace(&mut self.0, unsafe { MaybeUninit::uninit().assume_init() });
         mem::forget(self);
 
         Self::IntoIter {

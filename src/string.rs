@@ -1,4 +1,11 @@
-use core::{fmt, fmt::Write, hash, mem, ops, str, str::Utf8Error};
+use core::{
+    fmt,
+    fmt::Write,
+    hash,
+    mem::{self, MaybeUninit},
+    ops, str,
+    str::Utf8Error,
+};
 
 use generic_array::{
     typenum::{consts::*, IsGreaterOrEqual},
@@ -103,7 +110,7 @@ where
     #[inline]
     pub unsafe fn from_utf8_unchecked(mut vec: Vec<u8, N>) -> String<N> {
         // FIXME this may result in a memcpy at runtime
-        let vec_ = mem::replace(&mut vec.0, mem::uninitialized());
+        let vec_ = mem::replace(&mut vec.0, MaybeUninit::uninit().assume_init());
         mem::forget(vec);
         String(crate::i::String { vec: vec_ })
     }
