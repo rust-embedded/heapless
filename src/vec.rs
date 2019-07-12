@@ -63,11 +63,14 @@ where
             // won't fit in the `Vec`; don't modify anything and return an error
             Err(())
         } else {
-            for elem in other {
-                unsafe {
-                    self.push_unchecked(elem.clone());
+            unsafe {
+                let mut ptr = (self.buffer.as_mut_ptr() as *mut T).add(self.len);
+                for elem in other {
+                    ptr.write(elem.clone());
+                    ptr = ptr.add(1);
                 }
             }
+            self.len += other.len();
             Ok(())
         }
     }
