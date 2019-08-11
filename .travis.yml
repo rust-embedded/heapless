@@ -28,6 +28,10 @@ matrix:
       rust: nightly
       if: branch != master
 
+    - env: TARGET=thumbv8m.base-none-eabi
+      rust: nightly
+      if: branch != master
+
     - env: TARGET=thumbv8m.main-none-eabi
       rust: nightly
       if: branch != master
