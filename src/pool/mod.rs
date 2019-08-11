@@ -183,7 +183,7 @@ pub struct Pool<T> {
 // NOTE: Here we lie about `Pool` implementing `Sync` on x86_64. This is not true but it lets us
 // test the `pool!` and `singleton::Pool` abstractions. We just have to be careful not to use the
 // pool in a multi-threaded context
-#[cfg(any(armv7m, armv7r, test))]
+#[cfg(any(armv7m, armv7r, armv8m, test))]
 unsafe impl<T> Sync for Pool<T> {}
 
 unsafe impl<T> Send for Pool<T> {}
