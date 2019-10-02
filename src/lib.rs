@@ -90,9 +90,9 @@ mod ser;
 
 pub mod binary_heap;
 pub mod i;
-#[cfg(not(armv6m))]
+#[cfg(not(any(armv6m, feature = "no_cas")))]
 pub mod mpmc;
-#[cfg(not(armv6m))]
+#[cfg(not(any(armv6m, feature = "no_cas")))]
 pub mod pool;
 pub mod spsc;
 

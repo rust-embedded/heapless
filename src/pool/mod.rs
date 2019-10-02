@@ -154,7 +154,7 @@
 //!
 //! [1]: https://static.docs.arm.com/ddi0403/eb/DDI0403E_B_armv7m_arm.pdf
 
-#[cfg(not(armv6m))]
+#[cfg(not(any(armv6m, feature = "no_cas")))]
 use core::{any::TypeId, mem, sync::atomic::Ordering};
 use core::{
     cell::UnsafeCell,
