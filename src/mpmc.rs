@@ -494,7 +494,11 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
         } else if dif < 0 {
             return None;
         } else {
-            pos = dequeue_pos.load(Ordering::Relaxed);
+            if pos == 255 && dif == 255{
+                return None;
+            } else {
+                pos = dequeue_pos.load(Ordering::Relaxed);
+            }
         }
     }
 
