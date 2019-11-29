@@ -22,6 +22,9 @@ unsafe impl XCore for MultiCore {
 
 pub unsafe trait Uxx: Into<usize> + Send {
     #[doc(hidden)]
+    fn saturate(x: usize) -> Self;
+
+    #[doc(hidden)]
     fn truncate(x: usize) -> Self;
 
     #[doc(hidden)]
@@ -39,13 +42,17 @@ pub unsafe trait Uxx: Into<usize> + Send {
 }
 
 unsafe impl Uxx for u8 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u8::MAX;
+    fn saturate(x: usize) -> Self {
+        let max = Self::max_value() as usize;
         if x >= usize::from(max) {
-            max
+            max as Self
         } else {
-            x as u8
+            x as Self
         }
+    }
+
+    fn truncate(x: usize) -> Self {
+        x as Self
     }
 
     unsafe fn load_acquire<C>(x: *const Self) -> Self
@@ -79,13 +86,17 @@ unsafe impl Uxx for u8 {
 }
 
 unsafe impl Uxx for u16 {
-    fn truncate(x: usize) -> Self {
-        let max = ::core::u16::MAX;
+    fn saturate(x: usize) -> Self {
+        let max = Self::max_value() as usize;
         if x >= usize::from(max) {
-            max
+            max as Self
         } else {
-            x as u16
+            x as Self
         }
+    }
+
+    fn truncate(x: usize) -> Self {
+        x as Self
     }
 
     unsafe fn load_acquire<C>(x: *const Self) -> Self
@@ -119,6 +130,10 @@ unsafe impl Uxx for u16 {
 }
 
 unsafe impl Uxx for usize {
+    fn saturate(x: usize) -> Self {
+        x
+    }
+
     fn truncate(x: usize) -> Self {
         x
     }
