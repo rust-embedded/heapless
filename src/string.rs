@@ -96,7 +96,7 @@ where
     /// assert!(String::from_utf8(v).is_err());
     /// ```
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, N>) -> Result<(String<N>), Utf8Error> {
+    pub fn from_utf8(vec: Vec<u8, N>) -> Result<String<N>, Utf8Error> {
         // validate input
         str::from_utf8(&*vec)?;
 
