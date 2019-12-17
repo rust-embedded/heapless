@@ -9,7 +9,9 @@ main() {
         cargo test --target $TARGET --release --features 'serde'
 
         if [ $MSRV = 1 ]; then
-            cargo test --features __trybuild --test cfail
+            cd cfail
+            cargo run
+            cd ..
         fi
 
 
@@ -52,7 +54,7 @@ if [ -z ${TARGET-} ]; then
 fi
 
 if [ -z ${MSRV-} ]; then
-    MSRV=1
+    MSRV=0
 fi
 
 if [ $TRAVIS_BRANCH != master ]; then
