@@ -596,6 +596,28 @@ macro_rules! iterator {
                 }
             }
         }
+
+        impl<'a, T, N, U, C> DoubleEndedIterator for $name<'a, T, N, U, C>
+        where
+            N: ArrayLength<T>,
+            U: sealed::Uxx,
+            C: sealed::XCore,
+        {
+            fn next_back(&mut self) -> Option<$elem> {
+                if self.index < self.len {
+                    let head = self.rb.0.head.load_relaxed().into();
+
+                    let cap = self.rb.capacity().into();
+                    let ptr = self.rb.0.buffer.$asptr() as $ptr;
+                    // self.len > 0, since it's larger than self.index > 0
+                    let i = (head + self.len - 1) % cap;
+                    self.len -= 1;
+                    Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
+                } else {
+                    None
+                }
+            }
+        }
     };
 }
 
@@ -694,6 +716,23 @@ mod tests {
     }
 
     #[test]
+    fn iter_double_ended() {
+        let mut rb: Queue<i32, U4> = Queue::new();
+
+        rb.enqueue(0).unwrap();
+        rb.enqueue(1).unwrap();
+        rb.enqueue(2).unwrap();
+
+        let mut items = rb.iter();
+
+        assert_eq!(items.next(), Some(&0));
+        assert_eq!(items.next_back(), Some(&2));
+        assert_eq!(items.next(), Some(&1));
+        assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
+    }
+  
+    #[test]
     fn iter_overflow() {
         let mut rb: Queue<i32, U4, u8> = Queue::u8();
 
@@ -723,6 +762,23 @@ mod tests {
         assert_eq!(items.next(), None);
     }
 
+    #[test]
+    fn iter_mut_double_ended() {
+        let mut rb: Queue<i32, U4> = Queue::new();
+
+        rb.enqueue(0).unwrap();
+        rb.enqueue(1).unwrap();
+        rb.enqueue(2).unwrap();
+
+        let mut items = rb.iter_mut();
+
+        assert_eq!(items.next(), Some(&mut 0));
+        assert_eq!(items.next_back(), Some(&mut 2));
+        assert_eq!(items.next(), Some(&mut 1));
+        assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
+    }
+  
     #[test]
     fn sanity() {
         let mut rb: Queue<i32, U4> = Queue::new();
