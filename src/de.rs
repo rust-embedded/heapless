@@ -182,7 +182,7 @@ where
                 Ok(values)
             }
         }
-        deserializer.deserialize_seq(ValueVisitor(PhantomData))
+        deserializer.deserialize_map(ValueVisitor(PhantomData))
     }
 }
 
@@ -225,7 +225,7 @@ where
                 Ok(values)
             }
         }
-        deserializer.deserialize_seq(ValueVisitor(PhantomData))
+        deserializer.deserialize_map(ValueVisitor(PhantomData))
     }
 }
 
