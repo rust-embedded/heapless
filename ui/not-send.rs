@@ -19,5 +19,5 @@ fn main() {
     is_send::<Consumer<NotSend, consts::U4>>();
     is_send::<Producer<NotSend, consts::U4>>();
     is_send::<Queue<NotSend, consts::U4>>();
-    is_send::<Vec<NotSend, consts::U4>>();
+    is_send::<heapless::Vec<NotSend, consts::U4>>();
 }
