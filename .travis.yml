@@ -4,7 +4,7 @@ matrix:
   include:
 
     # MSRV: Minimum Supported Rust Version
-    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-gnu MSRV=1
       rust: 1.36.0
       if: branch != master
 
