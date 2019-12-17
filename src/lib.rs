@@ -90,10 +90,13 @@ mod ser;
 
 pub mod binary_heap;
 pub mod i;
-#[cfg(not(any(armv6m, feature = "no_cas")))]
+#[cfg(feature = "cas")]
 pub mod mpmc;
-#[cfg(not(any(armv6m, feature = "no_cas")))]
+#[cfg(feature = "cas")]
 pub mod pool;
 pub mod spsc;
+
+#[cfg(all(armv6m, feature = "cas"))]
+core::compile_error!("The 'cas' feature may not be used with `armv6m` targets.");
 
 mod sealed;
