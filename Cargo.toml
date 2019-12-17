@@ -23,9 +23,9 @@ version = "0.5.1"
 name = "cfail"
 required-features = ["__trybuild"]
 
-[dev-dependencies]
+[target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
-trybuild = "1.0.18"
+trybuild = "1"
 
 [dependencies]
 as-slice = "0.1.0"
