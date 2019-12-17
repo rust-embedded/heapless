@@ -19,8 +19,13 @@ name = "heapless"
 repository = "https://github.com/japaric/heapless"
 version = "0.5.1"
 
+[[test]]
+name = "cfail"
+required-features = ["__trybuild"]
+
 [dev-dependencies]
 scoped_threadpool = "0.1.8"
+trybuild = "1.0.18"
 
 [dependencies]
 as-slice = "0.1.0"
@@ -31,3 +36,7 @@ hash32 = "0.1.0"
 version = "1"
 optional = true
 default-features = false
+
+[features]
+# only for tests
+__trybuild = []
