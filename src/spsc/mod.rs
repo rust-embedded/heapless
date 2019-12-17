@@ -174,7 +174,7 @@ where
 {
     /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
-        U::truncate(N::to_usize())
+        U::saturate(N::to_usize())
     }
 
     /// Returns `true` if the queue has a length of 0
@@ -205,7 +205,7 @@ where
         let head = self.0.head.load_relaxed().into();
         let tail = self.0.tail.load_relaxed().into();
 
-        tail.wrapping_sub(head)
+        U::truncate(tail.wrapping_sub(head)).into()
     }
 }
 
@@ -731,6 +731,20 @@ mod tests {
         assert_eq!(items.next(), None);
         assert_eq!(items.next_back(), None);
     }
+  
+    #[test]
+    fn iter_overflow() {
+        let mut rb: Queue<i32, U4, u8> = Queue::u8();
+
+        rb.enqueue(0).unwrap();
+        for _ in 0..300 {
+            let mut items = rb.iter_mut();
+            assert_eq!(items.next(), Some(&mut 0));
+            assert_eq!(items.next(), None);
+            rb.dequeue().unwrap();
+            rb.enqueue(0).unwrap();
+        }
+    }
 
     #[test]
     fn iter_mut() {
@@ -764,6 +778,7 @@ mod tests {
         assert_eq!(items.next(), None);
         assert_eq!(items.next_back(), None);
     }
+  
     #[test]
     fn sanity() {
         let mut rb: Queue<i32, U4> = Queue::new();
