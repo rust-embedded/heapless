@@ -76,7 +76,6 @@ pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;
 
-mod cfail;
 mod indexmap;
 mod indexset;
 mod linear_map;

@@ -1,0 +1,83 @@
+error[E0277]: `*const ()` cannot be sent between threads safely
+  --> $DIR/not-send.rs:19:5
+   |
+19 |     is_send::<Consumer<NotSend, consts::U4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |
+   = help: within `std::marker::PhantomData<*const ()>`, the trait `std::marker::Send` is not implemented for `*const ()`
+   = note: required because it appears within the type `std::marker::PhantomData<*const ()>`
+   = note: required because of the requirements on the impl of `std::marker::Send` for `heapless::spsc::split::Consumer<'_, std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+note: required by `is_send`
+  --> $DIR/not-send.rs:12:1
+   |
+12 | / fn is_send<T>()
+13 | | where
+14 | |     T: Send,
+15 | | {
+16 | | }
+   | |_^
+
+error[E0277]: `*const ()` cannot be sent between threads safely
+  --> $DIR/not-send.rs:20:5
+   |
+20 |     is_send::<Producer<NotSend, consts::U4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |
+   = help: within `std::marker::PhantomData<*const ()>`, the trait `std::marker::Send` is not implemented for `*const ()`
+   = note: required because it appears within the type `std::marker::PhantomData<*const ()>`
+   = note: required because of the requirements on the impl of `std::marker::Send` for `heapless::spsc::split::Producer<'_, std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+note: required by `is_send`
+  --> $DIR/not-send.rs:12:1
+   |
+12 | / fn is_send<T>()
+13 | | where
+14 | |     T: Send,
+15 | | {
+16 | | }
+   | |_^
+
+error[E0277]: `*const ()` cannot be sent between threads safely
+  --> $DIR/not-send.rs:21:5
+   |
+21 |     is_send::<Queue<NotSend, consts::U4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |
+   = help: within `std::marker::PhantomData<*const ()>`, the trait `std::marker::Send` is not implemented for `*const ()`
+   = note: required because it appears within the type `std::marker::PhantomData<*const ()>`
+   = note: required because of the requirements on the impl of `std::marker::Send` for `generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+   = note: required because it appears within the type `std::mem::ManuallyDrop<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `std::mem::MaybeUninit<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `heapless::i::Queue<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `heapless::spsc::Queue<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+note: required by `is_send`
+  --> $DIR/not-send.rs:12:1
+   |
+12 | / fn is_send<T>()
+13 | | where
+14 | |     T: Send,
+15 | | {
+16 | | }
+   | |_^
+
+error[E0277]: `*const ()` cannot be sent between threads safely
+  --> $DIR/not-send.rs:22:5
+   |
+22 |     is_send::<heapless::Vec<NotSend, consts::U4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |
+   = help: within `std::marker::PhantomData<*const ()>`, the trait `std::marker::Send` is not implemented for `*const ()`
+   = note: required because it appears within the type `std::marker::PhantomData<*const ()>`
+   = note: required because of the requirements on the impl of `std::marker::Send` for `generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+   = note: required because it appears within the type `std::mem::ManuallyDrop<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `std::mem::MaybeUninit<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `heapless::i::Vec<generic_array::GenericArray<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>>`
+   = note: required because it appears within the type `heapless::vec::Vec<std::marker::PhantomData<*const ()>, typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B0>>`
+note: required by `is_send`
+  --> $DIR/not-send.rs:12:1
+   |
+12 | / fn is_send<T>()
+13 | | where
+14 | |     T: Send,
+15 | | {
+16 | | }
+   | |_^

@@ -23,7 +23,7 @@ version = "0.5.1"
 default = ["cas"]
 cas = []
 
-[dev-dependencies]
+[target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
 
 [dependencies]
@@ -35,3 +35,7 @@ hash32 = "0.1.0"
 version = "1"
 optional = true
 default-features = false
+
+[features]
+# only for tests
+__trybuild = []

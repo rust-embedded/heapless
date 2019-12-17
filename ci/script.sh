@@ -8,6 +8,13 @@ main() {
         cargo test --target $TARGET --features 'serde'
         cargo test --target $TARGET --release --features 'serde'
 
+        if [ $MSRV = 1 ]; then
+            cd cfail
+            cargo run
+            cd ..
+        fi
+
+
         if [ $TRAVIS_RUST_VERSION = nightly ]; then
             export RUSTFLAGS="-Z sanitizer=thread"
             export RUST_TEST_THREADS=1
@@ -44,6 +51,10 @@ fi
 
 if [ -z ${TARGET-} ]; then
     TARGET=$(rustc -Vv | grep host | cut -d ' ' -f2)
+fi
+
+if [ -z ${MSRV-} ]; then
+    MSRV=0
 fi
 
 if [ $TRAVIS_BRANCH != master ]; then

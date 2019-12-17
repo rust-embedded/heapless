@@ -174,7 +174,7 @@ where
 {
     /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
-        U::truncate(N::to_usize())
+        U::saturate(N::to_usize())
     }
 
     /// Returns `true` if the queue has a length of 0
@@ -205,7 +205,7 @@ where
         let head = self.0.head.load_relaxed().into();
         let tail = self.0.tail.load_relaxed().into();
 
-        tail.wrapping_sub(head)
+        U::truncate(tail.wrapping_sub(head)).into()
     }
 }
 
@@ -596,6 +596,28 @@ macro_rules! iterator {
                 }
             }
         }
+
+        impl<'a, T, N, U, C> DoubleEndedIterator for $name<'a, T, N, U, C>
+        where
+            N: ArrayLength<T>,
+            U: sealed::Uxx,
+            C: sealed::XCore,
+        {
+            fn next_back(&mut self) -> Option<$elem> {
+                if self.index < self.len {
+                    let head = self.rb.0.head.load_relaxed().into();
+
+                    let cap = self.rb.capacity().into();
+                    let ptr = self.rb.0.buffer.$asptr() as $ptr;
+                    // self.len > 0, since it's larger than self.index > 0
+                    let i = (head + self.len - 1) % cap;
+                    self.len -= 1;
+                    Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
+                } else {
+                    None
+                }
+            }
+        }
     };
 }
 
@@ -694,6 +716,37 @@ mod tests {
     }
 
     #[test]
+    fn iter_double_ended() {
+        let mut rb: Queue<i32, U4> = Queue::new();
+
+        rb.enqueue(0).unwrap();
+        rb.enqueue(1).unwrap();
+        rb.enqueue(2).unwrap();
+
+        let mut items = rb.iter();
+
+        assert_eq!(items.next(), Some(&0));
+        assert_eq!(items.next_back(), Some(&2));
+        assert_eq!(items.next(), Some(&1));
+        assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
+    }
+  
+    #[test]
+    fn iter_overflow() {
+        let mut rb: Queue<i32, U4, u8> = Queue::u8();
+
+        rb.enqueue(0).unwrap();
+        for _ in 0..300 {
+            let mut items = rb.iter_mut();
+            assert_eq!(items.next(), Some(&mut 0));
+            assert_eq!(items.next(), None);
+            rb.dequeue().unwrap();
+            rb.enqueue(0).unwrap();
+        }
+    }
+
+    #[test]
     fn iter_mut() {
         let mut rb: Queue<i32, U4> = Queue::new();
 
@@ -709,6 +762,23 @@ mod tests {
         assert_eq!(items.next(), None);
     }
 
+    #[test]
+    fn iter_mut_double_ended() {
+        let mut rb: Queue<i32, U4> = Queue::new();
+
+        rb.enqueue(0).unwrap();
+        rb.enqueue(1).unwrap();
+        rb.enqueue(2).unwrap();
+
+        let mut items = rb.iter_mut();
+
+        assert_eq!(items.next(), Some(&mut 0));
+        assert_eq!(items.next_back(), Some(&mut 2));
+        assert_eq!(items.next(), Some(&mut 1));
+        assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
+    }
+  
     #[test]
     fn sanity() {
         let mut rb: Queue<i32, U4> = Queue::new();
