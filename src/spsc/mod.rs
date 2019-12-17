@@ -729,6 +729,7 @@ mod tests {
         assert_eq!(items.next_back(), Some(&2));
         assert_eq!(items.next(), Some(&1));
         assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
     }
 
     #[test]
@@ -761,6 +762,7 @@ mod tests {
         assert_eq!(items.next_back(), Some(&mut 2));
         assert_eq!(items.next(), Some(&mut 1));
         assert_eq!(items.next(), None);
+        assert_eq!(items.next_back(), None);
     }
     #[test]
     fn sanity() {
