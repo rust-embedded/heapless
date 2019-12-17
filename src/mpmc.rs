@@ -1,5 +1,7 @@
 //! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue
 //!
+//! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
+//!
 //! # Example
 //!
 //! This queue can be constructed in "const context". Placing it in a `static` variable lets *all*

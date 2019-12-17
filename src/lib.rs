@@ -89,10 +89,11 @@ mod ser;
 
 pub mod binary_heap;
 pub mod i;
-#[cfg(all(not(armv6m), feature = "cas"))]
+#[cfg(all(has_cas, feature = "cas"))]
 pub mod mpmc;
-#[cfg(all(not(armv6m), feature = "cas"))]
+#[cfg(all(has_cas, feature = "cas"))]
 pub mod pool;
+#[cfg(has_atomics)]
 pub mod spsc;
 
 mod sealed;
