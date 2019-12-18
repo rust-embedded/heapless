@@ -12,6 +12,11 @@ matrix:
       rust: stable
       if: branch != master
 
+    # does not support atomic loads
+    - env: TARGET=riscv32imc-unknown-none-elf
+      rust: stable
+      if: branch != master
+
     # build docs on master
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly

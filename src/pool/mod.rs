@@ -1,5 +1,7 @@
 //! A heap-less, interrupt-safe, lock-free memory pool (\*)
 //!
+//! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
+//!
 //! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv7-M devices
 //!
 //! # Examples

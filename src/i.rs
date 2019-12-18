@@ -2,6 +2,7 @@
 
 use core::{marker::PhantomData, mem::MaybeUninit};
 
+#[cfg(has_atomics)]
 use crate::spsc::{Atomic, MultiCore};
 
 /// `const-fn` version of [`BinaryHeap`](../binary_heap/struct.BinaryHeap.html)
@@ -16,6 +17,7 @@ pub struct LinearMap<A> {
 }
 
 /// `const-fn` version of [`spsc::Queue`](../spsc/struct.Queue.html)
+#[cfg(has_atomics)]
 pub struct Queue<A, U = usize, C = MultiCore> {
     // this is from where we dequeue items
     pub(crate) head: Atomic<U, C>,

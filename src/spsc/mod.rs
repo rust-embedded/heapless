@@ -1,5 +1,8 @@
 //! Fixed capacity Single Producer Single Consumer (SPSC) queue
 //!
+//! NOTE: This module is not available on targets that do *not* support atomic loads, e.g. RISC-V
+//! cores w/o the A (Atomic) extension
+//!
 //! # Examples
 //!
 //! - `Queue` can be used as a plain queue
@@ -731,7 +734,7 @@ mod tests {
         assert_eq!(items.next(), None);
         assert_eq!(items.next_back(), None);
     }
-  
+
     #[test]
     fn iter_overflow() {
         let mut rb: Queue<i32, U4, u8> = Queue::u8();
@@ -778,7 +781,7 @@ mod tests {
         assert_eq!(items.next(), None);
         assert_eq!(items.next_back(), None);
     }
-  
+
     #[test]
     fn sanity() {
         let mut rb: Queue<i32, U4> = Queue::new();
