@@ -788,5 +788,4 @@ mod tests {
         assert_eq!(0, s.len());
         assert_eq!(8, s.capacity());
     }
-
 }

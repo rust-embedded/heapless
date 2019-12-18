@@ -3,8 +3,8 @@ use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 use crate::{
-    sealed::binary_heap::Kind as BinaryHeapKind,
     indexmap::{Bucket, Pos},
+    sealed::binary_heap::Kind as BinaryHeapKind,
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 
