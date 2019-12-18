@@ -373,9 +373,7 @@ macro_rules! impl_ {
                 let p = self.0.buffer.as_ptr();
 
                 if *head != *tail {
-                    let item = unsafe {
-                      &*(p as *const T).add(usize::from(*head % cap))
-                    };
+                    let item = unsafe { &*(p as *const T).add(usize::from(*head % cap)) };
                     Some(item)
                 } else {
                     None
@@ -921,5 +919,4 @@ mod tests {
         };
         assert_eq!(hash1, hash2);
     }
-
 }

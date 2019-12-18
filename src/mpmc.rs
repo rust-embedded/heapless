@@ -496,7 +496,7 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
         } else if dif < 0 {
             return None;
         } else {
-            if pos == 255 && dif == 255{
+            if pos == 255 && dif == 255 {
                 return None;
             } else {
                 pos = dequeue_pos.load(Ordering::Relaxed);
@@ -568,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn blocking(){
+    fn blocking() {
         let q = Q2::new();
         for _ in 0..255 {
             q.enqueue(0).unwrap();

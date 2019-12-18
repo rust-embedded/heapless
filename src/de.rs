@@ -5,8 +5,8 @@ use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 use crate::{
-    sealed::binary_heap::Kind as BinaryHeapKind,
     indexmap::{Bucket, Pos},
+    sealed::binary_heap::Kind as BinaryHeapKind,
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 

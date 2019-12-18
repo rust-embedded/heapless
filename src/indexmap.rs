@@ -979,5 +979,4 @@ mod tests {
             assert!(a == b);
         }
     }
-
 }
