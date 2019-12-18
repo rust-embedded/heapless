@@ -3,7 +3,7 @@
 use heapless::{
     consts,
     spsc::{Consumer, Producer, Queue},
-    Vec,
+    Vec, HistoryBuffer,
 };
 
 #[test]
@@ -22,4 +22,5 @@ fn send() {
     is_send::<Producer<IsSend, consts::U4>>();
     is_send::<Queue<IsSend, consts::U4>>();
     is_send::<Vec<IsSend, consts::U4>>();
+    is_send::<HistoryBuffer<IsSend, consts::U4>>();
 }
