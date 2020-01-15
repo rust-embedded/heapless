@@ -17,6 +17,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=armv8m_base");
     } else if target.starts_with("thumbv8m.main") {
         println!("cargo:rustc-cfg=armv8m_main");
+    } else if target.starts_with("armv7-") {
+        println!("cargo:rustc-cfg=armv7a");
     }
 
     // built-in targets with no atomic / CAS support as of nightly-2019-12-17
