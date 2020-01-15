@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.5.2] - 2020-01-15
+
+### Fixed
+
+- Fixed incorrect overflow behavior in computation of capacities
+- Fixed edge case in `mpmc::Queue::dqueue` that led to an infinite loop
+- IndexMap and LinerMap are now deserialized as maps, rather than as sequences
+- Fixed compilation of this crates on built-in targets that don't have CAS instructions
+
+### Changed
+
+- `spsc::Queue` iterators now implement the double ended iterator trait
+
+### Added
+
+- opt-out `cas` feature to disable parts of the API that use CAS instructions.
+Useful if using a custom (i.e. not built-in) rustc target that does not have CAS
+instructions.
+
+- singleton `Pool` support on ARMv7-A devices
+
 ## [v0.5.1] - 2019-08-29
 
 ### Added
@@ -261,7 +282,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.2...HEAD
+[v0.5.2]: https://github.com/japaric/heapless/compare/v0.5.1...v0.5.2
 [v0.5.1]: https://github.com/japaric/heapless/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/japaric/heapless/compare/v0.4.4...v0.5.0
 [v0.4.4]: https://github.com/japaric/heapless/compare/v0.4.3...v0.4.4
