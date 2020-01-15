@@ -2,7 +2,8 @@
 //!
 //! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
 //!
-//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv7-M devices
+//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv7-{A,R,M} & ARMv8-M
+//! devices
 //!
 //! # Examples
 //!
@@ -56,7 +57,7 @@
 //! The only counter measure against the ABA problem that this implementation currently takes is
 //! relying on LL/SC (Link-local / Store-conditional) instructions being used to implement CAS loops
 //! on the target architecture (see section on ['Soundness'](#soundness) for more information). For
-//! this reason, `Pool` only implements `Sync` when compiling for ARMv7-M.
+//! this reason, `Pool` only implements `Sync` when compiling for some ARM cores.
 //!
 //! Also note that ARMv6-M architecture lacks the primitives for CAS loops so this module does *not*
 //! exist for `thumbv6m-none-eabi`.
@@ -113,8 +114,9 @@
 //! no longer is a valid free node. As a result the stack, and thus the allocator, is in a invalid
 //! state.
 //!
-//! However, not all is lost because Cortex-M devices use LL/SC (Link-local / Store-conditional)
-//! operations to implement CAS loops. Let's look at the actual disassembly of `pop`.
+//! However, not all is lost because ARM devices use LL/SC (Link-local / Store-conditional)
+//! operations to implement CAS loops. Let's look at the actual disassembly of `pop` for the ARM
+//! Cortex-M.
 //!
 //! ``` text
 //! 08000130 <<heapless::pool::Pool<T>>::pop>:
@@ -143,6 +145,10 @@
 //! systems, preemption is required to run into the ABA problem and on Cortex-M devices preemption
 //! always involves taking an exception. Thus the underlying LL/SC operations prevent the ABA
 //! problem on Cortex-M.
+//!
+//! In the case of multi-core systems if any other core successfully does a STREX op on the head
+//! while the current core is somewhere between LDREX and STREX then the current core will fail its
+//! STREX operation.
 //!
 //! # References
 //!
@@ -184,7 +190,7 @@ pub struct Pool<T> {
 // NOTE: Here we lie about `Pool` implementing `Sync` on x86_64. This is not true but it lets us
 // test the `pool!` and `singleton::Pool` abstractions. We just have to be careful not to use the
 // pool in a multi-threaded context
-#[cfg(any(armv7m, armv7r, armv8m_main, test))]
+#[cfg(any(armv7a, armv7r, armv7m, armv8m_main, test))]
 unsafe impl<T> Sync for Pool<T> {}
 
 unsafe impl<T> Send for Pool<T> {}
@@ -301,7 +307,7 @@ impl<T> Pool<T> {
                     Ordering::Relaxed, // failure
                 ) {
                     Ok(_) => break Some(nn_head),
-                    // head was changed by some interrupt handler
+                    // interrupt occurred or other core made a successful STREX op on the head
                     Err(_) => continue,
                 }
             } else {
@@ -325,7 +331,7 @@ impl<T> Pool<T> {
                 Ordering::Relaxed, // failure
             ) {
                 Ok(_) => return,
-                // head changed
+                // interrupt occurred or other core made a successful STREX op on the head
                 Err(p) => head = p,
             }
         }
