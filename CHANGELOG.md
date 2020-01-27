@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.5.3] - 2020-01-27
+
+### Added
+
+- Extend the ARMv7-A `Pool` support to the bare-metal `armv7a-` targets.
+
 ## [v0.5.2] - 2020-01-15
 
 ### Fixed

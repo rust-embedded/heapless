@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=armv8m_base");
     } else if target.starts_with("thumbv8m.main") {
         println!("cargo:rustc-cfg=armv8m_main");
-    } else if target.starts_with("armv7-") {
+    } else if target.starts_with("armv7-") | target.starts_with("armv7a-") {
         println!("cargo:rustc-cfg=armv7a");
     }
 
