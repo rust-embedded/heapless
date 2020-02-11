@@ -365,6 +365,18 @@ where
     }
 }
 
+impl<N> fmt::Write for Vec<u8, N>
+where
+    N: ArrayLength<u8>,
+{
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        match self.extend_from_slice(s.as_bytes()) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(fmt::Error),
+        }
+    }
+}
+
 impl<T, N> Drop for Vec<T, N>
 where
     N: ArrayLength<T>,
@@ -645,6 +657,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{consts::*, Vec};
+    use core::fmt::Write;
 
     #[test]
     fn static_new() {
@@ -910,5 +923,12 @@ mod tests {
         // correct value is being written.
         v.resize_default(1).unwrap();
         assert_eq!(v[0], 0);
+    }
+
+    #[test]
+    fn write() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        write!(v, "{:x}", 1234).unwrap();
+        assert_eq!(&v[..], b"4d2")
     }
 }
