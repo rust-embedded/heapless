@@ -568,13 +568,13 @@ mod tests {
     }
 
     #[test]
-    fn blocking() {
+    fn drain_at_pos255() {
         let q = Q2::new();
         for _ in 0..255 {
             q.enqueue(0).unwrap();
             q.dequeue();
         }
         // this should not block forever
-        q.dequeue();
+        assert_eq!(q.dequeue(), None);
     }
 }
