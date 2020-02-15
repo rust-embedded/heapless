@@ -571,8 +571,8 @@ mod tests {
     fn drain_at_pos255() {
         let q = Q2::new();
         for _ in 0..255 {
-            q.enqueue(0).unwrap();
-            q.dequeue();
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
         }
         // this should not block forever
         assert_eq!(q.dequeue(), None);
