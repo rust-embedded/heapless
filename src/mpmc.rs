@@ -577,4 +577,18 @@ mod tests {
         // this should not block forever
         assert_eq!(q.dequeue(), None);
     }
+
+    #[test]
+    fn full_at_wrapped_pos0() {
+        let q = Q2::new();
+        for _ in 0..254 {
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
+        }
+        assert!(q.enqueue(0).is_ok());
+        assert!(q.enqueue(0).is_ok());
+        // this should not block forever
+        assert!(q.enqueue(0).is_err());
+    }
+
 }
