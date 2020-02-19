@@ -1,9 +1,7 @@
 // NOTE this code has been based on slab (crates.io) v0.4.2
 
 use core::{mem, slice};
-use generic_array::ArrayLength;
-
-use crate::Vec;
+use generic_array::{ArrayLength, GenericArray};
 
 /// Implementation detail
 #[doc(hidden)]
@@ -12,16 +10,21 @@ pub enum Entry<T> {
     Occupied(T),
 }
 
-/// TODO
-pub struct Slab<T, N>
-where
-    N: ArrayLength<Entry<T>>,
-{
-    // entries: MaybeUninit<GenericArray<Entry<T>, N>>,
-    entries: Vec<Entry<T>, N>,
-    len: usize,
-    next: usize,
+impl<A> crate::i::Slab<A> {
+    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+    pub const fn new() -> Self {
+        Self {
+            entries: crate::i::Vec::new(),
+            len: 0,
+            next: 0,
+        }
+    }
 }
+
+/// TODO
+pub struct Slab<T, N>(#[doc(hidden)] pub crate::i::Slab<GenericArray<Entry<T>, N>>)
+where
+    N: ArrayLength<Entry<T>>;
 
 impl<T, N> Slab<T, N>
 where
@@ -29,38 +32,37 @@ where
 {
     /// TODO
     pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-            len: 0,
-            next: 0,
-        }
+        Slab(crate::i::Slab::new())
     }
 
     /// TODO
     pub fn insert(&mut self, val: T) -> Result<usize, T> {
-        let key = self.next;
+        let key = self.0.next;
         self.insert_at(key, val)?;
         Ok(key)
     }
 
     fn insert_at(&mut self, key: usize, val: T) -> Result<(), T> {
-        self.len += 1;
+        self.0.len += 1;
 
-        if key == self.entries.len() {
-            self.entries.push(Entry::Occupied(val)).map_err(|entry| {
+        if key == self.0.entries.len {
+            self.0.entries.push(Entry::Occupied(val)).map_err(|entry| {
                 if let Entry::Occupied(val) = entry {
                     val
                 } else {
                     unreachable!()
                 }
             })?;
-            self.next = key + 1;
+            self.0.next = key + 1;
         } else {
-            let prev = mem::replace(&mut self.entries[key], Entry::Occupied(val));
+            let prev = mem::replace(
+                &mut self.0.entries.as_mut_slice()[key],
+                Entry::Occupied(val),
+            );
 
             match prev {
                 Entry::Vacant(next) => {
-                    self.next = next;
+                    self.0.next = next;
                 }
                 _ => unreachable!(),
             }
@@ -72,17 +74,20 @@ where
     /// TODO
     pub fn remove(&mut self, key: usize) -> T {
         // Swap the entry at the provided value
-        let prev = mem::replace(&mut self.entries[key], Entry::Vacant(self.next));
+        let prev = mem::replace(
+            &mut self.0.entries.as_mut_slice()[key],
+            Entry::Vacant(self.0.next),
+        );
 
         match prev {
             Entry::Occupied(val) => {
-                self.len -= 1;
-                self.next = key;
+                self.0.len -= 1;
+                self.0.next = key;
                 val
             }
             _ => {
                 // Woops, the entry is actually vacant, restore the state
-                self.entries[key] = prev;
+                self.0.entries.as_mut_slice()[key] = prev;
                 panic!("invalid key");
             }
         }
@@ -91,7 +96,7 @@ where
     /// TODO
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut {
-            entries: self.entries.iter_mut(),
+            entries: self.0.entries.as_mut_slice().iter_mut(),
             curr: 0,
         }
     }
