@@ -73,6 +73,7 @@ pub use generic_array::ArrayLength;
 pub use indexmap::{FnvIndexMap, IndexMap};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
+pub use slab::Slab;
 pub use string::String;
 pub use vec::Vec;
 
@@ -80,6 +81,7 @@ pub use vec::Vec;
 mod indexmap;
 mod indexset;
 mod linear_map;
+mod slab;
 mod string;
 mod vec;
 
