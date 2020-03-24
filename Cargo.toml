@@ -37,3 +37,7 @@ hash32 = "0.1.0"
 version = "1"
 optional = true
 default-features = false
+
+[dependencies.stable_deref_trait]
+version = "1"
+default-features = false

@@ -375,6 +375,8 @@ unsafe impl<T, S> Send for Box<T, S> where T: Send {}
 
 unsafe impl<T, S> Sync for Box<T, S> where T: Sync {}
 
+unsafe impl<T> stable_deref_trait::StableDeref for Box<T>  {}
+
 impl<A> AsSlice for Box<A>
 where
     A: AsSlice,
