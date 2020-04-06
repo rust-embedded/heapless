@@ -160,6 +160,8 @@ where
     }
 }
 
+unsafe impl<P: Pool> stable_deref_trait::StableDeref for Box<P> {}
+
 impl<P> fmt::Debug for Box<P>
 where
     P: Pool,
