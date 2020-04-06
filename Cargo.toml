@@ -17,7 +17,7 @@ keywords = [
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.5.3"
+version = "0.5.4"
 
 [features]
 default = ["cas"]
