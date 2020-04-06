@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `StableDeref` implementation for `pool::Box` and `pool::singleton::Box`.
+
 ## [v0.5.3] - 2020-01-27
 
 ### Added
