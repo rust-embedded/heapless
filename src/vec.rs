@@ -197,6 +197,28 @@ where
         Vec(crate::i::Vec::new())
     }
 
+    /// Constructs a new vector with a fixed capacity of `N` and fills it
+    /// with the provided slice.
+    ///
+    /// This is equivalent to the following code:
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let mut v: Vec<u8, U16> = Vec::new();
+    /// v.extend_from_slice(&[1, 2, 3]).unwrap();
+    /// ```
+    #[inline]
+    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    where
+        T: Clone,
+    {
+        let mut v = Vec::new();
+        v.extend_from_slice(other)?;
+        Ok(v)
+    }
+
     /* Public API */
     /// Returns the maximum number of elements the vector can hold
     pub fn capacity(&self) -> usize {
@@ -644,6 +666,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use as_slice::AsSlice;
     use crate::{consts::*, Vec};
 
     #[test]
@@ -910,5 +933,31 @@ mod tests {
         // correct value is being written.
         v.resize_default(1).unwrap();
         assert_eq!(v[0], 0);
+    }
+
+    #[test]
+    fn extend_from_slice() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        assert_eq!(v.len(), 0);
+        v.extend_from_slice(&[1, 2]).unwrap();
+        assert_eq!(v.len(), 2);
+        assert_eq!(v.as_slice(), &[1, 2]);
+        v.extend_from_slice(&[3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+        assert!(v.extend_from_slice(&[4, 5]).is_err());
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn from_slice() {
+        // Successful construction
+        let v: Vec<u8, U4> = Vec::from_slice(&[1, 2, 3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+
+        // Slice too large
+        assert!(Vec::<u8, U2>::from_slice(&[1, 2, 3]).is_err());
     }
 }
