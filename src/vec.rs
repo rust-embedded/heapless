@@ -366,6 +366,54 @@ where
     pub(crate) fn is_full(&self) -> bool {
         self.0.is_full()
     }
+
+    /// Returns `true` if `needle` is a prefix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.starts_with(b""), true);
+    /// assert_eq!(v.starts_with(b"ab"), true);
+    /// assert_eq!(v.starts_with(b"bc"), false);
+    /// ```
+    #[inline]
+    pub fn starts_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let n = needle.len();
+        self.len() >= n && needle == &self[..n]
+    }
+
+    /// Returns `true` if `needle` is a suffix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.ends_with(b""), true);
+    /// assert_eq!(v.ends_with(b"ab"), false);
+    /// assert_eq!(v.ends_with(b"bc"), true);
+    /// ```
+    #[inline]
+    pub fn ends_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let (v, n) = (self.len(), needle.len());
+        v >= n && needle == &self[v - n..]
+    }
 }
 
 impl<T, N> Default for Vec<T, N>
@@ -959,5 +1007,29 @@ mod tests {
 
         // Slice too large
         assert!(Vec::<u8, U2>::from_slice(&[1, 2, 3]).is_err());
+    }
+
+    #[test]
+    fn starts_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.starts_with(&[]));
+        assert!(v.starts_with(b""));
+        assert!(v.starts_with(b"a"));
+        assert!(v.starts_with(b"ab"));
+        assert!(!v.starts_with(b"abc"));
+        assert!(!v.starts_with(b"ba"));
+        assert!(!v.starts_with(b"b"));
+    }
+
+    #[test]
+    fn ends_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.ends_with(&[]));
+        assert!(v.ends_with(b""));
+        assert!(v.ends_with(b"b"));
+        assert!(v.ends_with(b"ab"));
+        assert!(!v.ends_with(b"abc"));
+        assert!(!v.ends_with(b"ba"));
+        assert!(!v.ends_with(b"a"));
     }
 }
