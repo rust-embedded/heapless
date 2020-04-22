@@ -68,9 +68,9 @@
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
-pub use generic_array::typenum::consts;
+pub use generic_array::typenum::{consts, PowerOfTwo};
 pub use generic_array::ArrayLength;
-pub use indexmap::{FnvIndexMap, IndexMap};
+pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 pub use string::String;
