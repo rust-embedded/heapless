@@ -224,16 +224,14 @@
 //!
 //! 4. "Hazard pointers: Safe memory reclamation for lock-free objects." Michael, Maged M.
 
-use core::{any::TypeId, mem, sync::atomic::Ordering};
+use core::{any::TypeId, mem};
 use core::{
-    cell::UnsafeCell,
     cmp, fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
     ptr,
-    sync::atomic::AtomicPtr,
 };
 
 use as_slice::{AsMutSlice, AsSlice};
@@ -394,7 +392,7 @@ impl<T> Pool<T> {
                 }
 
                 #[cfg(not(target_arch = "x86_64"))]
-                () => self.stack.push(NonNull::from(p)),
+                () => self.stack.push(core::ptr::NonNull::from(p)),
             }
         }
         cap

@@ -4,9 +4,11 @@ pub use core::ptr::NonNull as Ptr;
 use core::{
     cell::UnsafeCell,
     ptr,
-    sync::atomic::{self, AtomicPtr, Ordering},
+    sync::atomic::{AtomicPtr, Ordering},
 };
 
+/// Unfortunate implementation detail required to use the
+/// [`Pool.grow_exact`](struct.Pool.html#method.grow_exact) method
 pub struct Node<T> {
     next: AtomicPtr<Node<T>>,
     pub(crate) data: UnsafeCell<T>,
