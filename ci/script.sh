@@ -5,8 +5,8 @@ main() {
     cargo check --target $TARGET --features 'serde'
 
     if [ $TARGET = x86_64-unknown-linux-gnu ]; then
-        cargo test --target $TARGET --features 'serde'
-        cargo test --target $TARGET --release --features 'serde'
+        cargo test --test cpass --target $TARGET --features 'serde'
+        cargo test --test cpass --target $TARGET --release --features 'serde'
 
         if [ $MSRV = 1 ]; then
             cd cfail
@@ -19,8 +19,8 @@ main() {
             export RUSTFLAGS="-Z sanitizer=thread"
             export TSAN_OPTIONS="suppressions=$(pwd)/suppressions.txt"
 
-            cargo test --test tsan --target $TARGET
-            cargo test --test tsan --target $TARGET --release
+            cargo test --test tsan --features x86-sync-pool --target $TARGET
+            cargo test --test tsan --features x86-sync-pool --target $TARGET --release
         fi
     fi
 }
