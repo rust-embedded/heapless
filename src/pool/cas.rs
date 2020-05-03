@@ -7,7 +7,7 @@ use core::{
     cell::UnsafeCell,
     convert::TryFrom,
     marker::PhantomData,
-    mem::{self, MaybeUninit},
+    mem,
     num::NonZeroUsize,
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
