@@ -153,6 +153,8 @@
 //!
 //! # x86_64 support / limitations
 //!
+//! *NOTE* `Pool` is only `Sync` on `x86_64` if the Cargo feature "x86-sync-pool" is enabled
+//!
 //! x86_64 support is a gamble. Yes, a gamble. Do you feel lucky enough to use `Pool` on x86_64?
 //!
 //! As it's not possible to implement *ideal* LL/SC semantics (\*) on x86_64 the architecture is
@@ -253,7 +255,15 @@ pub struct Pool<T> {
     _not_send_or_sync: PhantomData<*const ()>,
 }
 
-#[cfg(any(armv7a, armv7r, armv7m, armv8m_main, target_arch = "x86_64"))]
+// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)
+#[cfg(any(
+    armv7a,
+    armv7r,
+    armv7m,
+    armv8m_main,
+    all(target_arch = "x86_64", feature = "x86-sync-pool"),
+    test
+))]
 unsafe impl<T> Sync for Pool<T> {}
 
 unsafe impl<T> Send for Pool<T> {}
