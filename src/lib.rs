@@ -56,6 +56,14 @@
 //! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
 //! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
 //!
+//! # Optional Features
+//!
+//! The `heapless` crate provides the following optional Cargo features:
+//!
+//! - `ufmt-impl`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
+//!
+//! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
+//!
 //! # Minimum Supported Rust Version (MSRV)
 //!
 //! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
@@ -98,5 +106,8 @@ pub mod mpmc;
 pub mod pool;
 #[cfg(has_atomics)]
 pub mod spsc;
+
+#[cfg(feature = "ufmt-impl")]
+mod ufmt;
 
 mod sealed;

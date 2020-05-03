@@ -22,6 +22,7 @@ version = "0.5.4"
 [features]
 default = ["cas"]
 cas = []
+ufmt-impl = ["ufmt-write"]
 # only for tests
 __trybuild = []
 
@@ -41,3 +42,10 @@ default-features = false
 [dependencies.stable_deref_trait]
 version = "1"
 default-features = false
+
+[dependencies.ufmt-write]
+version = "0.1"
+optional = true
+
+[dev-dependencies.ufmt]
+version = "0.1"
