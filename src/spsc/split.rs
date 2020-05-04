@@ -61,11 +61,12 @@ where
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, N, U> Send for Producer<'a, T, N, U>
+unsafe impl<'a, T, N, U, C> Send for Producer<'a, T, N, U, C>
 where
     N: ArrayLength<T>,
     T: Send,
     U: sealed::Uxx,
+    C: sealed::XCore,
 {
 }
 
