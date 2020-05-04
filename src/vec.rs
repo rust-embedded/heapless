@@ -1003,6 +1003,7 @@ mod tests {
         assert_eq!(&v[..], b"4d2");
     }
 
+    #[test]
     fn extend_from_slice() {
         let mut v: Vec<u8, U4> = Vec::new();
         assert_eq!(v.len(), 0);
