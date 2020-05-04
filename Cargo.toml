@@ -23,6 +23,8 @@ version = "0.5.4"
 default = ["cas"]
 cas = []
 ufmt-impl = ["ufmt-write"]
+# read the docs before enabling: makes `Pool` Sync on x86_64
+x86-sync-pool = []
 # only for tests
 __trybuild = []
 
