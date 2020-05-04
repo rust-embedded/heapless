@@ -197,6 +197,28 @@ where
         Vec(crate::i::Vec::new())
     }
 
+    /// Constructs a new vector with a fixed capacity of `N` and fills it
+    /// with the provided slice.
+    ///
+    /// This is equivalent to the following code:
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let mut v: Vec<u8, U16> = Vec::new();
+    /// v.extend_from_slice(&[1, 2, 3]).unwrap();
+    /// ```
+    #[inline]
+    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    where
+        T: Clone,
+    {
+        let mut v = Vec::new();
+        v.extend_from_slice(other)?;
+        Ok(v)
+    }
+
     /* Public API */
     /// Returns the maximum number of elements the vector can hold
     pub fn capacity(&self) -> usize {
@@ -343,6 +365,54 @@ where
 
     pub(crate) fn is_full(&self) -> bool {
         self.0.is_full()
+    }
+
+    /// Returns `true` if `needle` is a prefix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.starts_with(b""), true);
+    /// assert_eq!(v.starts_with(b"ab"), true);
+    /// assert_eq!(v.starts_with(b"bc"), false);
+    /// ```
+    #[inline]
+    pub fn starts_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let n = needle.len();
+        self.len() >= n && needle == &self[..n]
+    }
+
+    /// Returns `true` if `needle` is a suffix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.ends_with(b""), true);
+    /// assert_eq!(v.ends_with(b"ab"), false);
+    /// assert_eq!(v.ends_with(b"bc"), true);
+    /// ```
+    #[inline]
+    pub fn ends_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let (v, n) = (self.len(), needle.len());
+        v >= n && needle == &self[v - n..]
     }
 }
 
@@ -656,6 +726,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use as_slice::AsSlice;
     use crate::{consts::*, Vec};
     use core::fmt::Write;
 
@@ -929,6 +1000,55 @@ mod tests {
     fn write() {
         let mut v: Vec<u8, U4> = Vec::new();
         write!(v, "{:x}", 1234).unwrap();
-        assert_eq!(&v[..], b"4d2")
+        assert_eq!(&v[..], b"4d2");
+    }
+
+    fn extend_from_slice() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        assert_eq!(v.len(), 0);
+        v.extend_from_slice(&[1, 2]).unwrap();
+        assert_eq!(v.len(), 2);
+        assert_eq!(v.as_slice(), &[1, 2]);
+        v.extend_from_slice(&[3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+        assert!(v.extend_from_slice(&[4, 5]).is_err());
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn from_slice() {
+        // Successful construction
+        let v: Vec<u8, U4> = Vec::from_slice(&[1, 2, 3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+
+        // Slice too large
+        assert!(Vec::<u8, U2>::from_slice(&[1, 2, 3]).is_err());
+    }
+
+    #[test]
+    fn starts_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.starts_with(&[]));
+        assert!(v.starts_with(b""));
+        assert!(v.starts_with(b"a"));
+        assert!(v.starts_with(b"ab"));
+        assert!(!v.starts_with(b"abc"));
+        assert!(!v.starts_with(b"ba"));
+        assert!(!v.starts_with(b"b"));
+    }
+
+    #[test]
+    fn ends_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.ends_with(&[]));
+        assert!(v.ends_with(b""));
+        assert!(v.ends_with(b"b"));
+        assert!(v.ends_with(b"ab"));
+        assert!(!v.ends_with(b"abc"));
+        assert!(!v.ends_with(b"ba"));
+        assert!(!v.ends_with(b"a"));
     }
 }

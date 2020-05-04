@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.5.4] - 2020-04-06
+
+### Added
+
+- Added `StableDeref` implementation for `pool::Box` and `pool::singleton::Box`.
+
 ## [v0.5.3] - 2020-01-27
 
 ### Added
@@ -288,7 +294,9 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.4...HEAD
+[v0.5.4]: https://github.com/japaric/heapless/compare/v0.5.3...v0.5.4
+[v0.5.3]: https://github.com/japaric/heapless/compare/v0.5.2...v0.5.3
 [v0.5.2]: https://github.com/japaric/heapless/compare/v0.5.1...v0.5.2
 [v0.5.1]: https://github.com/japaric/heapless/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/japaric/heapless/compare/v0.4.4...v0.5.0
