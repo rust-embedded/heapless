@@ -146,6 +146,32 @@ where
     }
 }
 
+impl<P> Box<P, Init>
+where
+    P: Pool,
+{
+    /// Forgets the contents of this memory block without running its destructor.
+    ///
+    /// Note that this this does not return the memory block to the pool. The
+    /// block can be reused, or returned to the pool by dropping it.
+    pub fn forget(self) -> Box<P, Uninit> {
+        let node = self.inner.node;
+
+        mem::forget(self);
+        mem::forget(unsafe {
+            ptr::read(node.as_ref().data.get())
+        });
+
+        Box {
+            inner: super::Box {
+                node,
+                _state: PhantomData,
+            },
+            _pool: PhantomData,
+        }
+    }
+}
+
 impl<P> Deref for Box<P>
 where
     P: Pool,
@@ -348,17 +374,23 @@ mod tests {
 
         let x = A::alloc().unwrap().init(X::new());
         let y = A::alloc().unwrap().init(X::new());
+        let z = A::alloc().unwrap().init(X::new());
 
-        assert_eq!(COUNT.load(Ordering::Relaxed), 2);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 3);
 
         // this runs `X`'s destructor
         drop(x);
 
-        assert_eq!(COUNT.load(Ordering::Relaxed), 1);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 2);
 
         // this leaks memory
         mem::forget(y);
 
-        assert_eq!(COUNT.load(Ordering::Relaxed), 1);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 2);
+
+        // this forgets `X` without leaking memory
+        z.forget();
+
+        assert_eq!(COUNT.load(Ordering::Relaxed), 2);
     }
 }
