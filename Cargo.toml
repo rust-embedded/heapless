@@ -29,6 +29,7 @@ x86-sync-pool = []
 __trybuild = []
 
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
+[target.x86_64-apple-darwin.dev-dependencies]
 scoped_threadpool = "0.1.8"
 
 [dependencies]
