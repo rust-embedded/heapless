@@ -122,7 +122,7 @@ where
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
         self.data[self.write_at] = t;
-        self.write_at = self.write_at + 1;
+        self.write_at += 1;
         if self.write_at == self.len() {
             self.write_at = 0;
         }
@@ -156,9 +156,9 @@ where
     /// ```
     pub fn recent(&self) -> &T {
         if self.write_at == 0 {
-            &self.data[(self.len() - 1)]
+            &self.data[self.len() - 1]
         } else {
-            &self.data[(self.write_at - 1)]
+            &self.data[self.write_at - 1]
         }
     }
 
