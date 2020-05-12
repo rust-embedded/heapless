@@ -5,11 +5,20 @@
 
 > `static` friendly data structures that don't require dynamic memory allocation
 
-# [Documentation](https://japaric.github.io/heapless/heapless/index.html)
+## [Documentation](https://japaric.github.io/heapless/heapless/index.html)
 
-# [Change log](CHANGELOG.md)
+## [Change log](CHANGELOG.md)
 
-# License
+## Tests
+
+```bash
+# run all
+cargo test --features 'serde','x86-sync-pool'
+# run only for example histbuf tests
+cargo test histbuf --features 'serde','x86-sync-pool'
+```
+
+## License
 
 Licensed under either of
 

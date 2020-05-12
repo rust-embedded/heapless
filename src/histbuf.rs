@@ -122,7 +122,10 @@ where
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
         self.data[self.write_at] = t;
-        self.write_at = (self.write_at + 1) % self.len();
+        self.write_at += 1;
+        if self.write_at == self.len() {
+            self.write_at = 0;
+        }
     }
 
     /// Clones and writes all elements in a slice to the buffer.
@@ -152,7 +155,11 @@ where
     /// assert_eq!(x.recent(), &10);
     /// ```
     pub fn recent(&self) -> &T {
-        &self.data[(self.write_at + self.len() - 1) % self.len()]
+        if self.write_at == 0 {
+            &self.data[self.len() - 1]
+        } else {
+            &self.data[self.write_at - 1]
+        }
     }
 
     /// Returns the array slice backing the buffer, without keeping track
