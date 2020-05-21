@@ -78,7 +78,7 @@
 
 pub use binary_heap::BinaryHeap;
 pub use bytebuf::ByteBuf;
-pub use generic_array::typenum::{consts, PowerOfTwo};
+pub use generic_array::typenum::{consts, PowerOfTwo, Unsigned};
 pub use generic_array::ArrayLength;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};

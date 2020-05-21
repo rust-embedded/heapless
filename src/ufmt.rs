@@ -17,22 +17,7 @@ where
     }
 }
 
-// seems ufmt does not implement uDebug for str, not sure why...
-// https://doc.rust-lang.org/src/core/fmt/mod.rs.html#2001-2019
-//
-// impl<N> ufmt::uDebug for String<N>
-// where
-//     N: ArrayLength<u8>,
-// {
-//     fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
-//     where
-//         W: ufmt::uWrite + ?Sized,
-//     {
-//         ufmt::uDebug::fmt(&**self, f)
-//     }
-// }
-
-impl<N> ufmt::uDebug for Vec<u8, N>
+impl<N> ufmt::uDebug for String<N>
 where
     N: ArrayLength<u8>,
 {
@@ -40,7 +25,20 @@ where
     where
         W: ufmt::uWrite + ?Sized,
     {
-        <[u8] as ufmt::uDebug>::fmt(self, f)
+        <[u8] as ufmt::uDebug>::fmt(self.as_str().as_bytes(), f)
+    }
+}
+
+impl<N, T> ufmt::uDebug for Vec<T, N>
+where
+    N: ArrayLength<T>,
+    T: ufmt::uDebug,
+{
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: ufmt::uWrite + ?Sized,
+    {
+        <[T] as ufmt::uDebug>::fmt(self, f)
     }
 }
 

@@ -7,14 +7,12 @@ use core::{
     slice,
 };
 
-use generic_array::ArrayLength;
+use generic_array::{
+    ArrayLength,
+    typenum::{IsGreaterOrEqual, True},
+};
 
 use crate::vec::{IntoIter, Vec};
-
-// pub type Bytes8 = ByteBuf<consts::U8>;
-// pub type Bytes16 = ByteBuf<consts::U8>;
-// pub type Bytes32 = ByteBuf<consts::U8>;
-// pub type Bytes64 = ByteBuf<consts::U8>;
 
 /// Wrapper around Vec<u8, N> to serialize and deserialize efficiently.
 pub struct ByteBuf<N>
@@ -25,15 +23,6 @@ where
     vec: crate::Vec::<u8, N>,
 }
 
-impl<A> crate::i::ByteBuf<A> {
-    /// `ByteBuf` `const` constructor; wrap the returned value in [`ByteBuf`](../struct.ByteBuf.html)
-    pub const fn new() -> Self {
-        Self {
-            vec: crate::i::Vec::new(),
-        }
-    }
-}
-
 impl<N> ByteBuf<N>
 where
     N: ArrayLength<u8>,
@@ -41,8 +30,51 @@ where
     /// Constructs a new, empty `ByteBuf` with a fixed capacity of `N`
     #[inline]
     pub fn new() -> Self {
-        // ByteBuf(Vec(crate::i::Vec::new()))
         ByteBuf { vec: Vec(crate::i::Vec::new()) }
+    }
+
+    /// Embed in bigger vector.
+    // We can't implement TryInto since it would clash with blanket implementations.
+    pub fn embed<M>(&self) -> ByteBuf<M>
+    where
+        M: ArrayLength<u8> + IsGreaterOrEqual<N, Output = True>,
+    {
+        match ByteBuf::from_slice(self) {
+            Ok(vec) => vec,
+            _ => unreachable!(),
+        }
+    }
+
+    /// Fallible embed.
+    pub fn try_embed<M>(&self) -> Result<ByteBuf<M>, ()>
+    where
+        M: ArrayLength<u8>,
+    {
+        ByteBuf::from_slice(self)
+    }
+
+    // cf. https://internals.rust-lang.org/t/add-vec-insert-slice-at-to-insert-the-content-of-a-slice-at-an-arbitrary-index/11008/3
+    /// Insert byte slice at given index, if capacity allows it.
+    pub fn insert_slice_at(&mut self, slice: &[u8], at: usize) -> core::result::Result<(), ()> {
+        let l = slice.len();
+        let before = self.len();
+
+        // make space
+        self.resize_default(before + l)?;
+
+        // move back existing
+        let raw: &mut [u8] = &mut self.vec;
+        raw.copy_within(at..before, at + l);
+
+        // insert slice
+        raw[at..][..l].copy_from_slice(slice);
+
+        Ok(())
+    }
+
+    /// Unwraps the Vec<u8, N>.
+    pub fn into_inner(self) -> Vec<u8, N> {
+        self.vec
     }
 
     /// Constructs a new byte buffer with a fixed capacity of `N` and fills it
@@ -67,19 +99,13 @@ where
         Ok(new)
     }
 
-    /// Unwraps the Vec<u8, N>
-    pub fn into_inner(self) -> Vec<u8, N> {
-        self.vec
-    }
-
-    /// Some APIs offer an interface of the form `f(&mut [u8]) -> Result<usize, E>`,
-    /// with the contract that the Ok-value signals how many bytes were written.
+    /// APIs modeled after `std::io::Read` offer an interface of the form
+    /// `f(&mut [u8]) -> Result<usize, E>`, with the contract that the
+    /// Ok-value signals how many bytes were written.
     ///
     /// This constructor allows wrapping such interfaces in a more ergonomic way,
     /// returning a byte buffer filled using `f`.
-    ///
-    /// It seems it's not possible to do this as an actual `TryFrom` implementation.
-    pub fn try_from<E>(
+    pub fn try_read<E>(
         f: impl FnOnce(&mut [u8]) -> core::result::Result<usize, E>
     )
         -> core::result::Result<Self, E>

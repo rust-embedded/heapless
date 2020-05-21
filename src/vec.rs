@@ -1,6 +1,10 @@
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
-use generic_array::{ArrayLength, GenericArray};
+use generic_array::{
+    ArrayLength,
+    GenericArray,
+    typenum::{IsGreaterOrEqual, True},
+};
 use hash32;
 
 impl<A> crate::i::Vec<A> {
@@ -197,6 +201,18 @@ where
         Vec(crate::i::Vec::new())
     }
 
+    /// Returns an immutable slice view.
+    // Add as inherent method as it's annoying to import AsSlice.
+    pub fn as_slice(&self) -> &[T] {
+        self.0.as_slice()
+    }
+
+    /// Returns a mutable slice view.
+    // Add as inherent method as it's annoying to import AsSlice.
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        self.0.as_mut_slice()
+    }
+
     /// Constructs a new vector with a fixed capacity of `N` and fills it
     /// with the provided slice.
     ///
@@ -251,6 +267,28 @@ where
         T: Clone,
     {
         self.0.extend_from_slice(other)
+    }
+
+    /// Embed in bigger vector.
+    // We can't implement TryInto since it would clash with blanket implementations.
+    pub fn embed<M>(&self) -> Vec<T, M>
+    where
+        M: ArrayLength<T> + IsGreaterOrEqual<N, Output = True>,
+        T: Clone,
+    {
+        match Vec::from_slice(self) {
+            Ok(vec) => vec,
+            _ => unreachable!(),
+        }
+    }
+
+    /// Fallible embed.
+    pub fn try_embed<M>(&self) -> Result<Vec<T, M>, ()>
+    where
+        M: ArrayLength<T>,
+        T: Clone,
+    {
+        Vec::from_slice(self)
     }
 
     /// Removes the last element from a vector and return it, or `None` if it's empty
@@ -736,7 +774,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use as_slice::AsSlice;
     use crate::{consts::*, Vec};
     use core::fmt::Write;
 

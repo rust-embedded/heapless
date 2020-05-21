@@ -11,12 +11,6 @@ pub struct BinaryHeap<A, K> {
     pub(crate) data: Vec<A>,
 }
 
-/// `const-fn` version of [`ByteBuf`](../struct.ByteBuf.html)
-pub struct ByteBuf<A> {
-    #[allow(dead_code)]
-    pub(crate) vec: Vec<A>,
-}
-
 /// `const-fn` version of [`LinearMap`](../struct.LinearMap.html)
 pub struct LinearMap<A> {
     pub(crate) buffer: Vec<A>,
