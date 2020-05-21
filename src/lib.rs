@@ -100,6 +100,8 @@ mod histbuf;
 mod de;
 #[cfg(feature = "serde")]
 mod ser;
+#[cfg(feature = "serde")]
+pub mod serde_as_bytes;
 
 pub mod binary_heap;
 pub mod i;

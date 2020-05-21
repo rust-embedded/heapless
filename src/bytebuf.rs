@@ -54,10 +54,10 @@ where
     /// use heapless::ByteBuf;
     /// use heapless::consts::*;
     ///
-    /// let mut bb: ByteBuf<U16> = ByteBuf::new();
-    /// bb.extend_from_slice(&[1, 2, 3]).unwrap();
-    /// 
-    /// println!("hello, byte buffer! {}", &bb);
+    /// let mut bytes: ByteBuf<U16> = ByteBuf::new();
+    /// bytes.extend_from_slice(&[1, 2, 3]).unwrap();
+    ///
+    /// println!("hello, byte buffer! {}", &bytes);
     /// ```
     #[inline]
     pub fn from_slice(other: &[u8]) -> Result<Self, ()>
@@ -65,6 +65,11 @@ where
         let mut new = ByteBuf::new();
         new.extend_from_slice(other)?;
         Ok(new)
+    }
+
+    /// Unwraps the Vec<u8, N>
+    pub fn into_inner(self) -> Vec<u8, N> {
+        self.vec
     }
 
     /// Some APIs offer an interface of the form `f(&mut [u8]) -> Result<usize, E>`,
@@ -261,11 +266,6 @@ where
         I: IntoIterator<Item = u8>,
     {
         Self { vec: Vec::from_iter(iter) }
-        // let mut bb = ByteBuf::new();
-        // for i in iter {
-        //     vec.push(i).ok().expect("Vec::from_iter overflow");
-        // }
-        // vec
     }
 }
 
@@ -287,9 +287,9 @@ where
     Rhs: ?Sized + AsRef<[u8]>,
 {
     fn eq(&self, other: &Rhs) -> bool {
+        // self.as_ref().eq(other.as_ref())
         let slice: &[u8] = self.as_ref();
         slice.eq(other.as_ref())
-        // self.as_ref().eq(other.as_ref())
     }
 }
 
@@ -299,9 +299,9 @@ where
     Rhs: ?Sized + AsRef<[u8]>,
 {
     fn partial_cmp(&self, other: &Rhs) -> Option<cmp::Ordering> {
+        // self.as_ref().partial_cmp(other.as_ref())
         let slice: &[u8] = self.as_ref();
         slice.partial_cmp(other.as_ref())
-        // self.as_ref().partial_cmp(other.as_ref())
     }
 }
 
@@ -428,3 +428,4 @@ where
         self
     }
 }
+
