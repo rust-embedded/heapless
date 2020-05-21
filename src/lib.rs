@@ -47,6 +47,7 @@
 //! List of currently implemented data structures:
 //!
 //! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
+//! - [`ByteBuf`](struct.ByteBuf.html)
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
@@ -76,6 +77,7 @@
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
+pub use bytebuf::ByteBuf;
 pub use generic_array::typenum::{consts, PowerOfTwo};
 pub use generic_array::ArrayLength;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
@@ -85,6 +87,7 @@ pub use string::String;
 pub use vec::Vec;
 pub use histbuf::HistoryBuffer;
 
+mod bytebuf;
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
 mod indexmap;
 mod indexset;
@@ -107,7 +110,7 @@ pub mod pool;
 #[cfg(has_atomics)]
 pub mod spsc;
 
-#[cfg(feature = "ufmt-impl")]
+#[cfg(feature = "ufmt")]
 mod ufmt;
 
 mod sealed;

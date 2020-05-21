@@ -5,7 +5,7 @@ use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 use crate::{
     indexmap::{Bucket, Pos},
     sealed::binary_heap::Kind as BinaryHeapKind,
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+    BinaryHeap, ByteBuf, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 
 // Sequential containers
@@ -25,6 +25,18 @@ where
             seq.serialize_element(element)?;
         }
         seq.end()
+    }
+}
+
+impl<N> Serialize for ByteBuf<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(self)
     }
 }
 

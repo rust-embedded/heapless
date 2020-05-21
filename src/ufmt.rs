@@ -1,12 +1,60 @@
-use ufmt_write::uWrite;
-
 use crate::{
     ArrayLength,
+    bytebuf::ByteBuf,
     string::String,
     vec::Vec,
 };
 
-impl<N> uWrite for String<N>
+impl<N> ufmt::uDebug for ByteBuf<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: ufmt::uWrite + ?Sized,
+    {
+        <[u8] as ufmt::uDebug>::fmt(self, f)
+    }
+}
+
+// seems ufmt does not implement uDebug for str, not sure why...
+// https://doc.rust-lang.org/src/core/fmt/mod.rs.html#2001-2019
+//
+// impl<N> ufmt::uDebug for String<N>
+// where
+//     N: ArrayLength<u8>,
+// {
+//     fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+//     where
+//         W: ufmt::uWrite + ?Sized,
+//     {
+//         ufmt::uDebug::fmt(&**self, f)
+//     }
+// }
+
+impl<N> ufmt::uDebug for Vec<u8, N>
+where
+    N: ArrayLength<u8>,
+{
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: ufmt::uWrite + ?Sized,
+    {
+        <[u8] as ufmt::uDebug>::fmt(self, f)
+    }
+}
+
+impl<N> ufmt::uWrite for ByteBuf<N>
+where
+    N: ArrayLength<u8>,
+{
+    type Error = ();
+    fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
+        self.extend_from_slice(s.as_bytes())
+    }
+}
+
+impl<N> ufmt::uWrite for String<N>
 where
     N: ArrayLength<u8>,
 {
@@ -16,7 +64,7 @@ where
     }
 }
 
-impl<N> uWrite for Vec<u8, N>
+impl<N> ufmt::uWrite for Vec<u8, N>
 where
     N: ArrayLength<u8>,
 {

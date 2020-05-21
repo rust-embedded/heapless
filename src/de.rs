@@ -7,7 +7,7 @@ use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 use crate::{
     indexmap::{Bucket, Pos},
     sealed::binary_heap::Kind as BinaryHeapKind,
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+    BinaryHeap, ByteBuf, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 
 // Sequential containers
@@ -52,6 +52,48 @@ where
             }
         }
         deserializer.deserialize_seq(ValueVisitor(PhantomData))
+    }
+}
+
+impl<'de, N> Deserialize<'de> for ByteBuf<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ValueVisitor<'de, N>(PhantomData<(&'de (), N)>);
+
+        impl<'de, N> de::Visitor<'de> for ValueVisitor<'de, N>
+        where
+            N: ArrayLength<u8>,
+        {
+            type Value = ByteBuf<N>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if v.len() > N::to_usize() {
+                    return Err(E::invalid_length(v.len(), &self))?;
+                }
+                let mut buf: ByteBuf<N> = ByteBuf::new();
+                match buf.extend_from_slice(v) {
+                    Ok(()) => {}
+                    Err(()) => {
+                        return Err(E::invalid_length(v.len(), &self))?;
+                    }
+                }
+                Ok(buf)
+            }
+        }
+
+        deserializer.deserialize_bytes(ValueVisitor(PhantomData))
     }
 }
 

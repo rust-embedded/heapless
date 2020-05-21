@@ -22,7 +22,6 @@ version = "0.5.5"
 [features]
 default = ["cas"]
 cas = []
-ufmt-impl = ["ufmt-write"]
 # read the docs before enabling: makes `Pool` Sync on x86_64
 x86-sync-pool = []
 # only for tests
@@ -45,9 +44,6 @@ default-features = false
 version = "1"
 default-features = false
 
-[dependencies.ufmt-write]
+[dependencies.ufmt]
 version = "0.1"
 optional = true
-
-[dev-dependencies.ufmt]
-version = "0.1"
