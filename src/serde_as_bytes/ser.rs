@@ -18,6 +18,18 @@ impl Serialize for [u8] {
     }
 }
 
+impl<N> Serialize for generic_array::GenericArray<u8, N>
+where
+    N: ArrayLength<u8>
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(self.as_slice())
+    }
+}
+
 impl<N> Serialize for crate::Vec<u8, N>
 where
     N: ArrayLength<u8>

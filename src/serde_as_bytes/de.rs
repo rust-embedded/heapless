@@ -1,6 +1,6 @@
 use core::{fmt, marker};
 
-use generic_array::ArrayLength;
+use generic_array::{ArrayLength, GenericArray};
 use serde::Deserializer;
 use serde::de::{Error, Visitor};
 
@@ -21,6 +21,41 @@ impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8] {
     {
         // Via the serde::Deserialize impl for &[u8].
         serde::Deserialize::deserialize(deserializer)
+    }
+}
+
+impl<'de, N> Deserialize<'de> for GenericArray<u8, N>
+where
+    N: ArrayLength<u8>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ValueVisitor<'de, N>(marker::PhantomData<(&'de (), N)>);
+
+        impl<'de, N> serde::de::Visitor<'de> for ValueVisitor<'de, N>
+        where
+            N: ArrayLength<u8>,
+        {
+            type Value = GenericArray<u8, N>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if v.len() > N::to_usize() {
+                    return Err(E::invalid_length(v.len(), &self))?;
+                }
+                Ok(GenericArray::clone_from_slice(v))
+            }
+        }
+
+        deserializer.deserialize_bytes(ValueVisitor(marker::PhantomData))
     }
 }
 
