@@ -348,23 +348,29 @@ where
     where
         T: Copy + Default
     {
-        let l = slice.len();
-        let before = self.len();
+        let slice_len = slice.len();
+        let len_before = self.len();
+
+        if at > len_before {
+            // out of bounds
+            return Err(());
+        }
 
         // make space
-        self.resize_default(before + l)?;
+        self.resize_default(len_before + slice_len)?;
 
         // move back existing
         let raw: &mut [T] = self.as_mut_slice();
         // if/when MSRV is raised (from 1.36) to 1.37, use builtin method:
         // raw.copy_within(at..before, at + l);
+        let p = &mut raw[0] as *mut T;
+        let tail_len = len_before - at;
         unsafe {
-            let p = &mut raw[0] as *mut T;
-            core::ptr::copy(p.add(at), p.add(at + l), l);
+            core::ptr::copy(p.add(at), p.add(at + slice_len), tail_len);
         }
 
         // insert slice
-        raw[at..][..l].copy_from_slice(slice);
+        raw[at..at + slice_len].copy_from_slice(slice);
 
         Ok(())
     }
