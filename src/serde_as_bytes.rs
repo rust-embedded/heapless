@@ -1,35 +1,35 @@
-//! Wrapper types to enable optimized handling of `&[u8]` and `Vec<u8, N>`.
+//! Wrapper types to enable special handling of `&[u8]` and `Vec<u8, N>`.
 //!
 //! This code is an adaption of the `serde_bytes` library code.
 //!
 //! Without specialization, Rust forces Serde to treat `&[u8]` just like any
 //! other slice and `Vec<u8, N>` just like any other vector. In reality this
 //! particular slice and vector can often be serialized and deserialized in a
-//! more efficient, compact representation in many formats.
+//! more efficient, compact representation in many formats. Or the serialization
+//! format distinguishes between general sequences of types, and sequences
+//! of bytes/octets.
 //!
 //! When working with such a format, you can opt into specialized handling of
 //! `Vec<u8, N>` by wrapping it in `heapless::ByteBuf`.
 //!
 //! Additionally this crate supports the Serde `with` attribute to enable
-//! efficient handling of `&[u8]` and `Vec<u8, N>` in structs without needing a
+//! special handling of `&[u8]` and `Vec<u8, N>` in structs without needing a
 //! wrapper type.
 //!
 //! ```
 //! # use generic_array::ArrayLength;
 //! # use serde_derive::{Deserialize, Serialize};
-//! use heapless::Vec;
+//! use heapless::{ByteBuf, consts::*, Vec};
 //! use serde::{Deserialize, Serialize};
 //!
-//! #[derive(Deserialize, Serialize)]
-//! struct Efficient<'a, N>
-//! where
-//!     N: ArrayLength<u8>,
+//! #[derive(Debug, Deserialize, Serialize, PartialEq)]
+//! struct Efficient<'a>
 //! {
 //!     #[serde(with = "heapless::serde_as_bytes")]
 //!     bytes: &'a [u8],
 //!
 //!     #[serde(with = "heapless::serde_as_bytes")]
-//!     byte_buf: Vec<u8, N>,
+//!     byte_buf: Vec<u8, U3>,
 //! }
 //! ```
 mod de;
@@ -41,7 +41,8 @@ pub use ser::Serialize;
 use serde::Serializer;
 use serde::Deserializer;
 
-/// Serde `serialize_with` function to serialize bytes efficiently.
+/// Serde `serialize_with` function to serialize bytes differently
+/// and sometimes more efficiently.
 ///
 /// This function can be used with either of the following Serde attributes:
 ///
@@ -50,7 +51,7 @@ use serde::Deserializer;
 ///
 /// ```
 /// # use generic_array::ArrayLength;
-/// # use serde_derive::Serialize;
+/// # use serde_derive::{Deserialize, Serialize};
 /// use heapless::Vec;
 /// use serde::Serialize;
 ///
@@ -75,7 +76,8 @@ where
     Serialize::serialize(bytes, serializer)
 }
 
-/// Serde `deserialize_with` function to deserialize bytes efficiently.
+/// Serde `deserialize_with` function to deserialize bytes differently and
+/// sometimes more efficiently.
 ///
 /// This function can be used with either of the following Serde attributes:
 ///
@@ -84,7 +86,7 @@ where
 ///
 /// ```
 /// # use generic_array::ArrayLength;
-/// # use serde_derive::Deserialize;
+/// # use serde_derive::{Deserialize, Serialize};
 /// use heapless::Vec;
 /// use serde::Deserialize;
 ///

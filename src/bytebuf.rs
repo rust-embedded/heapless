@@ -141,30 +141,35 @@ where
     }
 }
 
-impl<N> fmt::Debug for ByteBuf<N>
-where
-    N: ArrayLength<u8>,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <[u8] as fmt::Debug>::fmt(self, f)
-    }
-}
-
-// Possible alternative implementation.
-// impl<N: ArrayLength<u8>> Debug for Bytes<N> {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         // TODO: There has to be a better way :'-)
-//         use core::ascii::escape_default;
-//         f.write_str("b\"")?;
-//         for byte in &self.bytes {
-//             for ch in escape_default(*byte) {
-//                 f.write_str(unsafe { core::str::from_utf8_unchecked(&[ch]) })?;
-//             }
-//         }
-//         f.write_str("\""")?;
-//         Ok(())
+// The normal, boring implementation
+// impl<N> fmt::Debug for ByteBuf<N>
+// where
+//     N: ArrayLength<u8>,
+// {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         <[u8] as fmt::Debug>::fmt(self, f)
 //     }
 // }
+
+
+// Somewhat nicer implementation
+impl<N> fmt::Debug for ByteBuf<N>
+where
+    N: ArrayLength<u8>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: There has to be a better way :'-)
+        use core::ascii::escape_default;
+        f.write_str("b'")?;
+        for byte in &self.vec {
+            for ch in escape_default(*byte) {
+                f.write_str(unsafe { core::str::from_utf8_unchecked(&[ch]) })?;
+            }
+        }
+        f.write_str("'")?;
+        Ok(())
+    }
+}
 
 impl<N> fmt::Display for ByteBuf<N>
 where
@@ -175,7 +180,7 @@ where
     }
 }
 
-impl<'a, N> From<Vec<u8, N>> for ByteBuf<N>
+impl<N> From<Vec<u8, N>> for ByteBuf<N>
 where
     N: ArrayLength<u8>,
 {
@@ -382,7 +387,7 @@ where
 
 impl<N> Eq for ByteBuf<N>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8>
 {
 }
 
@@ -454,4 +459,3 @@ where
         self
     }
 }
-
