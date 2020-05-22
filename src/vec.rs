@@ -106,6 +106,52 @@ where
         self.len += 1;
     }
 
+    pub(crate) fn insert(&mut self, index: usize, item: T) -> Result<(), T> {
+        let len = self.len;
+        assert!(index <= len);
+        if self.len < self.capacity() && index <= self.len {
+            unsafe { self.insert_unchecked(index, item) }
+            Ok(())
+        } else {
+            Err(item)
+        }
+    }
+
+    pub(crate) unsafe fn insert_unchecked(&mut self, index: usize, item: T) {
+        let p = (self.buffer.as_mut_ptr() as *mut T).add(index);
+        // Shift everything over to make space. (Duplicating the
+        // `index`th element into two consecutive places.)
+        ptr::copy(p, p.offset(1), self.len - index);
+        // Write it in, overwriting the first copy of the `index`th
+        // element.
+        ptr::write(p, item);
+
+        self.len += 1;
+    }
+
+    pub(crate) fn remove(&mut self, index: usize) -> Result<T, ()> {
+        if index < self.len {
+            unsafe { Ok(self.remove_unchecked(index)) }
+        } else {
+            Err(())
+        }
+    }
+
+    pub(crate) unsafe fn remove_unchecked(&mut self, index: usize) -> T {
+        // the place we are taking from.
+        let p = (self.buffer.as_mut_ptr() as *mut T).add(index);
+
+        // copy it out, unsafely having a copy of the value on
+        // the stack and in the vector at the same time.
+        let ret = ptr::read(p);
+
+        // shift everything down to fill in that spot.
+        ptr::copy(p.offset(1), p, self.len - index - 1);
+
+        self.len -= 1;
+        ret
+    }
+
     unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         let length = self.len;
         debug_assert!(index < length);
@@ -201,6 +247,33 @@ where
         Vec(crate::i::Vec::new())
     }
 
+    /// APIs modeled after [`std::io::Write`] offer an interface of the form
+    /// `write(&mut [u8]) -> Result<usize, E>`, with the contract that the
+    /// Ok value signals how many bytes were written, of at most length of
+    /// the buffer.
+    ///
+    /// This constructor allows wrapping such interfaces in a more ergonomic way,
+    /// returning a new byte buffer filled using the writer.
+    ///
+    /// [`std::io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
+    pub fn from_writer<E>(
+        write: impl FnOnce(&mut [T]) -> core::result::Result<usize, E>
+    )
+        -> core::result::Result<Self, E>
+    where
+        T: Clone + Default,
+    {
+        let mut new = Self::new();
+        new.resize_to_capacity();
+
+        let result = write(&mut new);
+
+        result.map(|count| {
+            new.truncate(count);
+            new
+        })
+    }
+
     /// Returns an immutable slice view.
     // Add as inherent method as it's annoying to import AsSlice.
     pub fn as_slice(&self) -> &[T] {
@@ -223,7 +296,7 @@ where
     /// use heapless::consts::*;
     ///
     /// let mut v: Vec<u8, U16> = Vec::new();
-    /// v.extend_from_slice(&[1, 2, 3]).unwrap();
+    /// v.extend_from_slice(&[1, 2, 3]);
     /// ```
     #[inline]
     pub fn from_slice(other: &[T]) -> Result<Self, ()>
@@ -269,9 +342,37 @@ where
         self.0.extend_from_slice(other)
     }
 
-    /// Embed in bigger vector.
-    // We can't implement TryInto since it would clash with blanket implementations.
-    pub fn embed<M>(&self) -> Vec<T, M>
+    // cf. https://internals.rust-lang.org/t/add-vec-insert-slice-at-to-insert-the-content-of-a-slice-at-an-arbitrary-index/11008/3
+    /// Insert slice at given index, if capacity allows it.
+    pub fn insert_slice_at(&mut self, slice: &[T], at: usize) -> core::result::Result<(), ()>
+    where
+        T: Copy + Default
+    {
+        let l = slice.len();
+        let before = self.len();
+
+        // make space
+        self.resize_default(before + l)?;
+
+        // move back existing
+        let raw: &mut [T] = self.as_mut_slice();
+        // if/when MSRV is raised (from 1.36) to 1.37, use builtin method:
+        // raw.copy_within(at..before, at + l);
+        unsafe {
+            let p = &mut raw[0] as *mut T;
+            core::ptr::copy(p.add(at), p.add(at + l), l);
+        }
+
+        // insert slice
+        raw[at..][..l].copy_from_slice(slice);
+
+        Ok(())
+    }
+
+
+    /// Clone into at least same size vector.
+    // We can't implement Into since it would clash with blanket implementations.
+    pub fn to_vec<M>(&self) -> Vec<T, M>
     where
         M: ArrayLength<T> + IsGreaterOrEqual<N, Output = True>,
         T: Clone,
@@ -282,8 +383,9 @@ where
         }
     }
 
-    /// Fallible embed.
-    pub fn try_embed<M>(&self) -> Result<Vec<T, M>, ()>
+    /// Fallible clone into differently sized vector.
+    // We can't implement TryInto since it would clash with blanket implementations.
+    pub fn try_to_vec<M>(&self) -> Result<Vec<T, M>, ()>
     where
         M: ArrayLength<T>,
         T: Clone,
@@ -366,6 +468,7 @@ where
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `capacity`.
+    // Useful because v.resize_default(v.capacity()) makes the borrow checker complain
     pub fn resize_to_capacity(&mut self)
     where
         T: Clone + Default,
@@ -373,6 +476,22 @@ where
         self.resize(N::USIZE, T::default()).unwrap();
     }
 
+    /// Inserts an item at position `index` within the vector, shifting all
+    /// items after it to the right.
+    ///
+    /// Returns the item if index is out of bounds or there is no capacity.
+    pub fn insert(&mut self, index: usize, item: T) -> Result<(), T> {
+        self.0.insert(index, item)
+    }
+
+
+    /// Removes and returns the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    ///
+    /// Returns error if index is out of bounds.
+    pub fn remove(&mut self, index: usize) -> Result<T, ()> {
+        self.0.remove(index)
+    }
 
     /// Removes an element from the vector and returns it.
     ///
@@ -460,6 +579,36 @@ where
     {
         let (v, n) = (self.len(), needle.len());
         v >= n && needle == &self[v - n..]
+    }
+}
+
+impl<N> Vec<u8, N>
+where
+    N: ArrayLength<u8>,
+{
+    /// Wrap same underlying buffer as byte buffer,
+    /// consuming the vector.
+    pub fn into_byte_buf(self) -> crate::ByteBuf<N> {
+        crate::ByteBuf::from(self)
+    }
+
+    /// Clone into at least same size byte buffer.
+    pub fn to_byte_buf<M>(&self) -> crate::ByteBuf<M>
+    where
+        M: ArrayLength<u8> + IsGreaterOrEqual<N, Output = True>,
+    {
+        match crate::ByteBuf::from_slice(self) {
+            Ok(byte_buf) => byte_buf,
+            _ => unreachable!(),
+        }
+    }
+
+    /// Fallible conversion into differently sized byte buffer.
+    pub fn try_to_byte_buf<M>(&self) -> Result<crate::ByteBuf<M>, ()>
+    where
+        M: ArrayLength<u8>,
+    {
+        crate::ByteBuf::from_slice(self)
     }
 }
 

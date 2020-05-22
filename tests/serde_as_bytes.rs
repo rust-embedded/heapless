@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
 // CBOR has a specialized "bytes" string type.
-// For this format, a general Vec<T, N> gets serialized
-// as a sequence of u8, while ByteBuf<N>, and Vec<T, N>
-// decorated with `#[serde(with = "heapless::serde_as_bytes")`
-// get serialized as bytes string
+// For this format, a Vec<T, u8> gets serialized as a sequence of u8,
+// since there is no specialization.
+// ByteBuf<N>, and Vec<T, N> if decorated with
+// `#[serde(with = "heapless::serde_as_bytes")`,
+// get serialized as byte strings.
 
 const BYTES_SERIALIZATION: &'static [u8] =
     b"\xa2ebytesC\x01\x02\x03hbyte_bufC\x01\x02\x03";
@@ -81,18 +82,18 @@ fn cbor() {
         byte_buf: ByteBuf::from_slice(&[1, 2, 3]).unwrap(),
     };
 
-    let mut ser_as_bytes = ByteBuf::<U100>::try_read(|buf| cbor_serialize(&as_bytes, buf)).unwrap();
+    let mut ser_as_bytes = ByteBuf::<U100>::from_writer(|buf| cbor_serialize(&as_bytes, buf)).unwrap();
     assert_eq!(ser_as_bytes, BYTES_SERIALIZATION);
     assert_eq!(as_bytes, cbor_deserialize(&mut *ser_as_bytes).unwrap());
 
-    let ser_raw_vec = ByteBuf::<U100>::try_read(|buf| cbor_serialize(&raw_vec, buf)).unwrap();
+    let ser_raw_vec = ByteBuf::<U100>::from_writer(|buf| cbor_serialize(&raw_vec, buf)).unwrap();
     assert_eq!(ser_raw_vec, SEQUENCE_SERIALIZATION);
 
-    let mut ser_raw_vec_no_slice = ByteBuf::<U100>::try_read(|buf| cbor_serialize(&raw_vec_no_slice, buf)).unwrap();
+    let mut ser_raw_vec_no_slice = ByteBuf::<U100>::from_writer(|buf| cbor_serialize(&raw_vec_no_slice, buf)).unwrap();
     assert_eq!(ser_raw_vec_no_slice, SEQUENCE_SERIALIZATION_NO_SLICE);
     assert_eq!(raw_vec_no_slice, cbor_deserialize(&mut *ser_raw_vec_no_slice).unwrap());
 
-    let mut ser_raw_bytes = ByteBuf::<U100>::try_read(|buf| cbor_serialize(&raw_bytes, buf)).unwrap();
+    let mut ser_raw_bytes = ByteBuf::<U100>::from_writer(|buf| cbor_serialize(&raw_bytes, buf)).unwrap();
     assert_eq!(ser_as_bytes, BYTES_SERIALIZATION);
     assert_eq!(raw_bytes, cbor_deserialize(&mut *ser_raw_bytes).unwrap());
 }

@@ -7,14 +7,16 @@ use core::{
     slice,
 };
 
-use generic_array::{
-    ArrayLength,
-    typenum::{IsGreaterOrEqual, True},
-};
+use generic_array::ArrayLength;
 
 use crate::vec::{IntoIter, Vec};
 
 /// Wrapper around Vec<u8, N> to serialize and deserialize efficiently.
+///
+/// If [impl specialization] is stabilized, this type might be removed, and
+/// the more efficient serde implemented on Vec<u8, N> directly.
+///
+/// [impl specialization]: https://github.com/rust-lang/rust/issues/31844/
 pub struct ByteBuf<N>
 where
     N: ArrayLength<u8>
@@ -33,47 +35,13 @@ where
         ByteBuf { vec: Vec(crate::i::Vec::new()) }
     }
 
-    /// Embed in bigger vector.
-    // We can't implement TryInto since it would clash with blanket implementations.
-    pub fn embed<M>(&self) -> ByteBuf<M>
-    where
-        M: ArrayLength<u8> + IsGreaterOrEqual<N, Output = True>,
-    {
-        match ByteBuf::from_slice(self) {
-            Ok(vec) => vec,
-            _ => unreachable!(),
-        }
-    }
-
-    /// Fallible embed.
-    pub fn try_embed<M>(&self) -> Result<ByteBuf<M>, ()>
-    where
-        M: ArrayLength<u8>,
-    {
-        ByteBuf::from_slice(self)
-    }
-
-    // cf. https://internals.rust-lang.org/t/add-vec-insert-slice-at-to-insert-the-content-of-a-slice-at-an-arbitrary-index/11008/3
-    /// Insert byte slice at given index, if capacity allows it.
-    pub fn insert_slice_at(&mut self, slice: &[u8], at: usize) -> core::result::Result<(), ()> {
-        let l = slice.len();
-        let before = self.len();
-
-        // make space
-        self.resize_default(before + l)?;
-
-        // move back existing
-        let raw: &mut [u8] = &mut self.vec;
-        raw.copy_within(at..before, at + l);
-
-        // insert slice
-        raw[at..][..l].copy_from_slice(slice);
-
-        Ok(())
-    }
-
-    /// Unwraps the Vec<u8, N>.
+    /// Unwraps the Vec<u8, N>, same as `into_vec`.
     pub fn into_inner(self) -> Vec<u8, N> {
+        self.vec
+    }
+
+    /// Unwraps the Vec<u8, N>, same as `into_inner`.
+    pub fn into_vec(self) -> Vec<u8, N> {
         self.vec
     }
 
@@ -87,7 +55,7 @@ where
     /// use heapless::consts::*;
     ///
     /// let mut bytes: ByteBuf<U16> = ByteBuf::new();
-    /// bytes.extend_from_slice(&[1, 2, 3]).unwrap();
+    /// bytes.extend_from_slice(&[1, 2, 3]);
     ///
     /// println!("hello, byte buffer! {}", &bytes);
     /// ```
@@ -99,25 +67,25 @@ where
         Ok(new)
     }
 
-    /// APIs modeled after `std::io::Read` offer an interface of the form
-    /// `f(&mut [u8]) -> Result<usize, E>`, with the contract that the
-    /// Ok-value signals how many bytes were written.
+    /// APIs modeled after `std::io::Write` offer an interface of the form
+    /// `write(&mut [u8]) -> Result<usize, E>`, with the contract that the
+    /// Ok value signals how many bytes were written.
     ///
     /// This constructor allows wrapping such interfaces in a more ergonomic way,
-    /// returning a byte buffer filled using `f`.
-    pub fn try_read<E>(
-        f: impl FnOnce(&mut [u8]) -> core::result::Result<usize, E>
+    /// returning a byte buffer filled using the writer.
+    pub fn from_writer<E>(
+        write: impl FnOnce(&mut [u8]) -> core::result::Result<usize, E>
     )
         -> core::result::Result<Self, E>
     {
-        let mut data = Self::new();
-        data.resize_to_capacity();
+        let mut new = Self::new();
+        new.resize_to_capacity();
 
-        let result = f(&mut data);
+        let result = write(&mut new);
 
         result.map(|count| {
-            data.truncate(count);
-            data
+            new.truncate(count);
+            new
         })
     }
 
@@ -151,7 +119,6 @@ where
 //     }
 // }
 
-
 // Somewhat nicer implementation
 impl<N> fmt::Debug for ByteBuf<N>
 where
@@ -159,14 +126,11 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: There has to be a better way :'-)
-        use core::ascii::escape_default;
-        f.write_str("b'")?;
-        for byte in &self.vec {
-            for ch in escape_default(*byte) {
-                f.write_str(unsafe { core::str::from_utf8_unchecked(&[ch]) })?;
-            }
+        f.write_str("b\"")?;
+        for ch in self.vec.iter().flat_map(|byte| core::ascii::escape_default(*byte)) {
+            f.write_str(unsafe { core::str::from_utf8_unchecked(&[ch]) })?;
         }
-        f.write_str("'")?;
+        f.write_str("\"")?;
         Ok(())
     }
 }
@@ -336,55 +300,6 @@ where
     }
 }
 
-// impl<N1, N2> PartialEq<ByteBuf<N2>> for ByteBuf<N1>
-// where
-//     N1: ArrayLength<u8>,
-//     N2: ArrayLength<u8>,
-// {
-//     fn eq(&self, other: &ByteBuf<N2>) -> bool {
-//         <[u8]>::eq(&self.vec, &***other)
-//     }
-// }
-
-// macro_rules! eq {
-//     ($Lhs:ty, $Rhs:ty) => {
-//         impl<'a, 'b, N> PartialEq<$Rhs> for $Lhs
-//         where
-//             N: ArrayLength<u8>,
-//         {
-//             fn eq(&self, other: &$Rhs) -> bool {
-//                 <[u8]>::eq(self, &other[..])
-//             }
-//         }
-//     };
-// }
-
-// eq!(ByteBuf<N>, [u8]);
-// eq!(ByteBuf<N>, &'a [u8]);
-// eq!(ByteBuf<N>, &'a mut [u8]);
-
-// macro_rules! array {
-//     ($($N:expr),+) => {
-//         $(
-//             eq!(ByteBuf<N>, [u8; $N]);
-//             eq!(ByteBuf<N>, &'a [u8; $N]);
-//         )+
-//     }
-// }
-
-// array!(
-//     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-//     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-//     49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
-// );
-
-// impl<N> Ord for ByteBuf<N>
-// where
-//     N: ArrayLength<u8>,
-// {
-//     fn cmp(...)
-// }
-
 impl<N> Eq for ByteBuf<N>
 where
     N: ArrayLength<u8>
@@ -457,5 +372,38 @@ where
     #[inline]
     fn as_mut(&mut self) -> &mut [u8] {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slice_insertion() {
+        let mut v = ByteBuf::<crate::consts::U8>::from_slice(&[1, 2, 6, 7, 8]).unwrap();
+        v.insert_slice_at(&[3, 4, 5], 2).unwrap();
+        assert_eq!(v, &[1, 2, 3, 4, 5, 6, 7, 8]);
+        let x = v.remove(0).unwrap();
+        assert_eq!(x, 1);
+        let x = v.remove(2).unwrap();
+        assert_eq!(x, 4);
+        assert!(v.remove(6).is_err());
+        assert!(v.remove(5).is_ok());
+    }
+
+    #[test]
+    fn to_byte_buf() {
+        let v = ByteBuf::<crate::consts::U8>::from_slice(&[1, 2, 6, 7, 8]).unwrap();
+        let w: ByteBuf<crate::consts::U9> = v.to_byte_buf();
+        assert_eq!(v, w);
+        let w: ByteBuf<crate::consts::U5> = v.try_to_byte_buf().unwrap();
+        assert_eq!(v, w);
+    }
+
+    #[test]
+    fn debug() {
+        let bytes = ByteBuf::<crate::consts::U24>::from_slice(b"\xa2ebytesC\x01\x02\x03hbyte_bufC\x01\x02\x03");
+        println!("{:?}", bytes);
     }
 }

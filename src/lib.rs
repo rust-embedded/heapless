@@ -61,9 +61,15 @@
 //!
 //! The `heapless` crate provides the following optional Cargo features:
 //!
-//! - `ufmt-impl`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
+//! - [`serde`]: Implement `serde::Serialize` and `serde::Deserialize` for
+//!   `ByteBuf<N>`, `String<N>` and `Vec<u8, N>`
 //!
-//! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
+//! [`serde`]: https://serde.rs/
+//!
+//! - [`ufmt`]: Implement `ufmt::uWrite` and `ufmt::uDebug` for
+//!   `ByteBuf<N>`, `String<N>` and `Vec<u8, N>`
+//!
+//! [`ufmt`]: https://docs.rs/ufmt/
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!

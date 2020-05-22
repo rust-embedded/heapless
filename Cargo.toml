@@ -19,6 +19,10 @@ name = "heapless"
 repository = "https://github.com/japaric/heapless"
 version = "0.5.5"
 
+[package.metadata.docs.rs]
+features = ["serde", "ufmt"]
+targets = []
+
 [features]
 default = ["cas"]
 cas = []
