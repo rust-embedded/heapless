@@ -160,6 +160,8 @@ where
 /// }
 /// assert_eq!(vec, [7, 1, 2, 3]);
 /// ```
+// repr(transparent) is needed for [`String::as_mut_vec`]
+#[repr(transparent)]
 pub struct Vec<T, N>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>>)
 where
     N: ArrayLength<T>;
