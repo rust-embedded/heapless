@@ -1,10 +1,6 @@
 //! Collections of `Send`-able things are `Send`
 
-use heapless::{
-    consts,
-    spsc::{Consumer, Producer, Queue},
-    Vec, HistoryBuffer,
-};
+use heapless::Vec;
 
 #[test]
 fn send() {
@@ -18,9 +14,9 @@ fn send() {
     {
     }
 
-    is_send::<Consumer<IsSend, consts::U4>>();
-    is_send::<Producer<IsSend, consts::U4>>();
-    is_send::<Queue<IsSend, consts::U4>>();
-    is_send::<Vec<IsSend, consts::U4>>();
-    is_send::<HistoryBuffer<IsSend, consts::U4>>();
+    // is_send::<Consumer<IsSend, consts::U4>>();
+    // is_send::<Producer<IsSend, consts::U4>>();
+    // is_send::<Queue<IsSend, consts::U4>>();
+    is_send::<Vec<IsSend, 4>>();
+    // is_send::<HistoryBuffer<IsSend, consts::U4>>();
 }

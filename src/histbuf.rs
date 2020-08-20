@@ -1,4 +1,4 @@
-use generic_array::{ArrayLength, GenericArray, sequence::GenericSequence};
+// use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
@@ -14,10 +14,9 @@ use generic_array::{ArrayLength, GenericArray, sequence::GenericSequence};
 /// # Examples
 /// ```
 /// use heapless::HistoryBuffer;
-/// use heapless::consts::*;
 ///
 /// // Initialize a new buffer with 8 elements, all initially zero.
-/// let mut buf = HistoryBuffer::<_, U8>::new();
+/// let mut buf = HistoryBuffer::<_, 8>::new();
 ///
 /// buf.write(3);
 /// buf.write(5);
@@ -34,19 +33,14 @@ use generic_array::{ArrayLength, GenericArray, sequence::GenericSequence};
 /// assert_eq!(avg, 2);
 /// ```
 #[derive(Clone)]
-pub struct HistoryBuffer<T, N>
-where
-    N: ArrayLength<T>,
-{
-    data: GenericArray<T, N>,
+pub struct HistoryBuffer<T, const N: usize> {
+    data: [T; N],
     write_at: usize,
 }
 
-
-impl<T, N> HistoryBuffer<T, N>
+impl<T, const N: usize> HistoryBuffer<T, N>
 where
-    N: ArrayLength<T>,
-    T: Default,
+    T: Default + Copy,
 {
     /// Constructs a new history buffer, where every element is filled with the
     /// default value of the type `T`.
@@ -57,16 +51,17 @@ where
     ///
     /// ```
     /// use heapless::HistoryBuffer;
-    /// use heapless::consts::*;
     ///
     /// // Allocate a 16-element buffer on the stack
-    /// let mut x: HistoryBuffer<u8, U16> = HistoryBuffer::new();
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
     /// // All elements are zero
     /// assert_eq!(x.as_slice(), [0; 16]);
     /// ```
     pub fn new() -> Self {
         Self {
-            data: Default::default(),
+            // seems not yet implemented
+            // data: Default::default(),
+            data: [T::default(); N],
             write_at: 0,
         }
     }
@@ -78,10 +73,9 @@ where
     }
 }
 
-impl<T, N> HistoryBuffer<T, N>
+impl<T, const N: usize> HistoryBuffer<T, N>
 where
-    N: ArrayLength<T>,
-    T: Clone,
+    T: Copy + Clone,
 {
     /// Constructs a new history buffer, where every element is the given value.
     ///
@@ -89,16 +83,15 @@ where
     ///
     /// ```
     /// use heapless::HistoryBuffer;
-    /// use heapless::consts::*;
     ///
     /// // Allocate a 16-element buffer on the stack
-    /// let mut x: HistoryBuffer<u8, U16> = HistoryBuffer::new_with(4);
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new_with(4);
     /// // All elements are four
     /// assert_eq!(x.as_slice(), [4; 16]);
     /// ```
     pub fn new_with(t: T) -> Self {
         Self {
-            data: GenericArray::generate(|_| t.clone()),
+            data: [t; N],
             write_at: 0,
         }
     }
@@ -109,10 +102,7 @@ where
     }
 }
 
-impl<T, N> HistoryBuffer<T, N>
-where
-    N: ArrayLength<T>,
-{
+impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the capacity of the buffer, which is the length of the
     /// underlying backing array.
     pub fn len(&self) -> usize {
@@ -147,9 +137,8 @@ where
     ///
     /// ```
     /// use heapless::HistoryBuffer;
-    /// use heapless::consts::*;
     ///
-    /// let mut x: HistoryBuffer<u8, U16> = HistoryBuffer::new();
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
     /// x.write(4);
     /// x.write(10);
     /// assert_eq!(x.recent(), &10);
@@ -169,10 +158,7 @@ where
     }
 }
 
-impl<T, N> Extend<T> for HistoryBuffer<T, N>
-where
-    N: ArrayLength<T>,
-{
+impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -183,10 +169,9 @@ where
     }
 }
 
-impl<'a, T, N> Extend<&'a T> for HistoryBuffer<T, N>
+impl<'a, T, const N: usize> Extend<&'a T> for HistoryBuffer<T, N>
 where
     T: 'a + Clone,
-    N: ArrayLength<T>,
 {
     fn extend<I>(&mut self, iter: I)
     where
@@ -198,21 +183,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{consts::*, HistoryBuffer};
+    use crate::HistoryBuffer;
 
     #[test]
     fn new() {
-        let x: HistoryBuffer<u8, U4> = HistoryBuffer::new_with(1);
+        let x: HistoryBuffer<u8, 4> = HistoryBuffer::new_with(1);
         assert_eq!(x.len(), 4);
         assert_eq!(x.as_slice(), [1; 4]);
 
-        let x: HistoryBuffer<u8, U4> = HistoryBuffer::new();
+        let x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.as_slice(), [0; 4]);
     }
 
     #[test]
     fn write() {
-        let mut x: HistoryBuffer<u8, U4> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         x.write(1);
         x.write(4);
         assert_eq!(x.as_slice(), [1, 4, 0, 0]);
@@ -228,18 +213,18 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut x: HistoryBuffer<u8, U4> = HistoryBuffer::new_with(1);
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new_with(1);
         x.clear();
         assert_eq!(x.as_slice(), [0; 4]);
 
-        let mut x: HistoryBuffer<u8, U4> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         x.clear_with(1);
         assert_eq!(x.as_slice(), [1; 4]);
     }
 
     #[test]
     fn recent() {
-        let mut x: HistoryBuffer<u8, U4> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.recent(), &0);
 
         x.write(1);
@@ -254,7 +239,7 @@ mod tests {
 
     #[test]
     fn as_slice() {
-        let mut x: HistoryBuffer<u8, U4> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
 
         x.extend([1, 2, 3, 4, 5].iter());
 

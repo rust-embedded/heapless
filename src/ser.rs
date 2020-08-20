@@ -1,4 +1,6 @@
-use generic_array::{typenum::PowerOfTwo, ArrayLength};
+//! missing doc
+
+// use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -10,10 +12,9 @@ use crate::{
 
 // Sequential containers
 
-impl<T, N, KIND> Serialize for BinaryHeap<T, N, KIND>
+impl<T, KIND, const N: usize> Serialize for BinaryHeap<T, KIND, N>
 where
     T: Ord + Serialize,
-    N: ArrayLength<T>,
     KIND: BinaryHeapKind,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -28,11 +29,10 @@ where
     }
 }
 
-impl<T, N, S> Serialize for IndexSet<T, N, S>
+impl<T, S, const N: usize> Serialize for IndexSet<T, S, N>
 where
     T: Eq + Hash + Serialize,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
@@ -46,10 +46,9 @@ where
     }
 }
 
-impl<T, N> Serialize for Vec<T, N>
+impl<T, const N: usize> Serialize for Vec<T, N>
 where
     T: Serialize,
-    N: ArrayLength<T>,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -65,10 +64,9 @@ where
 
 // Dictionaries
 
-impl<K, V, N, S> Serialize for IndexMap<K, V, N, S>
+impl<K, V, S, const N: usize> Serialize for IndexMap<K, V, S, N>
 where
     K: Eq + Hash + Serialize,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
     S: BuildHasher,
     V: Serialize,
 {
@@ -84,9 +82,8 @@ where
     }
 }
 
-impl<K, V, N> Serialize for LinearMap<K, V, N>
+impl<K, V, const N: usize> Serialize for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq + Serialize,
     V: Serialize,
 {
@@ -104,10 +101,7 @@ where
 
 // String containers
 
-impl<N> Serialize for String<N>
-where
-    N: ArrayLength<u8>,
-{
+impl<const N: usize> Serialize for String<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

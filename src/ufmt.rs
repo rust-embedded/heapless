@@ -1,25 +1,15 @@
 use ufmt_write::uWrite;
 
-use crate::{
-    ArrayLength,
-    string::String,
-    vec::Vec,
-};
+use crate::{string::String, vec::Vec};
 
-impl<N> uWrite for String<N>
-where
-    N: ArrayLength<u8>,
-{
+impl<const N: usize> uWrite for String<N> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
 }
 
-impl<N> uWrite for Vec<u8, N>
-where
-    N: ArrayLength<u8>,
-{
+impl<const N: usize> uWrite for Vec<u8, N> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
@@ -32,8 +22,6 @@ mod tests {
 
     use ufmt::{derive::uDebug, uwrite};
 
-    use crate::consts::*;
-
     #[derive(uDebug)]
     struct Pair {
         x: u32,
@@ -45,7 +33,7 @@ mod tests {
         let a = 123;
         let b = Pair { x: 0, y: 1234 };
 
-        let mut s = String::<U32>::new();
+        let mut s = String::<32>::new();
         uwrite!(s, "{} -> {:?}", a, b).unwrap();
 
         assert_eq!(s, "123 -> Pair { x: 0, y: 1234 }");
@@ -54,7 +42,7 @@ mod tests {
     #[test]
     fn test_string_err() {
         let p = Pair { x: 0, y: 1234 };
-        let mut s = String::<U4>::new();
+        let mut s = String::<4>::new();
         assert!(uwrite!(s, "{:?}", p).is_err());
     }
 
@@ -63,7 +51,7 @@ mod tests {
         let a = 123;
         let b = Pair { x: 0, y: 1234 };
 
-        let mut v = Vec::<u8, U32>::new();
+        let mut v = Vec::<u8, 32>::new();
         uwrite!(v, "{} -> {:?}", a, b).unwrap();
 
         assert_eq!(v, b"123 -> Pair { x: 0, y: 1234 }");

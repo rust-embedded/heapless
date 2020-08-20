@@ -6,31 +6,21 @@ use core::{
     ops, ptr, slice,
 };
 
-use generic_array::{ArrayLength, GenericArray};
-
 use crate::Vec;
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
-pub struct LinearMap<K, V, N>(#[doc(hidden)] pub crate::i::LinearMap<GenericArray<(K, V), N>>)
-where
-    N: ArrayLength<(K, V)>,
-    K: Eq;
 
-impl<A> crate::i::LinearMap<A> {
-    /// `LinearMap` `const` constructor; wrap the returned value in
-    /// [`LinearMap`](../struct.LinearMap.html)
-    pub const fn new() -> Self {
-        Self {
-            buffer: crate::i::Vec::new(),
-        }
-    }
+pub struct LinearMap<K, V, const N: usize>
+where
+    K: Eq,
+{
+    pub(crate) buffer: Vec<(K, V), N>,
 }
 
-impl<K, V, N> LinearMap<K, V, N>
+impl<K, V, const N: usize> LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     /// Creates an empty `LinearMap`
@@ -39,16 +29,15 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
     /// // allocate the map on the stack
-    /// let mut map: LinearMap<&str, isize, U8> = LinearMap::new();
+    /// let mut map: LinearMap<&str, isize, 8> = LinearMap::new();
     ///
     /// // allocate the map in a static variable
-    /// static mut MAP: LinearMap<&str, isize, U8> = LinearMap(heapless::i::LinearMap::new());
+    /// static mut MAP: LinearMap<&str, isize, 8> = LinearMap::new();
     /// ```
-    pub fn new() -> Self {
-        LinearMap(crate::i::LinearMap::new())
+    pub const fn new() -> Self {
+        Self { buffer: Vec::new() }
     }
 
     /// Returns the number of elements that the map can hold
@@ -59,13 +48,12 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let map: LinearMap<&str, isize, U8> = LinearMap::new();
+    /// let map: LinearMap<&str, isize, 8> = LinearMap::new();
     /// assert_eq!(map.capacity(), 8);
     /// ```
     pub fn capacity(&self) -> usize {
-        N::to_usize()
+        N
     }
 
     /// Clears the map, removing all key-value pairs
@@ -76,15 +64,14 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// map.clear();
     /// assert!(map.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.0.buffer.clear()
+        self.buffer.clear()
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -95,9 +82,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.contains_key(&1), true);
     /// assert_eq!(map.contains_key(&2), false);
@@ -114,9 +100,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.get(&1), Some(&"a"));
     /// assert_eq!(map.get(&2), None);
@@ -139,9 +124,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// if let Some(x) = map.get_mut(&1) {
     ///     *x = "b";
@@ -166,15 +150,14 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, 8> = LinearMap::new();
     /// assert_eq!(a.len(), 0);
     /// a.insert(1, "a").unwrap();
     /// assert_eq!(a.len(), 1);
     /// ```
     pub fn len(&self) -> usize {
-        self.0.buffer.len
+        self.buffer.len()
     }
 
     /// Inserts a key-value pair into the map.
@@ -189,9 +172,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// assert_eq!(map.insert(37, "a").unwrap(), None);
     /// assert_eq!(map.is_empty(), false);
     ///
@@ -205,7 +187,7 @@ where
             return Ok(Some(value));
         }
 
-        self.0.buffer.push((key, value))?;
+        self.buffer.push((key, value))?;
         Ok(None)
     }
 
@@ -217,9 +199,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, 8> = LinearMap::new();
     /// assert!(a.is_empty());
     /// a.insert(1, "a").unwrap();
     /// assert!(!a.is_empty());
@@ -234,9 +215,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -247,7 +227,7 @@ where
     /// ```
     pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
-            iter: self.0.buffer.as_slice().iter(),
+            iter: self.buffer.as_slice().iter(),
         }
     }
 
@@ -258,9 +238,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -276,7 +255,7 @@ where
     /// ```
     pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut {
-            iter: self.0.buffer.as_mut_slice().iter_mut(),
+            iter: self.buffer.as_mut_slice().iter_mut(),
         }
     }
 
@@ -286,9 +265,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -310,9 +288,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.remove(&1), Some("a"));
     /// assert_eq!(map.remove(&1), None);
@@ -328,7 +305,7 @@ where
             .find(|&(_, k)| k.borrow() == key)
             .map(|(idx, _)| idx);
 
-        idx.map(|idx| self.0.buffer.swap_remove(idx).1)
+        idx.map(|idx| self.buffer.swap_remove(idx).1)
     }
 
     /// An iterator visiting all values in arbitrary order
@@ -337,9 +314,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -358,9 +334,8 @@ where
     ///
     /// ```
     /// use heapless::LinearMap;
-    /// use heapless::consts::*;
     ///
-    /// let mut map: LinearMap<_, _, U8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -378,9 +353,8 @@ where
     }
 }
 
-impl<'a, K, V, N, Q> ops::Index<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, Q, const N: usize> ops::Index<&'a Q> for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
 {
@@ -391,9 +365,8 @@ where
     }
 }
 
-impl<'a, K, V, N, Q> ops::IndexMut<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, Q, const N: usize> ops::IndexMut<&'a Q> for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
 {
@@ -402,9 +375,8 @@ where
     }
 }
 
-impl<K, V, N> Default for LinearMap<K, V, N>
+impl<K, V, const N: usize> Default for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     fn default() -> Self {
@@ -412,22 +384,20 @@ where
     }
 }
 
-impl<K, V, N> Clone for LinearMap<K, V, N>
+impl<K, V, const N: usize> Clone for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq + Clone,
     V: Clone,
 {
     fn clone(&self) -> Self {
-        Self(crate::i::LinearMap {
-            buffer: self.0.buffer.clone(),
-        })
+        Self {
+            buffer: self.buffer.clone(),
+        }
     }
 }
 
-impl<K, V, N> fmt::Debug for LinearMap<K, V, N>
+impl<K, V, const N: usize> fmt::Debug for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq + fmt::Debug,
     V: fmt::Debug,
 {
@@ -436,9 +406,8 @@ where
     }
 }
 
-impl<K, V, N> FromIterator<(K, V)> for LinearMap<K, V, N>
+impl<K, V, const N: usize> FromIterator<(K, V)> for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     fn from_iter<I>(iter: I) -> Self
@@ -446,22 +415,20 @@ where
         I: IntoIterator<Item = (K, V)>,
     {
         let mut out = Self::new();
-        out.0.buffer.extend(iter);
+        out.buffer.extend(iter);
         out
     }
 }
 
-pub struct IntoIter<K, V, N>
+pub struct IntoIter<K, V, const N: usize>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     inner: <Vec<(K, V), N> as IntoIterator>::IntoIter,
 }
 
-impl<K, V, N> Iterator for IntoIter<K, V, N>
+impl<K, V, const N: usize> Iterator for IntoIter<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     type Item = (K, V);
@@ -470,28 +437,27 @@ where
     }
 }
 
-impl<K, V, N> IntoIterator for LinearMap<K, V, N>
+// TODO: Why is this needed at all, no example, no test... I don't get it
+// impl<K, V, const N: usize> IntoIterator for LinearMap<K, V, N>
+// where
+//     K: Eq,
+// {
+//     type Item = (K, V);
+//     type IntoIter = IntoIter<K, V, N>;
+
+//     fn into_iter(mut self) -> Self::IntoIter {
+//         // FIXME this may result in a memcpy at runtime
+//         let lm = mem::replace(&mut self, unsafe { MaybeUninit::uninit().assume_init() });
+//         mem::forget(self);
+
+//         Self::IntoIter {
+//             inner: lm.buffer.into_iter(),
+//         }
+//     }
+// }
+
+impl<'a, K, V, const N: usize> IntoIterator for &'a LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
-    K: Eq,
-{
-    type Item = (K, V);
-    type IntoIter = IntoIter<K, V, N>;
-
-    fn into_iter(mut self) -> Self::IntoIter {
-        // FIXME this may result in a memcpy at runtime
-        let lm = mem::replace(&mut self.0, unsafe { MaybeUninit::uninit().assume_init() });
-        mem::forget(self);
-
-        Self::IntoIter {
-            inner: crate::Vec(lm.buffer).into_iter(),
-        }
-    }
-}
-
-impl<'a, K, V, N> IntoIterator for &'a LinearMap<K, V, N>
-where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     type Item = (&'a K, &'a V);
@@ -522,13 +488,15 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
-impl<K, V, N> Drop for LinearMap<K, V, N>
+impl<K, V, const N: usize> Drop for LinearMap<K, V, N>
 where
-    N: ArrayLength<(K, V)>,
     K: Eq,
 {
     fn drop(&mut self) {
-        unsafe { ptr::drop_in_place(self.0.buffer.as_mut_slice()) }
+        // heapless::Vec implements drop right?
+        drop(&self.buffer);
+        // original code below
+        // unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }
     }
 }
 
@@ -544,12 +512,10 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, N, N2> PartialEq<LinearMap<K, V, N2>> for LinearMap<K, V, N>
+impl<K, V, const N: usize, const N2: usize> PartialEq<LinearMap<K, V, N2>> for LinearMap<K, V, N>
 where
     K: Eq,
     V: PartialEq,
-    N: ArrayLength<(K, V)>,
-    N2: ArrayLength<(K, V)>,
 {
     fn eq(&self, other: &LinearMap<K, V, N2>) -> bool {
         self.len() == other.len()
@@ -559,30 +525,29 @@ where
     }
 }
 
-impl<K, V, N> Eq for LinearMap<K, V, N>
+impl<K, V, const N: usize> Eq for LinearMap<K, V, N>
 where
     K: Eq,
     V: PartialEq,
-    N: ArrayLength<(K, V)>,
 {
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{consts::*, LinearMap};
+    use crate::LinearMap;
 
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, U8> = LinearMap(crate::i::LinearMap::new());
+        static mut _L: LinearMap<i32, i32, 8> = LinearMap::new();
     }
 
     #[test]
     fn partial_eq() {
         {
-            let mut a = LinearMap::<_, _, U1>::new();
+            let mut a = LinearMap::<_, _, 1>::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b = LinearMap::<_, _, U2>::new();
+            let mut b = LinearMap::<_, _, 2>::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -593,15 +558,17 @@ mod test {
         }
 
         {
-            let mut a = LinearMap::<_, _, U2>::new();
+            let mut a = LinearMap::<_, _, 2>::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b = LinearMap::<_, _, U2>::new();
+            let mut b = LinearMap::<_, _, 2>::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
         }
     }
+
+    // TODO: drop test
 }

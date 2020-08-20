@@ -1,12 +1,13 @@
 use core::{borrow::Borrow, fmt, iter::FromIterator};
 
-use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::indexmap::{self, Bucket, IndexMap, Pos};
 
 /// An `IndexSet` using the default FNV hasher
-pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
+pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, N>;
+
+// TODO: We don't enforce the power of 2 currently (part of generic array bounds)
 
 /// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html)
 ///
@@ -16,10 +17,9 @@ pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
 ///
 /// ```
 /// use heapless::FnvIndexSet;
-/// use heapless::consts::*;
 ///
 /// // A hash set with a capacity of 16 elements allocated on the stack
-/// let mut books = FnvIndexSet::<_, U16>::new();
+/// let mut books = FnvIndexSet::<_, 16>::new();
 ///
 /// // Add some books.
 /// books.insert("A Dance With Dragons").unwrap();
@@ -41,19 +41,17 @@ pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
 ///     println!("{}", book);
 /// }
 /// ```
-pub struct IndexSet<T, N, S>
+pub struct IndexSet<T, S, const N: usize>
 where
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
-    map: IndexMap<T, (), N, S>,
+    map: IndexMap<T, (), S, N>,
 }
 
-impl<T, N, S> IndexSet<T, N, BuildHasherDefault<S>>
+impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N>
 where
     T: Eq + Hash,
     S: Default + Hasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
 {
     /// Creates an empty `IndexSet`
     pub fn new() -> Self {
@@ -63,11 +61,10 @@ where
     }
 }
 
-impl<T, N, S> IndexSet<T, N, S>
+impl<T, S, const N: usize> IndexSet<T, S, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     /// Returns the number of elements the set can hold
     ///
@@ -75,9 +72,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let set = FnvIndexSet::<i32, U16>::new();
+    /// let set = FnvIndexSet::<i32, 16>::new();
     /// assert_eq!(set.capacity(), 16);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -90,9 +86,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut set = FnvIndexSet::<_, U16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     /// set.insert("a").unwrap();
     /// set.insert("b").unwrap();
     ///
@@ -114,30 +109,28 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, U16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Can be seen as `a - b`.
     /// for x in a.difference(&b) {
     ///     println!("{}", x); // Print 1
     /// }
     ///
-    /// let diff: FnvIndexSet<_, U16> = a.difference(&b).collect();
-    /// assert_eq!(diff, [1].iter().collect::<FnvIndexSet<_, U16>>());
+    /// let diff: FnvIndexSet<_, 16> = a.difference(&b).collect();
+    /// assert_eq!(diff, [1].iter().collect::<FnvIndexSet<_, 16>>());
     ///
     /// // Note that difference is not symmetric,
     /// // and `b - a` means something else:
-    /// let diff: FnvIndexSet<_, U16> = b.difference(&a).collect();
-    /// assert_eq!(diff, [4].iter().collect::<FnvIndexSet<_, U16>>());
+    /// let diff: FnvIndexSet<_, 16> = b.difference(&a).collect();
+    /// assert_eq!(diff, [4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
-    pub fn difference<'a, N2, S2>(
+    pub fn difference<'a, S2, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2>,
-    ) -> Difference<'a, T, N2, S2>
+        other: &'a IndexSet<T, S2, N2>,
+    ) -> Difference<'a, T, S2, N2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         Difference {
@@ -153,28 +146,26 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, U16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 1, 4 in that order order.
     /// for x in a.symmetric_difference(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let diff1: FnvIndexSet<_, U16> = a.symmetric_difference(&b).collect();
-    /// let diff2: FnvIndexSet<_, U16> = b.symmetric_difference(&a).collect();
+    /// let diff1: FnvIndexSet<_, 16> = a.symmetric_difference(&b).collect();
+    /// let diff2: FnvIndexSet<_, 16> = b.symmetric_difference(&a).collect();
     ///
     /// assert_eq!(diff1, diff2);
-    /// assert_eq!(diff1, [1, 4].iter().collect::<FnvIndexSet<_, U16>>());
+    /// assert_eq!(diff1, [1, 4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
-    pub fn symmetric_difference<'a, N2, S2>(
+    pub fn symmetric_difference<'a, S2, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2>,
+        other: &'a IndexSet<T, S2, N2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         self.difference(other).chain(other.difference(self))
@@ -187,25 +178,23 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, U16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 2, 3 in that order.
     /// for x in a.intersection(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let intersection: FnvIndexSet<_, U16> = a.intersection(&b).collect();
-    /// assert_eq!(intersection, [2, 3].iter().collect::<FnvIndexSet<_, U16>>());
+    /// let intersection: FnvIndexSet<_, 16> = a.intersection(&b).collect();
+    /// assert_eq!(intersection, [2, 3].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
-    pub fn intersection<'a, N2, S2>(
+    pub fn intersection<'a, S2, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2>,
-    ) -> Intersection<'a, T, N2, S2>
+        other: &'a IndexSet<T, S2, N2>,
+    ) -> Intersection<'a, T, S2, N2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         Intersection {
@@ -221,25 +210,23 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut a: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, U16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 1, 2, 3, 4 in that order.
     /// for x in a.union(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let union: FnvIndexSet<_, U16> = a.union(&b).collect();
-    /// assert_eq!(union, [1, 2, 3, 4].iter().collect::<FnvIndexSet<_, U16>>());
+    /// let union: FnvIndexSet<_, 16> = a.union(&b).collect();
+    /// assert_eq!(union, [1, 2, 3, 4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
-    pub fn union<'a, N2, S2>(
+    pub fn union<'a, S2, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2>,
+        other: &'a IndexSet<T, S2, N2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         self.iter().chain(other.difference(self))
@@ -251,9 +238,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut v: FnvIndexSet<_, U16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert_eq!(v.len(), 0);
     /// v.insert(1).unwrap();
     /// assert_eq!(v.len(), 1);
@@ -268,9 +254,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut v: FnvIndexSet<_, U16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert!(v.is_empty());
     /// v.insert(1).unwrap();
     /// assert!(!v.is_empty());
@@ -285,9 +270,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut v: FnvIndexSet<_, U16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// v.insert(1).unwrap();
     /// v.clear();
     /// assert!(v.is_empty());
@@ -305,9 +289,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let set: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
+    /// let set: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// assert_eq!(set.contains(&1), true);
     /// assert_eq!(set.contains(&4), false);
     /// ```
@@ -326,10 +309,9 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let a: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b = FnvIndexSet::<_, U16>::new();
+    /// let a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(a.is_disjoint(&b), true);
     /// b.insert(4).unwrap();
@@ -337,9 +319,8 @@ where
     /// b.insert(1).unwrap();
     /// assert_eq!(a.is_disjoint(&b), false);
     /// ```
-    pub fn is_disjoint<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
+    pub fn is_disjoint<S2, const N2: usize>(&self, other: &IndexSet<T, S2, N2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         self.iter().all(|v| !other.contains(v))
@@ -352,10 +333,9 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let sup: FnvIndexSet<_, U16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut set = FnvIndexSet::<_, U16>::new();
+    /// let sup: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.is_subset(&sup), true);
     /// set.insert(2).unwrap();
@@ -363,9 +343,8 @@ where
     /// set.insert(4).unwrap();
     /// assert_eq!(set.is_subset(&sup), false);
     /// ```
-    pub fn is_subset<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
+    pub fn is_subset<S2, const N2: usize>(&self, other: &IndexSet<T, S2, N2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         self.iter().all(|v| other.contains(v))
@@ -378,10 +357,9 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let sub: FnvIndexSet<_, U16> = [1, 2].iter().cloned().collect();
-    /// let mut set = FnvIndexSet::<_, U16>::new();
+    /// let sub: FnvIndexSet<_, 16> = [1, 2].iter().cloned().collect();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.is_superset(&sub), false);
     ///
@@ -392,9 +370,8 @@ where
     /// set.insert(2).unwrap();
     /// assert_eq!(set.is_superset(&sub), true);
     /// ```
-    pub fn is_superset<N2, S2>(&self, other: &IndexSet<T, N2, S2>) -> bool
+    pub fn is_superset<S2, const N2: usize>(&self, other: &IndexSet<T, S2, N2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
         S2: BuildHasher,
     {
         other.is_subset(self)
@@ -410,9 +387,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut set = FnvIndexSet::<_, U16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.insert(2).unwrap(), true);
     /// assert_eq!(set.insert(2).unwrap(), false);
@@ -434,9 +410,8 @@ where
     ///
     /// ```
     /// use heapless::FnvIndexSet;
-    /// use heapless::consts::*;
     ///
-    /// let mut set = FnvIndexSet::<_, U16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// set.insert(2).unwrap();
     /// assert_eq!(set.remove(&2), true);
@@ -451,11 +426,10 @@ where
     }
 }
 
-impl<T, N, S> Clone for IndexSet<T, N, S>
+impl<T, S, const N: usize> Clone for IndexSet<T, S, N>
 where
     T: Eq + Hash + Clone,
     S: Clone,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -464,22 +438,20 @@ where
     }
 }
 
-impl<T, N, S> fmt::Debug for IndexSet<T, N, S>
+impl<T, S, const N: usize> fmt::Debug for IndexSet<T, S, N>
 where
     T: Eq + Hash + fmt::Debug,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_set().entries(self.iter()).finish()
     }
 }
 
-impl<T, N, S> Default for IndexSet<T, N, S>
+impl<T, S, const N: usize> Default for IndexSet<T, S, N>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn default() -> Self {
         IndexSet {
@@ -488,24 +460,22 @@ where
     }
 }
 
-impl<T, N1, N2, S1, S2> PartialEq<IndexSet<T, N2, S2>> for IndexSet<T, N1, S1>
+impl<T, S1, S2, const N1: usize, const N2: usize> PartialEq<IndexSet<T, S2, N2>>
+    for IndexSet<T, S1, N1>
 where
     T: Eq + Hash,
     S1: BuildHasher,
     S2: BuildHasher,
-    N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
-    N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
-    fn eq(&self, other: &IndexSet<T, N2, S2>) -> bool {
+    fn eq(&self, other: &IndexSet<T, S2, N2>) -> bool {
         self.len() == other.len() && self.is_subset(other)
     }
 }
 
-impl<T, N, S> Extend<T> for IndexSet<T, N, S>
+impl<T, S, const N: usize> Extend<T> for IndexSet<T, S, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -515,11 +485,10 @@ where
     }
 }
 
-impl<'a, T, N, S> Extend<&'a T> for IndexSet<T, N, S>
+impl<'a, T, S, const N: usize> Extend<&'a T> for IndexSet<T, S, N>
 where
     T: 'a + Eq + Hash + Copy,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -529,11 +498,10 @@ where
     }
 }
 
-impl<T, N, S> FromIterator<T> for IndexSet<T, N, S>
+impl<T, S, const N: usize> FromIterator<T> for IndexSet<T, S, N>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -545,11 +513,10 @@ where
     }
 }
 
-impl<'a, T, N, S> IntoIterator for &'a IndexSet<T, N, S>
+impl<'a, T, S, const N: usize> IntoIterator for &'a IndexSet<T, S, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
@@ -579,21 +546,19 @@ impl<'a, T> Clone for Iter<'a, T> {
     }
 }
 
-pub struct Difference<'a, T, N, S>
+pub struct Difference<'a, T, S, const N: usize>
 where
     S: BuildHasher,
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     iter: Iter<'a, T>,
-    other: &'a IndexSet<T, N, S>,
+    other: &'a IndexSet<T, S, N>,
 }
 
-impl<'a, T, N, S> Iterator for Difference<'a, T, N, S>
+impl<'a, T, S, const N: usize> Iterator for Difference<'a, T, S, N>
 where
     S: BuildHasher,
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     type Item = &'a T;
 
@@ -607,21 +572,19 @@ where
     }
 }
 
-pub struct Intersection<'a, T, N, S>
+pub struct Intersection<'a, T, S, const N: usize>
 where
     S: BuildHasher,
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     iter: Iter<'a, T>,
-    other: &'a IndexSet<T, N, S>,
+    other: &'a IndexSet<T, S, N>,
 }
 
-impl<'a, T, N, S> Iterator for Intersection<'a, T, N, S>
+impl<'a, T, S, const N: usize> Iterator for Intersection<'a, T, S, N>
 where
     S: BuildHasher,
     T: Eq + Hash,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
 {
     type Item = &'a T;
 

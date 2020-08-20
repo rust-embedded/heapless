@@ -2,7 +2,6 @@
 pub mod spsc {
     #[cfg(has_atomics)]
     use crate::spsc::{MultiCore, SingleCore};
-
     #[cfg(has_atomics)]
     use core::sync::atomic::{self, AtomicU16, AtomicU8, AtomicUsize, Ordering};
 

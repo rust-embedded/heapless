@@ -10,17 +10,14 @@
 //!
 //! ```
 //! use heapless::Vec; // fixed capacity `std::Vec`
-//! use heapless::consts::U8; // type level integer used to specify capacity
 //!
 //! // on the stack
-//! let mut xs: Vec<u8, U8> = Vec::new(); // can hold up to 8 elements
+//! let mut xs: Vec<u8, 8> = Vec::new(); // can hold up to 8 elements
 //! xs.push(42).unwrap();
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
-//! // (because `const-fn` has not been fully stabilized you need to use the helper structs in
-//! // the `i` module, which must be wrapped in a tuple struct)
-//! static mut XS: Vec<u8, U8> = Vec(heapless::i::Vec::new());
+//! static mut XS: Vec<u8, 8> = Vec::new();
 //!
 //! let xs = unsafe { &mut XS };
 //!
@@ -28,7 +25,7 @@
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in the heap (though kind of pointless because no reallocation)
-//! let mut ys: Box<Vec<u8, U8>> = Box::new(Vec::new());
+//! let mut ys: Box<Vec<u8, 8>> = Box::new(Vec::new());
 //! ys.push(42).unwrap();
 //! assert_eq!(ys.pop(), Some(42));
 //! ```
@@ -69,29 +66,32 @@
 //! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
 //! It *might* compile on older versions but that may change in any new patch release.
 
+// experimental usage of const generics, requires nightly 2020-08-18 (or newer)
+#![feature(min_const_generics)]
+#![feature(const_fn)]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-#![deny(warnings)]
+// #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
-pub use generic_array::typenum::{consts, PowerOfTwo};
-pub use generic_array::ArrayLength;
+// pub use generic_array::typenum::{consts, PowerOfTwo};
+// pub use generic_array::ArrayLength;
+pub use histbuf::HistoryBuffer;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;
-pub use histbuf::HistoryBuffer;
 
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
+mod histbuf;
 mod indexmap;
 mod indexset;
 mod linear_map;
 mod string;
 mod vec;
-mod histbuf;
 
 #[cfg(feature = "serde")]
 mod de;
@@ -99,10 +99,10 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-pub mod i;
+// pub mod i;
 #[cfg(all(has_cas, feature = "cas"))]
 pub mod mpmc;
-#[cfg(all(has_cas, feature = "cas"))]
+// #[cfg(all(has_cas, feature = "cas"))]
 pub mod pool;
 #[cfg(has_atomics)]
 pub mod spsc;
