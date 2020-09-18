@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.5.6] - 2020-09-18
+
+### Added
+
+- Added `as_mut_vec` for `String`
+- Added `set_len` for `Vec`
+- Performance improvements in `histbuf`
+
+### Fixed
+
+- `Producer` was made `Send` for single core applications
+
 ## [v0.5.5] - 2020-05-04
 
 ### Added
