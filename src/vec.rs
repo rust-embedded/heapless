@@ -167,6 +167,8 @@ where
 /// }
 /// assert_eq!(vec, [7, 1, 2, 3]);
 /// ```
+// repr(transparent) is needed for [`String::as_mut_vec`]
+#[repr(transparent)]
 pub struct Vec<T, N>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>>)
 where
     N: ArrayLength<T>;
@@ -202,6 +204,28 @@ where
     /// ```
     pub fn new() -> Self {
         Vec(crate::i::Vec::new())
+    }
+
+    /// Constructs a new vector with a fixed capacity of `N` and fills it
+    /// with the provided slice.
+    ///
+    /// This is equivalent to the following code:
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let mut v: Vec<u8, U16> = Vec::new();
+    /// v.extend_from_slice(&[1, 2, 3]).unwrap();
+    /// ```
+    #[inline]
+    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    where
+        T: Clone,
+    {
+        let mut v = Vec::new();
+        v.extend_from_slice(other)?;
+        Ok(v)
     }
 
     /* Public API */
@@ -315,6 +339,103 @@ where
         self.resize(new_len, T::default())
     }
 
+    /// Forces the length of the vector to `new_len`.
+    ///
+    /// This is a low-level operation that maintains none of the normal
+    /// invariants of the type. Normally changing the length of a vector
+    /// is done using one of the safe operations instead, such as
+    /// [`truncate`], [`resize`], [`extend`], or [`clear`].
+    ///
+    /// [`truncate`]: #method.truncate
+    /// [`resize`]: #method.resize
+    /// [`extend`]: https://doc.rust-lang.org/stable/core/iter/trait.Extend.html#tymethod.extend
+    /// [`clear`]: #method.clear
+    ///
+    /// # Safety
+    ///
+    /// - `new_len` must be less than or equal to [`capacity()`].
+    /// - The elements at `old_len..new_len` must be initialized.
+    ///
+    /// [`capacity()`]: #method.capacity
+    ///
+    /// # Examples
+    ///
+    /// This method can be useful for situations in which the vector
+    /// is serving as a buffer for other code, particularly over FFI:
+    ///
+    /// ```no_run
+    /// # #![allow(dead_code)]
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// # // This is just a minimal skeleton for the doc example;
+    /// # // don't use this as a starting point for a real library.
+    /// # pub struct StreamWrapper { strm: *mut core::ffi::c_void }
+    /// # const Z_OK: i32 = 0;
+    /// # extern "C" {
+    /// #     fn deflateGetDictionary(
+    /// #         strm: *mut core::ffi::c_void,
+    /// #         dictionary: *mut u8,
+    /// #         dictLength: *mut usize,
+    /// #     ) -> i32;
+    /// # }
+    /// # impl StreamWrapper {
+    /// pub fn get_dictionary(&self) -> Option<Vec<u8, U32768>> {
+    ///     // Per the FFI method's docs, "32768 bytes is always enough".
+    ///     let mut dict = Vec::new();
+    ///     let mut dict_length = 0;
+    ///     // SAFETY: When `deflateGetDictionary` returns `Z_OK`, it holds that:
+    ///     // 1. `dict_length` elements were initialized.
+    ///     // 2. `dict_length` <= the capacity (32_768)
+    ///     // which makes `set_len` safe to call.
+    ///     unsafe {
+    ///         // Make the FFI call...
+    ///         let r = deflateGetDictionary(self.strm, dict.as_mut_ptr(), &mut dict_length);
+    ///         if r == Z_OK {
+    ///             // ...and update the length to what was initialized.
+    ///             dict.set_len(dict_length);
+    ///             Some(dict)
+    ///         } else {
+    ///             None
+    ///         }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    ///
+    /// While the following example is sound, there is a memory leak since
+    /// the inner vectors were not freed prior to the `set_len` call:
+    ///
+    /// ```
+    /// use core::iter::FromIterator;
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let mut vec = Vec::<Vec<u8, U3>, U3>::from_iter(
+    ///     [
+    ///         Vec::from_iter([1, 0, 0].iter().cloned()),
+    ///         Vec::from_iter([0, 1, 0].iter().cloned()),
+    ///         Vec::from_iter([0, 0, 1].iter().cloned()),
+    ///     ]
+    ///     .iter()
+    ///     .cloned()
+    /// );
+    /// // SAFETY:
+    /// // 1. `old_len..0` is empty so no elements need to be initialized.
+    /// // 2. `0 <= capacity` always holds whatever `capacity` is.
+    /// unsafe {
+    ///     vec.set_len(0);
+    /// }
+    /// ```
+    ///
+    /// Normally, here, one would use [`clear`] instead to correctly drop
+    /// the contents and thus not leak memory.
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= self.capacity());
+
+        self.0.len = new_len
+    }
+
     /// Removes an element from the vector and returns it.
     ///
     /// The removed element is replaced by the last element of the vector.
@@ -354,6 +475,54 @@ where
     pub(crate) fn is_full(&self) -> bool {
         self.0.is_full()
     }
+
+    /// Returns `true` if `needle` is a prefix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.starts_with(b""), true);
+    /// assert_eq!(v.starts_with(b"ab"), true);
+    /// assert_eq!(v.starts_with(b"bc"), false);
+    /// ```
+    #[inline]
+    pub fn starts_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let n = needle.len();
+        self.len() >= n && needle == &self[..n]
+    }
+
+    /// Returns `true` if `needle` is a suffix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// use heapless::consts::*;
+    ///
+    /// let v: Vec<_, U8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.ends_with(b""), true);
+    /// assert_eq!(v.ends_with(b"ab"), false);
+    /// assert_eq!(v.ends_with(b"bc"), true);
+    /// ```
+    #[inline]
+    pub fn ends_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let (v, n) = (self.len(), needle.len());
+        v >= n && needle == &self[v - n..]
+    }
 }
 
 impl<T, N> Default for Vec<T, N>
@@ -372,6 +541,18 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <[T] as fmt::Debug>::fmt(self, f)
+    }
+}
+
+impl<N> fmt::Write for Vec<u8, N>
+where
+    N: ArrayLength<u8>,
+{
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        match self.extend_from_slice(s.as_bytes()) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(fmt::Error),
+        }
     }
 }
 
@@ -655,6 +836,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{consts::*, Vec};
+    use as_slice::AsSlice;
+    use core::fmt::Write;
 
     #[test]
     fn static_new() {
@@ -920,5 +1103,62 @@ mod tests {
         // correct value is being written.
         v.resize_default(1).unwrap();
         assert_eq!(v[0], 0);
+    }
+
+    #[test]
+    fn write() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        write!(v, "{:x}", 1234).unwrap();
+        assert_eq!(&v[..], b"4d2");
+    }
+
+    #[test]
+    fn extend_from_slice() {
+        let mut v: Vec<u8, U4> = Vec::new();
+        assert_eq!(v.len(), 0);
+        v.extend_from_slice(&[1, 2]).unwrap();
+        assert_eq!(v.len(), 2);
+        assert_eq!(v.as_slice(), &[1, 2]);
+        v.extend_from_slice(&[3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+        assert!(v.extend_from_slice(&[4, 5]).is_err());
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn from_slice() {
+        // Successful construction
+        let v: Vec<u8, U4> = Vec::from_slice(&[1, 2, 3]).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+
+        // Slice too large
+        assert!(Vec::<u8, U2>::from_slice(&[1, 2, 3]).is_err());
+    }
+
+    #[test]
+    fn starts_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.starts_with(&[]));
+        assert!(v.starts_with(b""));
+        assert!(v.starts_with(b"a"));
+        assert!(v.starts_with(b"ab"));
+        assert!(!v.starts_with(b"abc"));
+        assert!(!v.starts_with(b"ba"));
+        assert!(!v.starts_with(b"b"));
+    }
+
+    #[test]
+    fn ends_with() {
+        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        assert!(v.ends_with(&[]));
+        assert!(v.ends_with(b""));
+        assert!(v.ends_with(b"b"));
+        assert!(v.ends_with(b"ab"));
+        assert!(!v.ends_with(b"abc"));
+        assert!(!v.ends_with(b"ba"));
+        assert!(!v.ends_with(b"a"));
     }
 }

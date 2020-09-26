@@ -56,6 +56,14 @@
 //! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
 //! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
 //!
+//! # Optional Features
+//!
+//! The `heapless` crate provides the following optional Cargo features:
+//!
+//! - `ufmt-impl`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
+//!
+//! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
+//!
 //! # Minimum Supported Rust Version (MSRV)
 //!
 //! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
@@ -69,13 +77,14 @@
 
 pub use binary_heap::BinaryHeap;
 pub use errors::*;
-pub use generic_array::typenum::consts;
+pub use generic_array::typenum::{consts, PowerOfTwo};
 pub use generic_array::ArrayLength;
-pub use indexmap::{FnvIndexMap, IndexMap};
+pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;
+pub use histbuf::HistoryBuffer;
 
 mod errors;
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
@@ -84,6 +93,7 @@ mod indexset;
 mod linear_map;
 mod string;
 mod vec;
+mod histbuf;
 
 #[cfg(feature = "serde")]
 mod de;
@@ -98,5 +108,8 @@ pub mod mpmc;
 pub mod pool;
 #[cfg(has_atomics)]
 pub mod spsc;
+
+#[cfg(feature = "ufmt-impl")]
+mod ufmt;
 
 mod sealed;

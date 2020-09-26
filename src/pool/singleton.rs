@@ -15,7 +15,13 @@ use as_slice::{AsMutSlice, AsSlice};
 use super::{Init, Node, Uninit};
 
 /// Instantiates a pool as a global singleton
-#[cfg(any(armv7a, armv7r, armv7m, armv8m_main, test))]
+#[cfg(any(
+    armv7a,
+    armv7r,
+    armv7m,
+    armv8m_main,
+    all(target_arch = "x86_64", feature = "x86-sync-pool"),
+))]
 #[macro_export]
 macro_rules! pool {
     ($(#[$($attr:tt)*])* $ident:ident: $ty:ty) => {
@@ -194,7 +200,9 @@ where
             }
         }
 
-        P::ptr().push(self.inner.node)
+        if mem::size_of::<P::Data>() != 0 {
+            P::ptr().stack.push(self.inner.node)
+        }
     }
 }
 
@@ -291,11 +299,12 @@ mod tests {
         sync::atomic::{AtomicUsize, Ordering},
     };
 
-    use super::Pool;
+    use super::{super::Node, Pool};
 
     #[test]
     fn sanity() {
-        static mut MEMORY: [u8; 31] = [0; 31];
+        const SZ: usize = 2 * mem::size_of::<Node<u8>>() - 1;
+        static mut MEMORY: [u8; SZ] = [0; SZ];
 
         pool!(A: u8);
 
@@ -336,9 +345,6 @@ mod tests {
         }
 
         pool!(A: X);
-        static mut MEMORY: [u8; 23] = [0; 23];
-
-        A::grow(unsafe { &mut MEMORY });
 
         let x = A::alloc().unwrap().init(X::new());
         let y = A::alloc().unwrap().init(X::new());

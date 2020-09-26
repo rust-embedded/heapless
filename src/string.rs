@@ -178,6 +178,34 @@ where
         unsafe { str::from_utf8_unchecked_mut(self.0.vec.as_mut_slice()) }
     }
 
+    /// Returns a mutable reference to the contents of this `String`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the bytes passed
+    /// to it are valid UTF-8. If this constraint is violated, it may cause
+    /// memory unsafety issues with future users of the `String`, as the rest of
+    /// the library assumes that `String`s are valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// let mut s = String::from("hello");
+    ///
+    /// unsafe {
+    ///     let vec = s.as_mut_vec();
+    ///     assert_eq!(&[104, 101, 108, 108, 111][..], &vec[..]);
+    ///
+    ///     vec.reverse();
+    /// }
+    /// assert_eq!(s, "olleh");
+    /// ```
+    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
+        &mut *(&mut self.0.vec as *mut crate::i::Vec<GenericArray<u8, N>> as *mut Vec<u8, N>)
+    }
+
     /// Appends a given string slice onto the end of this `String`.
     ///
     /// # Examples
