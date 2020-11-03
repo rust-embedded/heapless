@@ -134,6 +134,23 @@ macro_rules! impl_ {
                 self._dequeue(head) // ▲
             }
 
+            /// Returns the maximum number of elements the queue can hold
+            pub fn capacity(&self) -> $uxx {
+                unsafe { self.rb.as_ref().capacity() }
+            }
+
+            /// Returns the number of elements in the queue
+            ///
+            /// # Note
+            ///
+            /// This is a conservative estimate. Interrupt during this function
+            /// might cause that the `Consumer` actually has more than N items available.
+            pub fn len(&self) -> $uxx {
+                let head = unsafe { self.rb.as_ref().0.head.load_relaxed() };
+                let tail = unsafe { self.rb.as_ref().0.tail.load_acquire() };
+                tail.wrapping_sub(head)
+            }
+
             unsafe fn _peek(&self, head: $uxx) -> &T {
                 let rb = self.rb.as_ref();
 
@@ -195,6 +212,23 @@ macro_rules! impl_ {
                     unsafe { self._enqueue(tail, item) }; // ▲
                     Ok(())
                 }
+            }
+
+            /// Returns the maximum number of elements the queue can hold
+            pub fn capacity(&self) -> $uxx {
+                unsafe { self.rb.as_ref().capacity() }
+            }
+
+            /// Returns the number of elements in the queue
+            ///
+            /// # Note
+            ///
+            /// This is a conservative estimate. Interrupt during this function
+            /// might cause that the `Producer` actually has more than N items of available space.
+            pub fn len(&self) -> $uxx {
+                let head = unsafe { self.rb.as_ref().0.head.load_acquire() };
+                let tail = unsafe { self.rb.as_ref().0.tail.load_relaxed() };
+                tail.wrapping_sub(head)
             }
 
             /// Adds an `item` to the end of the queue without checking if it's full
