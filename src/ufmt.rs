@@ -1,10 +1,6 @@
 use ufmt_write::uWrite;
 
-use crate::{
-    ArrayLength,
-    string::String,
-    vec::Vec,
-};
+use crate::{string::String, vec::Vec, ArrayLength};
 
 impl<N> uWrite for String<N>
 where
