@@ -3,7 +3,7 @@
 use heapless::{
     consts,
     spsc::{Consumer, Producer, Queue},
-    Vec, HistoryBuffer,
+    HistoryBuffer, Vec,
 };
 
 #[test]

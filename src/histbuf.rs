@@ -1,4 +1,4 @@
-use generic_array::{ArrayLength, GenericArray, sequence::GenericSequence};
+use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
@@ -41,7 +41,6 @@ where
     data: GenericArray<T, N>,
     write_at: usize,
 }
-
 
 impl<T, N> HistoryBuffer<T, N>
 where
