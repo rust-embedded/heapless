@@ -12,7 +12,48 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::Vec;
 
-/// An `IndexMap` using the default FNV hasher
+/// A [`heaples::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
+///
+/// A list of all Methods and Traits available for `FnvIndexMap` can be found in
+/// the [`heapless::IndexMap`](./struct.IndexMap.html) documentation.
+///
+/// # Examples
+/// ```
+/// use heapless::FnvIndexMap;
+/// use heapless::consts::*;
+///
+/// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+/// let mut book_reviews = FnvIndexMap::<_, _, U16>::new();
+///
+/// // review some books.
+/// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
+/// book_reviews.insert("Grimms' Fairy Tales",               "Masterpiece.").unwrap();
+/// book_reviews.insert("Pride and Prejudice",               "Very enjoyable.").unwrap();
+/// book_reviews.insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.").unwrap();
+///
+/// // check for a specific one.
+/// if !book_reviews.contains_key("Les Misérables") {
+///     println!("We've got {} reviews, but Les Misérables ain't one.",
+///              book_reviews.len());
+/// }
+///
+/// // oops, this review has a lot of spelling mistakes, let's delete it.
+/// book_reviews.remove("The Adventures of Sherlock Holmes");
+///
+/// // look up the values associated with some keys.
+/// let to_find = ["Pride and Prejudice", "Alice's Adventure in Wonderland"];
+/// for book in &to_find {
+///     match book_reviews.get(book) {
+///         Some(review) => println!("{}: {}", book, review),
+///         None => println!("{} is unreviewed.", book)
+///     }
+/// }
+///
+/// // iterate over everything.
+/// for (book, review) in &book_reviews {
+///     println!("{}: \"{}\"", book, review);
+/// }
+/// ```
 pub type FnvIndexMap<K, V, N> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -286,9 +327,15 @@ where
 
 /// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/1/indexmap/map/struct.IndexMap.html)
 ///
+/// Note that you cannot use `IndexMap` directly, since it is generic around the hashing algorithm
+/// in use. Pick a concrete instantiation like [`FnvIndexMap`](./type.FnvIndexMap.html) instead
+/// or create your own.
+///
 /// Note that the capacity of the `IndexMap` must be a power of 2.
 ///
 /// # Examples
+/// Since `IndexMap` cannot be used directly, we're using its `FnvIndexMap` instantiation
+/// for this example.
 ///
 /// ```
 /// use heapless::FnvIndexMap;
