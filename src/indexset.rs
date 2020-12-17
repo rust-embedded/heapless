@@ -5,14 +5,52 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::indexmap::{self, Bucket, IndexMap, Pos};
 
-/// An `IndexSet` using the default FNV hasher
+/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
+/// default FNV hasher.
+/// A list of all Methods and Traits available for `FnvIndexSet` can be found in
+/// the [`heapless::IndexSet`](./struct.IndexSet.html) documentation.
+///
+/// # Examples
+/// ```
+/// use heapless::FnvIndexSet;
+/// use heapless::consts::*;
+///
+/// // A hash set with a capacity of 16 elements allocated on the stack
+/// let mut books = FnvIndexSet::<_, U16>::new();
+///
+/// // Add some books.
+/// books.insert("A Dance With Dragons").unwrap();
+/// books.insert("To Kill a Mockingbird").unwrap();
+/// books.insert("The Odyssey").unwrap();
+/// books.insert("The Great Gatsby").unwrap();
+///
+/// // Check for a specific one.
+/// if !books.contains("The Winds of Winter") {
+///     println!("We have {} books, but The Winds of Winter ain't one.",
+///              books.len());
+/// }
+///
+/// // Remove a book.
+/// books.remove("The Odyssey");
+///
+/// // Iterate over everything.
+/// for book in &books {
+///     println!("{}", book);
+/// }
+/// ```
 pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;
 
-/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html)
+/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
+///
+/// Note that you cannot use `IndexSet` directly, since it is generic around the hashing algorithm
+/// in use. Pick a concrete instantiation like [`FnvIndexSet`](./type.FnvIndexSet.html) instead
+/// or create your own.
 ///
 /// Note that the capacity of the `IndexSet` must be a power of 2.
 ///
 /// # Examples
+/// Since `IndexSet` cannot be used directly, we're using its `FnvIndexSet` instantiation
+/// for this example.
 ///
 /// ```
 /// use heapless::FnvIndexSet;
