@@ -637,6 +637,44 @@
 <span id="634">634</span>
 <span id="635">635</span>
 <span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">core</span>::{<span class="ident">borrow</span>::<span class="ident">Borrow</span>, <span class="ident">fmt</span>, <span class="ident">iter</span>::<span class="ident">FromIterator</span>};
 
@@ -645,14 +683,52 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">indexmap</span>::{<span class="self">self</span>, <span class="ident">Bucket</span>, <span class="ident">IndexMap</span>, <span class="ident">Pos</span>};
 
-<span class="doccomment">/// An `IndexSet` using the default FNV hasher</span>
+<span class="doccomment">/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the</span>
+<span class="doccomment">/// default FNV hasher.</span>
+<span class="doccomment">/// A list of all Methods and Traits available for `FnvIndexSet` can be found in</span>
+<span class="doccomment">/// the [`heapless::IndexSet`](./struct.IndexSet.html) documentation.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// # Examples</span>
+<span class="doccomment">/// ```</span>
+<span class="doccomment">/// use heapless::FnvIndexSet;</span>
+<span class="doccomment">/// use heapless::consts::*;</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // A hash set with a capacity of 16 elements allocated on the stack</span>
+<span class="doccomment">/// let mut books = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // Add some books.</span>
+<span class="doccomment">/// books.insert(&quot;A Dance With Dragons&quot;).unwrap();</span>
+<span class="doccomment">/// books.insert(&quot;To Kill a Mockingbird&quot;).unwrap();</span>
+<span class="doccomment">/// books.insert(&quot;The Odyssey&quot;).unwrap();</span>
+<span class="doccomment">/// books.insert(&quot;The Great Gatsby&quot;).unwrap();</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // Check for a specific one.</span>
+<span class="doccomment">/// if !books.contains(&quot;The Winds of Winter&quot;) {</span>
+<span class="doccomment">///     println!(&quot;We have {} books, but The Winds of Winter ain&#39;t one.&quot;,</span>
+<span class="doccomment">///              books.len());</span>
+<span class="doccomment">/// }</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // Remove a book.</span>
+<span class="doccomment">/// books.remove(&quot;The Odyssey&quot;);</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // Iterate over everything.</span>
+<span class="doccomment">/// for book in &amp;books {</span>
+<span class="doccomment">///     println!(&quot;{}&quot;, book);</span>
+<span class="doccomment">/// }</span>
+<span class="doccomment">/// ```</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FnvIndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">BuildHasherDefault</span><span class="op">&lt;</span><span class="ident">FnvHasher</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-<span class="doccomment">/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html)</span>
+<span class="doccomment">/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Note that you cannot use `IndexSet` directly, since it is generic around the hashing algorithm</span>
+<span class="doccomment">/// in use. Pick a concrete instantiation like [`FnvIndexSet`](./type.FnvIndexSet.html) instead</span>
+<span class="doccomment">/// or create your own.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note that the capacity of the `IndexSet` must be a power of 2.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Examples</span>
+<span class="doccomment">/// Since `IndexSet` cannot be used directly, we&#39;re using its `FnvIndexSet` instantiation</span>
+<span class="doccomment">/// for this example.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use heapless::FnvIndexSet;</span>
