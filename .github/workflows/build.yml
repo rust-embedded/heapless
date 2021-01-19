@@ -310,16 +310,3 @@ jobs:
     steps:
       - name: Mark the job as a success
         run: exit 0
-  ci-failure:
-    name: ci
-    if: github.event_name == 'push' && !success()
-    needs:
-      - style
-      - check
-      - testcpass
-      - testtsan
-      - testcfail
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Mark the job as a failure
-        run: exit 1
