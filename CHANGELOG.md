@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.6.0] - 2021-02-02
+
+### Changed
+
+- [breaking-change] The version of the `generic-array` dependency has been
+  bumped to v0.14.2.
+
 ## [v0.5.6] - 2020-09-18
 
 ### Added
