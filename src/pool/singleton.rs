@@ -158,9 +158,7 @@ where
         let node = self.inner.node;
 
         mem::forget(self);
-        mem::forget(unsafe {
-            ptr::read(node.as_ref().data.get())
-        });
+        mem::forget(unsafe { ptr::read(node.as_ref().data.get()) });
 
         Box {
             inner: super::Box {
