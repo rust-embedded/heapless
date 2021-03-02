@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.6.1] - 2021-03-02
+
+### Fixed
+
+- Security issue.
+
 ## [v0.6.0] - 2021-02-02
 
 ### Changed
@@ -323,7 +329,9 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.6.1...HEAD
+[v0.6.1]: https://github.com/japaric/heapless/compare/v0.6.0...v0.6.1
+[v0.6.0]: https://github.com/japaric/heapless/compare/v0.5.5...v0.6.0
 [v0.5.5]: https://github.com/japaric/heapless/compare/v0.5.4...v0.5.5
 [v0.5.4]: https://github.com/japaric/heapless/compare/v0.5.3...v0.5.4
 [v0.5.3]: https://github.com/japaric/heapless/compare/v0.5.2...v0.5.3
