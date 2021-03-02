@@ -680,10 +680,19 @@ where
     N: ArrayLength<T>,
 {
     fn clone(&self) -> Self {
-        Self {
-            vec: self.vec.clone(),
-            next: self.next,
+        let mut vec = Vec::new();
+
+        if self.next < self.vec.len() {
+            let s = unsafe {
+                slice::from_raw_parts(
+                    (self.vec.0.buffer.as_ptr() as *const T).add(self.next),
+                    self.vec.len() - self.next,
+                )
+            };
+            vec.extend_from_slice(s).ok();
         }
+
+        Self { vec, next: 0 }
     }
 }
 
