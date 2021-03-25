@@ -1,13 +1,7 @@
-//! missing doc
-
 use core::{fmt, marker::PhantomData};
-
-// use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
-
 use crate::{
-    indexmap::{Bucket, Pos},
     sealed::binary_heap::Kind as BinaryHeapKind,
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
@@ -230,7 +224,7 @@ impl<'de, const N:usize> Deserialize<'de> for String<N>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, const N:usize>(PhantomData<(&'de ())>);
+        struct ValueVisitor<'de, const N:usize>(PhantomData<&'de ()>);
 
         impl<'de, const N:usize > de::Visitor<'de> for ValueVisitor<'de, N>
         {

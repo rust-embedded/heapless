@@ -792,7 +792,6 @@ where
 #[cfg(test)]
 mod tests {
     use crate::Vec;
-    use as_slice::AsSlice;
     use core::fmt::Write;
 
     #[test]

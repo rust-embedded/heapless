@@ -1,12 +1,5 @@
-use core::{
-    borrow::Borrow,
-    fmt,
-    iter::FromIterator,
-    mem::{self, MaybeUninit},
-    ops, ptr, slice,
-};
-
 use crate::Vec;
+use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///

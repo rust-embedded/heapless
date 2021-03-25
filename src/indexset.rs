@@ -1,4 +1,4 @@
-use crate::indexmap::{self, Bucket, IndexMap, Pos};
+use crate::indexmap::{self, IndexMap};
 use core::{borrow::Borrow, fmt, iter::FromIterator};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
