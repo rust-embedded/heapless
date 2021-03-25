@@ -127,25 +127,27 @@ macro_rules! probe_loop {
 }
 
 struct CoreMap<K, V, const N: usize>
-where
-    K: Eq + Hash,
 {
     entries: Vec<Bucket<K, V>, N>,
     indices: [Option<Pos>; N],
 }
 
 impl<K, V, const N: usize> CoreMap<K, V, N>
+{
+    const fn new() -> Self {
+        const INIT: Option<Pos> = None;
+
+        CoreMap {
+            entries: Vec::new(),
+            indices: [INIT; N],
+        }
+    }
+}
+
+impl<K, V, const N: usize> CoreMap<K, V, N>
 where
     K: Eq + Hash,
 {
-    // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
-    fn new() -> Self {
-        CoreMap {
-            entries: Vec::new(),
-            indices: unsafe { MaybeUninit::zeroed().assume_init() },
-        }
-    }
-
     fn capacity() -> usize {
         N
     }

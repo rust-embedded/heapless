@@ -2,7 +2,6 @@ use crate::indexmap::{self, IndexMap};
 use core::{borrow::Borrow, fmt, iter::FromIterator};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-// TODO: We don't enforce the power of 2 currently (part of generic array bounds)
 /// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
 /// default FNV hasher.
 /// A list of all Methods and Traits available for `FnvIndexSet` can be found in
@@ -89,6 +88,8 @@ where
 {
     /// Creates an empty `IndexSet`
     pub fn new() -> Self {
+        assert!(N.is_power_of_two());
+
         IndexSet {
             map: IndexMap::new(),
         }
