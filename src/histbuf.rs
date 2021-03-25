@@ -1,5 +1,3 @@
-// use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
-
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
 /// This buffer keeps a fixed number of elements.  On write, the oldest element

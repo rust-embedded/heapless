@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.6.1] - 2021-03-02
+
+### Fixed
+
+- Security issue.
+
+## [v0.6.0] - 2021-02-02
+
+### Changed
+
+- [breaking-change] The version of the `generic-array` dependency has been
+  bumped to v0.14.2.
+
+## [v0.5.6] - 2020-09-18
+
+### Added
+
+- Added `as_mut_vec` for `String`
+- Added `set_len` for `Vec`
+- Performance improvements in `histbuf`
+
+### Fixed
+
+- `Producer` was made `Send` for single core applications
+
 ## [v0.5.5] - 2020-05-04
 
 ### Added
@@ -304,7 +329,9 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.6.1...HEAD
+[v0.6.1]: https://github.com/japaric/heapless/compare/v0.6.0...v0.6.1
+[v0.6.0]: https://github.com/japaric/heapless/compare/v0.5.5...v0.6.0
 [v0.5.5]: https://github.com/japaric/heapless/compare/v0.5.4...v0.5.5
 [v0.5.4]: https://github.com/japaric/heapless/compare/v0.5.3...v0.5.4
 [v0.5.3]: https://github.com/japaric/heapless/compare/v0.5.2...v0.5.3

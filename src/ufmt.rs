@@ -1,5 +1,4 @@
 use ufmt_write::uWrite;
-
 use crate::{string::String, vec::Vec};
 
 impl<const N: usize> uWrite for String<N> {

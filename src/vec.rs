@@ -354,7 +354,6 @@ impl<T, const N: usize> Vec<T, N> {
     /// use core::iter::FromIterator;
     /// use heapless::Vec;
     ///
-    ///         
     /// let mut vec = Vec::<Vec<u8, 3>, 3>::from_iter(
     ///     [
     ///         Vec::from_iter([1, 0, 0].iter().cloned()),
@@ -638,10 +637,19 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        Self {
-            vec: self.vec.clone(),
-            next: self.next,
+        let mut vec = Vec::new();
+
+        if self.next < self.vec.len() {
+            let s = unsafe {
+                slice::from_raw_parts(
+                    (self.vec.buffer.as_ptr() as *const T).add(self.next),
+                    self.vec.len() - self.next,
+                )
+            };
+            vec.extend_from_slice(s).ok();
         }
+
+        Self { vec, next: 0 }
     }
 }
 
@@ -784,7 +792,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::Vec;
-    // use as_slice::AsSlice;
+    use as_slice::AsSlice;
     use core::fmt::Write;
 
     #[test]
