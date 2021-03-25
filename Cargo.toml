@@ -32,8 +32,7 @@ __trybuild = []
 scoped_threadpool = "0.1.8"
 
 [dependencies]
-as-slice = "0.1.0"
-# generic-array = "0.13.0"
+as-slice = "0.2.0"
 hash32 = "0.1.0"
 
 [dependencies.serde]

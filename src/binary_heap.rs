@@ -72,20 +72,12 @@ pub enum Max {}
 /// assert!(heap.is_empty())
 /// ```
 
-pub struct BinaryHeap<T, K, const N: usize>
-where
-    T: Ord,
-    K: Kind,
-{
+pub struct BinaryHeap<T, K, const N: usize> {
     pub(crate) _kind: PhantomData<K>,
     pub(crate) data: Vec<T, N>,
 }
 
-impl<T, K, const N: usize> BinaryHeap<T, K, N>
-where
-    T: Ord,
-    K: Kind,
-{
+impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
     /// Creates an empty BinaryHeap as a $K-heap.
     ///
@@ -105,7 +97,13 @@ where
             data: Vec::new(),
         }
     }
+}
 
+impl<T, K, const N: usize> BinaryHeap<T, K, N>
+where
+    T: Ord,
+    K: Kind,
+{
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
@@ -512,11 +510,7 @@ where
     }
 }
 
-impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N>
-where
-    K: Kind,
-    T: Ord,
-{
+impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N> {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
     }

@@ -67,8 +67,6 @@
 //! It *might* compile on older versions but that may change in any new patch release.
 
 // experimental usage of const generics, requires nightly 2020-08-18 (or newer)
-#![feature(min_const_generics)]
-#![feature(const_fn)]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
@@ -76,8 +74,6 @@
 // #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
-// pub use generic_array::typenum::{consts, PowerOfTwo};
-// pub use generic_array::ArrayLength;
 pub use histbuf::HistoryBuffer;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
@@ -99,10 +95,9 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-// pub mod i;
 #[cfg(all(has_cas, feature = "cas"))]
 pub mod mpmc;
-// #[cfg(all(has_cas, feature = "cas"))]
+#[cfg(all(has_cas, feature = "cas"))]
 pub mod pool;
 #[cfg(has_atomics)]
 pub mod spsc;

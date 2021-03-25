@@ -12,17 +12,11 @@ use crate::Vec;
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
 
-pub struct LinearMap<K, V, const N: usize>
-where
-    K: Eq,
-{
+pub struct LinearMap<K, V, const N: usize> {
     pub(crate) buffer: Vec<(K, V), N>,
 }
 
-impl<K, V, const N: usize> LinearMap<K, V, N>
-where
-    K: Eq,
-{
+impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap`
     ///
     /// # Examples
@@ -39,7 +33,12 @@ where
     pub const fn new() -> Self {
         Self { buffer: Vec::new() }
     }
+}
 
+impl<K, V, const N: usize> LinearMap<K, V, N>
+where
+    K: Eq,
+{
     /// Returns the number of elements that the map can hold
     ///
     /// Computes in **O(1)** time
@@ -437,25 +436,6 @@ where
     }
 }
 
-// TODO: Why is this needed at all, no example, no test... I don't get it
-// impl<K, V, const N: usize> IntoIterator for LinearMap<K, V, N>
-// where
-//     K: Eq,
-// {
-//     type Item = (K, V);
-//     type IntoIter = IntoIter<K, V, N>;
-
-//     fn into_iter(mut self) -> Self::IntoIter {
-//         // FIXME this may result in a memcpy at runtime
-//         let lm = mem::replace(&mut self, unsafe { MaybeUninit::uninit().assume_init() });
-//         mem::forget(self);
-
-//         Self::IntoIter {
-//             inner: lm.buffer.into_iter(),
-//         }
-//     }
-// }
-
 impl<'a, K, V, const N: usize> IntoIterator for &'a LinearMap<K, V, N>
 where
     K: Eq,
@@ -488,10 +468,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
-impl<K, V, const N: usize> Drop for LinearMap<K, V, N>
-where
-    K: Eq,
-{
+impl<K, V, const N: usize> Drop for LinearMap<K, V, N> {
     fn drop(&mut self) {
         // heapless::Vec implements drop right?
         drop(&self.buffer);
