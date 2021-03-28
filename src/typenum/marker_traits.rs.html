@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/github.com-1ecc6299db9ec823/typenum-1.12.0/src/marker_traits.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>marker_traits.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/github.com-1ecc6299db9ec823/typenum-1.13.0/src/marker_traits.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>marker_traits.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../typenum/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -195,6 +195,12 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! All of the **marker traits** used in typenum.</span>
 <span class="doccomment">//!</span>
@@ -207,16 +213,19 @@
 <span class="doccomment">//! to_i32() -&gt; i32` and the associated constant `I32` so that one can do this:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use typenum::{N42, Integer};</span>
+<span class="doccomment">//! use typenum::{Integer, N42};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! assert_eq!(-42, N42::to_i32());</span>
 <span class="doccomment">//! assert_eq!(-42, N42::I32);</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//!</span>
 
 <span class="doccomment">/// A **marker trait** to designate that a type is not zero. All number types in this</span>
 <span class="doccomment">/// crate implement `NonZero` except `B0`, `U0`, and `Z0`.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NonZero</span> {}
+
+<span class="doccomment">/// A **marker trait** to designate that a type is zero. Only `B0`, `U0`, and `Z0`</span>
+<span class="doccomment">/// implement this trait.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Zero</span> {}
 
 <span class="doccomment">/// A **Marker trait** for the types `Greater`, `Equal`, and `Less`.</span>
 <span class="doccomment">///</span>
@@ -235,6 +244,9 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
     <span class="kw">const</span> <span class="ident">BOOL</span>: <span class="ident">bool</span>;
 
+    <span class="doccomment">/// Instantiates a singleton representing this bit.</span>
+    <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
+
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
     <span class="kw">fn</span> <span class="ident">to_u8</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u8</span>;
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
@@ -247,7 +259,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">/// ```rust</span>
-<span class="doccomment">/// use typenum::{U3, Unsigned};</span>
+<span class="doccomment">/// use typenum::{Unsigned, U3};</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// assert_eq!(U3::to_u32(), 3);</span>
 <span class="doccomment">/// assert_eq!(U3::I32, 3);</span>
@@ -316,7 +328,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">/// ```rust</span>
-<span class="doccomment">/// use typenum::{P3, Integer};</span>
+<span class="doccomment">/// use typenum::{Integer, P3};</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// assert_eq!(P3::to_i32(), 3);</span>
 <span class="doccomment">/// assert_eq!(P3::I32, 3);</span>
@@ -369,9 +381,9 @@
 <span class="doccomment">/// Here&#39;s a working example:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```rust</span>
-<span class="doccomment">/// use typenum::{P4, P8, PowerOfTwo};</span>
+<span class="doccomment">/// use typenum::{PowerOfTwo, P4, P8};</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// fn only_p2&lt;P: PowerOfTwo&gt;() { }</span>
+<span class="doccomment">/// fn only_p2&lt;P: PowerOfTwo&gt;() {}</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// only_p2::&lt;P4&gt;();</span>
 <span class="doccomment">/// only_p2::&lt;P8&gt;();</span>
