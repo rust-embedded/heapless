@@ -235,6 +235,7 @@ fn iterator_properly_wraps() {
     assert_eq!(expected, actual)
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "x86-sync-pool"))]
 #[test]
 fn pool() {
     use heapless::pool::singleton::Pool as _;
