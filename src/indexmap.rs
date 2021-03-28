@@ -126,14 +126,12 @@ macro_rules! probe_loop {
     }
 }
 
-struct CoreMap<K, V, const N: usize>
-{
+struct CoreMap<K, V, const N: usize> {
     entries: Vec<Bucket<K, V>, N>,
     indices: [Option<Pos>; N],
 }
 
-impl<K, V, const N: usize> CoreMap<K, V, N>
-{
+impl<K, V, const N: usize> CoreMap<K, V, N> {
     const fn new() -> Self {
         const INIT: Option<Pos> = None;
 

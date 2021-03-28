@@ -1,7 +1,7 @@
 //! Collections of `Send`-able things are `Send`
 
 use heapless::{
-    spsc::{Consumer, Producer, Queue, MultiCore},
+    spsc::{Consumer, MultiCore, Producer, Queue},
     HistoryBuffer, Vec,
 };
 

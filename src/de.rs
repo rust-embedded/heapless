@@ -1,10 +1,10 @@
+use crate::{
+    sealed::binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String,
+    Vec,
+};
 use core::{fmt, marker::PhantomData};
 use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
-use crate::{
-    sealed::binary_heap::Kind as BinaryHeapKind,
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
-};
 
 // Sequential containers
 
@@ -142,9 +142,9 @@ where
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, K, V, S, const N:usize>(PhantomData<(&'de (), K, V, S)>);
+        struct ValueVisitor<'de, K, V, S, const N: usize>(PhantomData<(&'de (), K, V, S)>);
 
-        impl<'de, K, V, S, const N:usize> de::Visitor<'de> for ValueVisitor<'de, K, V, S, N>
+        impl<'de, K, V, S, const N: usize> de::Visitor<'de> for ValueVisitor<'de, K, V, S, N>
         where
             K: Eq + Hash + Deserialize<'de>,
             V: Deserialize<'de>,
@@ -175,7 +175,7 @@ where
     }
 }
 
-impl<'de, K, V, const N:usize> Deserialize<'de> for LinearMap<K, V, N>
+impl<'de, K, V, const N: usize> Deserialize<'de> for LinearMap<K, V, N>
 where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
@@ -184,9 +184,9 @@ where
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, K, V, const N:usize>(PhantomData<(&'de (), K, V)>);
+        struct ValueVisitor<'de, K, V, const N: usize>(PhantomData<(&'de (), K, V)>);
 
-        impl<'de, K, V, const N:usize> de::Visitor<'de> for ValueVisitor<'de, K, V, N>
+        impl<'de, K, V, const N: usize> de::Visitor<'de> for ValueVisitor<'de, K, V, N>
         where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
@@ -218,24 +218,18 @@ where
 
 // String containers
 
-impl<'de, const N:usize> Deserialize<'de> for String<N>
-{
+impl<'de, const N: usize> Deserialize<'de> for String<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, const N:usize>(PhantomData<&'de ()>);
+        struct ValueVisitor<'de, const N: usize>(PhantomData<&'de ()>);
 
-        impl<'de, const N:usize > de::Visitor<'de> for ValueVisitor<'de, N>
-        {
+        impl<'de, const N: usize> de::Visitor<'de> for ValueVisitor<'de, N> {
             type Value = String<N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(
-                    formatter,
-                    "a string no more than {} bytes long",
-                    N as u64
-                )
+                write!(formatter, "a string no more than {} bytes long", N as u64)
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

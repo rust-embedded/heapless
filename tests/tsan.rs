@@ -188,7 +188,7 @@ fn unchecked() {
             scope.execute(move || {
                 let mut sum: usize = 0;
 
-                for _ in 0..N/ 2 {
+                for _ in 0..N / 2 {
                     sum = sum.wrapping_add(usize::from(unsafe { c.dequeue_unchecked() }));
                 }
 
@@ -197,7 +197,7 @@ fn unchecked() {
         });
     }
 
-    assert_eq!(rb.len(), N/ 2);
+    assert_eq!(rb.len(), N / 2);
 }
 
 #[test]
