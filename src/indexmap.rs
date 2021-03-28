@@ -12,7 +12,7 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::Vec;
 
-/// A [`heaples::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
+/// A [`heapless::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
 ///
 /// A list of all Methods and Traits available for `FnvIndexMap` can be found in
 /// the [`heapless::IndexMap`](./struct.IndexMap.html) documentation.
