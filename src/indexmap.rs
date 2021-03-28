@@ -1,11 +1,4 @@
-use core::{
-    borrow::Borrow,
-    fmt,
-    iter::FromIterator,
-    mem::{self, MaybeUninit},
-    num::NonZeroU32,
-    ops, slice,
-};
+use core::{borrow::Borrow, fmt, iter::FromIterator, mem, num::NonZeroU32, ops, slice};
 
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
