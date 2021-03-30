@@ -15,12 +15,14 @@ use as_slice::{AsMutSlice, AsSlice};
 use super::{Init, Node, Uninit};
 
 /// Instantiates a pool as a global singleton
+// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)
 #[cfg(any(
     armv7a,
     armv7r,
     armv7m,
     armv8m_main,
     all(target_arch = "x86_64", feature = "x86-sync-pool"),
+    test
 ))]
 #[macro_export]
 macro_rules! pool {

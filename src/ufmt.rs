@@ -1,5 +1,5 @@
-use ufmt_write::uWrite;
 use crate::{string::String, vec::Vec};
+use ufmt_write::uWrite;
 
 impl<const N: usize> uWrite for String<N> {
     type Error = ();
