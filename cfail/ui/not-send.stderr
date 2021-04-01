@@ -1,53 +1,44 @@
-error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:18:5
+error[E0107]: this struct takes 3 generic arguments but 4 generic arguments were supplied
+  --> $DIR/not-send.rs:18:15
    |
-11 | fn is_send<T>()
-   |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
-   |        ---- required by this bound in `is_send`
-...
 18 |     is_send::<Consumer<NotSend, _, _, 4>>();
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |               ^^^^^^^^              --- help: remove this generic argument
+   |               |
+   |               expected 3 generic arguments
    |
-   = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
-   = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because of the requirements on the impl of `Send` for `Consumer<'_, PhantomData<*const ()>, _, _, 4_usize>`
+note: struct defined here, with 3 generic parameters: `T`, `U`, `N`
+  --> $DIR/split.rs:26:12
+   |
+26 | pub struct Consumer<'a, T, U, const N: usize>
+   |            ^^^^^^^^     -  -        -
 
-error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:19:5
+error[E0107]: this struct takes 3 generic arguments but 4 generic arguments were supplied
+  --> $DIR/not-send.rs:19:15
    |
-11 | fn is_send<T>()
-   |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
-   |        ---- required by this bound in `is_send`
-...
 19 |     is_send::<Producer<NotSend, _, _, 4>>();
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+   |               ^^^^^^^^              --- help: remove this generic argument
+   |               |
+   |               expected 3 generic arguments
    |
-   = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
-   = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because of the requirements on the impl of `Send` for `Producer<'_, PhantomData<*const ()>, _, _, 4_usize>`
+note: struct defined here, with 3 generic parameters: `T`, `U`, `N`
+  --> $DIR/split.rs:43:12
+   |
+43 | pub struct Producer<'a, T, U, const N: usize>
+   |            ^^^^^^^^     -  -        -
 
-error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:20:5
-   |
-11 | fn is_send<T>()
-   |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
-   |        ---- required by this bound in `is_send`
-...
-20 |     is_send::<Queue<NotSend, _, _, 4>>();
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
-   |
-   = help: within `Queue<PhantomData<*const ()>, _, _, 4_usize>`, the trait `Send` is not implemented for `*const ()`
-   = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because it appears within the type `[PhantomData<*const ()>; 4]`
-   = note: required because it appears within the type `ManuallyDrop<[PhantomData<*const ()>; 4]>`
-   = note: required because it appears within the type `MaybeUninit<[PhantomData<*const ()>; 4]>`
-   = note: required because it appears within the type `Queue<PhantomData<*const ()>, _, _, 4_usize>`
+error[E0107]: this struct takes 3 generic arguments but 4 generic arguments were supplied
+   --> $DIR/not-send.rs:20:15
+    |
+20  |     is_send::<Queue<NotSend, _, _, 4>>();
+    |               ^^^^^              --- help: remove this generic argument
+    |               |
+    |               expected 3 generic arguments
+    |
+note: struct defined here, with 3 generic parameters: `T`, `U`, `N`
+   --> $DIR/mod.rs:151:12
+    |
+151 | pub struct Queue<T, U, const N: usize>
+    |            ^^^^^ -  -        -
 
 error[E0277]: `*const ()` cannot be sent between threads safely
   --> $DIR/not-send.rs:21:5

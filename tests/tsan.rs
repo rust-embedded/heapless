@@ -4,15 +4,12 @@
 
 use std::{sync::mpsc, thread};
 
-use heapless::{
-    mpmc::Q64,
-    spsc::{self, MultiCore},
-};
+use heapless::{mpmc::Q64, spsc};
 use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
-    static mut RB: spsc::Queue<i32, usize, MultiCore, 4> = spsc::Queue::new();
+    static mut RB: spsc::Queue<i32, usize, 4> = spsc::Queue::new();
 
     let rb = unsafe { &mut RB };
 
@@ -33,7 +30,7 @@ fn once() {
 
 #[test]
 fn twice() {
-    static mut RB: spsc::Queue<i32, usize, MultiCore, 4> = spsc::Queue::new();
+    static mut RB: spsc::Queue<i32, usize, 4> = spsc::Queue::new();
 
     let rb = unsafe { &mut RB };
 
@@ -55,7 +52,7 @@ fn twice() {
 
 #[test]
 fn scoped() {
-    let mut rb: spsc::Queue<i32, usize, MultiCore, 4> = spsc::Queue::new();
+    let mut rb: spsc::Queue<i32, usize, 4> = spsc::Queue::new();
 
     rb.enqueue(0).unwrap();
 
@@ -80,7 +77,7 @@ fn scoped() {
 fn contention() {
     const N: usize = 1024;
 
-    let mut rb: spsc::Queue<u8, usize, MultiCore, 4> = spsc::Queue::new();
+    let mut rb: spsc::Queue<u8, usize, 4> = spsc::Queue::new();
 
     {
         let (mut p, mut c) = rb.split();
@@ -167,7 +164,7 @@ fn mpmc_contention() {
 fn unchecked() {
     const N: usize = 1024;
 
-    let mut rb: spsc::Queue<u8, usize, MultiCore, N> = spsc::Queue::new();
+    let mut rb: spsc::Queue<u8, usize, N> = spsc::Queue::new();
 
     for _ in 0..N / 2 {
         rb.enqueue(1).unwrap();
@@ -203,7 +200,7 @@ fn unchecked() {
 #[test]
 fn len_properly_wraps() {
     const N: usize = 3;
-    let mut rb: spsc::Queue<u8, usize, MultiCore, N> = spsc::Queue::new();
+    let mut rb: spsc::Queue<u8, usize, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
     assert_eq!(rb.len(), 1);
@@ -220,7 +217,7 @@ fn len_properly_wraps() {
 #[test]
 fn iterator_properly_wraps() {
     const N: usize = 3;
-    let mut rb: spsc::Queue<u8, usize, MultiCore, N> = spsc::Queue::new();
+    let mut rb: spsc::Queue<u8, usize, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
     rb.dequeue();

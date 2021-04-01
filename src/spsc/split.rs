@@ -1,18 +1,13 @@
 use core::{marker::PhantomData, ptr::NonNull};
 
-use crate::{
-    sealed::spsc as sealed,
-    spsc::Queue,
-    // spsc::{MultiCore, Queue}, // we cannot currently default to MultiCore
-};
+use crate::{sealed::spsc as sealed, spsc::Queue};
 
-impl<T, U, C, const N: usize> Queue<T, U, C, N>
+impl<T, U, const N: usize> Queue<T, U, N>
 where
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     /// Splits a statically allocated queue into producer and consumer end points
-    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, U, C, N>, Consumer<'rb, T, U, C, N>) {
+    pub fn split<'rb>(&'rb mut self) -> (Producer<'rb, T, U, N>, Consumer<'rb, T, U, N>) {
         (
             Producer {
                 rb: unsafe { NonNull::new_unchecked(self) },
@@ -28,48 +23,41 @@ where
 
 /// A queue "consumer"; it can dequeue items from the queue
 // NOTE the consumer semantically owns the `head` pointer of the queue
-pub struct Consumer<'a, T, U, C, const N: usize>
+pub struct Consumer<'a, T, U, const N: usize>
 where
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
-    rb: NonNull<Queue<T, U, C, N>>,
+    rb: NonNull<Queue<T, U, N>>,
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, U, C, const N: usize> Send for Consumer<'a, T, U, C, N>
+unsafe impl<'a, T, U, const N: usize> Send for Consumer<'a, T, U, N>
 where
     T: Send,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
 }
 
 /// A queue "producer"; it can enqueue items into the queue
 // NOTE the producer semantically owns the `tail` pointer of the queue
-pub struct Producer<'a, T, U, C, const N: usize>
+pub struct Producer<'a, T, U, const N: usize>
 where
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
-    rb: NonNull<Queue<T, U, C, N>>,
+    rb: NonNull<Queue<T, U, N>>,
     _marker: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, T, U, C, const N: usize> Send for Producer<'a, T, U, C, N>
+unsafe impl<'a, T, U, const N: usize> Send for Producer<'a, T, U, N>
 where
     T: Send,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
 }
 
 macro_rules! impl_ {
     ($uxx:ident) => {
-        impl<'a, T, C, const N: usize> Consumer<'a, T, $uxx, C, N>
-        where
-            C: sealed::XCore,
-        {
+        impl<'a, T, const N: usize> Consumer<'a, T, $uxx, N> {
             /// Returns if there are any items to dequeue. When this returns true, at least the
             /// first subsequent dequeue will succeed.
             pub fn ready(&self) -> bool {
@@ -84,7 +72,7 @@ macro_rules! impl_ {
             /// ```
             /// use heapless::spsc::Queue;
             ///
-            /// let mut queue: Queue<u8, _, _, 235> = Queue::u8();
+            /// let mut queue: Queue<u8, _, 235> = Queue::u8();
             /// let (mut producer, mut consumer) = queue.split();
             /// assert_eq!(None, consumer.peek());
             /// producer.enqueue(1);
@@ -165,10 +153,7 @@ macro_rules! impl_ {
             }
         }
 
-        impl<'a, T, C, const N: usize> Producer<'a, T, $uxx, C, N>
-        where
-            C: sealed::XCore,
-        {
+        impl<'a, T, const N: usize> Producer<'a, T, $uxx, N> {
             /// Returns if there is any space to enqueue a new item. When this returns true, at
             /// least the first subsequent enqueue will succeed.
             pub fn ready(&self) -> bool {
@@ -259,11 +244,11 @@ impl_!(usize);
 
 #[cfg(test)]
 mod tests {
-    use crate::spsc::{MultiCore, Queue};
+    use crate::spsc::Queue;
 
     #[test]
     fn sanity() {
-        let mut rb: Queue<i32, u8, MultiCore, 2> = Queue::u8();
+        let mut rb: Queue<i32, u8, 2> = Queue::u8();
 
         let (mut p, mut c) = rb.split();
 

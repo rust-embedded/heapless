@@ -1,27 +1,7 @@
 /// Sealed traits and implementations for `spsc`
 pub mod spsc {
     #[cfg(has_atomics)]
-    use crate::spsc::{MultiCore, SingleCore};
-    #[cfg(has_atomics)]
-    use core::sync::atomic::{self, AtomicU16, AtomicU8, AtomicUsize, Ordering};
-
-    pub unsafe trait XCore {
-        fn is_multi_core() -> bool;
-    }
-
-    #[cfg(has_atomics)]
-    unsafe impl XCore for SingleCore {
-        fn is_multi_core() -> bool {
-            false
-        }
-    }
-
-    #[cfg(has_atomics)]
-    unsafe impl XCore for MultiCore {
-        fn is_multi_core() -> bool {
-            true
-        }
-    }
+    use core::sync::atomic::{AtomicU16, AtomicU8, AtomicUsize, Ordering};
 
     pub unsafe trait Uxx: Into<usize> + Send {
         #[doc(hidden)]
@@ -32,9 +12,7 @@ pub mod spsc {
 
         #[cfg(has_atomics)]
         #[doc(hidden)]
-        unsafe fn load_acquire<C>(x: *const Self) -> Self
-        where
-            C: XCore;
+        unsafe fn load_acquire(x: *const Self) -> Self;
 
         #[cfg(has_atomics)]
         #[doc(hidden)]
@@ -42,9 +20,7 @@ pub mod spsc {
 
         #[cfg(has_atomics)]
         #[doc(hidden)]
-        unsafe fn store_release<C>(x: *const Self, val: Self)
-        where
-            C: XCore;
+        unsafe fn store_release(x: *const Self, val: Self);
     }
 
     unsafe impl Uxx for u8 {
@@ -62,17 +38,11 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn load_acquire<C>(x: *const Self) -> Self
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicU8)).load(Ordering::Acquire)
-            } else {
-                let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed); // read
-                atomic::compiler_fence(Ordering::Acquire); // ▼
-                y
-            }
+        unsafe fn load_acquire(x: *const Self) -> Self {
+            (*(x as *const AtomicU8)).load(Ordering::Acquire)
+            // let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed); // read
+            // atomic::compiler_fence(Ordering::Acquire); // ▼
+            // y
         }
 
         #[cfg(has_atomics)]
@@ -81,16 +51,10 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn store_release<C>(x: *const Self, val: Self)
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicU8)).store(val, Ordering::Release)
-            } else {
-                atomic::compiler_fence(Ordering::Release); // ▲
-                (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) // write
-            }
+        unsafe fn store_release(x: *const Self, val: Self) {
+            (*(x as *const AtomicU8)).store(val, Ordering::Release)
+            // atomic::compiler_fence(Ordering::Release); // ▲
+            // (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) // write
         }
     }
 
@@ -109,17 +73,11 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn load_acquire<C>(x: *const Self) -> Self
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicU16)).load(Ordering::Acquire)
-            } else {
-                let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed); // read
-                atomic::compiler_fence(Ordering::Acquire); // ▼
-                y
-            }
+        unsafe fn load_acquire(x: *const Self) -> Self {
+            (*(x as *const AtomicU16)).load(Ordering::Acquire)
+            // let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed); // read
+            // atomic::compiler_fence(Ordering::Acquire); // ▼
+            // y
         }
 
         #[cfg(has_atomics)]
@@ -128,16 +86,10 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn store_release<C>(x: *const Self, val: Self)
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicU16)).store(val, Ordering::Release)
-            } else {
-                atomic::compiler_fence(Ordering::Release); // ▲
-                (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) // write
-            }
+        unsafe fn store_release(x: *const Self, val: Self) {
+            (*(x as *const AtomicU16)).store(val, Ordering::Release)
+            // atomic::compiler_fence(Ordering::Release); // ▲
+            // (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) // write
         }
     }
 
@@ -151,17 +103,11 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn load_acquire<C>(x: *const Self) -> Self
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicUsize)).load(Ordering::Acquire)
-            } else {
-                let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed); // read
-                atomic::compiler_fence(Ordering::Acquire); // ▼
-                y
-            }
+        unsafe fn load_acquire(x: *const Self) -> Self {
+            (*(x as *const AtomicUsize)).load(Ordering::Acquire)
+            // let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed); // read
+            // atomic::compiler_fence(Ordering::Acquire); // ▼
+            // y
         }
 
         #[cfg(has_atomics)]
@@ -170,16 +116,10 @@ pub mod spsc {
         }
 
         #[cfg(has_atomics)]
-        unsafe fn store_release<C>(x: *const Self, val: Self)
-        where
-            C: XCore,
-        {
-            if C::is_multi_core() {
-                (*(x as *const AtomicUsize)).store(val, Ordering::Release)
-            } else {
-                atomic::compiler_fence(Ordering::Release); // ▲
-                (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed); // write
-            }
+        unsafe fn store_release(x: *const Self, val: Self) {
+            (*(x as *const AtomicUsize)).store(val, Ordering::Release)
+            // atomic::compiler_fence(Ordering::Release); // ▲
+            // (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed); // write
         }
     }
 }

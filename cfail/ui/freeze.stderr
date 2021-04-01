@@ -1,9 +1,13 @@
-error[E0499]: cannot borrow `q` as mutable more than once at a time
- --> $DIR/freeze.rs:7:5
-  |
-6 |     let (_p, mut _c) = q.split();
-  |                        - first mutable borrow occurs here
-7 |     q.enqueue(0).unwrap();
-  |     ^ second mutable borrow occurs here
-8 |     _c.dequeue();
-  |     -- first borrow later used here
+error[E0107]: this struct takes 3 generic arguments but 4 generic arguments were supplied
+   --> $DIR/freeze.rs:4:16
+    |
+4   |     let mut q: Queue<u8, _, _, 4> = Queue::new();
+    |                ^^^^^         --- help: remove this generic argument
+    |                |
+    |                expected 3 generic arguments
+    |
+note: struct defined here, with 3 generic parameters: `T`, `U`, `N`
+   --> $DIR/mod.rs:151:12
+    |
+151 | pub struct Queue<T, U, const N: usize>
+    |            ^^^^^ -  -        -
