@@ -246,13 +246,15 @@ impl<'de, const N: usize> Deserialize<'de> for String<N> {
             where
                 E: de::Error,
             {
-                let mut bytes = Vec::new();
-                if bytes.extend_from_slice(v).is_err() {
-                    return Err(E::invalid_value(de::Unexpected::Bytes(v), &self));
-                }
+                let mut s = String::new();
 
-                String::from_utf8(bytes)
-                    .map_err(|_| E::invalid_value(de::Unexpected::Bytes(v), &self))
+                s.push_str(
+                    core::str::from_utf8(v)
+                        .map_err(|_| E::invalid_value(de::Unexpected::Bytes(v), &self))?,
+                )
+                .map_err(|_| E::invalid_length(v.len(), &self))?;
+
+                Ok(s)
             }
         }
 

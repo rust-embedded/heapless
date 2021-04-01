@@ -1,11 +1,4 @@
-use core::{
-    fmt,
-    fmt::Write,
-    hash,
-    mem::{self, MaybeUninit},
-    ops, str,
-    str::Utf8Error,
-};
+use core::{fmt, fmt::Write, hash, ops, str};
 
 use hash32;
 
@@ -15,13 +8,6 @@ use crate::Vec;
 pub struct String<const N: usize> {
     vec: Vec<u8, N>,
 }
-
-// impl<const N: usize> String<N> {
-//     /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
-//     pub const fn new() -> Self {
-//         Self { vec: Vec::new() }
-//     }
-// }
 
 impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N`
@@ -42,65 +28,6 @@ impl<const N: usize> String<N> {
     #[inline]
     pub const fn new() -> Self {
         Self { vec: Vec::new() }
-    }
-
-    /// Converts a vector of bytes into a `String`.
-    ///
-    /// A string slice ([`&str`]) is made of bytes ([`u8`]), and a vector of bytes
-    /// ([`Vec<u8>`]) is made of bytes, so this function converts between the
-    /// two. Not all byte slices are valid `String`s, however: `String`
-    /// requires that it is valid UTF-8. `from_utf8()` checks to ensure that
-    /// the bytes are valid UTF-8, and then does the conversion.
-    ///
-    /// See std::String for further information.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use heapless::{String, Vec};
-    ///
-    /// let mut v: Vec<u8, 8> = Vec::new();
-    /// v.push('a' as u8).unwrap();
-    /// v.push('b' as u8).unwrap();
-    ///
-    /// let s = String::from_utf8(v).unwrap();
-    /// assert!(s.len() == 2);
-    /// ```
-    ///
-    /// Incorrect bytes:
-    ///
-    /// ```
-    /// use heapless::{String, Vec};
-    ///
-    /// // some invalid bytes, in a vector
-    ///
-    /// let mut v: Vec<u8, 8> = Vec::new();
-    /// v.push(0).unwrap();
-    /// v.push(159).unwrap();
-    /// v.push(146).unwrap();
-    /// v.push(150).unwrap();
-    /// assert!(String::from_utf8(v).is_err());
-    /// ```
-    #[inline]
-    pub fn from_utf8(vec: Vec<u8, N>) -> Result<String<N>, Utf8Error> {
-        // validate input
-        str::from_utf8(&*vec)?;
-
-        Ok(unsafe { String::from_utf8_unchecked(vec) })
-    }
-
-    /// Converts a vector of bytes to a `String` without checking that the
-    /// string contains valid UTF-8.
-    ///
-    /// See the safe version, `from_utf8`, for more details.
-    #[inline]
-    pub unsafe fn from_utf8_unchecked(mut vec: Vec<u8, N>) -> String<N> {
-        // FIXME this may result in a memcpy at runtime
-        let vec_ = mem::replace(&mut vec, MaybeUninit::uninit().assume_init());
-        mem::forget(vec);
-        String { vec: vec_ }
     }
 
     /// Converts a `String` into a byte vector.
@@ -544,14 +471,6 @@ impl<const N: usize> PartialEq<String<N>> for &str {
 
 impl<const N: usize> Eq for String<N> {}
 
-// impl<const N: usize, D: core::fmt::Display> From<D> for String<N> {
-//     fn from(s: D) -> Self {
-//         let mut new = String::new();
-//         write!(&mut new, "{}", s).unwrap();
-//         new
-//     }
-// }
-
 macro_rules! impl_from_num {
     ($num:ty, $size:expr) => {
         impl<const N: usize> From<$num> for String<N> {
@@ -645,52 +564,6 @@ mod tests {
     #[should_panic]
     fn from_panic() {
         let _: String<4> = String::from("12345");
-    }
-
-    #[test]
-    fn from_utf8() {
-        let mut v: Vec<u8, 8> = Vec::new();
-        v.push('a' as u8).unwrap();
-        v.push('b' as u8).unwrap();
-
-        let s = String::from_utf8(v).unwrap();
-        assert_eq!(s, "ab");
-    }
-
-    #[test]
-    fn from_utf8_uenc() {
-        let mut v: Vec<u8, 8> = Vec::new();
-        v.push(240).unwrap();
-        v.push(159).unwrap();
-        v.push(146).unwrap();
-        v.push(150).unwrap();
-
-        assert!(String::from_utf8(v).is_ok());
-    }
-
-    #[test]
-    fn from_utf8_uenc_err() {
-        let mut v: Vec<u8, 8> = Vec::new();
-        v.push(0).unwrap();
-        v.push(159).unwrap();
-        v.push(146).unwrap();
-        v.push(150).unwrap();
-
-        assert!(String::from_utf8(v).is_err());
-    }
-
-    #[test]
-    fn from_utf8_unchecked() {
-        let mut v: Vec<u8, 8> = Vec::new();
-        v.push(104).unwrap();
-        v.push(101).unwrap();
-        v.push(108).unwrap();
-        v.push(108).unwrap();
-        v.push(111).unwrap();
-
-        let s = unsafe { String::from_utf8_unchecked(v) };
-
-        assert_eq!(s, "hello");
     }
 
     #[test]
