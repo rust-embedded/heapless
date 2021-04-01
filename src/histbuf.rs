@@ -1,13 +1,12 @@
+use core::mem::MaybeUninit;
+use core::ptr;
+use core::slice;
+
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
 /// This buffer keeps a fixed number of elements.  On write, the oldest element
 /// is overwritten. Thus, the buffer is useful to keep a history of values with
 /// some desired depth, and for example calculate a rolling average.
-///
-/// The buffer is always fully initialized; depending on the constructor, the
-/// initial value is either the default value for the element type or a supplied
-/// initial value. This simplifies the API and is mostly irrelevant for the
-/// intended use case.
 ///
 /// # Examples
 /// ```
@@ -16,34 +15,35 @@
 /// // Initialize a new buffer with 8 elements, all initially zero.
 /// let mut buf = HistoryBuffer::<_, 8>::new();
 ///
+/// // Starts with no data
+/// assert_eq!(buf.recent(), None);
+///
 /// buf.write(3);
 /// buf.write(5);
 /// buf.extend(&[4, 4]);
 ///
 /// // The most recent written element is a four.
-/// assert_eq!(buf.recent(), &4);
+/// assert_eq!(buf.recent(), Some(&4));
 ///
 /// // To access all elements in an unspecified order, use `as_slice()`.
 /// for el in buf.as_slice() { println!("{:?}", el); }
 ///
-/// // Now we can prepare an average of all values, which comes out to 2.
+/// // Now we can prepare an average of all values, which comes out to 4.
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
-/// assert_eq!(avg, 2);
+/// assert_eq!(avg, 4);
 /// ```
-#[derive(Clone)]
 pub struct HistoryBuffer<T, const N: usize> {
-    data: [T; N],
+    data: [MaybeUninit<T>; N],
     write_at: usize,
+    filled: bool,
 }
 
-impl<T, const N: usize> HistoryBuffer<T, N>
-where
-    T: Default + Copy,
-{
-    /// Constructs a new history buffer, where every element is filled with the
-    /// default value of the type `T`.
+impl<T, const N: usize> HistoryBuffer<T, N> {
+    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+
+    /// Constructs a new history buffer.
     ///
-    /// `HistoryBuffer` currently cannot be constructed in `const` context.
+    /// The construction of a `HistoryBuffer` works in `const` contexts.
     ///
     /// # Examples
     ///
@@ -51,16 +51,15 @@ where
     /// use heapless::HistoryBuffer;
     ///
     /// // Allocate a 16-element buffer on the stack
-    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
-    /// // All elements are zero
-    /// assert_eq!(x.as_slice(), [0; 16]);
+    /// let x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// assert_eq!(x.len(), 0);
     /// ```
-    pub fn new() -> Self {
+    #[inline]
+    pub const fn new() -> Self {
         Self {
-            // seems not yet implemented
-            // data: Default::default(),
-            data: [T::default(); N],
+            data: [Self::INIT; N],
             write_at: 0,
+            filled: false,
         }
     }
 
@@ -87,10 +86,12 @@ where
     /// // All elements are four
     /// assert_eq!(x.as_slice(), [4; 16]);
     /// ```
+    #[inline]
     pub fn new_with(t: T) -> Self {
         Self {
-            data: [t; N],
+            data: [MaybeUninit::new(t); N],
             write_at: 0,
+            filled: true,
         }
     }
 
@@ -101,18 +102,35 @@ where
 }
 
 impl<T, const N: usize> HistoryBuffer<T, N> {
+    /// Returns the current fill level of the buffer.
+    #[inline]
+    pub fn len(&self) -> usize {
+        if self.filled {
+            N
+        } else {
+            self.write_at
+        }
+    }
+
     /// Returns the capacity of the buffer, which is the length of the
     /// underlying backing array.
-    pub fn len(&self) -> usize {
-        self.data.len()
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        N
     }
 
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
-        self.data[self.write_at] = t;
+        if self.filled {
+            // Drop the old before we overwrite it.
+            unsafe { ptr::drop_in_place(self.data[self.write_at].as_mut_ptr()) }
+        }
+        self.data[self.write_at] = MaybeUninit::new(t);
+
         self.write_at += 1;
-        if self.write_at == self.len() {
+        if self.write_at == self.capacity() {
             self.write_at = 0;
+            self.filled = true;
         }
     }
 
@@ -139,20 +157,28 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
     /// x.write(4);
     /// x.write(10);
-    /// assert_eq!(x.recent(), &10);
+    /// assert_eq!(x.recent(), Some(&10));
     /// ```
-    pub fn recent(&self) -> &T {
+    pub fn recent(&self) -> Option<&T> {
         if self.write_at == 0 {
-            &self.data[self.len() - 1]
+            if self.filled {
+                Some(unsafe { &*self.data[self.capacity() - 1].as_ptr() })
+            } else {
+                None
+            }
         } else {
-            &self.data[self.write_at - 1]
+            Some(unsafe { &*self.data[self.write_at - 1].as_ptr() })
         }
     }
 
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        &self.data
+        if self.filled {
+            unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.capacity()) }
+        } else {
+            unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.write_at) }
+        }
     }
 }
 
@@ -179,6 +205,17 @@ where
     }
 }
 
+impl<T, const N: usize> Drop for HistoryBuffer<T, N> {
+    fn drop(&mut self) {
+        unsafe {
+            ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
+                self.data.as_mut_ptr() as *mut T,
+                self.len(),
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::HistoryBuffer;
@@ -190,7 +227,7 @@ mod tests {
         assert_eq!(x.as_slice(), [1; 4]);
 
         let x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
-        assert_eq!(x.as_slice(), [0; 4]);
+        assert_eq!(x.as_slice(), []);
     }
 
     #[test]
@@ -198,7 +235,7 @@ mod tests {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         x.write(1);
         x.write(4);
-        assert_eq!(x.as_slice(), [1, 4, 0, 0]);
+        assert_eq!(x.as_slice(), [1, 4]);
 
         x.write(5);
         x.write(6);
@@ -213,7 +250,7 @@ mod tests {
     fn clear() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new_with(1);
         x.clear();
-        assert_eq!(x.as_slice(), [0; 4]);
+        assert_eq!(x.as_slice(), []);
 
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         x.clear_with(1);
@@ -223,16 +260,16 @@ mod tests {
     #[test]
     fn recent() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
-        assert_eq!(x.recent(), &0);
+        assert_eq!(x.recent(), None);
 
         x.write(1);
         x.write(4);
-        assert_eq!(x.recent(), &4);
+        assert_eq!(x.recent(), Some(&4));
 
         x.write(5);
         x.write(6);
         x.write(10);
-        assert_eq!(x.recent(), &10);
+        assert_eq!(x.recent(), Some(&10));
     }
 
     #[test]

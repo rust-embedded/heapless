@@ -142,7 +142,7 @@ where
 
 /// A statically allocated single producer single consumer queue with a capacity of `N` elements
 ///
-/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `U16`, `U32`,
+/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `16`, `32`,
 /// etc.).
 ///
 /// By default `spsc::Queue` will use `usize` integers to hold the indices to its head and tail. For

@@ -375,7 +375,6 @@ where
     K: Eq + Hash,
     S: Default + Hasher,
 {
-    // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
     /// Creates an empty `IndexMap`.
     ///
     /// **NOTE** This constructor will become a `const fn` in the future

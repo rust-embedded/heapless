@@ -63,15 +63,14 @@
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
-//! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.
+//! This crate is guaranteed to compile on stable Rust 1.51 and up with its default set of features.
 //! It *might* compile on older versions but that may change in any new patch release.
 
-// experimental usage of const generics, requires nightly 2020-08-18 (or newer)
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-// #![deny(warnings)]
+#![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
 pub use histbuf::HistoryBuffer;

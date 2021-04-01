@@ -2,6 +2,7 @@
 authors = [
   "Jorge Aparicio <jorge@japaric.io>",
   "Per Lindgren <per.lindgren@ltu.se>",
+  "Emil Fresk <emil.fresk@gmail.com>",
 ]
 categories = [
     "data-structures",
