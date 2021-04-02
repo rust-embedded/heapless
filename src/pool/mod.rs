@@ -439,6 +439,24 @@ unsafe impl<T, S> Sync for Box<T, S> where T: Sync {}
 
 unsafe impl<T> stable_deref_trait::StableDeref for Box<T> {}
 
+impl<A, T> AsRef<[T]> for Box<A>
+where
+    A: AsRef<[T]>,
+{
+    fn as_ref(&self) -> &[T] {
+        self.deref().as_ref()
+    }
+}
+
+impl<A, T> AsMut<[T]> for Box<A>
+where
+    A: AsMut<[T]>,
+{
+    fn as_mut(&mut self) -> &mut [T] {
+        self.deref_mut().as_mut()
+    }
+}
+
 impl<T> Deref for Box<T> {
     type Target = T;
 
