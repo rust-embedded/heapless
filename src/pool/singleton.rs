@@ -10,8 +10,6 @@ use core::{
     ptr,
 };
 
-use as_slice::{AsMutSlice, AsSlice};
-
 use super::{Init, Node, Uninit};
 
 /// Instantiates a pool as a global singleton
@@ -80,7 +78,7 @@ pub trait Pool {
     /// memory block
     fn grow_exact<A>(memory: &'static mut MaybeUninit<A>) -> usize
     where
-        A: AsMutSlice<Element = Node<Self::Data>>,
+        A: AsMut<[Node<Self::Data>]>,
     {
         Self::ptr().grow_exact(memory)
     }
@@ -123,7 +121,7 @@ where
 impl<P> Box<P, Uninit>
 where
     P: Pool,
-    P::Data: AsSlice<Element = u8>,
+    P::Data: AsRef<[u8]>,
 {
     /// Freezes the contents of this memory block
     ///
@@ -244,28 +242,6 @@ where
     P: Pool,
     P::Data: Sync,
 {
-}
-
-impl<P, T> AsSlice for Box<P>
-where
-    P: Pool,
-    P::Data: AsSlice<Element = T>,
-{
-    type Element = T;
-
-    fn as_slice(&self) -> &[T] {
-        self.deref().as_slice()
-    }
-}
-
-impl<P, T> AsMutSlice for Box<P>
-where
-    P: Pool,
-    P::Data: AsMutSlice<Element = T>,
-{
-    fn as_mut_slice(&mut self) -> &mut [T] {
-        self.deref_mut().as_mut_slice()
-    }
 }
 
 impl<P> PartialEq for Box<P>

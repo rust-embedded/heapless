@@ -236,8 +236,6 @@ use core::{
     ptr,
 };
 
-use as_slice::{AsMutSlice, AsSlice};
-
 pub use stack::Node;
 use stack::{Ptr, Stack};
 
@@ -384,13 +382,13 @@ impl<T> Pool<T> {
     /// memory block
     pub fn grow_exact<A>(&self, memory: &'static mut MaybeUninit<A>) -> usize
     where
-        A: AsMutSlice<Element = Node<T>>,
+        A: AsMut<[Node<T>]>,
     {
         if mem::size_of::<T>() == 0 {
             return usize::max_value();
         }
 
-        let nodes = unsafe { (*memory.as_mut_ptr()).as_mut_slice() };
+        let nodes = unsafe { (*memory.as_mut_ptr()).as_mut() };
         let cap = nodes.len();
         for p in nodes {
             match () {
@@ -440,26 +438,6 @@ unsafe impl<T, S> Send for Box<T, S> where T: Send {}
 unsafe impl<T, S> Sync for Box<T, S> where T: Sync {}
 
 unsafe impl<T> stable_deref_trait::StableDeref for Box<T> {}
-
-impl<A> AsSlice for Box<A>
-where
-    A: AsSlice,
-{
-    type Element = A::Element;
-
-    fn as_slice(&self) -> &[A::Element] {
-        self.deref().as_slice()
-    }
-}
-
-impl<A> AsMutSlice for Box<A>
-where
-    A: AsMutSlice,
-{
-    fn as_mut_slice(&mut self) -> &mut [A::Element] {
-        self.deref_mut().as_mut_slice()
-    }
-}
 
 impl<T> Deref for Box<T> {
     type Target = T;
