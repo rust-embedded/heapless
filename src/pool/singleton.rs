@@ -244,6 +244,26 @@ where
 {
 }
 
+impl<P, T> AsRef<[T]> for Box<P>
+where
+    P: Pool,
+    P::Data: AsRef<[T]>,
+{
+    fn as_ref(&self) -> &[T] {
+        self.deref().as_ref()
+    }
+}
+
+impl<P, T> AsMut<[T]> for Box<P>
+where
+    P: Pool,
+    P::Data: AsMut<[T]>,
+{
+    fn as_mut(&mut self) -> &mut [T] {
+        self.deref_mut().as_mut()
+    }
+}
+
 impl<P> PartialEq for Box<P>
 where
     P: Pool,
