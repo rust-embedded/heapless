@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let mut rb: Queue<i32, u8, 2> = Queue::u8();
+        let mut rb: Queue<i32, _, 2> = Queue::new();
 
         let (mut p, mut c) = rb.split();
 

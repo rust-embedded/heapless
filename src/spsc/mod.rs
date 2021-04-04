@@ -569,7 +569,7 @@ mod tests {
         static mut COUNT: i32 = 0;
 
         {
-            let mut v: Queue<Droppable, usize, 4> = Queue::usize();
+            let mut v: Queue<Droppable, _, 4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.dequeue().unwrap();
@@ -578,7 +578,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: Queue<Droppable, usize, 4> = Queue::usize();
+            let mut v: Queue<Droppable, _, 4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
         }
@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -600,7 +600,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut rb: Queue<i32, u16, 4> = Queue::u16();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn iter_double_ended() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -647,7 +647,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -663,7 +663,7 @@ mod tests {
 
     #[test]
     fn iter_mut_double_ended() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -680,7 +680,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
         assert_eq!(rb.dequeue(), None);
         rb.enqueue(0).unwrap();
         assert_eq!(rb.dequeue(), Some(0));
@@ -701,7 +701,7 @@ mod tests {
 
     #[test]
     fn wrap_around() {
-        let mut rb: Queue<i32, u8, 3> = Queue::u8();
+        let mut rb: Queue<i32, _, 3> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -717,7 +717,7 @@ mod tests {
 
     #[test]
     fn ready_flag() {
-        let mut rb: Queue<i32, u8, 2> = Queue::u8();
+        let mut rb: Queue<i32, _, 2> = Queue::new();
         let (mut p, mut c) = rb.split();
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
@@ -745,7 +745,7 @@ mod tests {
 
     #[test]
     fn clone() {
-        let mut rb1: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb1: Queue<i32, _, 4> = Queue::new();
         rb1.enqueue(0).unwrap();
         rb1.enqueue(0).unwrap();
         rb1.dequeue().unwrap();
@@ -760,12 +760,12 @@ mod tests {
     fn eq() {
         // generate two queues with same content
         // but different buffer alignment
-        let mut rb1: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb1: Queue<i32, _, 4> = Queue::new();
         rb1.enqueue(0).unwrap();
         rb1.enqueue(0).unwrap();
         rb1.dequeue().unwrap();
         rb1.enqueue(0).unwrap();
-        let mut rb2: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb2: Queue<i32, _, 4> = Queue::new();
         rb2.enqueue(0).unwrap();
         rb2.enqueue(0).unwrap();
         assert!(rb1 == rb2);
@@ -786,7 +786,7 @@ mod tests {
         // generate two queues with same content
         // but different buffer alignment
         let rb1 = {
-            let mut rb1: Queue<i32, u8, 4> = Queue::u8();
+            let mut rb1: Queue<i32, _, 4> = Queue::new();
             rb1.enqueue(0).unwrap();
             rb1.enqueue(0).unwrap();
             rb1.dequeue().unwrap();
@@ -794,7 +794,7 @@ mod tests {
             rb1
         };
         let rb2 = {
-            let mut rb2: Queue<i32, u8, 4> = Queue::u8();
+            let mut rb2: Queue<i32, _, 4> = Queue::new();
             rb2.enqueue(0).unwrap();
             rb2.enqueue(0).unwrap();
             rb2
