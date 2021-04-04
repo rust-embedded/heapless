@@ -276,10 +276,10 @@ where
 }
 
 macro_rules! impl_ {
-    ($uxx:ident) => {
+    ($uxx:ident, $doc:tt $(,$unsf:ident)?) => {
         impl<T, const N: usize> Queue<T, $uxx, N> {
-            /// Creates an empty queue with a fixed capacity of `N`
-            pub const fn $uxx() -> Self {
+            #[doc = $doc]
+            pub const $($unsf)* fn $uxx() -> Self {
                 Self {
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
@@ -296,7 +296,7 @@ macro_rules! impl_ {
             /// ```
             /// use heapless::spsc::Queue;
             ///
-            /// let mut queue: Queue<u8, _, 235> = Queue::u8();
+            /// let mut queue: Queue<u8, _, 235> = Queue::new();
             /// let (mut producer, mut consumer) = queue.split();
             /// assert_eq!(None, consumer.peek());
             /// producer.enqueue(1);
@@ -414,9 +414,17 @@ impl<T, const N: usize> Queue<T, usize, N> {
     }
 }
 
-impl_!(u8);
-impl_!(u16);
-impl_!(usize);
+impl_!(
+    u8,
+    "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u8::MAX`.",
+    unsafe
+);
+impl_!(
+    u16,
+    "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u16::MAX`.",
+    unsafe
+);
+impl_!(usize, "Creates an empty queue with a fixed capacity of `N`");
 
 impl<T, U, U2, const N: usize, const N2: usize> PartialEq<Queue<T, U2, N2>> for Queue<T, U, N>
 where
@@ -633,7 +641,7 @@ mod tests {
 
     #[test]
     fn iter_overflow() {
-        let mut rb: Queue<i32, u8, 4> = Queue::u8();
+        let mut rb: Queue<i32, u8, 4> = unsafe { Queue::u8() };
 
         rb.enqueue(0).unwrap();
         for _ in 0..300 {
