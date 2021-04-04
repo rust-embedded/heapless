@@ -32,6 +32,9 @@ __trybuild = []
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
 
+[target.thumbv6m-none-eabi.dependencies]
+atomic-polyfill = "0.1.2"
+
 [dependencies]
 hash32 = "0.1.0"
 

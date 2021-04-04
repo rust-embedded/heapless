@@ -24,10 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // built-in targets with no atomic / CAS support as of nightly-2019-12-17
     // see the `no-atomics.sh` / `no-cas.sh` script sitting next to this file
     match &target[..] {
-        "thumbv6m-none-eabi"
-        | "msp430-none-elf"
-        | "riscv32i-unknown-none-elf"
-        | "riscv32imc-unknown-none-elf" => {}
+        "msp430-none-elf" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {}
 
         _ => {
             println!("cargo:rustc-cfg=has_cas");
