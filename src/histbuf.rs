@@ -174,11 +174,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        if self.filled {
-            unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.capacity()) }
-        } else {
-            unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.write_at) }
-        }
+        unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
 }
 
@@ -275,6 +271,8 @@ mod tests {
     #[test]
     fn as_slice() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
+
+        assert_eq!(x.as_slice(), []);
 
         x.extend([1, 2, 3, 4, 5].iter());
 
