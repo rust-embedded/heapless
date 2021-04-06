@@ -44,7 +44,7 @@ use crate::{
 ///     println!("{}", book);
 /// }
 /// ```
-pub type FnvIndexSet<T, N, U> = IndexSet<T, N, BuildHasherDefault<FnvHasher>, U>;
+pub type FnvIndexSet<T, N, U = usize> = IndexSet<T, N, BuildHasherDefault<FnvHasher>, U>;
 
 /// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
 ///
@@ -85,7 +85,7 @@ pub type FnvIndexSet<T, N, U> = IndexSet<T, N, BuildHasherDefault<FnvHasher>, U>
 ///     println!("{}", book);
 /// }
 /// ```
-pub struct IndexSet<T, N, S, U>
+pub struct IndexSet<T, N, S, U = usize>
 where
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,

@@ -211,7 +211,7 @@ where
 /// ```
 // repr(transparent) is needed for [`String::as_mut_vec`]
 #[repr(transparent)]
-pub struct Vec<T, N, U>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>, U>)
+pub struct Vec<T, N, U = usize>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>, U>)
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
     U: MaxCapacity;

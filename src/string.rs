@@ -16,7 +16,7 @@ use hash32;
 use crate::{vec::MaxCapacity, Vec};
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
-pub struct String<N, U>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>, U>)
+pub struct String<N, U = usize>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>, U>)
 where
     N: ArrayLength<u8>;
 

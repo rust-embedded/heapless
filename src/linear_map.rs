@@ -13,7 +13,7 @@ use crate::{vec::MaxCapacity, Vec};
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
-pub struct LinearMap<K, V, N, U>(
+pub struct LinearMap<K, V, N, U = usize>(
     #[doc(hidden)] pub crate::i::LinearMap<GenericArray<(K, V), N>, U>,
 )
 where

@@ -57,7 +57,7 @@ use crate::{vec::MaxCapacity, Vec};
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub type FnvIndexMap<K, V, N, U> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>, U>;
+pub type FnvIndexMap<K, V, N, U = usize> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>, U>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 struct HashValue(u16);
@@ -379,7 +379,7 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub struct IndexMap<K, V, N, S, U>
+pub struct IndexMap<K, V, N, S, U = usize>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,

@@ -92,7 +92,7 @@ impl_new!(usize);
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, N, KIND, U>(
+pub struct BinaryHeap<T, N, KIND, U = usize>(
     #[doc(hidden)] pub crate::i::BinaryHeap<GenericArray<T, N>, KIND, U>,
 )
 where
