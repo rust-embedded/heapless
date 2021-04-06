@@ -18,7 +18,7 @@ use core::{
 
 use generic_array::{ArrayLength, GenericArray};
 
-use crate::sealed::binary_heap::Kind;
+use crate::{sealed::binary_heap::Kind, vec::MaxCapacity};
 
 /// Min-heap
 pub enum Min {}
@@ -26,7 +26,10 @@ pub enum Min {}
 /// Max-heap
 pub enum Max {}
 
-impl<A, K, U> crate::i::BinaryHeap<A, K, U> {
+impl<A, K, U> crate::i::BinaryHeap<A, K, U>
+where
+    U: MaxCapacity,
+{
     /// `BinaryHeap` `const` constructor; wrap the returned value in
     /// [`BinaryHeap`](../struct.BinaryHeap.html)
     pub const fn new() -> Self {
@@ -90,13 +93,15 @@ pub struct BinaryHeap<T, N, KIND, U>(
 where
     T: Ord,
     N: ArrayLength<T>,
-    KIND: Kind;
+    KIND: Kind,
+    U: MaxCapacity;
 
 impl<T, N, K, U> BinaryHeap<T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     /* Constructors */
     /// Creates an empty BinaryHeap as a $K-heap.
@@ -155,7 +160,7 @@ where
     /// assert_eq!(heap.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
-        self.0.data.len
+        self.0.data.len.into()
     }
 
     /// Checks if the binary heap is empty.
@@ -442,6 +447,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     heap: &'a mut BinaryHeap<T, N, K, U>,
     sift: bool,
@@ -452,6 +458,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     fn drop(&mut self) {
         if self.sift {
@@ -465,6 +472,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     type Target = T;
     fn deref(&self) -> &T {
@@ -479,6 +487,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
@@ -492,6 +501,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     /// Removes the peeked value from the heap and returns it.
     pub fn pop(mut this: PeekMut<'a, T, N, K, U>) -> T {
@@ -517,6 +527,7 @@ where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
+    U: MaxCapacity,
 {
     fn default() -> Self {
         Self::new()
@@ -528,6 +539,7 @@ where
     N: ArrayLength<T>,
     K: Kind,
     T: Ord + Clone,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         BinaryHeap(crate::i::BinaryHeap {
@@ -542,6 +554,7 @@ where
     N: ArrayLength<T>,
     K: Kind,
     T: Ord,
+    U: MaxCapacity,
 {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(self.0.data.as_mut_slice()) }
@@ -553,6 +566,7 @@ where
     N: ArrayLength<T>,
     K: Kind,
     T: Ord + fmt::Debug,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
@@ -564,6 +578,7 @@ where
     N: ArrayLength<T>,
     K: Kind,
     T: Ord,
+    U: MaxCapacity,
 {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;

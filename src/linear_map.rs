@@ -8,7 +8,7 @@ use core::{
 
 use generic_array::{ArrayLength, GenericArray};
 
-use crate::Vec;
+use crate::{vec::MaxCapacity, Vec};
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
@@ -18,9 +18,13 @@ pub struct LinearMap<K, V, N, U>(
 )
 where
     N: ArrayLength<(K, V)>,
-    K: Eq;
+    K: Eq,
+    U: MaxCapacity;
 
-impl<A, U> crate::i::LinearMap<A, U> {
+impl<A, U> crate::i::LinearMap<A, U>
+where
+    U: MaxCapacity,
+{
     /// `LinearMap` `const` constructor; wrap the returned value in
     /// [`LinearMap`](../struct.LinearMap.html)
     pub const fn new() -> Self {
@@ -34,6 +38,7 @@ impl<K, V, N, U> LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     /// Creates an empty `LinearMap`
     ///
@@ -176,7 +181,7 @@ where
     /// assert_eq!(a.len(), 1);
     /// ```
     pub fn len(&self) -> usize {
-        self.0.buffer.len
+        self.0.buffer.len.into()
     }
 
     /// Inserts a key-value pair into the map.
@@ -385,6 +390,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
+    U: MaxCapacity,
 {
     type Output = V;
 
@@ -398,6 +404,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
+    U: MaxCapacity,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("no entry found for key")
@@ -408,6 +415,7 @@ impl<K, V, N, U> Default for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     fn default() -> Self {
         Self::new()
@@ -419,6 +427,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq + Clone,
     V: Clone,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         Self(crate::i::LinearMap {
@@ -432,6 +441,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq + fmt::Debug,
     V: fmt::Debug,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -442,6 +452,7 @@ impl<K, V, N, U> FromIterator<(K, V)> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -457,6 +468,7 @@ pub struct IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     inner: <Vec<(K, V), N, U> as IntoIterator>::IntoIter,
 }
@@ -465,6 +477,7 @@ impl<K, V, N, U> Iterator for IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     type Item = (K, V);
     fn next(&mut self) -> Option<Self::Item> {
@@ -476,6 +489,7 @@ impl<K, V, N, U> IntoIterator for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     type Item = (K, V);
     type IntoIter = IntoIter<K, V, N, U>;
@@ -495,6 +509,7 @@ impl<'a, K, V, N, U> IntoIterator for &'a LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     type Item = (&'a K, &'a V);
     type IntoIter = Iter<'a, K, V>;
@@ -528,6 +543,7 @@ impl<K, V, N, U> Drop for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
+    U: MaxCapacity,
 {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(self.0.buffer.as_mut_slice()) }
@@ -552,6 +568,7 @@ where
     V: PartialEq,
     N: ArrayLength<(K, V)>,
     N2: ArrayLength<(K, V)>,
+    U: MaxCapacity,
 {
     fn eq(&self, other: &LinearMap<K, V, N2, U>) -> bool {
         self.len() == other.len()
@@ -566,6 +583,7 @@ where
     K: Eq,
     V: PartialEq,
     N: ArrayLength<(K, V)>,
+    U: MaxCapacity,
 {
 }
 

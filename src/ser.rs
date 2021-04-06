@@ -5,6 +5,7 @@ use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 use crate::{
     indexmap::{Bucket, Pos},
     sealed::binary_heap::Kind as BinaryHeapKind,
+    vec::MaxCapacity,
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 
@@ -15,6 +16,7 @@ where
     T: Ord + Serialize,
     N: ArrayLength<T>,
     KIND: BinaryHeapKind,
+    U: MaxCapacity,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -33,6 +35,7 @@ where
     T: Eq + Hash + Serialize,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    U: MaxCapacity,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
@@ -50,6 +53,7 @@ impl<T, N, U> Serialize for Vec<T, N, U>
 where
     T: Serialize,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -71,6 +75,7 @@ where
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
     S: BuildHasher,
     V: Serialize,
+    U: MaxCapacity,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
@@ -89,6 +94,7 @@ where
     N: ArrayLength<(K, V)>,
     K: Eq + Serialize,
     V: Serialize,
+    U: MaxCapacity,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
@@ -107,6 +113,7 @@ where
 impl<N, U> Serialize for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

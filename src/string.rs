@@ -13,14 +13,17 @@ use generic_array::{
 };
 use hash32;
 
-use crate::Vec;
+use crate::{vec::MaxCapacity, Vec};
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
 pub struct String<N, U>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>, U>)
 where
     N: ArrayLength<u8>;
 
-impl<A, U> crate::i::String<A, U> {
+impl<A, U> crate::i::String<A, U>
+where
+    U: MaxCapacity,
+{
     /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
     pub const fn new() -> Self {
         Self {
@@ -32,6 +35,7 @@ impl<A, U> crate::i::String<A, U> {
 impl<N, U> String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     /// Constructs a new, empty `String` with a fixed capacity of `N`
     ///
@@ -203,7 +207,7 @@ where
     /// assert_eq!(s, "olleh");
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N, U> {
-        &mut *(&mut self.0.vec as *mut crate::i::Vec<GenericArray<u8, N>> as *mut Vec<u8, N>)
+        &mut *(&mut self.0.vec as *mut crate::i::Vec<GenericArray<u8, N>, U> as *mut Vec<u8, N, U>)
     }
 
     /// Appends a given string slice onto the end of this `String`.
@@ -381,6 +385,7 @@ where
 impl<N, U> Default for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn default() -> Self {
         Self::new()
@@ -390,6 +395,7 @@ where
 impl<'a, N, U> From<&'a str> for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn from(s: &'a str) -> Self {
         let mut new = String::new();
@@ -401,6 +407,7 @@ where
 impl<N, U> str::FromStr for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     type Err = ();
 
@@ -414,6 +421,7 @@ where
 impl<N, U> Clone for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         Self(crate::i::String {
@@ -425,6 +433,7 @@ where
 impl<N, U> fmt::Debug for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
@@ -434,6 +443,7 @@ where
 impl<N, U> fmt::Display for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
@@ -443,6 +453,7 @@ where
 impl<N, U> hash::Hash for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
@@ -453,6 +464,7 @@ where
 impl<N, U> hash32::Hash for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     #[inline]
     fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
@@ -463,6 +475,7 @@ where
 impl<N, U> fmt::Write for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
@@ -476,6 +489,7 @@ where
 impl<N, U> ops::Deref for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     type Target = str;
 
@@ -487,6 +501,7 @@ where
 impl<N, U> ops::DerefMut for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
@@ -496,6 +511,7 @@ where
 impl<N, U> AsRef<str> for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_ref(&self) -> &str {
@@ -506,6 +522,7 @@ where
 impl<N, U> AsRef<[u8]> for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -517,6 +534,7 @@ impl<N1, N2, U> PartialEq<String<N2, U>> for String<N1, U>
 where
     N1: ArrayLength<u8>,
     N2: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn eq(&self, rhs: &String<N2, U>) -> bool {
         str::eq(&**self, &**rhs)
@@ -532,6 +550,7 @@ macro_rules! impl_eq {
         impl<'a, 'b, N, U> PartialEq<$rhs> for $lhs
         where
             N: ArrayLength<u8>,
+            U: MaxCapacity,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -546,6 +565,7 @@ macro_rules! impl_eq {
         impl<'a, 'b, N, U> PartialEq<$lhs> for $rhs
         where
             N: ArrayLength<u8>,
+            U: MaxCapacity,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -562,13 +582,19 @@ macro_rules! impl_eq {
 impl_eq! { String<N, U>, str }
 impl_eq! { String<N, U>, &'a str }
 
-impl<N, U> Eq for String<N, U> where N: ArrayLength<u8> {}
+impl<N, U> Eq for String<N, U>
+where
+    N: ArrayLength<u8>,
+    U: MaxCapacity,
+{
+}
 
 macro_rules! impl_from_num {
     ($num:ty, $size:ty) => {
         impl<N, U> From<$num> for String<N, U>
         where
             N: ArrayLength<u8> + IsGreaterOrEqual<$size, Output = True>,
+            U: MaxCapacity,
         {
             fn from(s: $num) -> Self {
                 let mut new = String::new();

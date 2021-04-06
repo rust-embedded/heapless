@@ -7,6 +7,7 @@ use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 use crate::{
     indexmap::{Bucket, Pos},
     sealed::binary_heap::Kind as BinaryHeapKind,
+    vec::MaxCapacity,
     BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 
@@ -17,6 +18,7 @@ where
     T: Ord + Deserialize<'de>,
     N: ArrayLength<T>,
     KIND: BinaryHeapKind,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -29,6 +31,7 @@ where
             T: Ord + Deserialize<'de>,
             N: ArrayLength<T>,
             KIND: BinaryHeapKind,
+            U: MaxCapacity,
         {
             type Value = BinaryHeap<T, N, KIND, U>;
 
@@ -60,6 +63,7 @@ where
     T: Eq + Hash + Deserialize<'de>,
     S: Hasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -72,6 +76,7 @@ where
             T: Eq + Hash + Deserialize<'de>,
             S: Hasher + Default,
             N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+            U: MaxCapacity,
         {
             type Value = IndexSet<T, N, BuildHasherDefault<S>, U>;
 
@@ -102,6 +107,7 @@ impl<'de, T, N, U> Deserialize<'de> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
     T: Deserialize<'de>,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -113,6 +119,7 @@ where
         where
             N: ArrayLength<T>,
             T: Deserialize<'de>,
+            U: MaxCapacity,
         {
             type Value = Vec<T, N, U>;
 
@@ -147,6 +154,7 @@ where
     V: Deserialize<'de>,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
     S: Default + Hasher,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -160,6 +168,7 @@ where
             V: Deserialize<'de>,
             N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
             S: Default + Hasher,
+            U: MaxCapacity,
         {
             type Value = IndexMap<K, V, N, BuildHasherDefault<S>, U>;
 
@@ -191,6 +200,7 @@ where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
     N: ArrayLength<(K, V)>,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -203,6 +213,7 @@ where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
             N: ArrayLength<(K, V)>,
+            U: MaxCapacity,
         {
             type Value = LinearMap<K, V, N, U>;
 
@@ -234,6 +245,7 @@ where
 impl<'de, N, U> Deserialize<'de> for String<N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -244,6 +256,7 @@ where
         impl<'de, N, U> de::Visitor<'de> for ValueVisitor<'de, N, U>
         where
             N: ArrayLength<u8>,
+            U: MaxCapacity,
         {
             type Value = String<N, U>;
 
@@ -279,6 +292,6 @@ where
             }
         }
 
-        deserializer.deserialize_str(ValueVisitor::<'de, N>(PhantomData))
+        deserializer.deserialize_str(ValueVisitor::<'de, N, U>(PhantomData))
     }
 }

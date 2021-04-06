@@ -3,7 +3,10 @@ use core::{borrow::Borrow, fmt, iter::FromIterator};
 use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use crate::indexmap::{self, Bucket, IndexMap, Pos};
+use crate::{
+    indexmap::{self, Bucket, IndexMap, Pos},
+    vec::MaxCapacity,
+};
 
 /// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
 /// default FNV hasher.
@@ -83,6 +86,7 @@ pub struct IndexSet<T, N, S, U>
 where
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     map: IndexMap<T, (), N, S, U>,
 }
@@ -92,6 +96,7 @@ where
     T: Eq + Hash,
     S: Default + Hasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    U: MaxCapacity,
 {
     /// Creates an empty `IndexSet`
     pub fn new() -> Self {
@@ -106,6 +111,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     /// Returns the number of elements the set can hold
     ///
@@ -494,6 +500,7 @@ where
     T: Eq + Hash + Clone,
     S: Clone,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         Self {
@@ -507,6 +514,7 @@ where
     T: Eq + Hash + fmt::Debug,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_set().entries(self.iter()).finish()
@@ -518,6 +526,7 @@ where
     T: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn default() -> Self {
         IndexSet {
@@ -533,6 +542,7 @@ where
     S2: BuildHasher,
     N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
     N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn eq(&self, other: &IndexSet<T, N2, S2, U>) -> bool {
         self.len() == other.len() && self.is_subset(other)
@@ -544,6 +554,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -558,6 +569,7 @@ where
     T: 'a + Eq + Hash + Copy,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
     where
@@ -572,6 +584,7 @@ where
     T: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -588,6 +601,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
@@ -622,6 +636,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S, U>,
@@ -632,6 +647,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     type Item = &'a T;
 
@@ -650,6 +666,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     iter: Iter<'a, T>,
     other: &'a IndexSet<T, N, S, U>,
@@ -660,6 +677,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>>,
+    U: MaxCapacity,
 {
     type Item = &'a T;
 

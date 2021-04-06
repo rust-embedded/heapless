@@ -1,31 +1,47 @@
+use core::ops::{AddAssign, SubAssign};
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 use crate::consts::*;
-use generic_array::{typenum::IsLess, ArrayLength, GenericArray};
+use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
-trait MaxCapacity: Default {
+pub(crate) trait MaxCapacity:
+    Default + Into<usize> + AddAssign<Self> + SubAssign<Self> + Clone + Copy
+{
     type Cap;
+    fn convert(x: u8) -> Self;
 }
 
 impl MaxCapacity for u8 {
     type Cap = U256;
+    fn convert(x: u8) -> Self {
+        x as Self
+    }
 }
 
 impl MaxCapacity for u16 {
     type Cap = U65536;
+    fn convert(x: u8) -> Self {
+        x as Self
+    }
 }
 
 impl MaxCapacity for usize {
     type Cap = generic_array::typenum::op!(U10000000000000000000 * U2);
+    fn convert(x: u8) -> Self {
+        x as Self
+    }
 }
 
-impl<A, U> crate::i::Vec<A, U> {
+impl<A, U> crate::i::Vec<A, U>
+where
+    U: MaxCapacity,
+{
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
         Self {
             buffer: MaybeUninit::uninit(),
-            len: 0,
+            len: Default::default(),
         }
     }
 }
@@ -33,17 +49,18 @@ impl<A, U> crate::i::Vec<A, U> {
 impl<T, N, U> crate::i::Vec<GenericArray<T, N>, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     pub(crate) fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len.into()) }
     }
 
     pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..len]
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
+        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len.into()) }
     }
 
     pub(crate) fn capacity(&self) -> usize {
@@ -76,7 +93,7 @@ where
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
+        if self.len.into() + other.len() > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
             Err(())
         } else {
@@ -90,18 +107,20 @@ where
     }
 
     pub(crate) fn is_full(&self) -> bool {
-        self.len == self.capacity()
+        self.len.into() == self.capacity()
     }
 
     pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.as_slice().is_empty());
 
-        self.len -= 1;
-        (self.buffer.as_ptr() as *const T).add(self.len).read()
+        self.len -= U::convert(1);
+        (self.buffer.as_ptr() as *const T)
+            .add(self.len.into())
+            .read()
     }
 
     pub(crate) fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
+        if self.len.into() < self.capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -113,14 +132,14 @@ where
         // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         (self.buffer.as_mut_ptr() as *mut T)
-            .add(self.len)
+            .add(self.len.into())
             .write(item);
 
-        self.len += 1;
+        self.len += U::convert(1);
     }
 
     unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
-        let length = self.len;
+        let length = self.len.into();
         debug_assert!(index < length);
         ptr::swap(
             self.as_mut_slice().get_unchecked_mut(index),
@@ -130,19 +149,19 @@ where
     }
 
     pub(crate) fn swap_remove(&mut self, index: usize) -> T {
-        assert!(index < self.len);
+        assert!(index < self.len.into());
         unsafe { self.swap_remove_unchecked(index) }
     }
 
     pub(crate) fn truncate(&mut self, len: usize) {
         unsafe {
             // drop any extra elements
-            while len < self.len {
+            while len < self.len.into() {
                 // decrement len before the drop_in_place(), so a panic on Drop
                 // doesn't re-drop the just-failed value.
-                self.len -= 1;
+                self.len -= U::convert(1);
                 let len = self.len;
-                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len));
+                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len.into()));
             }
         }
     }
@@ -181,12 +200,14 @@ where
 #[repr(transparent)]
 pub struct Vec<T, N, U>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>, U>)
 where
-    N: ArrayLength<T>;
+    N: ArrayLength<T>,
+    U: MaxCapacity;
 
 impl<T, N, U> Clone for Vec<T, N, U>
 where
     N: ArrayLength<T>,
     T: Clone,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         Vec(self.0.clone())
@@ -196,6 +217,7 @@ where
 impl<T, N, U> Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     /* Constructors */
     /// Constructs a new, empty vector with a fixed capacity of `N`
@@ -274,7 +296,7 @@ where
 
     /// Removes the last element from a vector and return it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        if self.0.len != 0 {
+        if self.0.len.into() != 0 {
             Some(unsafe { self.0.pop_unchecked() })
         } else {
             None
@@ -299,7 +321,7 @@ where
             while len < self.len() {
                 // decrement len before the drop_in_place(), so a panic on Drop
                 // doesn't re-drop the just-failed value.
-                self.0.len -= 1;
+                self.0.len -= U::convert(1);
                 let len = self.len();
                 ptr::drop_in_place(self.get_unchecked_mut(len));
             }
@@ -437,8 +459,8 @@ where
     ///
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
-    pub unsafe fn set_len(&mut self, new_len: usize) {
-        debug_assert!(new_len <= self.capacity());
+    pub unsafe fn set_len(&mut self, new_len: U) {
+        debug_assert!(new_len.into() <= self.capacity());
 
         self.0.len = new_len
     }
@@ -535,6 +557,7 @@ where
 impl<T, N, U> Default for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn default() -> Self {
         Self::new()
@@ -545,6 +568,7 @@ impl<T, N, U> fmt::Debug for Vec<T, N, U>
 where
     T: fmt::Debug,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <[T] as fmt::Debug>::fmt(self, f)
@@ -554,6 +578,7 @@ where
 impl<N, U> fmt::Write for Vec<u8, N, U>
 where
     N: ArrayLength<u8>,
+    U: MaxCapacity,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         match self.extend_from_slice(s.as_bytes()) {
@@ -566,6 +591,7 @@ where
 impl<T, N, U> Drop for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(&mut self[..]) }
@@ -575,6 +601,7 @@ where
 impl<T, N, U> Extend<T> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn extend<I>(&mut self, iter: I)
     where
@@ -588,6 +615,7 @@ impl<'a, T, N, U> Extend<&'a T> for Vec<T, N, U>
 where
     T: 'a + Copy,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn extend<I>(&mut self, iter: I)
     where
@@ -601,6 +629,7 @@ impl<T, N, U> hash::Hash for Vec<T, N, U>
 where
     T: core::hash::Hash,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         <[T] as hash::Hash>::hash(self, state)
@@ -611,6 +640,7 @@ impl<T, N, U> hash32::Hash for Vec<T, N, U>
 where
     T: hash32::Hash,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn hash<H: hash32::Hasher>(&self, state: &mut H) {
         <[T] as hash32::Hash>::hash(self, state)
@@ -620,6 +650,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
@@ -632,6 +663,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a mut Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
@@ -644,6 +676,7 @@ where
 impl<T, N, U> FromIterator<T> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn from_iter<I>(iter: I) -> Self
     where
@@ -666,6 +699,7 @@ where
 pub struct IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     vec: Vec<T, N, U>,
     next: usize,
@@ -674,6 +708,7 @@ where
 impl<T, N, U> Iterator for IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
@@ -695,6 +730,7 @@ impl<T, N, U> Clone for IntoIter<T, N, U>
 where
     T: Clone,
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn clone(&self) -> Self {
         let mut vec = Vec::new();
@@ -716,13 +752,14 @@ where
 impl<T, N, U> Drop for IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn drop(&mut self) {
         unsafe {
             // Drop all the elements that have not been moved out of vec
             ptr::drop_in_place(&mut self.vec[self.next..]);
             // Prevent dropping of other elements
-            self.vec.0.len = 0;
+            self.vec.0.len = U::convert(1);
         }
     }
 }
@@ -730,6 +767,7 @@ where
 impl<T, N, U> IntoIterator for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     type Item = T;
     type IntoIter = IntoIter<T, N, U>;
@@ -744,6 +782,7 @@ where
     N1: ArrayLength<A>,
     N2: ArrayLength<B>,
     A: PartialEq<B>,
+    U: MaxCapacity,
 {
     fn eq(&self, other: &Vec<B, N2, U>) -> bool {
         <[A]>::eq(self, &**other)
@@ -756,6 +795,7 @@ macro_rules! eq {
         where
             A: PartialEq<B>,
             N: ArrayLength<A>,
+            U: MaxCapacity,
         {
             fn eq(&self, other: &$Rhs) -> bool {
                 <[A]>::eq(self, &other[..])
@@ -786,12 +826,14 @@ impl<T, N, U> Eq for Vec<T, N, U>
 where
     N: ArrayLength<T>,
     T: Eq,
+    U: MaxCapacity,
 {
 }
 
 impl<T, N, U> ops::Deref for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     type Target = [T];
 
@@ -803,6 +845,7 @@ where
 impl<T, N, U> ops::DerefMut for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     fn deref_mut(&mut self) -> &mut [T] {
         self.0.as_mut_slice()
@@ -812,6 +855,7 @@ where
 impl<T, N, U> AsRef<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_ref(&self) -> &Self {
@@ -822,6 +866,7 @@ where
 impl<T, N, U> AsMut<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
@@ -832,6 +877,7 @@ where
 impl<T, N, U> AsRef<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_ref(&self) -> &[T] {
@@ -842,6 +888,7 @@ where
 impl<T, N, U> AsMut<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
+    U: MaxCapacity,
 {
     #[inline]
     fn as_mut(&mut self) -> &mut [T] {
