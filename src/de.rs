@@ -1,7 +1,7 @@
 use core::{fmt, marker::PhantomData};
 
 use generic_array::{
-    typenum::{IsLess, PowerOfTwo},
+    typenum::{IsLess, NonZero, PowerOfTwo},
     ArrayLength,
 };
 use hash32::{BuildHasherDefault, Hash, Hasher};
@@ -20,6 +20,7 @@ impl<'de, T, N, KIND, U> Deserialize<'de> for BinaryHeap<T, N, KIND, U>
 where
     T: Ord + Deserialize<'de>,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     KIND: BinaryHeapKind,
     U: MaxCapacity,
 {
@@ -33,6 +34,7 @@ where
         where
             T: Ord + Deserialize<'de>,
             N: ArrayLength<T> + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             KIND: BinaryHeapKind,
             U: MaxCapacity,
         {
@@ -66,6 +68,7 @@ where
     T: Eq + Hash + Deserialize<'de>,
     S: Hasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -79,6 +82,7 @@ where
             T: Eq + Hash + Deserialize<'de>,
             S: Hasher + Default,
             N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             U: MaxCapacity,
         {
             type Value = IndexSet<T, N, BuildHasherDefault<S>, U>;
@@ -109,6 +113,7 @@ where
 impl<'de, T, N, U> Deserialize<'de> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     T: Deserialize<'de>,
     U: MaxCapacity,
 {
@@ -121,6 +126,7 @@ where
         impl<'de, T, N, U> de::Visitor<'de> for ValueVisitor<'de, T, N, U>
         where
             N: ArrayLength<T> + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             T: Deserialize<'de>,
             U: MaxCapacity,
         {
@@ -156,6 +162,7 @@ where
     K: Eq + Hash + Deserialize<'de>,
     V: Deserialize<'de>,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     S: Default + Hasher,
     U: MaxCapacity,
 {
@@ -170,6 +177,7 @@ where
             K: Eq + Hash + Deserialize<'de>,
             V: Deserialize<'de>,
             N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             S: Default + Hasher,
             U: MaxCapacity,
         {
@@ -203,6 +211,7 @@ where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -216,6 +225,7 @@ where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
             N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             U: MaxCapacity,
         {
             type Value = LinearMap<K, V, N, U>;
@@ -248,6 +258,7 @@ where
 impl<'de, N, U> Deserialize<'de> for String<N, U>
 where
     N: ArrayLength<u8> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -259,6 +270,7 @@ where
         impl<'de, N, U> de::Visitor<'de> for ValueVisitor<'de, N, U>
         where
             N: ArrayLength<u8> + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             U: MaxCapacity,
         {
             type Value = String<N, U>;

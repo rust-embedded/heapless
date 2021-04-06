@@ -1,7 +1,7 @@
 use core::{borrow::Borrow, fmt, iter::FromIterator};
 
 use generic_array::{
-    typenum::{IsLess, PowerOfTwo},
+    typenum::{IsLess, NonZero, PowerOfTwo},
     ArrayLength,
 };
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
@@ -89,6 +89,7 @@ pub struct IndexSet<T, N, S, U = usize>
 where
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     map: IndexMap<T, (), N, S, U>,
@@ -99,6 +100,7 @@ where
     T: Eq + Hash,
     S: Default + Hasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     /// Creates an empty `IndexSet`
@@ -114,6 +116,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     /// Returns the number of elements the set can hold
@@ -185,6 +188,7 @@ where
     ) -> Difference<'a, T, N2, S2, U2>
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -223,6 +227,7 @@ where
     ) -> impl Iterator<Item = &'a T>
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -255,6 +260,7 @@ where
     ) -> Intersection<'a, T, N2, S2, U2>
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -290,6 +296,7 @@ where
     ) -> impl Iterator<Item = &'a T>
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -391,6 +398,7 @@ where
     pub fn is_disjoint<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -418,6 +426,7 @@ where
     pub fn is_subset<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -448,6 +457,7 @@ where
     pub fn is_superset<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
         N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+        <N2 as IsLess<U2::Cap>>::Output: NonZero,
         S2: BuildHasher,
         U2: MaxCapacity,
     {
@@ -510,6 +520,7 @@ where
     T: Eq + Hash + Clone,
     S: Clone,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -524,6 +535,7 @@ where
     T: Eq + Hash + fmt::Debug,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -536,6 +548,7 @@ where
     T: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn default() -> Self {
@@ -551,7 +564,9 @@ where
     S1: BuildHasher,
     S2: BuildHasher,
     N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U1::Cap>,
+    <N1 as IsLess<U1::Cap>>::Output: NonZero,
     N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+    <N2 as IsLess<U2::Cap>>::Output: NonZero,
     U1: MaxCapacity,
     U2: MaxCapacity,
 {
@@ -565,6 +580,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -580,6 +596,7 @@ where
     T: 'a + Eq + Hash + Copy,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -595,6 +612,7 @@ where
     T: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn from_iter<I>(iter: I) -> Self
@@ -612,6 +630,7 @@ where
     T: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = &'a T;
@@ -647,6 +666,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     iter: Iter<'a, T>,
@@ -658,6 +678,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = &'a T;
@@ -677,6 +698,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     iter: Iter<'a, T>,
@@ -688,6 +710,7 @@ where
     S: BuildHasher,
     T: Eq + Hash,
     N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = &'a T;

@@ -8,7 +8,7 @@ use core::{
 };
 
 use generic_array::{
-    typenum::{IsLess, PowerOfTwo},
+    typenum::{IsLess, NonZero, PowerOfTwo},
     ArrayLength, GenericArray,
 };
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
@@ -133,6 +133,7 @@ struct CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     entries: Vec<Bucket<K, V>, N, U>,
@@ -143,6 +144,7 @@ impl<K, V, N, U> CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
@@ -321,6 +323,7 @@ where
     K: Eq + Hash + Clone,
     V: Clone,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -383,6 +386,7 @@ pub struct IndexMap<K, V, N, S, U = usize>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     core: CoreMap<K, V, N, U>,
@@ -394,6 +398,7 @@ where
     K: Eq + Hash,
     S: Default + Hasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
@@ -413,6 +418,7 @@ where
     K: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     /* Public API */
@@ -777,6 +783,7 @@ where
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Output = V;
@@ -792,6 +799,7 @@ where
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
@@ -805,6 +813,7 @@ where
     V: Clone,
     S: Clone,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -821,6 +830,7 @@ where
     V: fmt::Debug,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -833,6 +843,7 @@ where
     K: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn default() -> Self {
@@ -849,8 +860,10 @@ where
     V: Eq,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     S2: BuildHasher,
     N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+    <N2 as IsLess<U2::Cap>>::Output: NonZero,
     U: MaxCapacity,
     U2: MaxCapacity,
 {
@@ -868,6 +881,7 @@ where
     V: Eq,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
 }
@@ -877,6 +891,7 @@ where
     K: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -895,6 +910,7 @@ where
     V: Copy,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -910,6 +926,7 @@ where
     K: Eq + Hash,
     S: BuildHasher + Default,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn from_iter<I>(iterable: I) -> Self
@@ -927,6 +944,7 @@ where
     K: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = (&'a K, &'a V);
@@ -942,6 +960,7 @@ where
     K: Eq + Hash,
     S: BuildHasher,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = (&'a K, &'a mut V);

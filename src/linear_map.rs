@@ -6,7 +6,10 @@ use core::{
     ops, ptr, slice,
 };
 
-use generic_array::{typenum::IsLess, ArrayLength, GenericArray};
+use generic_array::{
+    typenum::{IsLess, NonZero},
+    ArrayLength, GenericArray,
+};
 
 use crate::{vec::MaxCapacity, Vec};
 
@@ -18,6 +21,7 @@ pub struct LinearMap<K, V, N, U = usize>(
 )
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity;
 
@@ -43,6 +47,7 @@ impl_new!(usize, new);
 impl<K, V, N, U> LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -396,6 +401,7 @@ where
 impl<'a, K, V, N, Q, U> ops::Index<&'a Q> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
     U: MaxCapacity,
@@ -410,6 +416,7 @@ where
 impl<'a, K, V, N, Q, U> ops::IndexMut<&'a Q> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
     U: MaxCapacity,
@@ -422,6 +429,7 @@ where
 impl<K, V, N, U> Default for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -433,6 +441,7 @@ where
 impl<K, V, N, U> Clone for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq + Clone,
     V: Clone,
     U: MaxCapacity,
@@ -447,6 +456,7 @@ where
 impl<K, V, N, U> fmt::Debug for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq + fmt::Debug,
     V: fmt::Debug,
     U: MaxCapacity,
@@ -459,6 +469,7 @@ where
 impl<K, V, N, U> FromIterator<(K, V)> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -475,6 +486,7 @@ where
 pub struct IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -484,6 +496,7 @@ where
 impl<K, V, N, U> Iterator for IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -496,6 +509,7 @@ where
 impl<K, V, N, U> IntoIterator for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -516,6 +530,7 @@ where
 impl<'a, K, V, N, U> IntoIterator for &'a LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -550,6 +565,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
 impl<K, V, N, U> Drop for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Eq,
     U: MaxCapacity,
 {
@@ -575,7 +591,9 @@ where
     K: Eq,
     V: PartialEq,
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     N2: ArrayLength<(K, V)> + IsLess<U2::Cap>,
+    <N2 as IsLess<U2::Cap>>::Output: NonZero,
     U: MaxCapacity,
     U2: MaxCapacity,
 {
@@ -592,6 +610,7 @@ where
     K: Eq,
     V: PartialEq,
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
 }

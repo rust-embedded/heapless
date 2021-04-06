@@ -2,7 +2,10 @@ use core::ops::{AddAssign, SubAssign};
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 use crate::consts::*;
-use generic_array::{typenum::IsLess, ArrayLength, GenericArray};
+use generic_array::{
+    typenum::{IsLess, NonZero},
+    ArrayLength, GenericArray,
+};
 use hash32;
 
 pub trait MaxCapacity:
@@ -55,6 +58,7 @@ impl_new!(usize, new);
 impl<T, N, U> crate::i::Vec<GenericArray<T, N>, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     // Same behaviour as new(), except this is defined genericly
@@ -215,11 +219,13 @@ where
 pub struct Vec<T, N, U = usize>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>, U>)
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity;
 
 impl<T, N, U> Clone for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     T: Clone,
     U: MaxCapacity,
 {
@@ -231,6 +237,7 @@ where
 impl<T, N, U> Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     /* Constructors */
@@ -571,6 +578,7 @@ where
 impl<T, N, U> Default for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn default() -> Self {
@@ -582,6 +590,7 @@ impl<T, N, U> fmt::Debug for Vec<T, N, U>
 where
     T: fmt::Debug,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -592,6 +601,7 @@ where
 impl<N, U> fmt::Write for Vec<u8, N, U>
 where
     N: ArrayLength<u8> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -605,6 +615,7 @@ where
 impl<T, N, U> Drop for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn drop(&mut self) {
@@ -615,6 +626,7 @@ where
 impl<T, N, U> Extend<T> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iter: I)
@@ -629,6 +641,7 @@ impl<'a, T, N, U> Extend<&'a T> for Vec<T, N, U>
 where
     T: 'a + Copy,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iter: I)
@@ -643,6 +656,7 @@ impl<T, N, U> hash::Hash for Vec<T, N, U>
 where
     T: core::hash::Hash,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
@@ -654,6 +668,7 @@ impl<T, N, U> hash32::Hash for Vec<T, N, U>
 where
     T: hash32::Hash,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn hash<H: hash32::Hasher>(&self, state: &mut H) {
@@ -664,6 +679,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = &'a T;
@@ -677,6 +693,7 @@ where
 impl<'a, T, N, U> IntoIterator for &'a mut Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = &'a mut T;
@@ -690,6 +707,7 @@ where
 impl<T, N, U> FromIterator<T> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn from_iter<I>(iter: I) -> Self
@@ -713,6 +731,7 @@ where
 pub struct IntoIter<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     vec: Vec<T, N, U>,
@@ -722,6 +741,7 @@ where
 impl<T, N, U> Iterator for IntoIter<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = T;
@@ -744,6 +764,7 @@ impl<T, N, U> Clone for IntoIter<T, N, U>
 where
     T: Clone,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -766,6 +787,7 @@ where
 impl<T, N, U> Drop for IntoIter<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn drop(&mut self) {
@@ -781,6 +803,7 @@ where
 impl<T, N, U> IntoIterator for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Item = T;
@@ -794,7 +817,9 @@ where
 impl<A, B, N1, N2, U1, U2> PartialEq<Vec<B, N2, U2>> for Vec<A, N1, U1>
 where
     N1: ArrayLength<A> + IsLess<U1::Cap>,
+    <N1 as IsLess<U1::Cap>>::Output: NonZero,
     N2: ArrayLength<B> + IsLess<U2::Cap>,
+    <N2 as IsLess<U2::Cap>>::Output: NonZero,
     A: PartialEq<B>,
     U1: MaxCapacity,
     U2: MaxCapacity,
@@ -810,6 +835,7 @@ macro_rules! eq {
         where
             A: PartialEq<B>,
             N: ArrayLength<A> + IsLess<U::Cap>,
+            <N as IsLess<U::Cap>>::Output: NonZero,
             U: MaxCapacity,
         {
             fn eq(&self, other: &$Rhs) -> bool {
@@ -840,6 +866,7 @@ array!(
 impl<T, N, U> Eq for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     T: Eq,
     U: MaxCapacity,
 {
@@ -848,6 +875,7 @@ where
 impl<T, N, U> ops::Deref for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     type Target = [T];
@@ -860,6 +888,7 @@ where
 impl<T, N, U> ops::DerefMut for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     fn deref_mut(&mut self) -> &mut [T] {
@@ -870,6 +899,7 @@ where
 impl<T, N, U> AsRef<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     #[inline]
@@ -881,6 +911,7 @@ where
 impl<T, N, U> AsMut<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     #[inline]
@@ -892,6 +923,7 @@ where
 impl<T, N, U> AsRef<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     #[inline]
@@ -903,6 +935,7 @@ where
 impl<T, N, U> AsMut<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     U: MaxCapacity,
 {
     #[inline]

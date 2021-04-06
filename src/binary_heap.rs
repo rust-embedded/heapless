@@ -16,7 +16,10 @@ use core::{
     ptr, slice,
 };
 
-use generic_array::{typenum::IsLess, ArrayLength, GenericArray};
+use generic_array::{
+    typenum::{IsLess, NonZero},
+    ArrayLength, GenericArray,
+};
 
 use crate::{sealed::binary_heap::Kind, vec::MaxCapacity};
 
@@ -99,6 +102,7 @@ pub struct BinaryHeap<T, N, KIND, U = usize>(
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     KIND: Kind,
     U: MaxCapacity;
 
@@ -106,6 +110,7 @@ impl<T, N, K, U> BinaryHeap<T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -455,6 +460,7 @@ pub struct PeekMut<'a, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -466,6 +472,7 @@ impl<T, N, K, U> Drop for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -480,6 +487,7 @@ impl<T, N, K, U> Deref for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -495,6 +503,7 @@ impl<T, N, K, U> DerefMut for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -509,6 +518,7 @@ impl<'a, T, N, K, U> PeekMut<'a, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -535,6 +545,7 @@ impl<T, N, K, U> Default for BinaryHeap<T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     U: MaxCapacity,
 {
@@ -546,6 +557,7 @@ where
 impl<T, N, K, U> Clone for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     T: Ord + Clone,
     U: MaxCapacity,
@@ -561,6 +573,7 @@ where
 impl<T, N, K, U> Drop for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     T: Ord,
     U: MaxCapacity,
@@ -573,6 +586,7 @@ where
 impl<T, N, K, U> fmt::Debug for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     T: Ord + fmt::Debug,
     U: MaxCapacity,
@@ -585,6 +599,7 @@ where
 impl<'a, T, N, K, U> IntoIterator for &'a BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T> + IsLess<U::Cap>,
+    <N as IsLess<U::Cap>>::Output: NonZero,
     K: Kind,
     T: Ord,
     U: MaxCapacity,
