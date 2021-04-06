@@ -34,10 +34,10 @@ impl MaxCapacity for usize {
 }
 
 macro_rules! impl_new {
-    ($u:ident) => {
+    ($u:ident, $name:ident) => {
         impl<A> crate::i::Vec<A, $u> {
             /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
-            pub const fn new() -> Self {
+            pub const fn $name() -> Self {
                 Self {
                     buffer: MaybeUninit::uninit(),
                     len: 0,
@@ -47,9 +47,10 @@ macro_rules! impl_new {
     };
 }
 
-impl_new!(u8);
-impl_new!(u16);
-impl_new!(usize);
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
 
 impl<T, N, U> crate::i::Vec<GenericArray<T, N>, U>
 where

@@ -21,21 +21,22 @@ where
     N: ArrayLength<u8>;
 
 macro_rules! impl_new {
-    ($u:ident) => {
+    ($u:ident, $name:ident) => {
         impl<A> crate::i::String<A, $u> {
             /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
-            pub const fn new() -> Self {
+            pub const fn $name() -> Self {
                 Self {
-                    vec: crate::i::Vec::<_, $u>::new(),
+                    vec: crate::i::Vec::<_, $u>::$name(),
                 }
             }
         }
     };
 }
 
-impl_new!(u8);
-impl_new!(u16);
-impl_new!(usize);
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
 
 impl<N, U> String<N, U>
 where

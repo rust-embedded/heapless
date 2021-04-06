@@ -27,23 +27,24 @@ pub enum Min {}
 pub enum Max {}
 
 macro_rules! impl_new {
-    ($u:ident) => {
+    ($u:ident, $name:ident) => {
         impl<A, K> crate::i::BinaryHeap<A, K, $u> {
             /// `BinaryHeap` `const` constructor; wrap the returned value in
             /// [`BinaryHeap`](../struct.BinaryHeap.html)
-            pub const fn new() -> Self {
+            pub const fn $name() -> Self {
                 Self {
                     _kind: PhantomData,
-                    data: crate::i::Vec::<A, $u>::new(),
+                    data: crate::i::Vec::<A, $u>::$name(),
                 }
             }
         }
     };
 }
 
-impl_new!(u8);
-impl_new!(u16);
-impl_new!(usize);
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -607,8 +608,7 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _B: BinaryHeap<i32, U16, Min, u8> =
-            BinaryHeap(crate::i::BinaryHeap::<_, _, u8>::new());
+        static mut _B: BinaryHeap<i32, U16, Min, u8> = BinaryHeap(crate::i::BinaryHeap::u8());
     }
 
     #[test]

@@ -22,22 +22,23 @@ where
     U: MaxCapacity;
 
 macro_rules! impl_new {
-    ($u:ident) => {
+    ($u:ident, $name:ident) => {
         impl<A> crate::i::LinearMap<A, $u> {
             /// `LinearMap` `const` constructor; wrap the returned value in
             /// [`LinearMap`](../struct.LinearMap.html)
-            pub const fn new() -> Self {
+            pub const fn $name() -> Self {
                 Self {
-                    buffer: crate::i::Vec::<_, $u>::new(),
+                    buffer: crate::i::Vec::<_, $u>::$name(),
                 }
             }
         }
     };
 }
 
-impl_new!(u8);
-impl_new!(u16);
-impl_new!(usize);
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
 
 impl<K, V, N, U> LinearMap<K, V, N, U>
 where
