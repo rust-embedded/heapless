@@ -601,16 +601,17 @@ mod test {
 
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, U8, usize> = LinearMap(crate::i::LinearMap::new());
+        static mut _L: LinearMap<i32, i32, U8, usize> =
+            LinearMap(crate::i::LinearMap::<_, usize>::new());
     }
 
     #[test]
     fn partial_eq() {
         {
-            let mut a = LinearMap::<_, _, U1>::new();
+            let mut a = LinearMap::<_, _, U1, u8>::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b = LinearMap::<_, _, U2>::new();
+            let mut b = LinearMap::<_, _, U2, u8>::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -621,11 +622,11 @@ mod test {
         }
 
         {
-            let mut a = LinearMap::<_, _, U2>::new();
+            let mut a = LinearMap::<_, _, U2, u8>::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b = LinearMap::<_, _, U2>::new();
+            let mut b = LinearMap::<_, _, U2, u8>::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 

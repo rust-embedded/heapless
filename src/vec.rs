@@ -772,7 +772,7 @@ where
             // Drop all the elements that have not been moved out of vec
             ptr::drop_in_place(&mut self.vec[self.next..]);
             // Prevent dropping of other elements
-            self.vec.0.len = U::convert(1);
+            self.vec.0.len = U::convert(0);
         }
     }
 }
@@ -918,7 +918,7 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _V: Vec<i32, U4, usize> = Vec(crate::i::Vec::new());
+        static mut _V: Vec<i32, U4, usize> = Vec(crate::i::Vec::<_, usize>::new());
     }
 
     macro_rules! droppable {
@@ -949,7 +949,7 @@ mod tests {
         droppable!();
 
         {
-            let mut v: Vec<Droppable, U2> = Vec::new();
+            let mut v: Vec<Droppable, U2, u8> = Vec::new();
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             v.pop().unwrap();
@@ -958,7 +958,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: Vec<Droppable, U2> = Vec::new();
+            let mut v: Vec<Droppable, U2, u8> = Vec::new();
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
         }
@@ -968,8 +968,8 @@ mod tests {
 
     #[test]
     fn eq() {
-        let mut xs: Vec<i32, U4> = Vec::new();
-        let mut ys: Vec<i32, U8> = Vec::new();
+        let mut xs: Vec<i32, U4, u8> = Vec::new();
+        let mut ys: Vec<i32, U8, u8> = Vec::new();
 
         assert_eq!(xs, ys);
 
@@ -981,7 +981,7 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut v: Vec<i32, U4> = Vec::new();
+        let mut v: Vec<i32, U4, u8> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -993,7 +993,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut v: Vec<i32, U4> = Vec::new();
+        let mut v: Vec<i32, U4, u8> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -1011,7 +1011,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut v: Vec<i32, U4> = Vec::new();
+        let mut v: Vec<i32, U4, u8> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -1030,7 +1030,7 @@ mod tests {
     #[test]
     fn collect_from_iter() {
         let slice = &[1, 2, 3];
-        let vec = slice.iter().cloned().collect::<Vec<_, U4>>();
+        let vec = slice.iter().cloned().collect::<Vec<_, U4, u8>>();
         assert_eq!(vec, slice);
     }
 
@@ -1038,12 +1038,12 @@ mod tests {
     #[should_panic]
     fn collect_from_iter_overfull() {
         let slice = &[1, 2, 3];
-        let _vec = slice.iter().cloned().collect::<Vec<_, U2>>();
+        let _vec = slice.iter().cloned().collect::<Vec<_, U2, u8>>();
     }
 
     #[test]
     fn iter_move() {
-        let mut v: Vec<i32, U4> = Vec::new();
+        let mut v: Vec<i32, U4, u8> = Vec::new();
         v.push(0).unwrap();
         v.push(1).unwrap();
         v.push(2).unwrap();
@@ -1063,9 +1063,10 @@ mod tests {
         droppable!();
 
         {
-            let mut vec: Vec<Droppable, U2> = Vec::new();
+            let mut vec: Vec<Droppable, U2, usize> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
+            dbg!(vec.len());
             let mut items = vec.into_iter();
             // Move all
             let _ = items.next();
@@ -1075,7 +1076,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut vec: Vec<Droppable, U2> = Vec::new();
+            let mut vec: Vec<Droppable, U2, u8> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
             let _items = vec.into_iter();
@@ -1085,7 +1086,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut vec: Vec<Droppable, U2> = Vec::new();
+            let mut vec: Vec<Droppable, U2, u8> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
             let mut items = vec.into_iter();
@@ -1097,7 +1098,7 @@ mod tests {
 
     #[test]
     fn push_and_pop() {
-        let mut v: Vec<i32, U4> = Vec::new();
+        let mut v: Vec<i32, U4, u8> = Vec::new();
         assert_eq!(v.len(), 0);
 
         assert_eq!(v.pop(), None);
@@ -1115,7 +1116,7 @@ mod tests {
 
     #[test]
     fn resize_size_limit() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
 
         v.resize(0, 0).unwrap();
         v.resize(4, 0).unwrap();
@@ -1124,7 +1125,7 @@ mod tests {
 
     #[test]
     fn resize_length_cases() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
 
         assert_eq!(v.len(), 0);
 
@@ -1151,7 +1152,7 @@ mod tests {
 
     #[test]
     fn resize_contents() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
 
         // New entries take supplied value when growing
         v.resize(1, 17).unwrap();
@@ -1174,7 +1175,7 @@ mod tests {
 
     #[test]
     fn resize_default() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
 
         // resize_default is implemented using resize, so just check the
         // correct value is being written.
@@ -1184,14 +1185,14 @@ mod tests {
 
     #[test]
     fn write() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
         write!(v, "{:x}", 1234).unwrap();
         assert_eq!(&v[..], b"4d2");
     }
 
     #[test]
     fn extend_from_slice() {
-        let mut v: Vec<u8, U4> = Vec::new();
+        let mut v: Vec<u8, U4, u8> = Vec::new();
         assert_eq!(v.len(), 0);
         v.extend_from_slice(&[1, 2]).unwrap();
         assert_eq!(v.len(), 2);
@@ -1207,17 +1208,17 @@ mod tests {
     #[test]
     fn from_slice() {
         // Successful construction
-        let v: Vec<u8, U4> = Vec::from_slice(&[1, 2, 3]).unwrap();
+        let v: Vec<u8, U4, u8> = Vec::from_slice(&[1, 2, 3]).unwrap();
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
 
         // Slice too large
-        assert!(Vec::<u8, U2>::from_slice(&[1, 2, 3]).is_err());
+        assert!(Vec::<u8, U2, u8>::from_slice(&[1, 2, 3]).is_err());
     }
 
     #[test]
     fn starts_with() {
-        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        let v: Vec<_, U8, u8> = Vec::from_slice(b"ab").unwrap();
         assert!(v.starts_with(&[]));
         assert!(v.starts_with(b""));
         assert!(v.starts_with(b"a"));
@@ -1229,7 +1230,7 @@ mod tests {
 
     #[test]
     fn ends_with() {
-        let v: Vec<_, U8> = Vec::from_slice(b"ab").unwrap();
+        let v: Vec<_, U8, u8> = Vec::from_slice(b"ab").unwrap();
         assert!(v.ends_with(&[]));
         assert!(v.ends_with(b""));
         assert!(v.ends_with(b"b"));

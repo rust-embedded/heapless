@@ -629,12 +629,12 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _S: String<U8, usize> = String(crate::i::String::new());
+        static mut _S: String<U8, usize> = String(crate::i::String::<_, usize>::new());
     }
 
     #[test]
     fn clone() {
-        let s1: String<U20> = String::from("abcd");
+        let s1: String<U20, u8> = String::from("abcd");
         let mut s2 = s1.clone();
         s2.push_str(" efgh").unwrap();
 
@@ -646,7 +646,7 @@ mod tests {
     fn debug() {
         use core::fmt::Write;
 
-        let s: String<U8> = String::from("abcd");
+        let s: String<U8, u8> = String::from("abcd");
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
@@ -656,7 +656,7 @@ mod tests {
     fn display() {
         use core::fmt::Write;
 
-        let s: String<U8> = String::from("abcd");
+        let s: String<U8, u8> = String::from("abcd");
         let mut std_s = std::string::String::new();
         write!(std_s, "{}", s).unwrap();
         assert_eq!("abcd", std_s);
@@ -664,7 +664,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let s: String<U4> = String::new();
+        let s: String<U4, u8> = String::new();
         assert!(s.capacity() == 4);
         assert_eq!(s, "");
         assert_eq!(s.len(), 0);
@@ -673,7 +673,7 @@ mod tests {
 
     #[test]
     fn from() {
-        let s: String<U4> = String::from("123");
+        let s: String<U4, u8> = String::from("123");
         assert!(s.len() == 3);
         assert_eq!(s, "123");
     }
@@ -682,23 +682,23 @@ mod tests {
     fn from_str() {
         use core::str::FromStr;
 
-        let s: String<U4> = String::<U4>::from_str("123").unwrap();
+        let s: String<U4, u8> = String::<U4, u8>::from_str("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<U2>::from_str("123").unwrap_err();
+        let e: () = String::<U2, u8>::from_str("123").unwrap_err();
         assert_eq!(e, ());
     }
 
     #[test]
     #[should_panic]
     fn from_panic() {
-        let _: String<U4> = String::from("12345");
+        let _: String<U4, u8> = String::from("12345");
     }
 
     #[test]
     fn from_utf8() {
-        let mut v: Vec<u8, U8> = Vec::new();
+        let mut v: Vec<u8, U8, u8> = Vec::new();
         v.push('a' as u8).unwrap();
         v.push('b' as u8).unwrap();
 
@@ -708,7 +708,7 @@ mod tests {
 
     #[test]
     fn from_utf8_uenc() {
-        let mut v: Vec<u8, U8> = Vec::new();
+        let mut v: Vec<u8, U8, u8> = Vec::new();
         v.push(240).unwrap();
         v.push(159).unwrap();
         v.push(146).unwrap();
@@ -719,7 +719,7 @@ mod tests {
 
     #[test]
     fn from_utf8_uenc_err() {
-        let mut v: Vec<u8, U8> = Vec::new();
+        let mut v: Vec<u8, U8, u8> = Vec::new();
         v.push(0).unwrap();
         v.push(159).unwrap();
         v.push(146).unwrap();
@@ -730,7 +730,7 @@ mod tests {
 
     #[test]
     fn from_utf8_unchecked() {
-        let mut v: Vec<u8, U8> = Vec::new();
+        let mut v: Vec<u8, U8, u8> = Vec::new();
         v.push(104).unwrap();
         v.push(101).unwrap();
         v.push(108).unwrap();
@@ -744,22 +744,22 @@ mod tests {
 
     #[test]
     fn from_num() {
-        let v = String::<U20>::from(18446744073709551615 as u64);
+        let v = String::<U20, u8>::from(18446744073709551615 as u64);
 
         assert_eq!(v, "18446744073709551615");
     }
 
     #[test]
     fn into_bytes() {
-        let s: String<U4> = String::from("ab");
-        let b: Vec<u8, U4> = s.into_bytes();
+        let s: String<U4, u8> = String::from("ab");
+        let b: Vec<u8, U4, u8> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     }
 
     #[test]
     fn as_str() {
-        let s: String<U4> = String::from("ab");
+        let s: String<U4, u8> = String::from("ab");
 
         assert_eq!(s.as_str(), "ab");
         // should be moved to fail test
@@ -769,7 +769,7 @@ mod tests {
 
     #[test]
     fn as_mut_str() {
-        let mut s: String<U4> = String::from("ab");
+        let mut s: String<U4, u8> = String::from("ab");
         let s = s.as_mut_str();
         s.make_ascii_uppercase();
         assert_eq!(s, "AB");
@@ -777,7 +777,7 @@ mod tests {
 
     #[test]
     fn push_str() {
-        let mut s: String<U8> = String::from("foo");
+        let mut s: String<U8, u8> = String::from("foo");
         assert!(s.push_str("bar").is_ok());
         assert_eq!("foobar", s);
         assert!(s.push_str("tender").is_err());
@@ -786,7 +786,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let mut s: String<U6> = String::from("abc");
+        let mut s: String<U6, u8> = String::from("abc");
         assert!(s.push('1').is_ok());
         assert!(s.push('2').is_ok());
         assert!(s.push('3').is_ok());
@@ -796,13 +796,13 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let s: String<U8> = String::from("hello");
+        let s: String<U8, u8> = String::from("hello");
         assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     }
 
     #[test]
     fn truncate() {
-        let mut s: String<U8> = String::from("hello");
+        let mut s: String<U8, u8> = String::from("hello");
         s.truncate(6);
         assert_eq!(s.len(), 5);
         s.truncate(2);
@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn pop() {
-        let mut s: String<U8> = String::from("foo");
+        let mut s: String<U8, u8> = String::from("foo");
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('f'));
@@ -822,7 +822,7 @@ mod tests {
 
     #[test]
     fn pop_uenc() {
-        let mut s: String<U8> = String::from("é");
+        let mut s: String<U8, u8> = String::from("é");
         assert_eq!(s.len(), 3);
         match s.pop() {
             Some(c) => {
@@ -836,7 +836,7 @@ mod tests {
 
     #[test]
     fn is_empty() {
-        let mut v: String<U8> = String::new();
+        let mut v: String<U8, u8> = String::new();
         assert!(v.is_empty());
         let _ = v.push('a');
         assert!(!v.is_empty());
@@ -844,7 +844,7 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut s: String<U8> = String::from("foo");
+        let mut s: String<U8, u8> = String::from("foo");
         s.clear();
         assert!(s.is_empty());
         assert_eq!(0, s.len());

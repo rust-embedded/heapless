@@ -607,12 +607,13 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _B: BinaryHeap<i32, U16, Min, usize> = BinaryHeap(crate::i::BinaryHeap::new());
+        static mut _B: BinaryHeap<i32, U16, Min, u8> =
+            BinaryHeap(crate::i::BinaryHeap::<_, _, u8>::new());
     }
 
     #[test]
     fn min() {
-        let mut heap = BinaryHeap::<_, U16, Min>::new();
+        let mut heap = BinaryHeap::<_, U16, Min, u8>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();
@@ -664,7 +665,7 @@ mod tests {
 
     #[test]
     fn max() {
-        let mut heap = BinaryHeap::<_, U16, binary_heap::Max>::new();
+        let mut heap = BinaryHeap::<_, U16, binary_heap::Max, u8>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();

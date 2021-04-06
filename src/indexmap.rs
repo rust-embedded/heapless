@@ -1010,23 +1010,23 @@ mod tests {
 
         let cap = Cap::to_usize();
         assert_eq!(
-            mem::size_of::<FnvIndexMap<i16, u16, Cap>>(),
+            mem::size_of::<FnvIndexMap<i16, u16, Cap, u8>>(),
             cap * mem::size_of::<u32>() + // indices
                 cap * (mem::size_of::<i16>() + // key
                      mem::size_of::<u16>() + // value
                      mem::size_of::<u16>() // hash
                 ) + // buckets
-                mem::size_of::<usize>() // entries.length
+                mem::size_of::<u32>() // entries.length (aligned 32 bits)
         )
     }
 
     #[test]
     fn partial_eq() {
         {
-            let mut a: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
+            let mut a: FnvIndexMap<_, _, U4, u8> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, U4, u8> = FnvIndexMap::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -1037,11 +1037,11 @@ mod tests {
         }
 
         {
-            let mut a: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
+            let mut a: FnvIndexMap<_, _, U4, u8> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b: FnvIndexMap<_, _, U4> = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, U4, u8> = FnvIndexMap::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 
