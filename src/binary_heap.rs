@@ -26,13 +26,13 @@ pub enum Min {}
 /// Max-heap
 pub enum Max {}
 
-impl<A, K> crate::i::BinaryHeap<A, K> {
+impl<A, K, U> crate::i::BinaryHeap<A, K, U> {
     /// `BinaryHeap` `const` constructor; wrap the returned value in
     /// [`BinaryHeap`](../struct.BinaryHeap.html)
     pub const fn new() -> Self {
         Self {
             _kind: PhantomData,
-            data: crate::i::Vec::new(),
+            data: crate::i::Vec::<A, U>::new(),
         }
     }
 }
@@ -84,15 +84,15 @@ impl<A, K> crate::i::BinaryHeap<A, K> {
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, N, KIND>(
-    #[doc(hidden)] pub crate::i::BinaryHeap<GenericArray<T, N>, KIND>,
+pub struct BinaryHeap<T, N, KIND, U>(
+    #[doc(hidden)] pub crate::i::BinaryHeap<GenericArray<T, N>, KIND, U>,
 )
 where
     T: Ord,
     N: ArrayLength<T>,
     KIND: Kind;
 
-impl<T, N, K> BinaryHeap<T, N, K>
+impl<T, N, K, U> BinaryHeap<T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
@@ -254,7 +254,7 @@ where
     ///
     /// assert_eq!(heap.peek(), Some(&2));
     /// ```
-    pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, N, K>> {
+    pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, N, K, U>> {
         if self.is_empty() {
             None
         } else {
@@ -437,17 +437,17 @@ impl<'a, T> Hole<'a, T> {
 ///
 /// [`peek_mut`]: struct.BinaryHeap.html#method.peek_mut
 /// [`BinaryHeap`]: struct.BinaryHeap.html
-pub struct PeekMut<'a, T, N, K>
+pub struct PeekMut<'a, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
 {
-    heap: &'a mut BinaryHeap<T, N, K>,
+    heap: &'a mut BinaryHeap<T, N, K, U>,
     sift: bool,
 }
 
-impl<T, N, K> Drop for PeekMut<'_, T, N, K>
+impl<T, N, K, U> Drop for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
@@ -460,7 +460,7 @@ where
     }
 }
 
-impl<T, N, K> Deref for PeekMut<'_, T, N, K>
+impl<T, N, K, U> Deref for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
@@ -474,7 +474,7 @@ where
     }
 }
 
-impl<T, N, K> DerefMut for PeekMut<'_, T, N, K>
+impl<T, N, K, U> DerefMut for PeekMut<'_, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
@@ -487,14 +487,14 @@ where
     }
 }
 
-impl<'a, T, N, K> PeekMut<'a, T, N, K>
+impl<'a, T, N, K, U> PeekMut<'a, T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
     K: Kind,
 {
     /// Removes the peeked value from the heap and returns it.
-    pub fn pop(mut this: PeekMut<'a, T, N, K>) -> T {
+    pub fn pop(mut this: PeekMut<'a, T, N, K, U>) -> T {
         let value = this.heap.pop().unwrap();
         this.sift = false;
         value
@@ -512,7 +512,7 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
-impl<T, N, K> Default for BinaryHeap<T, N, K>
+impl<T, N, K, U> Default for BinaryHeap<T, N, K, U>
 where
     T: Ord,
     N: ArrayLength<T>,
@@ -523,7 +523,7 @@ where
     }
 }
 
-impl<T, N, K> Clone for BinaryHeap<T, N, K>
+impl<T, N, K, U> Clone for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T>,
     K: Kind,
@@ -537,7 +537,7 @@ where
     }
 }
 
-impl<T, N, K> Drop for BinaryHeap<T, N, K>
+impl<T, N, K, U> Drop for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T>,
     K: Kind,
@@ -548,7 +548,7 @@ where
     }
 }
 
-impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
+impl<T, N, K, U> fmt::Debug for BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T>,
     K: Kind,
@@ -559,7 +559,7 @@ where
     }
 }
 
-impl<'a, T, N, K> IntoIterator for &'a BinaryHeap<T, N, K>
+impl<'a, T, N, K, U> IntoIterator for &'a BinaryHeap<T, N, K, U>
 where
     N: ArrayLength<T>,
     K: Kind,
@@ -584,7 +584,7 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap(crate::i::BinaryHeap::new());
+        static mut _B: BinaryHeap<i32, U16, Min, usize> = BinaryHeap(crate::i::BinaryHeap::new());
     }
 
     #[test]

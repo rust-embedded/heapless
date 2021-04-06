@@ -54,7 +54,7 @@ use crate::Vec;
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub type FnvIndexMap<K, V, N> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>>;
+pub type FnvIndexMap<K, V, N, U> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>, U>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 struct HashValue(u16);
@@ -126,16 +126,16 @@ macro_rules! probe_loop {
     }
 }
 
-struct CoreMap<K, V, N>
+struct CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
-    entries: Vec<Bucket<K, V>, N>,
+    entries: Vec<Bucket<K, V>, N, U>,
     indices: GenericArray<Option<Pos>, N>,
 }
 
-impl<K, V, N> CoreMap<K, V, N>
+impl<K, V, N, U> CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
@@ -311,7 +311,7 @@ where
     }
 }
 
-impl<K, V, N> Clone for CoreMap<K, V, N>
+impl<K, V, N, U> Clone for CoreMap<K, V, N, U>
 where
     K: Eq + Hash + Clone,
     V: Clone,
@@ -373,16 +373,16 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub struct IndexMap<K, V, N, S>
+pub struct IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
-    core: CoreMap<K, V, N>,
+    core: CoreMap<K, V, N, U>,
     build_hasher: S,
 }
 
-impl<K, V, N, S> IndexMap<K, V, N, BuildHasherDefault<S>>
+impl<K, V, N, S, U> IndexMap<K, V, N, BuildHasherDefault<S>, U>
 where
     K: Eq + Hash,
     S: Default + Hasher,
@@ -400,7 +400,7 @@ where
     }
 }
 
-impl<K, V, N, S> IndexMap<K, V, N, S>
+impl<K, V, N, S, U> IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -762,7 +762,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, N, S> ops::Index<&'a Q> for IndexMap<K, V, N, S>
+impl<'a, K, Q, V, N, S, U> ops::Index<&'a Q> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -776,7 +776,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, N, S> ops::IndexMut<&'a Q> for IndexMap<K, V, N, S>
+impl<'a, K, Q, V, N, S, U> ops::IndexMut<&'a Q> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -788,7 +788,7 @@ where
     }
 }
 
-impl<K, V, N, S> Clone for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> Clone for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Clone,
     V: Clone,
@@ -803,7 +803,7 @@ where
     }
 }
 
-impl<K, V, N, S> fmt::Debug for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> fmt::Debug for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
@@ -815,7 +815,7 @@ where
     }
 }
 
-impl<K, V, N, S> Default for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> Default for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
@@ -829,7 +829,7 @@ where
     }
 }
 
-impl<K, V, N, S, N2, S2> PartialEq<IndexMap<K, V, N2, S2>> for IndexMap<K, V, N, S>
+impl<K, V, N, S, N2, S2, U> PartialEq<IndexMap<K, V, N2, S2, U>> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     V: Eq,
@@ -838,7 +838,7 @@ where
     S2: BuildHasher,
     N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
-    fn eq(&self, other: &IndexMap<K, V, N2, S2>) -> bool {
+    fn eq(&self, other: &IndexMap<K, V, N2, S2, U>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -846,7 +846,7 @@ where
     }
 }
 
-impl<K, V, N, S> Eq for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> Eq for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     V: Eq,
@@ -855,7 +855,7 @@ where
 {
 }
 
-impl<K, V, N, S> Extend<(K, V)> for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> Extend<(K, V)> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -871,7 +871,7 @@ where
     }
 }
 
-impl<'a, K, V, N, S> Extend<(&'a K, &'a V)> for IndexMap<K, V, N, S>
+impl<'a, K, V, N, S, U> Extend<(&'a K, &'a V)> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Copy,
     V: Copy,
@@ -886,7 +886,7 @@ where
     }
 }
 
-impl<K, V, N, S> FromIterator<(K, V)> for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> FromIterator<(K, V)> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
@@ -902,7 +902,7 @@ where
     }
 }
 
-impl<'a, K, V, N, S> IntoIterator for &'a IndexMap<K, V, N, S>
+impl<'a, K, V, N, S, U> IntoIterator for &'a IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -916,7 +916,7 @@ where
     }
 }
 
-impl<'a, K, V, N, S> IntoIterator for &'a mut IndexMap<K, V, N, S>
+impl<'a, K, V, N, S, U> IntoIterator for &'a mut IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,

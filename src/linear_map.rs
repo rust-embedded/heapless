@@ -13,12 +13,14 @@ use crate::Vec;
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
-pub struct LinearMap<K, V, N>(#[doc(hidden)] pub crate::i::LinearMap<GenericArray<(K, V), N>>)
+pub struct LinearMap<K, V, N, U>(
+    #[doc(hidden)] pub crate::i::LinearMap<GenericArray<(K, V), N>, U>,
+)
 where
     N: ArrayLength<(K, V)>,
     K: Eq;
 
-impl<A> crate::i::LinearMap<A> {
+impl<A, U> crate::i::LinearMap<A, U> {
     /// `LinearMap` `const` constructor; wrap the returned value in
     /// [`LinearMap`](../struct.LinearMap.html)
     pub const fn new() -> Self {
@@ -28,7 +30,7 @@ impl<A> crate::i::LinearMap<A> {
     }
 }
 
-impl<K, V, N> LinearMap<K, V, N>
+impl<K, V, N, U> LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -378,7 +380,7 @@ where
     }
 }
 
-impl<'a, K, V, N, Q> ops::Index<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, N, Q, U> ops::Index<&'a Q> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
@@ -391,7 +393,7 @@ where
     }
 }
 
-impl<'a, K, V, N, Q> ops::IndexMut<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, N, Q, U> ops::IndexMut<&'a Q> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Borrow<Q> + Eq,
@@ -402,7 +404,7 @@ where
     }
 }
 
-impl<K, V, N> Default for LinearMap<K, V, N>
+impl<K, V, N, U> Default for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -412,7 +414,7 @@ where
     }
 }
 
-impl<K, V, N> Clone for LinearMap<K, V, N>
+impl<K, V, N, U> Clone for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq + Clone,
@@ -425,7 +427,7 @@ where
     }
 }
 
-impl<K, V, N> fmt::Debug for LinearMap<K, V, N>
+impl<K, V, N, U> fmt::Debug for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq + fmt::Debug,
@@ -436,7 +438,7 @@ where
     }
 }
 
-impl<K, V, N> FromIterator<(K, V)> for LinearMap<K, V, N>
+impl<K, V, N, U> FromIterator<(K, V)> for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -451,15 +453,15 @@ where
     }
 }
 
-pub struct IntoIter<K, V, N>
+pub struct IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
 {
-    inner: <Vec<(K, V), N> as IntoIterator>::IntoIter,
+    inner: <Vec<(K, V), N, U> as IntoIterator>::IntoIter,
 }
 
-impl<K, V, N> Iterator for IntoIter<K, V, N>
+impl<K, V, N, U> Iterator for IntoIter<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -470,13 +472,13 @@ where
     }
 }
 
-impl<K, V, N> IntoIterator for LinearMap<K, V, N>
+impl<K, V, N, U> IntoIterator for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
 {
     type Item = (K, V);
-    type IntoIter = IntoIter<K, V, N>;
+    type IntoIter = IntoIter<K, V, N, U>;
 
     fn into_iter(mut self) -> Self::IntoIter {
         // FIXME this may result in a memcpy at runtime
@@ -489,7 +491,7 @@ where
     }
 }
 
-impl<'a, K, V, N> IntoIterator for &'a LinearMap<K, V, N>
+impl<'a, K, V, N, U> IntoIterator for &'a LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -522,7 +524,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
-impl<K, V, N> Drop for LinearMap<K, V, N>
+impl<K, V, N, U> Drop for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq,
@@ -544,14 +546,14 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, N, N2> PartialEq<LinearMap<K, V, N2>> for LinearMap<K, V, N>
+impl<K, V, N, N2, U> PartialEq<LinearMap<K, V, N2, U>> for LinearMap<K, V, N, U>
 where
     K: Eq,
     V: PartialEq,
     N: ArrayLength<(K, V)>,
     N2: ArrayLength<(K, V)>,
 {
-    fn eq(&self, other: &LinearMap<K, V, N2>) -> bool {
+    fn eq(&self, other: &LinearMap<K, V, N2, U>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -559,7 +561,7 @@ where
     }
 }
 
-impl<K, V, N> Eq for LinearMap<K, V, N>
+impl<K, V, N, U> Eq for LinearMap<K, V, N, U>
 where
     K: Eq,
     V: PartialEq,
@@ -573,7 +575,7 @@ mod test {
 
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, U8> = LinearMap(crate::i::LinearMap::new());
+        static mut _L: LinearMap<i32, i32, U8, usize> = LinearMap(crate::i::LinearMap::new());
     }
 
     #[test]

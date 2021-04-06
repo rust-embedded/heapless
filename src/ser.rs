@@ -10,7 +10,7 @@ use crate::{
 
 // Sequential containers
 
-impl<T, N, KIND> Serialize for BinaryHeap<T, N, KIND>
+impl<T, N, KIND, U> Serialize for BinaryHeap<T, N, KIND, U>
 where
     T: Ord + Serialize,
     N: ArrayLength<T>,
@@ -28,7 +28,7 @@ where
     }
 }
 
-impl<T, N, S> Serialize for IndexSet<T, N, S>
+impl<T, N, S, U> Serialize for IndexSet<T, N, S, U>
 where
     T: Eq + Hash + Serialize,
     S: BuildHasher,
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<T, N> Serialize for Vec<T, N>
+impl<T, N, U> Serialize for Vec<T, N, U>
 where
     T: Serialize,
     N: ArrayLength<T>,
@@ -65,7 +65,7 @@ where
 
 // Dictionaries
 
-impl<K, V, N, S> Serialize for IndexMap<K, V, N, S>
+impl<K, V, N, S, U> Serialize for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Serialize,
     N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
@@ -84,7 +84,7 @@ where
     }
 }
 
-impl<K, V, N> Serialize for LinearMap<K, V, N>
+impl<K, V, N, U> Serialize for LinearMap<K, V, N, U>
 where
     N: ArrayLength<(K, V)>,
     K: Eq + Serialize,
@@ -104,7 +104,7 @@ where
 
 // String containers
 
-impl<N> Serialize for String<N>
+impl<N, U> Serialize for String<N, U>
 where
     N: ArrayLength<u8>,
 {

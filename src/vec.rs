@@ -1,9 +1,26 @@
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
-use generic_array::{ArrayLength, GenericArray};
+use crate::consts::*;
+use generic_array::{typenum::IsLess, ArrayLength, GenericArray};
 use hash32;
 
-impl<A> crate::i::Vec<A> {
+trait MaxCapacity: Default {
+    type Cap;
+}
+
+impl MaxCapacity for u8 {
+    type Cap = U256;
+}
+
+impl MaxCapacity for u16 {
+    type Cap = U65536;
+}
+
+impl MaxCapacity for usize {
+    type Cap = generic_array::typenum::op!(U10000000000000000000 * U2);
+}
+
+impl<A, U> crate::i::Vec<A, U> {
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
         Self {
@@ -13,7 +30,7 @@ impl<A> crate::i::Vec<A> {
     }
 }
 
-impl<T, N> crate::i::Vec<GenericArray<T, N>>
+impl<T, N, U> crate::i::Vec<GenericArray<T, N>, U>
 where
     N: ArrayLength<T>,
 {
@@ -162,11 +179,11 @@ where
 /// ```
 // repr(transparent) is needed for [`String::as_mut_vec`]
 #[repr(transparent)]
-pub struct Vec<T, N>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>>)
+pub struct Vec<T, N, U>(#[doc(hidden)] pub crate::i::Vec<GenericArray<T, N>, U>)
 where
     N: ArrayLength<T>;
 
-impl<T, N> Clone for Vec<T, N>
+impl<T, N, U> Clone for Vec<T, N, U>
 where
     N: ArrayLength<T>,
     T: Clone,
@@ -176,7 +193,7 @@ where
     }
 }
 
-impl<T, N> Vec<T, N>
+impl<T, N, U> Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -515,7 +532,7 @@ where
     }
 }
 
-impl<T, N> Default for Vec<T, N>
+impl<T, N, U> Default for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -524,7 +541,7 @@ where
     }
 }
 
-impl<T, N> fmt::Debug for Vec<T, N>
+impl<T, N, U> fmt::Debug for Vec<T, N, U>
 where
     T: fmt::Debug,
     N: ArrayLength<T>,
@@ -534,7 +551,7 @@ where
     }
 }
 
-impl<N> fmt::Write for Vec<u8, N>
+impl<N, U> fmt::Write for Vec<u8, N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -546,7 +563,7 @@ where
     }
 }
 
-impl<T, N> Drop for Vec<T, N>
+impl<T, N, U> Drop for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -555,7 +572,7 @@ where
     }
 }
 
-impl<T, N> Extend<T> for Vec<T, N>
+impl<T, N, U> Extend<T> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -567,7 +584,7 @@ where
     }
 }
 
-impl<'a, T, N> Extend<&'a T> for Vec<T, N>
+impl<'a, T, N, U> Extend<&'a T> for Vec<T, N, U>
 where
     T: 'a + Copy,
     N: ArrayLength<T>,
@@ -580,7 +597,7 @@ where
     }
 }
 
-impl<T, N> hash::Hash for Vec<T, N>
+impl<T, N, U> hash::Hash for Vec<T, N, U>
 where
     T: core::hash::Hash,
     N: ArrayLength<T>,
@@ -590,7 +607,7 @@ where
     }
 }
 
-impl<T, N> hash32::Hash for Vec<T, N>
+impl<T, N, U> hash32::Hash for Vec<T, N, U>
 where
     T: hash32::Hash,
     N: ArrayLength<T>,
@@ -600,7 +617,7 @@ where
     }
 }
 
-impl<'a, T, N> IntoIterator for &'a Vec<T, N>
+impl<'a, T, N, U> IntoIterator for &'a Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -612,7 +629,7 @@ where
     }
 }
 
-impl<'a, T, N> IntoIterator for &'a mut Vec<T, N>
+impl<'a, T, N, U> IntoIterator for &'a mut Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -624,7 +641,7 @@ where
     }
 }
 
-impl<T, N> FromIterator<T> for Vec<T, N>
+impl<T, N, U> FromIterator<T> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -646,15 +663,15 @@ where
 ///
 /// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
-pub struct IntoIter<T, N>
+pub struct IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
 {
-    vec: Vec<T, N>,
+    vec: Vec<T, N, U>,
     next: usize,
 }
 
-impl<T, N> Iterator for IntoIter<T, N>
+impl<T, N, U> Iterator for IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -674,7 +691,7 @@ where
     }
 }
 
-impl<T, N> Clone for IntoIter<T, N>
+impl<T, N, U> Clone for IntoIter<T, N, U>
 where
     T: Clone,
     N: ArrayLength<T>,
@@ -696,7 +713,7 @@ where
     }
 }
 
-impl<T, N> Drop for IntoIter<T, N>
+impl<T, N, U> Drop for IntoIter<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -710,32 +727,32 @@ where
     }
 }
 
-impl<T, N> IntoIterator for Vec<T, N>
+impl<T, N, U> IntoIterator for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
     type Item = T;
-    type IntoIter = IntoIter<T, N>;
+    type IntoIter = IntoIter<T, N, U>;
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter { vec: self, next: 0 }
     }
 }
 
-impl<A, B, N1, N2> PartialEq<Vec<B, N2>> for Vec<A, N1>
+impl<A, B, N1, N2, U> PartialEq<Vec<B, N2, U>> for Vec<A, N1, U>
 where
     N1: ArrayLength<A>,
     N2: ArrayLength<B>,
     A: PartialEq<B>,
 {
-    fn eq(&self, other: &Vec<B, N2>) -> bool {
+    fn eq(&self, other: &Vec<B, N2, U>) -> bool {
         <[A]>::eq(self, &**other)
     }
 }
 
 macro_rules! eq {
     ($Lhs:ty, $Rhs:ty) => {
-        impl<'a, 'b, A, B, N> PartialEq<$Rhs> for $Lhs
+        impl<'a, 'b, A, B, N, U> PartialEq<$Rhs> for $Lhs
         where
             A: PartialEq<B>,
             N: ArrayLength<A>,
@@ -747,15 +764,15 @@ macro_rules! eq {
     };
 }
 
-eq!(Vec<A, N>, [B]);
-eq!(Vec<A, N>, &'a [B]);
-eq!(Vec<A, N>, &'a mut [B]);
+eq!(Vec<A, N, U>, [B]);
+eq!(Vec<A, N, U>, &'a [B]);
+eq!(Vec<A, N, U>, &'a mut [B]);
 
 macro_rules! array {
     ($($N:expr),+) => {
         $(
-            eq!(Vec<A, N>, [B; $N]);
-            eq!(Vec<A, N>, &'a [B; $N]);
+            eq!(Vec<A, N, U>, [B; $N]);
+            eq!(Vec<A, N, U>, &'a [B; $N]);
         )+
     }
 }
@@ -765,14 +782,14 @@ array!(
     26, 27, 28, 29, 30, 31, 32
 );
 
-impl<T, N> Eq for Vec<T, N>
+impl<T, N, U> Eq for Vec<T, N, U>
 where
     N: ArrayLength<T>,
     T: Eq,
 {
 }
 
-impl<T, N> ops::Deref for Vec<T, N>
+impl<T, N, U> ops::Deref for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -783,7 +800,7 @@ where
     }
 }
 
-impl<T, N> ops::DerefMut for Vec<T, N>
+impl<T, N, U> ops::DerefMut for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -792,7 +809,7 @@ where
     }
 }
 
-impl<T, N> AsRef<Vec<T, N>> for Vec<T, N>
+impl<T, N, U> AsRef<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -802,7 +819,7 @@ where
     }
 }
 
-impl<T, N> AsMut<Vec<T, N>> for Vec<T, N>
+impl<T, N, U> AsMut<Vec<T, N, U>> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -812,7 +829,7 @@ where
     }
 }
 
-impl<T, N> AsRef<[T]> for Vec<T, N>
+impl<T, N, U> AsRef<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -822,7 +839,7 @@ where
     }
 }
 
-impl<T, N> AsMut<[T]> for Vec<T, N>
+impl<T, N, U> AsMut<[T]> for Vec<T, N, U>
 where
     N: ArrayLength<T>,
 {
@@ -840,7 +857,7 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _V: Vec<i32, U4> = Vec(crate::i::Vec::new());
+        static mut _V: Vec<i32, U4, usize> = Vec(crate::i::Vec::new());
     }
 
     macro_rules! droppable {

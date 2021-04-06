@@ -16,11 +16,11 @@ use hash32;
 use crate::Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
-pub struct String<N>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>>)
+pub struct String<N, U>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>, U>)
 where
     N: ArrayLength<u8>;
 
-impl<A> crate::i::String<A> {
+impl<A, U> crate::i::String<A, U> {
     /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
     pub const fn new() -> Self {
         Self {
@@ -29,7 +29,7 @@ impl<A> crate::i::String<A> {
     }
 }
 
-impl<N> String<N>
+impl<N, U> String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -96,7 +96,7 @@ where
     /// assert!(String::from_utf8(v).is_err());
     /// ```
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, N>) -> Result<String<N>, Utf8Error> {
+    pub fn from_utf8(vec: Vec<u8, N, U>) -> Result<String<N, U>, Utf8Error> {
         // validate input
         str::from_utf8(&*vec)?;
 
@@ -108,7 +108,7 @@ where
     ///
     /// See the safe version, `from_utf8`, for more details.
     #[inline]
-    pub unsafe fn from_utf8_unchecked(mut vec: Vec<u8, N>) -> String<N> {
+    pub unsafe fn from_utf8_unchecked(mut vec: Vec<u8, N, U>) -> String<N, U> {
         // FIXME this may result in a memcpy at runtime
         let vec_ = mem::replace(&mut vec.0, MaybeUninit::uninit().assume_init());
         mem::forget(vec);
@@ -134,7 +134,7 @@ where
     /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, N> {
+    pub fn into_bytes(self) -> Vec<u8, N, U> {
         Vec(self.0.vec)
     }
 
@@ -202,7 +202,7 @@ where
     /// }
     /// assert_eq!(s, "olleh");
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N, U> {
         &mut *(&mut self.0.vec as *mut crate::i::Vec<GenericArray<u8, N>> as *mut Vec<u8, N>)
     }
 
@@ -378,7 +378,7 @@ where
     }
 }
 
-impl<N> Default for String<N>
+impl<N, U> Default for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -387,7 +387,7 @@ where
     }
 }
 
-impl<'a, N> From<&'a str> for String<N>
+impl<'a, N, U> From<&'a str> for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -398,7 +398,7 @@ where
     }
 }
 
-impl<N> str::FromStr for String<N>
+impl<N, U> str::FromStr for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -411,7 +411,7 @@ where
     }
 }
 
-impl<N> Clone for String<N>
+impl<N, U> Clone for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -422,7 +422,7 @@ where
     }
 }
 
-impl<N> fmt::Debug for String<N>
+impl<N, U> fmt::Debug for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -431,7 +431,7 @@ where
     }
 }
 
-impl<N> fmt::Display for String<N>
+impl<N, U> fmt::Display for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -440,7 +440,7 @@ where
     }
 }
 
-impl<N> hash::Hash for String<N>
+impl<N, U> hash::Hash for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -450,7 +450,7 @@ where
     }
 }
 
-impl<N> hash32::Hash for String<N>
+impl<N, U> hash32::Hash for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -460,7 +460,7 @@ where
     }
 }
 
-impl<N> fmt::Write for String<N>
+impl<N, U> fmt::Write for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -473,7 +473,7 @@ where
     }
 }
 
-impl<N> ops::Deref for String<N>
+impl<N, U> ops::Deref for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -484,7 +484,7 @@ where
     }
 }
 
-impl<N> ops::DerefMut for String<N>
+impl<N, U> ops::DerefMut for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -493,7 +493,7 @@ where
     }
 }
 
-impl<N> AsRef<str> for String<N>
+impl<N, U> AsRef<str> for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -503,7 +503,7 @@ where
     }
 }
 
-impl<N> AsRef<[u8]> for String<N>
+impl<N, U> AsRef<[u8]> for String<N, U>
 where
     N: ArrayLength<u8>,
 {
@@ -513,23 +513,23 @@ where
     }
 }
 
-impl<N1, N2> PartialEq<String<N2>> for String<N1>
+impl<N1, N2, U> PartialEq<String<N2, U>> for String<N1, U>
 where
     N1: ArrayLength<u8>,
     N2: ArrayLength<u8>,
 {
-    fn eq(&self, rhs: &String<N2>) -> bool {
+    fn eq(&self, rhs: &String<N2, U>) -> bool {
         str::eq(&**self, &**rhs)
     }
 
-    fn ne(&self, rhs: &String<N2>) -> bool {
+    fn ne(&self, rhs: &String<N2, U>) -> bool {
         str::ne(&**self, &**rhs)
     }
 }
 
 macro_rules! impl_eq {
     ($lhs:ty, $rhs:ty) => {
-        impl<'a, 'b, N> PartialEq<$rhs> for $lhs
+        impl<'a, 'b, N, U> PartialEq<$rhs> for $lhs
         where
             N: ArrayLength<u8>,
         {
@@ -543,7 +543,7 @@ macro_rules! impl_eq {
             }
         }
 
-        impl<'a, 'b, N> PartialEq<$lhs> for $rhs
+        impl<'a, 'b, N, U> PartialEq<$lhs> for $rhs
         where
             N: ArrayLength<u8>,
         {
@@ -559,14 +559,14 @@ macro_rules! impl_eq {
     };
 }
 
-impl_eq! { String<N>, str }
-impl_eq! { String<N>, &'a str }
+impl_eq! { String<N, U>, str }
+impl_eq! { String<N, U>, &'a str }
 
-impl<N> Eq for String<N> where N: ArrayLength<u8> {}
+impl<N, U> Eq for String<N, U> where N: ArrayLength<u8> {}
 
 macro_rules! impl_from_num {
     ($num:ty, $size:ty) => {
-        impl<N> From<$num> for String<N>
+        impl<N, U> From<$num> for String<N, U>
         where
             N: ArrayLength<u8> + IsGreaterOrEqual<$size, Output = True>,
         {
@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _S: String<U8> = String(crate::i::String::new());
+        static mut _S: String<U8, usize> = String(crate::i::String::new());
     }
 
     #[test]
