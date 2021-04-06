@@ -790,14 +790,15 @@ where
     }
 }
 
-impl<A, B, N1, N2, U> PartialEq<Vec<B, N2, U>> for Vec<A, N1, U>
+impl<A, B, N1, N2, U1, U2> PartialEq<Vec<B, N2, U2>> for Vec<A, N1, U1>
 where
-    N1: ArrayLength<A> + IsLess<U::Cap>,
-    N2: ArrayLength<B> + IsLess<U::Cap>,
+    N1: ArrayLength<A> + IsLess<U1::Cap>,
+    N2: ArrayLength<B> + IsLess<U2::Cap>,
     A: PartialEq<B>,
-    U: MaxCapacity,
+    U1: MaxCapacity,
+    U2: MaxCapacity,
 {
-    fn eq(&self, other: &Vec<B, N2, U>) -> bool {
+    fn eq(&self, other: &Vec<B, N2, U2>) -> bool {
         <[A]>::eq(self, &**other)
     }
 }

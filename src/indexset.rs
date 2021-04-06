@@ -179,13 +179,14 @@ where
     /// let diff: FnvIndexSet<_, U16> = b.difference(&a).collect();
     /// assert_eq!(diff, [4].iter().collect::<FnvIndexSet<_, U16>>());
     /// ```
-    pub fn difference<'a, N2, S2>(
+    pub fn difference<'a, N2, S2, U2>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2, U>,
-    ) -> Difference<'a, T, N2, S2, U>
+        other: &'a IndexSet<T, N2, S2, U2>,
+    ) -> Difference<'a, T, N2, S2, U2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         Difference {
             iter: self.iter(),
@@ -216,13 +217,14 @@ where
     /// assert_eq!(diff1, diff2);
     /// assert_eq!(diff1, [1, 4].iter().collect::<FnvIndexSet<_, U16>>());
     /// ```
-    pub fn symmetric_difference<'a, N2, S2>(
+    pub fn symmetric_difference<'a, N2, S2, U2>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2, U>,
+        other: &'a IndexSet<T, N2, S2, U2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         self.difference(other).chain(other.difference(self))
     }
@@ -247,13 +249,14 @@ where
     /// let intersection: FnvIndexSet<_, U16> = a.intersection(&b).collect();
     /// assert_eq!(intersection, [2, 3].iter().collect::<FnvIndexSet<_, U16>>());
     /// ```
-    pub fn intersection<'a, N2, S2>(
+    pub fn intersection<'a, N2, S2, U2>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2, U>,
-    ) -> Intersection<'a, T, N2, S2, U>
+        other: &'a IndexSet<T, N2, S2, U2>,
+    ) -> Intersection<'a, T, N2, S2, U2>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         Intersection {
             iter: self.iter(),
@@ -281,13 +284,14 @@ where
     /// let union: FnvIndexSet<_, U16> = a.union(&b).collect();
     /// assert_eq!(union, [1, 2, 3, 4].iter().collect::<FnvIndexSet<_, U16>>());
     /// ```
-    pub fn union<'a, N2, S2>(
+    pub fn union<'a, N2, S2, U2>(
         &'a self,
-        other: &'a IndexSet<T, N2, S2, U>,
+        other: &'a IndexSet<T, N2, S2, U2>,
     ) -> impl Iterator<Item = &'a T>
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         self.iter().chain(other.difference(self))
     }
@@ -384,10 +388,11 @@ where
     /// b.insert(1).unwrap();
     /// assert_eq!(a.is_disjoint(&b), false);
     /// ```
-    pub fn is_disjoint<N2, S2>(&self, other: &IndexSet<T, N2, S2, U>) -> bool
+    pub fn is_disjoint<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         self.iter().all(|v| !other.contains(v))
     }
@@ -410,10 +415,11 @@ where
     /// set.insert(4).unwrap();
     /// assert_eq!(set.is_subset(&sup), false);
     /// ```
-    pub fn is_subset<N2, S2>(&self, other: &IndexSet<T, N2, S2, U>) -> bool
+    pub fn is_subset<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         self.iter().all(|v| other.contains(v))
     }
@@ -439,10 +445,11 @@ where
     /// set.insert(2).unwrap();
     /// assert_eq!(set.is_superset(&sub), true);
     /// ```
-    pub fn is_superset<N2, S2>(&self, other: &IndexSet<T, N2, S2, U>) -> bool
+    pub fn is_superset<N2, S2, U2>(&self, other: &IndexSet<T, N2, S2, U2>) -> bool
     where
-        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
+        N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
         S2: BuildHasher,
+        U2: MaxCapacity,
     {
         other.is_subset(self)
     }
@@ -538,16 +545,17 @@ where
     }
 }
 
-impl<T, N1, N2, S1, S2, U> PartialEq<IndexSet<T, N2, S2, U>> for IndexSet<T, N1, S1, U>
+impl<T, N1, N2, S1, S2, U1, U2> PartialEq<IndexSet<T, N2, S2, U2>> for IndexSet<T, N1, S1, U1>
 where
     T: Eq + Hash,
     S1: BuildHasher,
     S2: BuildHasher,
-    N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
-    N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
-    U: MaxCapacity,
+    N1: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U1::Cap>,
+    N2: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + IsLess<U2::Cap>,
+    U1: MaxCapacity,
+    U2: MaxCapacity,
 {
-    fn eq(&self, other: &IndexSet<T, N2, S2, U>) -> bool {
+    fn eq(&self, other: &IndexSet<T, N2, S2, U2>) -> bool {
         self.len() == other.len() && self.is_subset(other)
     }
 }

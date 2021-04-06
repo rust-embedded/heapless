@@ -569,15 +569,16 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, N, N2, U> PartialEq<LinearMap<K, V, N2, U>> for LinearMap<K, V, N, U>
+impl<K, V, N, N2, U, U2> PartialEq<LinearMap<K, V, N2, U2>> for LinearMap<K, V, N, U>
 where
     K: Eq,
     V: PartialEq,
     N: ArrayLength<(K, V)> + IsLess<U::Cap>,
-    N2: ArrayLength<(K, V)> + IsLess<U::Cap>,
+    N2: ArrayLength<(K, V)> + IsLess<U2::Cap>,
     U: MaxCapacity,
+    U2: MaxCapacity,
 {
-    fn eq(&self, other: &LinearMap<K, V, N2, U>) -> bool {
+    fn eq(&self, other: &LinearMap<K, V, N2, U2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()

@@ -537,17 +537,18 @@ where
     }
 }
 
-impl<N1, N2, U> PartialEq<String<N2, U>> for String<N1, U>
+impl<N1, N2, U1, U2> PartialEq<String<N2, U2>> for String<N1, U1>
 where
-    N1: ArrayLength<u8> + IsLess<U::Cap>,
-    N2: ArrayLength<u8> + IsLess<U::Cap>,
-    U: MaxCapacity,
+    N1: ArrayLength<u8> + IsLess<U1::Cap>,
+    N2: ArrayLength<u8> + IsLess<U2::Cap>,
+    U1: MaxCapacity,
+    U2: MaxCapacity,
 {
-    fn eq(&self, rhs: &String<N2, U>) -> bool {
+    fn eq(&self, rhs: &String<N2, U2>) -> bool {
         str::eq(&**self, &**rhs)
     }
 
-    fn ne(&self, rhs: &String<N2, U>) -> bool {
+    fn ne(&self, rhs: &String<N2, U2>) -> bool {
         str::ne(&**self, &**rhs)
     }
 }
