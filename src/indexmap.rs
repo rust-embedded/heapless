@@ -7,7 +7,10 @@ use core::{
     ops, slice,
 };
 
-use generic_array::{typenum::PowerOfTwo, ArrayLength, GenericArray};
+use generic_array::{
+    typenum::{IsLess, PowerOfTwo},
+    ArrayLength, GenericArray,
+};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::{vec::MaxCapacity, Vec};
@@ -129,7 +132,7 @@ macro_rules! probe_loop {
 struct CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     entries: Vec<Bucket<K, V>, N, U>,
@@ -139,7 +142,7 @@ where
 impl<K, V, N, U> CoreMap<K, V, N, U>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
@@ -317,7 +320,7 @@ impl<K, V, N, U> Clone for CoreMap<K, V, N, U>
 where
     K: Eq + Hash + Clone,
     V: Clone,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -379,7 +382,7 @@ where
 pub struct IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     core: CoreMap<K, V, N, U>,
@@ -390,7 +393,7 @@ impl<K, V, N, S, U> IndexMap<K, V, N, BuildHasherDefault<S>, U>
 where
     K: Eq + Hash,
     S: Default + Hasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     // TODO turn into a `const fn`; needs `mem::zeroed` to be a `const fn`
@@ -409,7 +412,7 @@ impl<K, V, N, S, U> IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     /* Public API */
@@ -773,7 +776,7 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     type Output = V;
@@ -788,7 +791,7 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
@@ -801,7 +804,7 @@ where
     K: Eq + Hash + Clone,
     V: Clone,
     S: Clone,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -817,7 +820,7 @@ where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -829,7 +832,7 @@ impl<K, V, N, S, U> Default for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn default() -> Self {
@@ -845,9 +848,9 @@ where
     K: Eq + Hash,
     V: Eq,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     S2: BuildHasher,
-    N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N2: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn eq(&self, other: &IndexMap<K, V, N2, S2, U>) -> bool {
@@ -863,7 +866,7 @@ where
     K: Eq + Hash,
     V: Eq,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
 }
@@ -872,7 +875,7 @@ impl<K, V, N, S, U> Extend<(K, V)> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -890,7 +893,7 @@ where
     K: Eq + Hash + Copy,
     V: Copy,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn extend<I>(&mut self, iterable: I)
@@ -905,7 +908,7 @@ impl<K, V, N, S, U> FromIterator<(K, V)> for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn from_iter<I>(iterable: I) -> Self
@@ -922,7 +925,7 @@ impl<'a, K, V, N, S, U> IntoIterator for &'a IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     type Item = (&'a K, &'a V);
@@ -937,7 +940,7 @@ impl<'a, K, V, N, S, U> IntoIterator for &'a mut IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash,
     S: BuildHasher,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     type Item = (&'a K, &'a mut V);

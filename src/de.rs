@@ -1,6 +1,9 @@
 use core::{fmt, marker::PhantomData};
 
-use generic_array::{typenum::PowerOfTwo, ArrayLength};
+use generic_array::{
+    typenum::{IsLess, PowerOfTwo},
+    ArrayLength,
+};
 use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
@@ -16,7 +19,7 @@ use crate::{
 impl<'de, T, N, KIND, U> Deserialize<'de> for BinaryHeap<T, N, KIND, U>
 where
     T: Ord + Deserialize<'de>,
-    N: ArrayLength<T>,
+    N: ArrayLength<T> + IsLess<U::Cap>,
     KIND: BinaryHeapKind,
     U: MaxCapacity,
 {
@@ -29,7 +32,7 @@ where
         impl<'de, T, N, KIND, U> de::Visitor<'de> for ValueVisitor<'de, T, N, KIND, U>
         where
             T: Ord + Deserialize<'de>,
-            N: ArrayLength<T>,
+            N: ArrayLength<T> + IsLess<U::Cap>,
             KIND: BinaryHeapKind,
             U: MaxCapacity,
         {
@@ -62,7 +65,7 @@ impl<'de, T, N, S, U> Deserialize<'de> for IndexSet<T, N, BuildHasherDefault<S>,
 where
     T: Eq + Hash + Deserialize<'de>,
     S: Hasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -75,7 +78,7 @@ where
         where
             T: Eq + Hash + Deserialize<'de>,
             S: Hasher + Default,
-            N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+            N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             type Value = IndexSet<T, N, BuildHasherDefault<S>, U>;
@@ -105,7 +108,7 @@ where
 
 impl<'de, T, N, U> Deserialize<'de> for Vec<T, N, U>
 where
-    N: ArrayLength<T>,
+    N: ArrayLength<T> + IsLess<U::Cap>,
     T: Deserialize<'de>,
     U: MaxCapacity,
 {
@@ -117,7 +120,7 @@ where
 
         impl<'de, T, N, U> de::Visitor<'de> for ValueVisitor<'de, T, N, U>
         where
-            N: ArrayLength<T>,
+            N: ArrayLength<T> + IsLess<U::Cap>,
             T: Deserialize<'de>,
             U: MaxCapacity,
         {
@@ -152,7 +155,7 @@ impl<'de, K, V, N, S, U> Deserialize<'de> for IndexMap<K, V, N, BuildHasherDefau
 where
     K: Eq + Hash + Deserialize<'de>,
     V: Deserialize<'de>,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
     S: Default + Hasher,
     U: MaxCapacity,
 {
@@ -166,7 +169,7 @@ where
         where
             K: Eq + Hash + Deserialize<'de>,
             V: Deserialize<'de>,
-            N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+            N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
             S: Default + Hasher,
             U: MaxCapacity,
         {
@@ -199,7 +202,7 @@ impl<'de, K, V, N, U> Deserialize<'de> for LinearMap<K, V, N, U>
 where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
-    N: ArrayLength<(K, V)>,
+    N: ArrayLength<(K, V)> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -212,7 +215,7 @@ where
         where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
-            N: ArrayLength<(K, V)>,
+            N: ArrayLength<(K, V)> + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             type Value = LinearMap<K, V, N, U>;
@@ -244,7 +247,7 @@ where
 
 impl<'de, N, U> Deserialize<'de> for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -255,7 +258,7 @@ where
 
         impl<'de, N, U> de::Visitor<'de> for ValueVisitor<'de, N, U>
         where
-            N: ArrayLength<u8>,
+            N: ArrayLength<u8> + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             type Value = String<N, U>;

@@ -1,4 +1,7 @@
-use generic_array::{typenum::PowerOfTwo, ArrayLength};
+use generic_array::{
+    typenum::{IsLess, PowerOfTwo},
+    ArrayLength,
+};
 use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -14,7 +17,7 @@ use crate::{
 impl<T, N, KIND, U> Serialize for BinaryHeap<T, N, KIND, U>
 where
     T: Ord + Serialize,
-    N: ArrayLength<T>,
+    N: ArrayLength<T> + IsLess<U::Cap>,
     KIND: BinaryHeapKind,
     U: MaxCapacity,
 {
@@ -34,7 +37,7 @@ impl<T, N, S, U> Serialize for IndexSet<T, N, S, U>
 where
     T: Eq + Hash + Serialize,
     S: BuildHasher,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
+    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
@@ -52,7 +55,7 @@ where
 impl<T, N, U> Serialize for Vec<T, N, U>
 where
     T: Serialize,
-    N: ArrayLength<T>,
+    N: ArrayLength<T> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -72,7 +75,7 @@ where
 impl<K, V, N, S, U> Serialize for IndexMap<K, V, N, S, U>
 where
     K: Eq + Hash + Serialize,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + IsLess<U::Cap>,
     S: BuildHasher,
     V: Serialize,
     U: MaxCapacity,
@@ -91,7 +94,7 @@ where
 
 impl<K, V, N, U> Serialize for LinearMap<K, V, N, U>
 where
-    N: ArrayLength<(K, V)>,
+    N: ArrayLength<(K, V)> + IsLess<U::Cap>,
     K: Eq + Serialize,
     V: Serialize,
     U: MaxCapacity,
@@ -112,7 +115,7 @@ where
 
 impl<N, U> Serialize for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

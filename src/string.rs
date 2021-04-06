@@ -8,7 +8,7 @@ use core::{
 };
 
 use generic_array::{
-    typenum::{consts::*, IsGreaterOrEqual},
+    typenum::{consts::*, IsGreaterOrEqual, IsLess},
     ArrayLength, GenericArray,
 };
 use hash32;
@@ -39,7 +39,7 @@ impl_new!(usize);
 
 impl<N, U> String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     /// Constructs a new, empty `String` with a fixed capacity of `N`
@@ -391,7 +391,7 @@ where
 
 impl<N, U> Default for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn default() -> Self {
@@ -401,7 +401,7 @@ where
 
 impl<'a, N, U> From<&'a str> for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn from(s: &'a str) -> Self {
@@ -413,7 +413,7 @@ where
 
 impl<N, U> str::FromStr for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     type Err = ();
@@ -427,7 +427,7 @@ where
 
 impl<N, U> Clone for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn clone(&self) -> Self {
@@ -439,7 +439,7 @@ where
 
 impl<N, U> fmt::Debug for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -449,7 +449,7 @@ where
 
 impl<N, U> fmt::Display for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -459,7 +459,7 @@ where
 
 impl<N, U> hash::Hash for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     #[inline]
@@ -470,7 +470,7 @@ where
 
 impl<N, U> hash32::Hash for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     #[inline]
@@ -481,7 +481,7 @@ where
 
 impl<N, U> fmt::Write for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
@@ -495,7 +495,7 @@ where
 
 impl<N, U> ops::Deref for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     type Target = str;
@@ -507,7 +507,7 @@ where
 
 impl<N, U> ops::DerefMut for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn deref_mut(&mut self) -> &mut str {
@@ -517,7 +517,7 @@ where
 
 impl<N, U> AsRef<str> for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     #[inline]
@@ -528,7 +528,7 @@ where
 
 impl<N, U> AsRef<[u8]> for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     #[inline]
@@ -539,8 +539,8 @@ where
 
 impl<N1, N2, U> PartialEq<String<N2, U>> for String<N1, U>
 where
-    N1: ArrayLength<u8>,
-    N2: ArrayLength<u8>,
+    N1: ArrayLength<u8> + IsLess<U::Cap>,
+    N2: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
     fn eq(&self, rhs: &String<N2, U>) -> bool {
@@ -556,7 +556,7 @@ macro_rules! impl_eq {
     ($lhs:ty, $rhs:ty) => {
         impl<'a, 'b, N, U> PartialEq<$rhs> for $lhs
         where
-            N: ArrayLength<u8>,
+            N: ArrayLength<u8> + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             #[inline]
@@ -571,7 +571,7 @@ macro_rules! impl_eq {
 
         impl<'a, 'b, N, U> PartialEq<$lhs> for $rhs
         where
-            N: ArrayLength<u8>,
+            N: ArrayLength<u8> + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             #[inline]
@@ -591,7 +591,7 @@ impl_eq! { String<N, U>, &'a str }
 
 impl<N, U> Eq for String<N, U>
 where
-    N: ArrayLength<u8>,
+    N: ArrayLength<u8> + IsLess<U::Cap>,
     U: MaxCapacity,
 {
 }
@@ -600,7 +600,7 @@ macro_rules! impl_from_num {
     ($num:ty, $size:ty) => {
         impl<N, U> From<$num> for String<N, U>
         where
-            N: ArrayLength<u8> + IsGreaterOrEqual<$size, Output = True>,
+            N: ArrayLength<u8> + IsGreaterOrEqual<$size, Output = True> + IsLess<U::Cap>,
             U: MaxCapacity,
         {
             fn from(s: $num) -> Self {
