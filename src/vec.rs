@@ -5,7 +5,7 @@ use crate::consts::*;
 use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
-pub(crate) trait MaxCapacity:
+pub trait MaxCapacity:
     Default + Into<usize> + AddAssign<Self> + SubAssign<Self> + Clone + Copy
 {
     type Cap;
@@ -33,24 +33,37 @@ impl MaxCapacity for usize {
     }
 }
 
-impl<A, U> crate::i::Vec<A, U>
-where
-    U: MaxCapacity,
-{
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
-    pub const fn new() -> Self {
-        Self {
-            buffer: MaybeUninit::uninit(),
-            len: Default::default(),
+macro_rules! impl_new {
+    ($u:ident) => {
+        impl<A> crate::i::Vec<A, $u> {
+            /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+            pub const fn new() -> Self {
+                Self {
+                    buffer: MaybeUninit::uninit(),
+                    len: 0,
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(u8);
+impl_new!(u16);
+impl_new!(usize);
 
 impl<T, N, U> crate::i::Vec<GenericArray<T, N>, U>
 where
     N: ArrayLength<T>,
     U: MaxCapacity,
 {
+    // Same behaviour as new(), except this is defined genericly
+    pub(crate) fn new_nonconst() -> Self {
+        Self {
+            buffer: MaybeUninit::uninit(),
+            len: Default::default(),
+        }
+    }
+
     pub(crate) fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
@@ -75,7 +88,7 @@ where
     where
         T: Clone,
     {
-        let mut new = Self::new();
+        let mut new = Self::new_nonconst();
         new.extend_from_slice(self.as_slice()).unwrap();
         new
     }
@@ -235,7 +248,7 @@ where
     /// static mut X: Vec<u8, U16> = Vec(heapless::i::Vec::new());
     /// ```
     pub fn new() -> Self {
-        Vec(crate::i::Vec::new())
+        Vec(crate::i::Vec::new_nonconst())
     }
 
     /// Constructs a new vector with a fixed capacity of `N` and fills it

@@ -26,19 +26,24 @@ pub enum Min {}
 /// Max-heap
 pub enum Max {}
 
-impl<A, K, U> crate::i::BinaryHeap<A, K, U>
-where
-    U: MaxCapacity,
-{
-    /// `BinaryHeap` `const` constructor; wrap the returned value in
-    /// [`BinaryHeap`](../struct.BinaryHeap.html)
-    pub const fn new() -> Self {
-        Self {
-            _kind: PhantomData,
-            data: crate::i::Vec::<A, U>::new(),
+macro_rules! impl_new {
+    ($u:ident) => {
+        impl<A, K> crate::i::BinaryHeap<A, K, $u> {
+            /// `BinaryHeap` `const` constructor; wrap the returned value in
+            /// [`BinaryHeap`](../struct.BinaryHeap.html)
+            pub const fn new() -> Self {
+                Self {
+                    _kind: PhantomData,
+                    data: crate::i::Vec::<A, $u>::new(),
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(u8);
+impl_new!(u16);
+impl_new!(usize);
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -118,7 +123,10 @@ where
     /// static mut HEAP: BinaryHeap<i32, U8, Max> = BinaryHeap(heapless::i::BinaryHeap::new());
     /// ```
     pub fn new() -> Self {
-        BinaryHeap(crate::i::BinaryHeap::new())
+        BinaryHeap(crate::i::BinaryHeap {
+            _kind: PhantomData,
+            data: crate::i::Vec::new_nonconst(),
+        })
     }
 
     /* Public API */

@@ -20,17 +20,22 @@ pub struct String<N, U>(#[doc(hidden)] pub crate::i::String<GenericArray<u8, N>,
 where
     N: ArrayLength<u8>;
 
-impl<A, U> crate::i::String<A, U>
-where
-    U: MaxCapacity,
-{
-    /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
-    pub const fn new() -> Self {
-        Self {
-            vec: crate::i::Vec::new(),
+macro_rules! impl_new {
+    ($u:ident) => {
+        impl<A> crate::i::String<A, $u> {
+            /// `String` `const` constructor; wrap the returned value in [`String`](../struct.String.html)
+            pub const fn new() -> Self {
+                Self {
+                    vec: crate::i::Vec::<_, $u>::new(),
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(u8);
+impl_new!(u16);
+impl_new!(usize);
 
 impl<N, U> String<N, U>
 where
@@ -55,7 +60,9 @@ where
     /// ```
     #[inline]
     pub fn new() -> Self {
-        String(crate::i::String::new())
+        String(crate::i::String {
+            vec: crate::i::Vec::new_nonconst(),
+        })
     }
 
     /// Converts a vector of bytes into a `String`.

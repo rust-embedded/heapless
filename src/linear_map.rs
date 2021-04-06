@@ -21,18 +21,23 @@ where
     K: Eq,
     U: MaxCapacity;
 
-impl<A, U> crate::i::LinearMap<A, U>
-where
-    U: MaxCapacity,
-{
-    /// `LinearMap` `const` constructor; wrap the returned value in
-    /// [`LinearMap`](../struct.LinearMap.html)
-    pub const fn new() -> Self {
-        Self {
-            buffer: crate::i::Vec::new(),
+macro_rules! impl_new {
+    ($u:ident) => {
+        impl<A> crate::i::LinearMap<A, $u> {
+            /// `LinearMap` `const` constructor; wrap the returned value in
+            /// [`LinearMap`](../struct.LinearMap.html)
+            pub const fn new() -> Self {
+                Self {
+                    buffer: crate::i::Vec::<_, $u>::new(),
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(u8);
+impl_new!(u16);
+impl_new!(usize);
 
 impl<K, V, N, U> LinearMap<K, V, N, U>
 where
@@ -55,7 +60,9 @@ where
     /// static mut MAP: LinearMap<&str, isize, U8> = LinearMap(heapless::i::LinearMap::new());
     /// ```
     pub fn new() -> Self {
-        LinearMap(crate::i::LinearMap::new())
+        LinearMap(crate::i::LinearMap {
+            buffer: crate::i::Vec::new_nonconst(),
+        })
     }
 
     /// Returns the number of elements that the map can hold
