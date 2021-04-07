@@ -1,0 +1,7 @@
+error[E0277]: the trait bound `typenum::bit::B0: typenum::marker_traits::NonZero` is not satisfied
+ --> $DIR/u16-vec.rs:8:13
+  |
+8 |     let _s: PhantomData<Vec<u8, U65536, u16>>;
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `typenum::marker_traits::NonZero` is not implemented for `typenum::bit::B0`
+  |
+  = note: required by `heapless::vec::Vec`
