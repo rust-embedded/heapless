@@ -30,7 +30,8 @@ impl MaxCapacity for u16 {
 }
 
 impl MaxCapacity for usize {
-    type Cap = generic_array::typenum::op!(U10000000000000000000 * U2);
+    // Around half of u64::max, which is more than any computer can hold
+    type Cap = U10000000000000000000;
     fn convert(x: u8) -> Self {
         x as Self
     }
