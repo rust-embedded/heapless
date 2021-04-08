@@ -276,7 +276,7 @@ where
 }
 
 macro_rules! impl_ {
-    ($uxx:ident, $doc:tt $(,$unsf:ident)?) => {
+    ($uxx:ident, $doc:tt, [$($size:literal),*] $(,$unsf:ident)?) => {
         impl<T, const N: usize> Queue<T, $uxx, N> {
             #[doc = $doc]
             pub const $($unsf)* fn $uxx() -> Self {
@@ -287,6 +287,18 @@ macro_rules! impl_ {
                 }
             }
         }
+        $(
+            impl<T> Queue<T, $uxx, $size> {
+                #[doc = $doc]
+                pub const fn new() -> Self {
+                    Self {
+                        head: Atomic::new(0),
+                        tail: Atomic::new(0),
+                        buffer: MaybeUninit::uninit(),
+                    }
+                }
+            }
+        )*
 
         impl<T, const N: usize> Queue<T, $uxx, N> {
             /// Returns a reference to the item in the front of the queue without dequeuing, or
@@ -417,14 +429,20 @@ impl<T, const N: usize> Queue<T, usize, N> {
 impl_!(
     u8,
     "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u8::MAX`.",
+    [1, 2, 4, 8, 16, 32, 64, 128, 256],
     unsafe
 );
 impl_!(
     u16,
     "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u16::MAX`.",
+    [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
     unsafe
 );
-impl_!(usize, "Creates an empty queue with a fixed capacity of `N`");
+impl_!(
+    usize,
+    "Creates an empty queue with a fixed capacity of `N`",
+    []
+);
 
 impl<T, U, U2, const N: usize, const N2: usize> PartialEq<Queue<T, U2, N2>> for Queue<T, U, N>
 where
