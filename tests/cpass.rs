@@ -21,5 +21,7 @@ fn send() {
     is_send::<Producer<IsSend, usize, 4>>();
     is_send::<Queue<IsSend, usize, 4>>();
     is_send::<Vec<IsSend, usize, 4>>();
+    is_send::<Vec<IsSend, u8, 4>>();
+    is_send::<Vec<IsSend, u16, 4>>();
     is_send::<HistoryBuffer<IsSend, 4>>();
 }
