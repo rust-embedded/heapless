@@ -40,9 +40,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn load_acquire(x: *const Self) -> Self {
             (*(x as *const AtomicU8)).load(Ordering::Acquire)
-            // let y = (*(x as *const AtomicU8)).load(Ordering::Relaxed); // read
-            // atomic::compiler_fence(Ordering::Acquire); // ▼
-            // y
         }
 
         #[cfg(has_atomics)]
@@ -53,8 +50,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn store_release(x: *const Self, val: Self) {
             (*(x as *const AtomicU8)).store(val, Ordering::Release)
-            // atomic::compiler_fence(Ordering::Release); // ▲
-            // (*(x as *const AtomicU8)).store(val, Ordering::Relaxed) // write
         }
     }
 
@@ -75,9 +70,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn load_acquire(x: *const Self) -> Self {
             (*(x as *const AtomicU16)).load(Ordering::Acquire)
-            // let y = (*(x as *const AtomicU16)).load(Ordering::Relaxed); // read
-            // atomic::compiler_fence(Ordering::Acquire); // ▼
-            // y
         }
 
         #[cfg(has_atomics)]
@@ -88,8 +80,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn store_release(x: *const Self, val: Self) {
             (*(x as *const AtomicU16)).store(val, Ordering::Release)
-            // atomic::compiler_fence(Ordering::Release); // ▲
-            // (*(x as *const AtomicU16)).store(val, Ordering::Relaxed) // write
         }
     }
 
@@ -105,9 +95,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn load_acquire(x: *const Self) -> Self {
             (*(x as *const AtomicUsize)).load(Ordering::Acquire)
-            // let y = (*(x as *const AtomicUsize)).load(Ordering::Relaxed); // read
-            // atomic::compiler_fence(Ordering::Acquire); // ▼
-            // y
         }
 
         #[cfg(has_atomics)]
@@ -118,8 +105,6 @@ pub mod spsc {
         #[cfg(has_atomics)]
         unsafe fn store_release(x: *const Self, val: Self) {
             (*(x as *const AtomicUsize)).store(val, Ordering::Release)
-            // atomic::compiler_fence(Ordering::Release); // ▲
-            // (*(x as *const AtomicUsize)).store(val, Ordering::Relaxed); // write
         }
     }
 }
