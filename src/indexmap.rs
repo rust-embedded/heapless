@@ -45,8 +45,7 @@ use crate::{sealed::spsc::Uxx, Vec};
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub type FnvIndexMap<K, V, U: Uxx, const N: usize> =
-    IndexMap<K, V, BuildHasherDefault<FnvHasher>, U, N>;
+pub type FnvIndexMap<K, V, U, const N: usize> = IndexMap<K, V, BuildHasherDefault<FnvHasher>, U, N>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 struct HashValue(u16);
@@ -122,26 +121,6 @@ struct CoreMap<K, V, U: Uxx, const N: usize> {
     entries: Vec<Bucket<K, V>, U, N>,
     indices: [Option<Pos>; N],
 }
-
-macro_rules! impl_new {
-    ($Uxx:ident, $name:ident) => {
-        impl<K, V, const N: usize> CoreMap<K, V, $Uxx, N> {
-            const fn $name() -> Self {
-                const INIT: Option<Pos> = None;
-
-                CoreMap {
-                    entries: Vec::$name(),
-                    indices: [INIT; N],
-                }
-            }
-        }
-    };
-}
-
-impl_new!(u8, u8);
-impl_new!(u16, u16);
-impl_new!(usize, usize);
-impl_new!(usize, new);
 
 impl<K, V, U: Uxx, const N: usize> CoreMap<K, V, U, N>
 where

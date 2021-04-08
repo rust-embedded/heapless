@@ -37,7 +37,7 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 ///     println!("{}", book);
 /// }
 /// ```
-pub type FnvIndexSet<T, U: Uxx, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, U, N>;
+pub type FnvIndexSet<T, U, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, U, N>;
 
 /// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
 ///
