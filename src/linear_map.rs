@@ -13,18 +13,6 @@ macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
         impl<K, V, const N: usize> LinearMap<K, V, $Uxx, N> {
             /// Creates an empty `LinearMap`
-            ///
-            /// # Examples
-            ///
-            /// ```
-            /// use heapless::LinearMap;
-            ///
-            /// // allocate the map on the stack
-            /// let mut map: LinearMap<&str, isize, $Uxx, 8> = LinearMap::$name();
-            ///
-            /// // allocate the map in a static variable
-            /// static mut MAP: LinearMap<&str, isize, $Uxx, 8> = LinearMap::$name();
-            /// ```
             pub const fn $name() -> Self {
                 Self {
                     buffer: Vec::$name(),
@@ -37,7 +25,25 @@ macro_rules! impl_new {
 impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
-impl_new!(usize, new);
+
+impl<K, V, const N: usize> LinearMap<K, V, usize, N> {
+    /// Creates an empty `LinearMap` with length type of `usize`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut map: LinearMap<&str, isize, _, 8> = LinearMap::new();
+    ///
+    /// // allocate the map in a static variable
+    /// static mut MAP: LinearMap<&str, isize, usize, 8> = LinearMap::new();
+    /// ```
+    pub const fn new() -> Self {
+        Self { buffer: Vec::new() }
+    }
+}
 
 impl<K, V, U: Uxx, const N: usize> LinearMap<K, V, U, N>
 where

@@ -41,18 +41,6 @@ macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
         impl<T, const N: usize> Vec<T, $Uxx, N> {
             /// Constructs a new, empty vector with a fixed capacity of `N`
-            ///
-            /// # Examples
-            ///
-            /// ```
-            /// use heapless::Vec;
-            ///
-            /// // allocate the vector on the stack
-            /// let mut x: Vec<u8, $Uxx, 16> = Vec::$name();
-            ///
-            /// // allocate the vector in a static variable
-            /// static mut X: Vec<u8, $Uxx, 16> = Vec::$name();
-            /// ```
             /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
             pub const fn $name() -> Self {
                 Self {
@@ -74,7 +62,20 @@ impl_new!(u16, u16);
 impl_new!(usize, usize);
 
 impl<T, const N: usize> Vec<T, usize, N> {
-    /// Alias for `usize()`
+    /// Constructs a new, empty vector with a fixed capacity of `N` and length type of `usize`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// // allocate the vector on the stack
+    /// let mut x: Vec<u8, _, 16> = Vec::new();
+    ///
+    /// // allocate the vector in a static variable
+    /// static mut X: Vec<u8, usize, 16> = Vec::new();
+    /// ```
+    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
         Self::usize()
     }
@@ -379,7 +380,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// use core::iter::FromIterator;
     /// use heapless::Vec;
     ///
-    /// let mut vec = Vec::<Vec<u8, usize, 3>, 3>::from_iter(
+    /// let mut vec = Vec::<Vec<u8, u8, 3>, u8, 3>::from_iter(
     ///     [
     ///         Vec::from_iter([1, 0, 0].iter().cloned()),
     ///         Vec::from_iter([0, 1, 0].iter().cloned()),
@@ -398,10 +399,10 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
-    pub unsafe fn set_len(&mut self, new_len: U) {
-        debug_assert!(new_len.into() <= self.capacity_nonconst());
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= self.capacity_nonconst());
 
-        self.len = new_len
+        self.len = U::truncate(new_len)
     }
 
     /// Removes an element from the vector and returns it.

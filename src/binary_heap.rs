@@ -82,17 +82,6 @@ macro_rules! impl_new {
         impl<T, K, const N: usize> BinaryHeap<T, K, $Uxx, N> {
             /* Constructors */
             /// Creates an empty BinaryHeap as a $K-heap.
-            ///
-            /// ```
-            /// use heapless::binary_heap::{BinaryHeap, Max};
-            ///
-            /// // allocate the binary heap on the stack
-            /// let mut heap: BinaryHeap<_, Max, $Uxx, 8> = BinaryHeap::$name();
-            /// heap.push(4).unwrap();
-            ///
-            /// // allocate the binary heap in a static variable
-            /// static mut HEAP: BinaryHeap<i32, Max, $Uxx, 8> = BinaryHeap::$name();
-            /// ```
             pub const fn $name() -> Self {
                 Self {
                     _kind: PhantomData,
@@ -106,7 +95,28 @@ macro_rules! impl_new {
 impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
-impl_new!(usize, new);
+
+impl<T, K, const N: usize> BinaryHeap<T, K, usize, N> {
+    /* Constructors */
+    /// Creates an empty BinaryHeap as a $K-heap.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// // allocate the binary heap on the stack
+    /// let mut heap: BinaryHeap<_, Max, _, 8> = BinaryHeap::new();
+    /// heap.push(4).unwrap();
+    ///
+    /// // allocate the binary heap in a static variable
+    /// static mut HEAP: BinaryHeap<i32, Max, usize, 8> = BinaryHeap::new();
+    /// ```
+    pub const fn new() -> Self {
+        Self {
+            _kind: PhantomData,
+            data: Vec::new(),
+        }
+    }
+}
 
 impl<T, K, U: Uxx, const N: usize> BinaryHeap<T, K, U, N>
 where

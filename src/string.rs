@@ -13,20 +13,6 @@ macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
         impl<const N: usize> String<$Uxx, N> {
             /// Constructs a new, empty `String` with a fixed capacity of `N`
-            ///
-            /// # Examples
-            ///
-            /// Basic usage:
-            ///
-            /// ```
-            /// use heapless::String;
-            ///
-            /// // allocate the string on the stack
-            /// let mut s: String<$Uxx, 4> = String::$name();
-            ///
-            /// // allocate the string in a static variable
-            /// static mut S: String<$Uxx, 4> = String::$name();
-            /// ```
             #[inline]
             pub const fn $name() -> Self {
                 Self { vec: Vec::$name() }
@@ -38,7 +24,28 @@ macro_rules! impl_new {
 impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
-impl_new!(usize, new);
+
+impl<const N: usize> String<usize, N> {
+    /// Constructs a new, empty `String` with a fixed capacity of `N` and length type of `usize`
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// // allocate the string on the stack
+    /// let mut s: String<_, 4> = String::new();
+    ///
+    /// // allocate the string in a static variable
+    /// static mut S: String<usize, 4> = String::new();
+    /// ```
+    #[inline]
+    pub const fn new() -> Self {
+        Self { vec: Vec::new() }
+    }
+}
 
 impl<U: Uxx, const N: usize> String<U, N> {
     /// Converts a `String` into a byte vector.
