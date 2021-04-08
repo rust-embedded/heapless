@@ -55,7 +55,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     pub const fn new() -> Self {
         Self {
             buffer: MaybeUninit::uninit(),
-            len: 0,
+            len: U::truncate(0),
         }
     }
 
@@ -104,7 +104,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len.into()) }
     }
 
     /// Extracts a mutable slice containing the entire vector.
@@ -122,7 +122,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
+        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len.into()) }
     }
 
     /// Returns the maximum number of elements the vector can hold.
@@ -169,7 +169,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
+        if self.len.into() + other.len() > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
             Err(())
         } else {
@@ -184,7 +184,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
 
     /// Removes the last element from a vector and returns it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        if self.len != 0 {
+        if self.len.into() != 0 {
             Some(unsafe { self.pop_unchecked() })
         } else {
             None
@@ -195,7 +195,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
+        if self.len.into() < self.capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -211,8 +211,10 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.as_slice().is_empty());
 
-        self.len -= 1;
-        (self.buffer.as_ptr() as *const T).add(self.len).read()
+        self.len -= U::truncate(1);
+        (self.buffer.as_ptr() as *const T)
+            .add(self.len.into())
+            .read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -225,10 +227,10 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         debug_assert!(!self.is_full());
         (self.buffer.as_mut_ptr() as *mut T)
-            .add(self.len)
+            .add(self.len.into())
             .write(item);
 
-        self.len += 1;
+        self.len += U::truncate(1);
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
@@ -236,12 +238,12 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     pub fn truncate(&mut self, len: usize) {
         unsafe {
             // drop any extra elements
-            while len < self.len {
+            while len < self.len.into() {
                 // decrement len before the drop_in_place(), so a panic on Drop
                 // doesn't re-drop the just-failed value.
-                self.len -= 1;
+                self.len -= U::truncate(1);
                 let len = self.len;
-                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len));
+                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len.into()));
             }
         }
     }
@@ -261,8 +263,8 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
             return Err(());
         }
 
-        if new_len > self.len {
-            while self.len < new_len {
+        if new_len > self.len.into() {
+            while self.len.into() < new_len {
                 self.push(value.clone()).ok();
             }
         } else {
@@ -275,7 +277,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
-    /// difference, with each additional slot filled with `Default::default()`.
+    /// difference, with each additional slot filled with `U::truncate(0)`.
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](struct.Vec.html#method.resize).
@@ -375,8 +377,8 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
-    pub unsafe fn set_len(&mut self, new_len: usize) {
-        debug_assert!(new_len <= self.capacity());
+    pub unsafe fn set_len(&mut self, new_len: U) {
+        debug_assert!(new_len.into() <= self.capacity());
 
         self.len = new_len
     }
@@ -410,7 +412,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
-        assert!(index < self.len);
+        assert!(index < self.len.into());
         unsafe { self.swap_remove_unchecked(index) }
     }
 
@@ -454,7 +456,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Returns true if the vec is full
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.len == self.capacity()
+        self.len.into() == self.capacity()
     }
 
     /// Returns `true` if `needle` is a prefix of the Vec.
@@ -477,7 +479,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
         T: PartialEq,
     {
         let n = needle.len();
-        self.len >= n && needle == &self[..n]
+        self.len.into() >= n && needle == &self[..n]
     }
 
     /// Returns `true` if `needle` is a suffix of the Vec.
@@ -662,7 +664,7 @@ impl<T, U: Uxx, const N: usize> Drop for IntoIter<T, U, N> {
             // Drop all the elements that have not been moved out of vec
             ptr::drop_in_place(&mut self.vec.as_mut_slice()[self.next..]);
             // Prevent dropping of other elements
-            self.vec.len = 0;
+            self.vec.len = U::truncate(0);
         }
     }
 }

@@ -1,9 +1,12 @@
 /// Sealed traits and implementations for `spsc`
 pub mod spsc {
+    use core::ops::{AddAssign, SubAssign};
     #[cfg(has_atomics)]
     use core::sync::atomic::{AtomicU16, AtomicU8, AtomicUsize, Ordering};
 
-    pub unsafe trait Uxx: Into<usize> + Send {
+    pub unsafe trait Uxx:
+        Into<usize> + Send + AddAssign<Self> + SubAssign<Self> + Copy
+    {
         #[doc(hidden)]
         fn saturate(x: usize) -> Self;
 
