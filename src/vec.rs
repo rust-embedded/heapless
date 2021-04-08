@@ -37,28 +37,39 @@ pub struct Vec<T, U: Uxx, const N: usize> {
     len: U,
 }
 
-impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
-    /// Constructs a new, empty vector with a fixed capacity of `N`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// // allocate the vector on the stack
-    /// let mut x: Vec<u8, 16> = Vec::new();
-    ///
-    /// // allocate the vector in a static variable
-    /// static mut X: Vec<u8, 16> = Vec::new();
-    /// ```
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
-    pub const fn new() -> Self {
-        Self {
-            buffer: MaybeUninit::uninit(),
-            len: U::truncate(0),
+macro_rules! impl_new {
+    ($Uxx:ident, $name:ident) => {
+        impl<T, const N: usize> Vec<T, $Uxx, N> {
+            /// Constructs a new, empty vector with a fixed capacity of `N`
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// use heapless::Vec;
+            ///
+            /// // allocate the vector on the stack
+            /// let mut x: Vec<u8, $Uxx, 16> = Vec::$name();
+            ///
+            /// // allocate the vector in a static variable
+            /// static mut X: Vec<u8, $Uxx, 16> = Vec::$name();
+            /// ```
+            /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+            pub const fn $name() -> Self {
+                Self {
+                    buffer: MaybeUninit::uninit(),
+                    len: 0,
+                }
+            }
         }
-    }
+    };
+}
 
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
+
+impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Constructs a new vector with a fixed capacity of `N` and fills it
     /// with the provided slice.
     ///
@@ -75,7 +86,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     where
         T: Clone,
     {
-        let mut v = Vec::new();
+        let mut v = Vec::default();
         v.extend_from_slice(other)?;
         Ok(v)
     }
@@ -85,7 +96,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     where
         T: Clone,
     {
-        let mut new = Self::new();
+        let mut new = Self::default();
         new.extend_from_slice(self.as_slice()).unwrap();
         new
     }
@@ -510,7 +521,10 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
 
 impl<T, U: Uxx, const N: usize> Default for Vec<T, U, N> {
     fn default() -> Self {
-        Self::new()
+        Self {
+            buffer: MaybeUninit::uninit(),
+            len: U::truncate(0),
+        }
     }
 }
 
@@ -604,7 +618,7 @@ impl<T, U: Uxx, const N: usize> FromIterator<T> for Vec<T, U, N> {
     where
         I: IntoIterator<Item = T>,
     {
-        let mut vec = Vec::new();
+        let mut vec = Vec::default();
         for i in iter {
             vec.push(i).ok().expect("Vec::from_iter overflow");
         }
@@ -641,7 +655,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut vec = Vec::new();
+        let mut vec = Vec::default();
 
         if self.next < self.vec.len() {
             let s = unsafe {

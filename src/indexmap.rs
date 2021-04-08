@@ -123,21 +123,39 @@ struct CoreMap<K, V, U: Uxx, const N: usize> {
     indices: [Option<Pos>; N],
 }
 
-impl<K, V, U: Uxx, const N: usize> CoreMap<K, V, U, N> {
-    const fn new() -> Self {
-        const INIT: Option<Pos> = None;
+macro_rules! impl_new {
+    ($Uxx:ident, $name:ident) => {
+        impl<K, V, const N: usize> CoreMap<K, V, $Uxx, N> {
+            const fn $name() -> Self {
+                const INIT: Option<Pos> = None;
 
-        CoreMap {
-            entries: Vec::new(),
-            indices: [INIT; N],
+                CoreMap {
+                    entries: Vec::$name(),
+                    indices: [INIT; N],
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(u8, u8);
+impl_new!(u16, u16);
+impl_new!(usize, usize);
+impl_new!(usize, new);
 
 impl<K, V, U: Uxx, const N: usize> CoreMap<K, V, U, N>
 where
     K: Eq + Hash,
 {
+    fn new_nonconst() -> Self {
+        const INIT: Option<Pos> = None;
+
+        CoreMap {
+            entries: Vec::default(),
+            indices: [INIT; N],
+        }
+    }
+
     fn capacity() -> usize {
         N
     }
@@ -380,7 +398,7 @@ where
     pub fn new() -> Self {
         IndexMap {
             build_hasher: BuildHasherDefault::default(),
-            core: CoreMap::new(),
+            core: CoreMap::new_nonconst(),
         }
     }
 }
@@ -795,7 +813,7 @@ where
     fn default() -> Self {
         IndexMap {
             build_hasher: <_>::default(),
-            core: CoreMap::new(),
+            core: CoreMap::new_nonconst(),
         }
     }
 }

@@ -37,7 +37,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = BinaryHeap::new();
+                let mut values = BinaryHeap::default();
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
@@ -118,7 +118,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = Vec::new();
+                let mut values = Vec::default();
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
@@ -207,7 +207,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = LinearMap::new();
+                let mut values = LinearMap::default();
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {
@@ -242,7 +242,7 @@ impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
             where
                 E: de::Error,
             {
-                let mut s = String::new();
+                let mut s = String::default();
                 s.push_str(v)
                     .map_err(|_| E::invalid_length(v.len(), &self))?;
                 Ok(s)
@@ -252,7 +252,7 @@ impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
             where
                 E: de::Error,
             {
-                let mut s = String::new();
+                let mut s = String::default();
 
                 s.push_str(
                     core::str::from_utf8(v)
