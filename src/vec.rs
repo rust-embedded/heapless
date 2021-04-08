@@ -32,6 +32,17 @@ use crate::sealed::spsc::Uxx;
 /// }
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
+///
+/// The length type of `Vec` and `Vec`-based containers is generic and can use `u8`, `u16`, or
+/// `usize`. Using smaller length types can reduce memory footprint for containers with low
+/// alignment requirements.  The easiest way to construct a `Vec` with a smaller index type is to
+/// use the [`u8`] and [`u16`] constructors.
+///
+/// [`u8`]: struct.Vec.html#method.u8
+/// [`u16`]: struct.Vec.html#method.u16
+///
+/// *IMPORTANT*: `Vec<_, u8, N>` has a maximum capacity of 255 elements; `Vec<_,
+/// u16, N>` has a maximum capacity of 65535 elements.
 pub struct Vec<T, U: Uxx, const N: usize> {
     buffer: MaybeUninit<[T; N]>,
     len: U,
