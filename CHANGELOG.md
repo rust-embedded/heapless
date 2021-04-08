@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- [breaking-change] Converted all data structures to use the `const generics` MVP
+- [breaking-change] `HistoryBuffer` is now working with const constructors and non-`Copy` data
+- [breaking-change] `HistoryBuffer::as_slice` and others now only return initialized values
+- [breaking-change] `MultiCore`/`SingleCore` is now removed from `spsc::Queue`
+- [breaking-change] `spsc::Queue::u8()` and `spsc::Queue::u16()` are now unsafe
+- `Pool` and `MPMC` now works on `thumbv6m`
+- [breaking-change] `String` has had `utf8` related methods removed as this can be done via `str`
+- [breaking-change] No data structures implement `AsSlice` traits any more, now using `AsRef` and `AsMut`
+
 ## [v0.6.1] - 2021-03-02
 
 ### Fixed
