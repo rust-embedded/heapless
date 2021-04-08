@@ -1,13 +1,13 @@
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:18:5
+  --> $DIR/not-send.rs:16:5
    |
-11 | fn is_send<T>()
+9  | fn is_send<T>()
    |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
+10 | where
+11 |     T: Send,
    |        ---- required by this bound in `is_send`
 ...
-18 |     is_send::<Consumer<NotSend, _, 4>>();
+16 |     is_send::<Consumer<NotSend, _, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
@@ -15,15 +15,15 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = note: required because of the requirements on the impl of `Send` for `Consumer<'_, PhantomData<*const ()>, _, 4_usize>`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:19:5
+  --> $DIR/not-send.rs:17:5
    |
-11 | fn is_send<T>()
+9  | fn is_send<T>()
    |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
+10 | where
+11 |     T: Send,
    |        ---- required by this bound in `is_send`
 ...
-19 |     is_send::<Producer<NotSend, _, 4>>();
+17 |     is_send::<Producer<NotSend, _, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
@@ -31,15 +31,15 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = note: required because of the requirements on the impl of `Send` for `Producer<'_, PhantomData<*const ()>, _, 4_usize>`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:20:5
+  --> $DIR/not-send.rs:18:5
    |
-11 | fn is_send<T>()
+9  | fn is_send<T>()
    |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
+10 | where
+11 |     T: Send,
    |        ---- required by this bound in `is_send`
 ...
-20 |     is_send::<Queue<NotSend, _, 4>>();
+18 |     is_send::<Queue<NotSend, _, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
    = help: within `Queue<PhantomData<*const ()>, _, 4_usize>`, the trait `Send` is not implemented for `*const ()`
@@ -50,20 +50,20 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = note: required because it appears within the type `Queue<PhantomData<*const ()>, _, 4_usize>`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> $DIR/not-send.rs:21:5
+  --> $DIR/not-send.rs:19:5
    |
-11 | fn is_send<T>()
+9  | fn is_send<T>()
    |    ------- required by a bound in this
-12 | where
-13 |     T: Send,
+10 | where
+11 |     T: Send,
    |        ---- required by this bound in `is_send`
 ...
-21 |     is_send::<heapless::Vec<NotSend, 4>>();
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+19 |     is_send::<heapless::Vec<NotSend, usize, 4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
-   = help: within `heapless::Vec<PhantomData<*const ()>, 4_usize>`, the trait `Send` is not implemented for `*const ()`
+   = help: within `heapless::Vec<PhantomData<*const ()>, usize, 4_usize>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
    = note: required because it appears within the type `[PhantomData<*const ()>; 4]`
    = note: required because it appears within the type `ManuallyDrop<[PhantomData<*const ()>; 4]>`
    = note: required because it appears within the type `MaybeUninit<[PhantomData<*const ()>; 4]>`
-   = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, 4_usize>`
+   = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, usize, 4_usize>`
