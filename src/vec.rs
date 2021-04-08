@@ -12,7 +12,7 @@ use crate::sealed::spsc::Uxx;
 ///
 ///
 /// // A vector with a fixed capacity of 8 elements allocated on the stack
-/// let mut vec = Vec::<_, 8>::new();
+/// let mut vec = Vec::<_, usize, 8>::new();
 /// vec.push(1);
 /// vec.push(2);
 ///
@@ -93,7 +93,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// ```
     /// use heapless::Vec;
     ///
-    /// let mut v: Vec<u8, 16> = Vec::new();
+    /// let mut v: Vec<u8, usize, 16> = Vec::new();
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
     #[inline]
@@ -124,7 +124,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// ```
     /// use heapless::Vec;
-    /// let buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// let buffer: Vec<u8, usize, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
     /// ```
     pub fn as_slice(&self) -> &[T] {
@@ -141,7 +141,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// ```
     /// use heapless::Vec;
-    /// let mut buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// let mut buffer: Vec<u8, usize, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// buffer[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
@@ -181,7 +181,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// ```
     /// use heapless::Vec;
     ///
-    /// let mut vec = Vec::<u8, 8>::new();
+    /// let mut vec = Vec::<u8, usize, 8>::new();
     /// vec.push(1).unwrap();
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
@@ -349,7 +349,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// #     ) -> i32;
     /// # }
     /// # impl StreamWrapper {
-    /// pub fn get_dictionary(&self) -> Option<Vec<u8, 32768>> {
+    /// pub fn get_dictionary(&self) -> Option<Vec<u8, usize, 32768>> {
     ///     // Per the FFI method's docs, "32768 bytes is always enough".
     ///     let mut dict = Vec::new();
     ///     let mut dict_length = 0;
@@ -379,7 +379,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// use core::iter::FromIterator;
     /// use heapless::Vec;
     ///
-    /// let mut vec = Vec::<Vec<u8, 3>, 3>::from_iter(
+    /// let mut vec = Vec::<Vec<u8, usize, 3>, 3>::from_iter(
     ///     [
     ///         Vec::from_iter([1, 0, 0].iter().cloned()),
     ///         Vec::from_iter([0, 1, 0].iter().cloned()),
@@ -420,7 +420,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// use heapless::Vec;
     ///// use heapless::consts::*;
     ///
-    /// let mut v: Vec<_, 8> = Vec::new();
+    /// let mut v: Vec<_, usize, 8> = Vec::new();
     /// v.push("foo").unwrap();
     /// v.push("bar").unwrap();
     /// v.push("baz").unwrap();
@@ -452,7 +452,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// ```
     /// use heapless::Vec;
     ///
-    /// let mut v: Vec<_, 8> = Vec::new();
+    /// let mut v: Vec<_, usize, 8> = Vec::new();
     /// v.push("foo").unwrap();
     /// v.push("bar").unwrap();
     /// v.push("baz").unwrap();
@@ -489,7 +489,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// ```
     /// use heapless::Vec;
     ///
-    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// let v: Vec<_, usize, 8> = Vec::from_slice(b"abc").unwrap();
     /// assert_eq!(v.starts_with(b""), true);
     /// assert_eq!(v.starts_with(b"ab"), true);
     /// assert_eq!(v.starts_with(b"bc"), false);
@@ -512,7 +512,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// ```
     /// use heapless::Vec;
     ///
-    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// let v: Vec<_, usize, 8> = Vec::from_slice(b"abc").unwrap();
     /// assert_eq!(v.ends_with(b""), true);
     /// assert_eq!(v.ends_with(b"ab"), false);
     /// assert_eq!(v.ends_with(b"bc"), true);
@@ -825,12 +825,12 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _V: Vec<i32, 4> = Vec::new();
+        static mut _V: Vec<i32, usize, 4> = Vec::new();
     }
 
     #[test]
     fn stack_new() {
-        static mut _V: Vec<i32, 4> = Vec::new();
+        static mut _V: Vec<i32, usize, 4> = Vec::new();
     }
 
     macro_rules! droppable {
@@ -861,7 +861,7 @@ mod tests {
         droppable!();
 
         {
-            let mut v: Vec<Droppable, 2> = Vec::new();
+            let mut v: Vec<Droppable, usize, 2> = Vec::new();
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             v.pop().unwrap();
@@ -870,7 +870,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: Vec<Droppable, 2> = Vec::new();
+            let mut v: Vec<Droppable, usize, 2> = Vec::new();
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
         }
@@ -880,8 +880,8 @@ mod tests {
 
     #[test]
     fn eq() {
-        let mut xs: Vec<i32, 4> = Vec::new();
-        let mut ys: Vec<i32, 8> = Vec::new();
+        let mut xs: Vec<i32, usize, 4> = Vec::new();
+        let mut ys: Vec<i32, usize, 8> = Vec::new();
 
         assert_eq!(xs, ys);
 
@@ -893,7 +893,7 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut v: Vec<i32, 4> = Vec::new();
+        let mut v: Vec<i32, usize, 4> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -905,7 +905,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut v: Vec<i32, 4> = Vec::new();
+        let mut v: Vec<i32, usize, 4> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -923,7 +923,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut v: Vec<i32, 4> = Vec::new();
+        let mut v: Vec<i32, usize, 4> = Vec::new();
 
         v.push(0).unwrap();
         v.push(1).unwrap();
@@ -942,7 +942,7 @@ mod tests {
     #[test]
     fn collect_from_iter() {
         let slice = &[1, 2, 3];
-        let vec: Vec<i32, 4> = slice.iter().cloned().collect();
+        let vec: Vec<i32, usize, 4> = slice.iter().cloned().collect();
         // PER: Auto deref did not work
         assert_eq!(vec.as_slice(), slice);
     }
@@ -951,12 +951,12 @@ mod tests {
     #[should_panic]
     fn collect_from_iter_overfull() {
         let slice = &[1, 2, 3];
-        let _vec = slice.iter().cloned().collect::<Vec<_, 2>>();
+        let _vec = slice.iter().cloned().collect::<Vec<_, usize, 2>>();
     }
 
     #[test]
     fn iter_move() {
-        let mut v: Vec<i32, 4> = Vec::new();
+        let mut v: Vec<i32, usize, 4> = Vec::new();
         v.push(0).unwrap();
         v.push(1).unwrap();
         v.push(2).unwrap();
@@ -976,7 +976,7 @@ mod tests {
         droppable!();
 
         {
-            let mut vec: Vec<Droppable, 2> = Vec::new();
+            let mut vec: Vec<Droppable, usize, 2> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
             let mut items = vec.into_iter();
@@ -988,7 +988,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut vec: Vec<Droppable, 2> = Vec::new();
+            let mut vec: Vec<Droppable, usize, 2> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
             let _items = vec.into_iter();
@@ -998,7 +998,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut vec: Vec<Droppable, 2> = Vec::new();
+            let mut vec: Vec<Droppable, usize, 2> = Vec::new();
             vec.push(Droppable::new()).ok().unwrap();
             vec.push(Droppable::new()).ok().unwrap();
             let mut items = vec.into_iter();
@@ -1010,7 +1010,7 @@ mod tests {
 
     #[test]
     fn push_and_pop() {
-        let mut v: Vec<i32, 4> = Vec::new();
+        let mut v: Vec<i32, usize, 4> = Vec::new();
         assert_eq!(v.len(), 0);
 
         assert_eq!(v.pop(), None);
@@ -1028,7 +1028,7 @@ mod tests {
 
     #[test]
     fn resize_size_limit() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
 
         v.resize(0, 0).unwrap();
         v.resize(4, 0).unwrap();
@@ -1037,7 +1037,7 @@ mod tests {
 
     #[test]
     fn resize_length_cases() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
 
         assert_eq!(v.len(), 0);
 
@@ -1064,7 +1064,7 @@ mod tests {
 
     #[test]
     fn resize_contents() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
 
         // New entries take supplied value when growing
         v.resize(1, 17).unwrap();
@@ -1087,7 +1087,7 @@ mod tests {
 
     #[test]
     fn resize_default() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
 
         // resize_default is implemented using resize, so just check the
         // correct value is being written.
@@ -1097,14 +1097,14 @@ mod tests {
 
     #[test]
     fn write() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
         write!(v, "{:x}", 1234).unwrap();
         assert_eq!(&v[..], b"4d2");
     }
 
     #[test]
     fn extend_from_slice() {
-        let mut v: Vec<u8, 4> = Vec::new();
+        let mut v: Vec<u8, usize, 4> = Vec::new();
         assert_eq!(v.len(), 0);
         v.extend_from_slice(&[1, 2]).unwrap();
         assert_eq!(v.len(), 2);
@@ -1120,17 +1120,17 @@ mod tests {
     #[test]
     fn from_slice() {
         // Successful construction
-        let v: Vec<u8, 4> = Vec::from_slice(&[1, 2, 3]).unwrap();
+        let v: Vec<u8, usize, 4> = Vec::from_slice(&[1, 2, 3]).unwrap();
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
 
         // Slice too large
-        assert!(Vec::<u8, 2>::from_slice(&[1, 2, 3]).is_err());
+        assert!(Vec::<u8, usize, 2>::from_slice(&[1, 2, 3]).is_err());
     }
 
     #[test]
     fn starts_with() {
-        let v: Vec<_, 8> = Vec::from_slice(b"ab").unwrap();
+        let v: Vec<_, usize, 8> = Vec::from_slice(b"ab").unwrap();
         assert!(v.starts_with(&[]));
         assert!(v.starts_with(b""));
         assert!(v.starts_with(b"a"));
@@ -1142,7 +1142,7 @@ mod tests {
 
     #[test]
     fn ends_with() {
-        let v: Vec<_, 8> = Vec::from_slice(b"ab").unwrap();
+        let v: Vec<_, usize, 8> = Vec::from_slice(b"ab").unwrap();
         assert!(v.ends_with(&[]));
         assert!(v.ends_with(b""));
         assert!(v.ends_with(b"b"));
