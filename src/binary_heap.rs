@@ -116,7 +116,7 @@ where
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.data.capacity()
+        self.data.capacity_nonconst()
     }
 
     /// Drops all items from the binary heap.

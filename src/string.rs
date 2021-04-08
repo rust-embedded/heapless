@@ -165,7 +165,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.capacity()
+        self.vec.capacity_nonconst()
     }
 
     /// Appends the given [`char`] to the end of this `String`.

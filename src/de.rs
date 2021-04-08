@@ -122,7 +122,10 @@ where
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(
+                            values.capacity_nonconst() + 1,
+                            &self,
+                        ))?;
                     }
                 }
 

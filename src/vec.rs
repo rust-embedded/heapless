@@ -60,6 +60,11 @@ macro_rules! impl_new {
                     len: 0,
                 }
             }
+
+            /// Returns the maximum number of elements the vector can hold.
+            pub const fn capacity(&self) -> usize {
+                N
+            }
         }
     };
 }
@@ -67,9 +72,19 @@ macro_rules! impl_new {
 impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
-impl_new!(usize, new);
+
+impl<T, const N: usize> Vec<T, usize, N> {
+    /// Alias for `usize()`
+    pub const fn new() -> Self {
+        Self::usize()
+    }
+}
 
 impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
+    pub(crate) fn capacity_nonconst(&self) -> usize {
+        N
+    }
+
     /// Constructs a new vector with a fixed capacity of `N` and fills it
     /// with the provided slice.
     ///
@@ -136,11 +151,6 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
         unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len.into()) }
     }
 
-    /// Returns the maximum number of elements the vector can hold.
-    pub const fn capacity(&self) -> usize {
-        N
-    }
-
     /// Clears the vector, removing all values.
     // PER: Check if non drop types correctly optimized.
     pub fn clear(&mut self) {
@@ -180,7 +190,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     where
         T: Clone,
     {
-        if self.len.into() + other.len() > self.capacity() {
+        if self.len.into() + other.len() > self.capacity_nonconst() {
             // won't fit in the `Vec`; don't modify anything and return an error
             Err(())
         } else {
@@ -206,7 +216,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len.into() < self.capacity() {
+        if self.len.into() < self.capacity_nonconst() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -270,7 +280,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     where
         T: Clone,
     {
-        if new_len > self.capacity() {
+        if new_len > self.capacity_nonconst() {
             return Err(());
         }
 
@@ -389,7 +399,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
     pub unsafe fn set_len(&mut self, new_len: U) {
-        debug_assert!(new_len.into() <= self.capacity());
+        debug_assert!(new_len.into() <= self.capacity_nonconst());
 
         self.len = new_len
     }
@@ -467,7 +477,7 @@ impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Returns true if the vec is full
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.len.into() == self.capacity()
+        self.len.into() == self.capacity_nonconst()
     }
 
     /// Returns `true` if `needle` is a prefix of the Vec.
