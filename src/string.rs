@@ -2,14 +2,14 @@ use core::{fmt, fmt::Write, hash, ops, str};
 
 use hash32;
 
-use crate::Vec;
+use crate::{sealed::spsc::Uxx, Vec};
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
-pub struct String<const N: usize> {
-    vec: Vec<u8, N>,
+pub struct String<U: Uxx, const N: usize> {
+    vec: Vec<u8, U, N>,
 }
 
-impl<const N: usize> String<N> {
+impl<U: Uxx, const N: usize> String<U, N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N`
     ///
     /// # Examples
@@ -48,7 +48,7 @@ impl<const N: usize> String<N> {
     /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, N> {
+    pub fn into_bytes(self) -> Vec<u8, U, N> {
         self.vec
     }
 
@@ -114,7 +114,7 @@ impl<const N: usize> String<N> {
     /// }
     /// assert_eq!(s, "olleh");
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, U, N> {
         &mut self.vec
     }
 
@@ -283,13 +283,13 @@ impl<const N: usize> String<N> {
     }
 }
 
-impl<const N: usize> Default for String<N> {
+impl<U: Uxx, const N: usize> Default for String<U, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, const N: usize> From<&'a str> for String<N> {
+impl<'a, U: Uxx, const N: usize> From<&'a str> for String<U, N> {
     fn from(s: &'a str) -> Self {
         let mut new = String::new();
         new.push_str(s).unwrap();
@@ -297,7 +297,7 @@ impl<'a, const N: usize> From<&'a str> for String<N> {
     }
 }
 
-impl<const N: usize> str::FromStr for String<N> {
+impl<U: Uxx, const N: usize> str::FromStr for String<U, N> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -307,7 +307,7 @@ impl<const N: usize> str::FromStr for String<N> {
     }
 }
 
-impl<const N: usize> Clone for String<N> {
+impl<U: Uxx, const N: usize> Clone for String<U, N> {
     fn clone(&self) -> Self {
         Self {
             vec: self.vec.clone(),
@@ -315,33 +315,33 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<const N: usize> fmt::Debug for String<N> {
+impl<U: Uxx, const N: usize> fmt::Debug for String<U, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<const N: usize> fmt::Display for String<N> {
+impl<U: Uxx, const N: usize> fmt::Display for String<U, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<const N: usize> hash::Hash for String<N> {
+impl<U: Uxx, const N: usize> hash::Hash for String<U, N> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher)
     }
 }
 
-impl<const N: usize> hash32::Hash for String<N> {
+impl<U: Uxx, const N: usize> hash32::Hash for String<U, N> {
     #[inline]
     fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
         <str as hash32::Hash>::hash(self, hasher)
     }
 }
 
-impl<const N: usize> fmt::Write for String<N> {
+impl<U: Uxx, const N: usize> fmt::Write for String<U, N> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -351,7 +351,7 @@ impl<const N: usize> fmt::Write for String<N> {
     }
 }
 
-impl<const N: usize> ops::Deref for String<N> {
+impl<U: Uxx, const N: usize> ops::Deref for String<U, N> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -359,39 +359,41 @@ impl<const N: usize> ops::Deref for String<N> {
     }
 }
 
-impl<const N: usize> ops::DerefMut for String<N> {
+impl<U: Uxx, const N: usize> ops::DerefMut for String<U, N> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<const N: usize> AsRef<str> for String<N> {
+impl<U: Uxx, const N: usize> AsRef<str> for String<U, N> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<const N: usize> AsRef<[u8]> for String<N> {
+impl<U: Uxx, const N: usize> AsRef<[u8]> for String<U, N> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
-    fn eq(&self, rhs: &String<N2>) -> bool {
+impl<U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<String<U2, N2>>
+    for String<U1, N1>
+{
+    fn eq(&self, rhs: &String<U2, N2>) -> bool {
         str::eq(&**self, &**rhs)
     }
 
-    fn ne(&self, rhs: &String<N2>) -> bool {
+    fn ne(&self, rhs: &String<U2, N2>) -> bool {
         str::ne(&**self, &**rhs)
     }
 }
 
 // macro_rules! impl_eq {
 //     ($lhs:ty, $rhs:ty) => {
-//         impl<'a, 'b, N> PartialEq<$rhs> for $lhs
+//         impl<'a, 'b, U, N> PartialEq<$rhs> for $lhs
 //         where
 //             N: ArrayLength<u8>,
 //         {
@@ -405,7 +407,7 @@ impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
 //             }
 //         }
 
-//         impl<'a, 'b, N> PartialEq<$lhs> for $rhs
+//         impl<'a, 'b, U, N> PartialEq<$lhs> for $rhs
 //         where
 //             N: ArrayLength<u8>,
 //         {
@@ -421,8 +423,8 @@ impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
 //     };
 // }
 
-// String<N> == str
-impl<const N: usize> PartialEq<str> for String<N> {
+// String<U, N> == str
+impl<U: Uxx, const N: usize> PartialEq<str> for String<U, N> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(&self[..], &other[..])
@@ -433,8 +435,8 @@ impl<const N: usize> PartialEq<str> for String<N> {
     }
 }
 
-// String<N> == &'str
-impl<const N: usize> PartialEq<&str> for String<N> {
+// String<U, N> == &'str
+impl<U: Uxx, const N: usize> PartialEq<&str> for String<U, N> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(&self[..], &other[..])
@@ -445,35 +447,35 @@ impl<const N: usize> PartialEq<&str> for String<N> {
     }
 }
 
-// str == String<N>
-impl<const N: usize> PartialEq<String<N>> for str {
+// str == String<U, N>
+impl<U: Uxx, const N: usize> PartialEq<String<U, N>> for str {
     #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
+    fn eq(&self, other: &String<U, N>) -> bool {
         str::eq(&self[..], &other[..])
     }
     #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
+    fn ne(&self, other: &String<U, N>) -> bool {
         str::ne(&self[..], &other[..])
     }
 }
 
-// &'str == String<N>
-impl<const N: usize> PartialEq<String<N>> for &str {
+// &'str == String<U, N>
+impl<U: Uxx, const N: usize> PartialEq<String<U, N>> for &str {
     #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
+    fn eq(&self, other: &String<U, N>) -> bool {
         str::eq(&self[..], &other[..])
     }
     #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
+    fn ne(&self, other: &String<U, N>) -> bool {
         str::ne(&self[..], &other[..])
     }
 }
 
-impl<const N: usize> Eq for String<N> {}
+impl<U: Uxx, const N: usize> Eq for String<U, N> {}
 
 macro_rules! impl_from_num {
     ($num:ty, $size:expr) => {
-        impl<const N: usize> From<$num> for String<N> {
+        impl<U: Uxx, const N: usize> From<$num> for String<U, N> {
             fn from(s: $num) -> Self {
                 let mut new = String::new();
                 write!(&mut new, "{}", s).unwrap();

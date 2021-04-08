@@ -1,6 +1,8 @@
 use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 use hash32;
 
+use crate::sealed::spsc::Uxx;
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
 /// # Examples
@@ -30,12 +32,12 @@ use hash32;
 /// }
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
-pub struct Vec<T, const N: usize> {
+pub struct Vec<T, U: Uxx, const N: usize> {
     buffer: MaybeUninit<[T; N]>,
-    len: usize,
+    len: U,
 }
 
-impl<T, const N: usize> Vec<T, N> {
+impl<T, U: Uxx, const N: usize> Vec<T, U, N> {
     /// Constructs a new, empty vector with a fixed capacity of `N`
     ///
     /// # Examples
@@ -504,13 +506,13 @@ impl<T, const N: usize> Vec<T, N> {
 
 // Trait implementations
 
-impl<T, const N: usize> Default for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> Default for Vec<T, U, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const N: usize> fmt::Debug for Vec<T, N>
+impl<T, U: Uxx, const N: usize> fmt::Debug for Vec<T, U, N>
 where
     T: fmt::Debug,
 {
@@ -519,7 +521,7 @@ where
     }
 }
 
-impl<const N: usize> fmt::Write for Vec<u8, N> {
+impl<U: Uxx, const N: usize> fmt::Write for Vec<u8, U, N> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         match self.extend_from_slice(s.as_bytes()) {
             Ok(()) => Ok(()),
@@ -529,7 +531,7 @@ impl<const N: usize> fmt::Write for Vec<u8, N> {
 }
 
 // PER: Please check if non drop types are correctly optimized
-impl<T, const N: usize> Drop for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> Drop for Vec<T, U, N> {
     fn drop(&mut self) {
         // We drop each element used in the vector by turning into a &mut[T]
         unsafe {
@@ -538,7 +540,7 @@ impl<T, const N: usize> Drop for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> Extend<T> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> Extend<T> for Vec<T, U, N> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -547,7 +549,7 @@ impl<T, const N: usize> Extend<T> for Vec<T, N> {
     }
 }
 
-impl<'a, T, const N: usize> Extend<&'a T> for Vec<T, N>
+impl<'a, T, U: Uxx, const N: usize> Extend<&'a T> for Vec<T, U, N>
 where
     T: 'a + Copy,
 {
@@ -559,7 +561,7 @@ where
     }
 }
 
-impl<T, const N: usize> hash::Hash for Vec<T, N>
+impl<T, U: Uxx, const N: usize> hash::Hash for Vec<T, U, N>
 where
     T: core::hash::Hash,
 {
@@ -568,7 +570,7 @@ where
     }
 }
 
-impl<T, const N: usize> hash32::Hash for Vec<T, N>
+impl<T, U: Uxx, const N: usize> hash32::Hash for Vec<T, U, N>
 where
     T: hash32::Hash,
 {
@@ -577,7 +579,7 @@ where
     }
 }
 
-impl<'a, T, const N: usize> IntoIterator for &'a Vec<T, N> {
+impl<'a, T, U: Uxx, const N: usize> IntoIterator for &'a Vec<T, U, N> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
@@ -586,7 +588,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a Vec<T, N> {
     }
 }
 
-impl<'a, T, const N: usize> IntoIterator for &'a mut Vec<T, N> {
+impl<'a, T, U: Uxx, const N: usize> IntoIterator for &'a mut Vec<T, U, N> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -595,7 +597,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a mut Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> FromIterator<T> for Vec<T, U, N> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = T>,
@@ -614,12 +616,12 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
 ///
 /// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
-pub struct IntoIter<T, const N: usize> {
-    vec: Vec<T, N>,
+pub struct IntoIter<T, U: Uxx, const N: usize> {
+    vec: Vec<T, U, N>,
     next: usize,
 }
 
-impl<T, const N: usize> Iterator for IntoIter<T, N> {
+impl<T, U: Uxx, const N: usize> Iterator for IntoIter<T, U, N> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
@@ -632,7 +634,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     }
 }
 
-impl<T, const N: usize> Clone for IntoIter<T, N>
+impl<T, U: Uxx, const N: usize> Clone for IntoIter<T, U, N>
 where
     T: Clone,
 {
@@ -654,7 +656,7 @@ where
 }
 
 // PER: is this correct
-impl<T, const N: usize> Drop for IntoIter<T, N> {
+impl<T, U: Uxx, const N: usize> Drop for IntoIter<T, U, N> {
     fn drop(&mut self) {
         unsafe {
             // Drop all the elements that have not been moved out of vec
@@ -665,26 +667,27 @@ impl<T, const N: usize> Drop for IntoIter<T, N> {
     }
 }
 
-impl<T, const N: usize> IntoIterator for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> IntoIterator for Vec<T, U, N> {
     type Item = T;
-    type IntoIter = IntoIter<T, N>;
+    type IntoIter = IntoIter<T, U, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter { vec: self, next: 0 }
     }
 }
 
-impl<A, B, const N1: usize, const N2: usize> PartialEq<Vec<B, N2>> for Vec<A, N1>
+impl<A, B, U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<Vec<B, U2, N2>>
+    for Vec<A, U1, N1>
 where
     A: PartialEq<B>,
 {
-    fn eq(&self, other: &Vec<B, N2>) -> bool {
+    fn eq(&self, other: &Vec<B, U2, N2>) -> bool {
         <[A]>::eq(self, &**other)
     }
 }
 
-// Vec<A, N> == [B]
-impl<A, B, const N: usize> PartialEq<[B]> for Vec<A, N>
+// Vec<A, U, N> == [B]
+impl<A, B, U: Uxx, const N: usize> PartialEq<[B]> for Vec<A, U, N>
 where
     A: PartialEq<B>,
 {
@@ -693,8 +696,8 @@ where
     }
 }
 
-// Vec<A, N> == &[B]
-impl<A, B, const N: usize> PartialEq<&[B]> for Vec<A, N>
+// Vec<A, U, N> == &[B]
+impl<A, B, U: Uxx, const N: usize> PartialEq<&[B]> for Vec<A, U, N>
 where
     A: PartialEq<B>,
 {
@@ -703,8 +706,8 @@ where
     }
 }
 
-// Vec<A, N> == &mut [B]
-impl<A, B, const N: usize> PartialEq<&mut [B]> for Vec<A, N>
+// Vec<A, U, N> == &mut [B]
+impl<A, B, U: Uxx, const N: usize> PartialEq<&mut [B]> for Vec<A, U, N>
 where
     A: PartialEq<B>,
 {
@@ -713,9 +716,9 @@ where
     }
 }
 
-// Vec<A, N> == [B; M]
+// Vec<A, U, N> == [B; M]
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<[B; M]> for Vec<A, N>
+impl<A, B, U: Uxx, const N: usize, const M: usize> PartialEq<[B; M]> for Vec<A, U, N>
 where
     A: PartialEq<B>,
 {
@@ -724,9 +727,9 @@ where
     }
 }
 
-// Vec<A, N> == &[B; M]
+// Vec<A, U, N> == &[B; M]
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<&[B; M]> for Vec<A, N>
+impl<A, B, U: Uxx, const N: usize, const M: usize> PartialEq<&[B; M]> for Vec<A, U, N>
 where
     A: PartialEq<B>,
 {
@@ -736,9 +739,9 @@ where
 }
 
 // Implements Eq if underlying data is Eq
-impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
+impl<T, U: Uxx, const N: usize> Eq for Vec<T, U, N> where T: Eq {}
 
-impl<T, const N: usize> ops::Deref for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> ops::Deref for Vec<T, U, N> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -746,41 +749,41 @@ impl<T, const N: usize> ops::Deref for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> ops::DerefMut for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> ops::DerefMut for Vec<T, U, N> {
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
 }
 
-impl<T, const N: usize> AsRef<Vec<T, N>> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> AsRef<Vec<T, U, N>> for Vec<T, U, N> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T, const N: usize> AsMut<Vec<T, N>> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> AsMut<Vec<T, U, N>> for Vec<T, U, N> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
-impl<T, const N: usize> AsRef<[T]> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> AsRef<[T]> for Vec<T, U, N> {
     #[inline]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T, const N: usize> AsMut<[T]> for Vec<T, N> {
+impl<T, U: Uxx, const N: usize> AsMut<[T]> for Vec<T, U, N> {
     #[inline]
     fn as_mut(&mut self) -> &mut [T] {
         self
     }
 }
 
-impl<T, const N: usize> Clone for Vec<T, N>
+impl<T, U: Uxx, const N: usize> Clone for Vec<T, U, N>
 where
     T: Clone,
 {
