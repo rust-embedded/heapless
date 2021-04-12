@@ -58,12 +58,12 @@ error[E0277]: `*const ()` cannot be sent between threads safely
 11 |     T: Send,
    |        ---- required by this bound in `is_send`
 ...
-19 |     is_send::<heapless::Vec<NotSend, usize, 4>>();
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
+19 |     is_send::<heapless::VecBase<NotSend, usize, 4>>();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
-   = help: within `heapless::Vec<PhantomData<*const ()>, usize, 4_usize>`, the trait `Send` is not implemented for `*const ()`
+   = help: within `VecBase<PhantomData<*const ()>, usize, 4_usize>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
    = note: required because it appears within the type `[PhantomData<*const ()>; 4]`
    = note: required because it appears within the type `ManuallyDrop<[PhantomData<*const ()>; 4]>`
    = note: required because it appears within the type `MaybeUninit<[PhantomData<*const ()>; 4]>`
-   = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, usize, 4_usize>`
+   = note: required because it appears within the type `VecBase<PhantomData<*const ()>, usize, 4_usize>`
