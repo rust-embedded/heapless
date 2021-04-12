@@ -13,10 +13,10 @@ pub struct StringBase<U: Uxx, const N: usize> {
 pub type String<const N: usize> = StringBase<usize, N>;
 
 macro_rules! impl_new {
-    ($Uxx:ident, $name:ident) => {
+    ($Uxx:ident, $name:ident, $doc:tt) => {
         impl<const N: usize> StringBase<$Uxx, N> {
-            /// Constructs a new, empty `String` with a fixed capacity of `N`
             #[inline]
+            #[doc = $doc]
             pub const fn $name() -> Self {
                 Self {
                     vec: VecBase::$name(),
@@ -26,9 +26,8 @@ macro_rules! impl_new {
     };
 }
 
-impl_new!(u8, u8);
-impl_new!(u16, u16);
-impl_new!(usize, usize);
+impl_new!(u8, u8, "Constructs a new, empty `String` with a fixed capacity of `N`. **Safety**: Assumes `N <= u8::MAX`.");
+impl_new!(u16, u16, "Constructs a new, empty `String` with a fixed capacity of `N`. **Safety**: Assumes `N <= u16::MAX`.");
 
 impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` and length type of `usize`

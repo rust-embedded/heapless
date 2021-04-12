@@ -13,9 +13,9 @@ pub struct LinearMapBase<K, V, U: Uxx, const N: usize> {
 pub type LinearMap<K, V, const N: usize> = LinearMapBase<K, V, usize, N>;
 
 macro_rules! impl_new {
-    ($Uxx:ident, $name:ident) => {
+    ($Uxx:ident, $name:ident, $doc:tt) => {
         impl<K, V, const N: usize> LinearMapBase<K, V, $Uxx, N> {
-            /// Creates an empty `LinearMap`
+            #[doc = $doc]
             pub const fn $name() -> Self {
                 Self {
                     buffer: VecBase::$name(),
@@ -25,9 +25,16 @@ macro_rules! impl_new {
     };
 }
 
-impl_new!(u8, u8);
-impl_new!(u16, u16);
-impl_new!(usize, usize);
+impl_new!(
+    u8,
+    u8,
+    "Creates an empty `LinearMap`. **Safety**: Assumes `N <= u8::MAX`."
+);
+impl_new!(
+    u16,
+    u16,
+    "Creates an empty `LinearMap`. **Safety**: Assumes `N <= u16::MAX`."
+);
 
 impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap` with length type of `usize`

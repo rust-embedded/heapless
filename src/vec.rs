@@ -53,10 +53,9 @@ pub struct VecBase<T, U: Uxx, const N: usize> {
 pub type Vec<T, const N: usize> = VecBase<T, usize, N>;
 
 macro_rules! impl_new {
-    ($Uxx:ident, $name:ident) => {
+    ($Uxx:ident, $name:ident, $doc:tt) => {
         impl<T, const N: usize> VecBase<T, $Uxx, N> {
-            /// Constructs a new, empty vector with a fixed capacity of `N`
-            /// `Vec` `const` constructor; wrap the returned value in [`VecBase`](../struct.VecBase.html)
+            #[doc = $doc]
             pub const fn $name() -> Self {
                 Self {
                     buffer: MaybeUninit::uninit(),
@@ -72,9 +71,8 @@ macro_rules! impl_new {
     };
 }
 
-impl_new!(u8, u8);
-impl_new!(u16, u16);
-impl_new!(usize, usize);
+impl_new!(u8, u8, "Constructs a new, empty vector with a fixed capacity of `N`. **Safety**: Assumes `N <= u8::MAX`.");
+impl_new!(u16, u16, "Constructs a new, empty vector with a fixed capacity of `N`. **Safety**: Assumes `N <= u16::MAX`.");
 
 impl<T, const N: usize> Vec<T, N> {
     /// Constructs a new, empty vector with a fixed capacity of `N` and length type of `usize`
@@ -91,7 +89,15 @@ impl<T, const N: usize> Vec<T, N> {
     /// static mut X: Vec<u8, 16> = Vec::new();
     /// ```
     pub const fn new() -> Self {
-        Self::usize()
+        Self {
+            buffer: MaybeUninit::uninit(),
+            len: 0,
+        }
+    }
+
+    /// Returns the maximum number of elements the vector can hold.
+    pub const fn capacity(&self) -> usize {
+        N
     }
 }
 

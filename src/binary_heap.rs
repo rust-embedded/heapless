@@ -81,10 +81,10 @@ pub struct BinaryHeapBase<T, K, U: Uxx, const N: usize> {
 pub type BinaryHeap<T, K, const N: usize> = BinaryHeapBase<T, K, usize, N>;
 
 macro_rules! impl_new {
-    ($Uxx:ident, $name:ident) => {
+    ($Uxx:ident, $name:ident, $doc:tt) => {
         impl<T, K, const N: usize> BinaryHeapBase<T, K, $Uxx, N> {
             /* Constructors */
-            /// Creates an empty BinaryHeap as a $K-heap.
+            #[doc = $doc]
             pub const fn $name() -> Self {
                 Self {
                     _kind: PhantomData,
@@ -95,9 +95,16 @@ macro_rules! impl_new {
     };
 }
 
-impl_new!(u8, u8);
-impl_new!(u16, u16);
-impl_new!(usize, usize);
+impl_new!(
+    u8,
+    u8,
+    "Creates an empty BinaryHeap as a $K-heap. **Safety**: Assumes `N <= u8::MAX`."
+);
+impl_new!(
+    u16,
+    u16,
+    "Creates an empty BinaryHeap as a $K-heap. **Safety**: Assumes `N <= u16::MAX`."
+);
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
