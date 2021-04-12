@@ -85,10 +85,10 @@ impl<T, const N: usize> Vec<T, N> {
     /// use heapless::Vec;
     ///
     /// // allocate the vector on the stack
-    /// let mut x: Vec<u8, _, 16> = Vec::new();
+    /// let mut x: Vec<u8, 16> = Vec::new();
     ///
     /// // allocate the vector in a static variable
-    /// static mut X: Vec<u8, usize, 16> = Vec::new();
+    /// static mut X: Vec<u8, 16> = Vec::new();
     /// ```
     pub const fn new() -> Self {
         Self::usize()

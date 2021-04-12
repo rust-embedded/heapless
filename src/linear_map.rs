@@ -38,10 +38,10 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// use heapless::LinearMap;
     ///
     /// // allocate the map on the stack
-    /// let mut map: LinearMap<&str, isize, _, 8> = LinearMap::new();
+    /// let mut map: LinearMap<&str, isize, 8> = LinearMap::new();
     ///
     /// // allocate the map in a static variable
-    /// static mut MAP: LinearMap<&str, isize, usize, 8> = LinearMap::new();
+    /// static mut MAP: LinearMap<&str, isize, 8> = LinearMap::new();
     /// ```
     pub const fn new() -> Self {
         Self {

@@ -41,10 +41,10 @@ impl<const N: usize> String<N> {
     /// use heapless::String;
     ///
     /// // allocate the string on the stack
-    /// let mut s: String<_, 4> = String::new();
+    /// let mut s: String<4> = String::new();
     ///
     /// // allocate the string in a static variable
-    /// static mut S: String<usize, 4> = String::new();
+    /// static mut S: String<4> = String::new();
     /// ```
     #[inline]
     pub const fn new() -> Self {

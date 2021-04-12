@@ -107,11 +107,11 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /// use heapless::binary_heap::{BinaryHeap, Max};
     ///
     /// // allocate the binary heap on the stack
-    /// let mut heap: BinaryHeap<_, Max, _, 8> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(4).unwrap();
     ///
     /// // allocate the binary heap in a static variable
-    /// static mut HEAP: BinaryHeap<i32, Max, usize, 8> = BinaryHeap::new();
+    /// static mut HEAP: BinaryHeap<i32, Max, 8> = BinaryHeap::new();
     /// ```
     pub const fn new() -> Self {
         Self {
