@@ -58,7 +58,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let map: LinearMap<&str, isize, usize, 8> = LinearMap::new();
+    /// let map: LinearMap<&str, isize, 8> = LinearMap::new();
     /// assert_eq!(map.capacity(), 8);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -74,7 +74,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// map.clear();
     /// assert!(map.is_empty());
@@ -92,7 +92,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.contains_key(&1), true);
     /// assert_eq!(map.contains_key(&2), false);
@@ -110,7 +110,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.get(&1), Some(&"a"));
     /// assert_eq!(map.get(&2), None);
@@ -134,7 +134,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// if let Some(x) = map.get_mut(&1) {
     ///     *x = "b";
@@ -160,7 +160,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut a: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, 8> = LinearMap::new();
     /// assert_eq!(a.len(), 0);
     /// a.insert(1, "a").unwrap();
     /// assert_eq!(a.len(), 1);
@@ -182,7 +182,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// assert_eq!(map.insert(37, "a").unwrap(), None);
     /// assert_eq!(map.is_empty(), false);
     ///
@@ -209,7 +209,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut a: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut a: LinearMap<_, _, 8> = LinearMap::new();
     /// assert!(a.is_empty());
     /// a.insert(1, "a").unwrap();
     /// assert!(!a.is_empty());
@@ -225,7 +225,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -248,7 +248,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -275,7 +275,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -298,7 +298,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.remove(&1), Some("a"));
     /// assert_eq!(map.remove(&1), None);
@@ -324,7 +324,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -344,7 +344,7 @@ where
     /// ```
     /// use heapless::LinearMap;
     ///
-    /// let mut map: LinearMap<_, _, usize, 8> = LinearMap::new();
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -528,16 +528,16 @@ mod test {
 
     #[test]
     fn static_new() {
-        static mut _L: LinearMap<i32, i32, usize, 8> = LinearMap::new();
+        static mut _L: LinearMap<i32, i32, 8> = LinearMap::new();
     }
 
     #[test]
     fn partial_eq() {
         {
-            let mut a = LinearMap::<_, _, usize, 1>::new();
+            let mut a = LinearMap::<_, _, 1>::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b = LinearMap::<_, _, usize, 2>::new();
+            let mut b = LinearMap::<_, _, 2>::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -548,11 +548,11 @@ mod test {
         }
 
         {
-            let mut a = LinearMap::<_, _, usize, 2>::new();
+            let mut a = LinearMap::<_, _, 2>::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b = LinearMap::<_, _, usize, 2>::new();
+            let mut b = LinearMap::<_, _, 2>::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 

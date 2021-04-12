@@ -59,7 +59,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let s: String<usize, 4> = String::from("ab");
+    /// let s: String<4> = String::from("ab");
     /// let b = s.into_bytes();
     /// assert!(b.len() == 2);
     ///
@@ -79,7 +79,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 4> = String::from("ab");
+    /// let mut s: String<4> = String::from("ab");
     /// assert!(s.as_str() == "ab");
     ///
     /// let _s = s.as_str();
@@ -99,7 +99,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 4> = String::from("ab");
+    /// let mut s: String<4> = String::from("ab");
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
     /// ```
@@ -145,7 +145,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 8> = String::from("foo");
+    /// let mut s: String<8> = String::from("foo");
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
@@ -167,7 +167,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 4> = String::new();
+    /// let mut s: String<4> = String::new();
     /// assert!(s.capacity() == 4);
     /// ```
     #[inline]
@@ -186,7 +186,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 8> = String::from("abc");
+    /// let mut s: String<8> = String::from("abc");
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -227,7 +227,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 8> = String::from("hello");
+    /// let mut s: String<8> = String::from("hello");
     ///
     /// s.truncate(2);
     ///
@@ -254,7 +254,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 8> = String::from("foo");
+    /// let mut s: String<8> = String::from("foo");
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
@@ -287,7 +287,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<usize, 8> = String::from("foo");
+    /// let mut s: String<8> = String::from("foo");
     ///
     /// s.clear();
     ///
@@ -521,12 +521,12 @@ mod tests {
 
     #[test]
     fn static_new() {
-        static mut _S: String<usize, 8> = String::new();
+        static mut _S: String<8> = String::new();
     }
 
     #[test]
     fn clone() {
-        let s1: String<usize, 20> = String::from("abcd");
+        let s1: String<20> = String::from("abcd");
         let mut s2 = s1.clone();
         s2.push_str(" efgh").unwrap();
 
@@ -538,7 +538,7 @@ mod tests {
     fn debug() {
         use core::fmt::Write;
 
-        let s: String<usize, 8> = String::from("abcd");
+        let s: String<8> = String::from("abcd");
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
@@ -548,7 +548,7 @@ mod tests {
     fn display() {
         use core::fmt::Write;
 
-        let s: String<usize, 8> = String::from("abcd");
+        let s: String<8> = String::from("abcd");
         let mut std_s = std::string::String::new();
         write!(std_s, "{}", s).unwrap();
         assert_eq!("abcd", std_s);
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let s: String<usize, 4> = String::new();
+        let s: String<4> = String::new();
         assert!(s.capacity() == 4);
         assert_eq!(s, "");
         assert_eq!(s.len(), 0);
@@ -565,7 +565,7 @@ mod tests {
 
     #[test]
     fn from() {
-        let s: String<usize, 4> = String::from("123");
+        let s: String<4> = String::from("123");
         assert!(s.len() == 3);
         assert_eq!(s, "123");
     }
@@ -574,37 +574,37 @@ mod tests {
     fn from_str() {
         use core::str::FromStr;
 
-        let s: String<usize, 4> = String::<usize, 4>::from_str("123").unwrap();
+        let s: String<4> = String::<4>::from_str("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<usize, 2>::from_str("123").unwrap_err();
+        let e: () = String::<2>::from_str("123").unwrap_err();
         assert_eq!(e, ());
     }
 
     #[test]
     #[should_panic]
     fn from_panic() {
-        let _: String<usize, 4> = String::from("12345");
+        let _: String<4> = String::from("12345");
     }
 
     #[test]
     fn from_num() {
-        let v: String<usize, 20> = String::from(18446744073709551615 as u64);
+        let v: String<20> = String::from(18446744073709551615 as u64);
         assert_eq!(v, "18446744073709551615");
     }
 
     #[test]
     fn into_bytes() {
-        let s: String<usize, 4> = String::from("ab");
-        let b: Vec<u8, usize, 4> = s.into_bytes();
+        let s: String<4> = String::from("ab");
+        let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     }
 
     #[test]
     fn as_str() {
-        let s: String<usize, 4> = String::from("ab");
+        let s: String<4> = String::from("ab");
 
         assert_eq!(s.as_str(), "ab");
         // should be moved to fail test
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn as_mut_str() {
-        let mut s: String<usize, 4> = String::from("ab");
+        let mut s: String<4> = String::from("ab");
         let s = s.as_mut_str();
         s.make_ascii_uppercase();
         assert_eq!(s, "AB");
@@ -622,7 +622,7 @@ mod tests {
 
     #[test]
     fn push_str() {
-        let mut s: String<usize, 8> = String::from("foo");
+        let mut s: String<8> = String::from("foo");
         assert!(s.push_str("bar").is_ok());
         assert_eq!("foobar", s);
         assert_eq!(s, "foobar");
@@ -633,7 +633,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let mut s: String<usize, 6> = String::from("abc");
+        let mut s: String<6> = String::from("abc");
         assert!(s.push('1').is_ok());
         assert!(s.push('2').is_ok());
         assert!(s.push('3').is_ok());
@@ -643,13 +643,13 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let s: String<usize, 8> = String::from("hello");
+        let s: String<8> = String::from("hello");
         assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     }
 
     #[test]
     fn truncate() {
-        let mut s: String<usize, 8> = String::from("hello");
+        let mut s: String<8> = String::from("hello");
         s.truncate(6);
         assert_eq!(s.len(), 5);
         s.truncate(2);
@@ -660,7 +660,7 @@ mod tests {
 
     #[test]
     fn pop() {
-        let mut s: String<usize, 8> = String::from("foo");
+        let mut s: String<8> = String::from("foo");
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('f'));
@@ -669,7 +669,7 @@ mod tests {
 
     #[test]
     fn pop_uenc() {
-        let mut s: String<usize, 8> = String::from("é");
+        let mut s: String<8> = String::from("é");
         assert_eq!(s.len(), 3);
         match s.pop() {
             Some(c) => {
@@ -683,7 +683,7 @@ mod tests {
 
     #[test]
     fn is_empty() {
-        let mut v: String<usize, 8> = String::new();
+        let mut v: String<8> = String::new();
         assert!(v.is_empty());
         let _ = v.push('a');
         assert!(!v.is_empty());
@@ -691,7 +691,7 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut s: String<usize, 8> = String::from("foo");
+        let mut s: String<8> = String::from("foo");
         s.clear();
         assert!(s.is_empty());
         assert_eq!(0, s.len());

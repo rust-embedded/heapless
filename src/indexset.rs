@@ -15,7 +15,7 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 /// use heapless::FnvIndexSet;
 ///
 /// // A hash set with a capacity of 16 elements allocated on the stack
-/// let mut books = FnvIndexSet::<_, usize, 16>::new();
+/// let mut books = FnvIndexSet::<_, 16>::new();
 ///
 /// // Add some books.
 /// books.insert("A Dance With Dragons").unwrap();
@@ -55,7 +55,7 @@ pub type FnvIndexSet<T, U, const N: usize> = IndexSet<T, BuildHasherDefault<FnvH
 /// use heapless::FnvIndexSet;
 ///
 /// // A hash set with a capacity of 16 elements allocated on the stack
-/// let mut books = FnvIndexSet::<_, usize, 16>::new();
+/// let mut books = FnvIndexSet::<_, 16>::new();
 ///
 /// // Add some books.
 /// books.insert("A Dance With Dragons").unwrap();
@@ -111,7 +111,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let set = FnvIndexSet::<i32, usize, 16>::new();
+    /// let set = FnvIndexSet::<i32, 16>::new();
     /// assert_eq!(set.capacity(), 16);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -125,7 +125,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut set = FnvIndexSet::<_, usize, 16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     /// set.insert("a").unwrap();
     /// set.insert("b").unwrap();
     ///
@@ -148,21 +148,21 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut a: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, usize, 16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Can be seen as `a - b`.
     /// for x in a.difference(&b) {
     ///     println!("{}", x); // Print 1
     /// }
     ///
-    /// let diff: FnvIndexSet<_, usize, 16> = a.difference(&b).collect();
-    /// assert_eq!(diff, [1].iter().collect::<FnvIndexSet<_, usize, 16>>());
+    /// let diff: FnvIndexSet<_, 16> = a.difference(&b).collect();
+    /// assert_eq!(diff, [1].iter().collect::<FnvIndexSet<_, 16>>());
     ///
     /// // Note that difference is not symmetric,
     /// // and `b - a` means something else:
-    /// let diff: FnvIndexSet<_, usize, 16> = b.difference(&a).collect();
-    /// assert_eq!(diff, [4].iter().collect::<FnvIndexSet<_, usize, 16>>());
+    /// let diff: FnvIndexSet<_, 16> = b.difference(&a).collect();
+    /// assert_eq!(diff, [4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
     pub fn difference<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
@@ -185,19 +185,19 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut a: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, usize, 16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 1, 4 in that order order.
     /// for x in a.symmetric_difference(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let diff1: FnvIndexSet<_, usize, 16> = a.symmetric_difference(&b).collect();
-    /// let diff2: FnvIndexSet<_, usize, 16> = b.symmetric_difference(&a).collect();
+    /// let diff1: FnvIndexSet<_, 16> = a.symmetric_difference(&b).collect();
+    /// let diff2: FnvIndexSet<_, 16> = b.symmetric_difference(&a).collect();
     ///
     /// assert_eq!(diff1, diff2);
-    /// assert_eq!(diff1, [1, 4].iter().collect::<FnvIndexSet<_, usize, 16>>());
+    /// assert_eq!(diff1, [1, 4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
     pub fn symmetric_difference<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
@@ -217,16 +217,16 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut a: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, usize, 16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 2, 3 in that order.
     /// for x in a.intersection(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let intersection: FnvIndexSet<_, usize, 16> = a.intersection(&b).collect();
-    /// assert_eq!(intersection, [2, 3].iter().collect::<FnvIndexSet<_, usize, 16>>());
+    /// let intersection: FnvIndexSet<_, 16> = a.intersection(&b).collect();
+    /// assert_eq!(intersection, [2, 3].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
     pub fn intersection<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
@@ -249,16 +249,16 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut a: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b: FnvIndexSet<_, usize, 16> = [4, 2, 3, 4].iter().cloned().collect();
+    /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
     /// // Print 1, 2, 3, 4 in that order.
     /// for x in a.union(&b) {
     ///     println!("{}", x);
     /// }
     ///
-    /// let union: FnvIndexSet<_, usize, 16> = a.union(&b).collect();
-    /// assert_eq!(union, [1, 2, 3, 4].iter().collect::<FnvIndexSet<_, usize, 16>>());
+    /// let union: FnvIndexSet<_, 16> = a.union(&b).collect();
+    /// assert_eq!(union, [1, 2, 3, 4].iter().collect::<FnvIndexSet<_, 16>>());
     /// ```
     pub fn union<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
@@ -277,7 +277,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut v: FnvIndexSet<_, usize, 16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert_eq!(v.len(), 0);
     /// v.insert(1).unwrap();
     /// assert_eq!(v.len(), 1);
@@ -293,7 +293,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut v: FnvIndexSet<_, usize, 16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert!(v.is_empty());
     /// v.insert(1).unwrap();
     /// assert!(!v.is_empty());
@@ -309,7 +309,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut v: FnvIndexSet<_, usize, 16> = FnvIndexSet::new();
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// v.insert(1).unwrap();
     /// v.clear();
     /// assert!(v.is_empty());
@@ -328,7 +328,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let set: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let set: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// assert_eq!(set.contains(&1), true);
     /// assert_eq!(set.contains(&4), false);
     /// ```
@@ -348,8 +348,8 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let a: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut b = FnvIndexSet::<_, usize, 16>::new();
+    /// let a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut b = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(a.is_disjoint(&b), true);
     /// b.insert(4).unwrap();
@@ -372,8 +372,8 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let sup: FnvIndexSet<_, usize, 16> = [1, 2, 3].iter().cloned().collect();
-    /// let mut set = FnvIndexSet::<_, usize, 16>::new();
+    /// let sup: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.is_subset(&sup), true);
     /// set.insert(2).unwrap();
@@ -396,8 +396,8 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let sub: FnvIndexSet<_, usize, 16> = [1, 2].iter().cloned().collect();
-    /// let mut set = FnvIndexSet::<_, usize, 16>::new();
+    /// let sub: FnvIndexSet<_, 16> = [1, 2].iter().cloned().collect();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.is_superset(&sub), false);
     ///
@@ -426,7 +426,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut set = FnvIndexSet::<_, usize, 16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// assert_eq!(set.insert(2).unwrap(), true);
     /// assert_eq!(set.insert(2).unwrap(), false);
@@ -449,7 +449,7 @@ where
     /// ```
     /// use heapless::FnvIndexSet;
     ///
-    /// let mut set = FnvIndexSet::<_, usize, 16>::new();
+    /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
     /// set.insert(2).unwrap();
     /// assert_eq!(set.remove(&2), true);

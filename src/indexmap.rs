@@ -14,7 +14,7 @@ use crate::{sealed::spsc::Uxx, Vec};
 /// use heapless::FnvIndexMap;
 ///
 /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
-/// let mut book_reviews = FnvIndexMap::<_, _, usize, 16>::new();
+/// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
 /// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
@@ -327,7 +327,7 @@ where
 /// use heapless::FnvIndexMap;
 ///
 /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
-/// let mut book_reviews = FnvIndexMap::<_, _, usize, 16>::new();
+/// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
 /// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
@@ -398,7 +398,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -416,7 +416,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -434,7 +434,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -456,7 +456,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -476,7 +476,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
     /// map.insert("b", 2).unwrap();
     /// map.insert("c", 3).unwrap();
@@ -505,7 +505,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut a = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// assert_eq!(a.len(), 0);
     /// a.insert(1, "a").unwrap();
     /// assert_eq!(a.len(), 1);
@@ -521,7 +521,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut a = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// assert!(a.is_empty());
     /// a.insert(1, "a");
     /// assert!(!a.is_empty());
@@ -537,7 +537,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut a = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// a.insert(1, "a");
     /// a.clear();
     /// assert!(a.is_empty());
@@ -559,7 +559,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 16>::new();
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.get(&1), Some(&"a"));
     /// assert_eq!(map.get(&2), None);
@@ -585,7 +585,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 8>::new();
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.contains_key(&1), true);
     /// assert_eq!(map.contains_key(&2), false);
@@ -610,7 +610,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 8>::new();
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
     /// if let Some(x) = map.get_mut(&1) {
     ///     *x = "b";
@@ -648,7 +648,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 8>::new();
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// assert_eq!(map.insert(37, "a"), Ok(None));
     /// assert_eq!(map.is_empty(), false);
     ///
@@ -680,7 +680,7 @@ where
     /// ```
     /// use heapless::FnvIndexMap;
     ///
-    /// let mut map = FnvIndexMap::<_, _, usize, 8>::new();
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
     /// assert_eq!(map.remove(&1), Some("a"));
     /// assert_eq!(map.remove(&1), None);
@@ -944,7 +944,7 @@ mod tests {
     fn size() {
         const CAP: usize = 4;
         assert_eq!(
-            mem::size_of::<FnvIndexMap<i16, u16, usize, CAP>>(),
+            mem::size_of::<FnvIndexMap<i16, u16, CAP>>(),
             CAP * mem::size_of::<u32>() + // indices
                 CAP * (mem::size_of::<i16>() + // key
                      mem::size_of::<u16>() + // value
@@ -957,10 +957,10 @@ mod tests {
     #[test]
     fn partial_eq() {
         {
-            let mut a: FnvIndexMap<_, _, usize, 4> = FnvIndexMap::new();
+            let mut a: FnvIndexMap<_, _, 4> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
 
-            let mut b: FnvIndexMap<_, _, usize, 4> = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, 4> = FnvIndexMap::new();
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
@@ -971,11 +971,11 @@ mod tests {
         }
 
         {
-            let mut a: FnvIndexMap<_, _, usize, 4> = FnvIndexMap::new();
+            let mut a: FnvIndexMap<_, _, 4> = FnvIndexMap::new();
             a.insert("k1", "v1").unwrap();
             a.insert("k2", "v2").unwrap();
 
-            let mut b: FnvIndexMap<_, _, usize, 4> = FnvIndexMap::new();
+            let mut b: FnvIndexMap<_, _, 4> = FnvIndexMap::new();
             b.insert("k2", "v2").unwrap();
             b.insert("k1", "v1").unwrap();
 
