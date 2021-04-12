@@ -32,6 +32,13 @@ pub enum Max {}
 /// It is a logic error for an item to be modified in such a way that the item's ordering relative
 /// to any other item, as determined by the `Ord` trait, changes while it is in the heap. This is
 /// normally only possible through `Cell`, `RefCell`, global state, I/O, or unsafe code.
+
+pub struct BinaryHeapBase<T, K, U: Uxx, const N: usize> {
+    pub(crate) _kind: PhantomData<K>,
+    pub(crate) data: VecBase<T, U, N>,
+}
+
+/// A `BinaryHeapBase` with a length type of `usize`.
 ///
 /// ```
 /// use heapless::binary_heap::{BinaryHeap, Max};
@@ -71,12 +78,6 @@ pub enum Max {}
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-
-pub struct BinaryHeapBase<T, K, U: Uxx, const N: usize> {
-    pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: VecBase<T, U, N>,
-}
-
 pub type BinaryHeap<T, K, const N: usize> = BinaryHeapBase<T, K, usize, N>;
 
 macro_rules! impl_new {

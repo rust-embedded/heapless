@@ -5,10 +5,14 @@ use crate::{
 use core::{borrow::Borrow, fmt, iter::FromIterator};
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
+/// A [`heapless::IndexSetBase`](./struct.IndexSetBase.html) using the
 /// default FNV hasher.
-/// A list of all Methods and Traits available for `FnvIndexSet` can be found in
-/// the [`heapless::IndexSet`](./struct.IndexSet.html) documentation.
+/// A list of all Methods and Traits available for `FnvIndexSetBase` can be found in
+/// the [`heapless::IndexSetBase`](./struct.IndexSetBase.html) documentation.
+pub type FnvIndexSetBase<T, U, const N: usize> =
+    IndexSetBase<T, BuildHasherDefault<FnvHasher>, U, N>;
+
+/// A `FnvIndexSetBase` with a length type of `usize`.
 ///
 /// # Examples
 /// ```
@@ -37,18 +41,24 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 ///     println!("{}", book);
 /// }
 /// ```
-pub type FnvIndexSetBase<T, U, const N: usize> =
-    IndexSetBase<T, BuildHasherDefault<FnvHasher>, U, N>;
-
 pub type FnvIndexSet<T, const N: usize> = FnvIndexSetBase<T, usize, N>;
 
 /// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
 ///
 /// Note that you cannot use `IndexSet` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexSet`](./type.FnvIndexSet.html) instead
+/// in use. Pick a concrete instantiation like [`FnvIndexSetBase`](./type.FnvIndexSetBase.html) instead
 /// or create your own.
 ///
-/// Note that the capacity of the `IndexSet` must be a power of 2.
+/// Note that the capacity of the `IndexSetBase` must be a power of 2.
+///
+pub struct IndexSetBase<T, S, U: Uxx, const N: usize>
+where
+    T: Eq + Hash,
+{
+    map: IndexMapBase<T, (), S, U, N>,
+}
+
+/// An `IndexSetBase` with a length type of `usize`.
 ///
 /// # Examples
 /// Since `IndexSet` cannot be used directly, we're using its `FnvIndexSet` instantiation
@@ -80,13 +90,6 @@ pub type FnvIndexSet<T, const N: usize> = FnvIndexSetBase<T, usize, N>;
 ///     println!("{}", book);
 /// }
 /// ```
-pub struct IndexSetBase<T, S, U: Uxx, const N: usize>
-where
-    T: Eq + Hash,
-{
-    map: IndexMapBase<T, (), S, U, N>,
-}
-
 pub type IndexSet<T, S, const N: usize> = IndexSetBase<T, S, usize, N>;
 
 impl<T, S, U: Uxx, const N: usize> IndexSetBase<T, BuildHasherDefault<S>, U, N>

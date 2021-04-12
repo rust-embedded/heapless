@@ -4,10 +4,15 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::{sealed::spsc::Uxx, VecBase};
 
-/// A [`heapless::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
+/// A [`heapless::IndexMapBase`](./struct.IndexMap.html) using the default FNV hasher
 ///
-/// A list of all Methods and Traits available for `FnvIndexMap` can be found in
-/// the [`heapless::IndexMap`](./struct.IndexMap.html) documentation.
+/// A list of all Methods and Traits available for `FnvIndexMapBase` can be found in
+/// the [`heapless::IndexMapBase`](./struct.IndexMapBase.html) documentation.
+///
+pub type FnvIndexMapBase<K, V, U, const N: usize> =
+    IndexMapBase<K, V, BuildHasherDefault<FnvHasher>, U, N>;
+
+/// A `FnvIndexMapBase` with a length type of `usize`.
 ///
 /// # Examples
 /// ```
@@ -45,9 +50,6 @@ use crate::{sealed::spsc::Uxx, VecBase};
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub type FnvIndexMapBase<K, V, U, const N: usize> =
-    IndexMapBase<K, V, BuildHasherDefault<FnvHasher>, U, N>;
-
 pub type FnvIndexMap<K, V, const N: usize> = FnvIndexMapBase<K, V, usize, N>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -316,11 +318,20 @@ where
 
 /// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/1/indexmap/map/struct.IndexMap.html)
 ///
-/// Note that you cannot use `IndexMap` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexMap`](./type.FnvIndexMap.html) instead
+/// Note that you cannot use `IndexMapBase` directly, since it is generic around the hashing algorithm
+/// in use. Pick a concrete instantiation like [`FnvIndexMapBase`](./type.FnvIndexMap.html) instead
 /// or create your own.
 ///
-/// Note that the capacity of the `IndexMap` must be a power of 2.
+/// Note that the capacity of the `IndexMapBase` must be a power of 2.
+pub struct IndexMapBase<K, V, S, U: Uxx, const N: usize>
+where
+    K: Eq + Hash,
+{
+    core: CoreMap<K, V, U, N>,
+    build_hasher: S,
+}
+
+/// An `IndexMapBase` with a length type of `usize`.
 ///
 /// # Examples
 /// Since `IndexMap` cannot be used directly, we're using its `FnvIndexMap` instantiation
@@ -361,14 +372,6 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub struct IndexMapBase<K, V, S, U: Uxx, const N: usize>
-where
-    K: Eq + Hash,
-{
-    core: CoreMap<K, V, U, N>,
-    build_hasher: S,
-}
-
 pub type IndexMap<K, V, S, const N: usize> = IndexMapBase<K, V, S, usize, N>;
 
 impl<K, V, S, U: Uxx, const N: usize> IndexMapBase<K, V, BuildHasherDefault<S>, U, N>

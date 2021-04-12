@@ -5,6 +5,23 @@ use crate::sealed::spsc::Uxx;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
+/// The length type of `VecBase` and `VecBase`-based containers is generic and can use `u8`, `u16`,
+/// or `usize`. Using smaller length types can reduce memory footprint for containers with low
+/// alignment requirements.  The easiest way to construct a `VecBase` with a smaller index type is
+/// to use the [`u8`] and [`u16`] constructors.
+///
+/// [`u8`]: struct.VecBase.html#method.u8
+/// [`u16`]: struct.VecBase.html#method.u16
+///
+/// *IMPORTANT*: `VecBase<_, u8, N>` has a maximum capacity of 255 elements; `VecBase<_, u16, N>`
+/// has a maximum capacity of 65535 elements.
+pub struct VecBase<T, U: Uxx, const N: usize> {
+    buffer: MaybeUninit<[T; N]>,
+    len: U,
+}
+
+/// A `VecBase` that has a length type of `usize`.
+///
 /// # Examples
 ///
 /// ```
@@ -33,21 +50,6 @@ use crate::sealed::spsc::Uxx;
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 ///
-/// The length type of `Vec` and `Vec`-based containers is generic and can use `u8`, `u16`, or
-/// `usize`. Using smaller length types can reduce memory footprint for containers with low
-/// alignment requirements.  The easiest way to construct a `Vec` with a smaller index type is to
-/// use the [`u8`] and [`u16`] constructors.
-///
-/// [`u8`]: struct.Vec.html#method.u8
-/// [`u16`]: struct.Vec.html#method.u16
-///
-/// *IMPORTANT*: `Vec<_, u8, N>` has a maximum capacity of 255 elements; `Vec<_,
-/// u16, N>` has a maximum capacity of 65535 elements.
-pub struct VecBase<T, U: Uxx, const N: usize> {
-    buffer: MaybeUninit<[T; N]>,
-    len: U,
-}
-
 pub type Vec<T, const N: usize> = VecBase<T, usize, N>;
 
 macro_rules! impl_new {

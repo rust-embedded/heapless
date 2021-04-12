@@ -9,6 +9,7 @@ pub struct StringBase<U: Uxx, const N: usize> {
     vec: VecBase<u8, U, N>,
 }
 
+/// A `StringBase` with a length type of `usize`.
 pub type String<const N: usize> = StringBase<usize, N>;
 
 macro_rules! impl_new {

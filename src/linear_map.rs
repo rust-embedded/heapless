@@ -9,6 +9,7 @@ pub struct LinearMapBase<K, V, U: Uxx, const N: usize> {
     pub(crate) buffer: VecBase<(K, V), U, N>,
 }
 
+/// A `LinearMapBase` with a length type of `usize`.
 pub type LinearMap<K, V, const N: usize> = LinearMapBase<K, V, usize, N>;
 
 macro_rules! impl_new {
