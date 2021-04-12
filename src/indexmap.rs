@@ -4,7 +4,7 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
 use crate::{sealed::spsc::Uxx, VecBase};
 
-/// A [`heapless::IndexMapBase`](./struct.IndexMap.html) using the default FNV hasher
+/// A [`heapless::IndexMapBase`](./struct.IndexMapBase.html) using the default FNV hasher
 ///
 /// A list of all Methods and Traits available for `FnvIndexMapBase` can be found in
 /// the [`heapless::IndexMapBase`](./struct.IndexMapBase.html) documentation.
@@ -679,7 +679,7 @@ where
         }
     }
 
-    /// Same as [`swap_remove`](struct.IndexMap.html#method.swap_remove)
+    /// Same as [`swap_remove`](struct.IndexMapBase.html#method.swap_remove)
     ///
     /// Computes in **O(1)** time (average).
     ///

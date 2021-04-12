@@ -432,13 +432,13 @@ impl<'a, T> Hole<'a, T> {
 }
 
 /// Structure wrapping a mutable reference to the greatest item on a
-/// `BinaryHeap`.
+/// `BinaryHeapBase`.
 ///
-/// This `struct` is created by the [`peek_mut`] method on [`BinaryHeap`]. See
+/// This `struct` is created by the [`peek_mut`] method on [`BinaryHeapBase`]. See
 /// its documentation for more.
 ///
-/// [`peek_mut`]: struct.BinaryHeap.html#method.peek_mut
-/// [`BinaryHeap`]: struct.BinaryHeap.html
+/// [`peek_mut`]: struct.BinaryHeapBase.html#method.peek_mut
+/// [`BinaryHeap`]: struct.BinaryHeapBase.html
 pub struct PeekMut<'a, T, K, U: Uxx, const N: usize>
 where
     T: Ord,

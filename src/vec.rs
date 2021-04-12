@@ -56,7 +56,7 @@ macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
         impl<T, const N: usize> VecBase<T, $Uxx, N> {
             /// Constructs a new, empty vector with a fixed capacity of `N`
-            /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+            /// `Vec` `const` constructor; wrap the returned value in [`VecBase`](../struct.VecBase.html)
             pub const fn $name() -> Self {
                 Self {
                     buffer: MaybeUninit::uninit(),
@@ -90,7 +90,6 @@ impl<T, const N: usize> Vec<T, N> {
     /// // allocate the vector in a static variable
     /// static mut X: Vec<u8, usize, 16> = Vec::new();
     /// ```
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
         Self::usize()
     }
@@ -291,7 +290,7 @@ impl<T, U: Uxx, const N: usize> VecBase<T, U, N> {
     /// difference, with each additional slot filled with value. If
     /// new_len is less than len, the Vec is simply truncated.
     ///
-    /// See also [`resize_default`](struct.Vec.html#method.resize_default).
+    /// See also [`resize_default`](struct.VecBase.html#method.resize_default).
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
     where
         T: Clone,
@@ -317,7 +316,7 @@ impl<T, U: Uxx, const N: usize> VecBase<T, U, N> {
     /// difference, with each additional slot filled with `U::truncate(0)`.
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
-    /// See also [`resize`](struct.Vec.html#method.resize).
+    /// See also [`resize`](struct.VecBase.html#method.resize).
     pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
     where
         T: Clone + Default,
@@ -652,9 +651,9 @@ impl<T, U: Uxx, const N: usize> FromIterator<T> for VecBase<T, U, N> {
     }
 }
 
-/// An iterator that moves out of an [`Vec`][`Vec`].
+/// An iterator that moves out of an [`VecBase`][`VecBase`].
 ///
-/// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
+/// This struct is created by calling the `into_iter` method on [`VecBase`][`VecBase`].
 ///
 /// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///

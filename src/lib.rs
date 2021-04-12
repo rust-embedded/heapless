@@ -43,13 +43,13 @@
 //!
 //! List of currently implemented data structures:
 //!
-//! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
-//! - [`IndexMap`](struct.IndexMap.html) -- hash table
-//! - [`IndexSet`](struct.IndexSet.html) -- hash set
-//! - [`LinearMap`](struct.LinearMap.html)
+//! - [`BinaryHeap`](binary_heap/struct.BinaryHeapBase.html) -- priority queue
+//! - [`IndexMap`](struct.IndexMapBase.html) -- hash table
+//! - [`IndexSet`](struct.IndexSetBase.html) -- hash set
+//! - [`LinearMap`](struct.LinearMapBase.html)
 //! - [`Pool`](pool/struct.Pool.html) -- lock-free memory pool
-//! - [`String`](struct.String.html)
-//! - [`Vec`](struct.Vec.html)
+//! - [`String`](struct.StringBase.html)
+//! - [`Vec`](struct.VecBase.html)
 //! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
 //! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
 //!
