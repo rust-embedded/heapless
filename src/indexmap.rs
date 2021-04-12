@@ -2,7 +2,7 @@ use core::{borrow::Borrow, fmt, iter::FromIterator, mem, num::NonZeroU32, ops, s
 
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use crate::{sealed::spsc::Uxx, Vec};
+use crate::{sealed::spsc::Uxx, VecBase};
 
 /// A [`heapless::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
 ///
@@ -45,7 +45,10 @@ use crate::{sealed::spsc::Uxx, Vec};
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub type FnvIndexMap<K, V, U, const N: usize> = IndexMap<K, V, BuildHasherDefault<FnvHasher>, U, N>;
+pub type FnvIndexMapBase<K, V, U, const N: usize> =
+    IndexMapBase<K, V, BuildHasherDefault<FnvHasher>, U, N>;
+
+pub type FnvIndexMap<K, V, const N: usize> = FnvIndexMapBase<K, V, usize, N>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 struct HashValue(u16);
@@ -118,7 +121,7 @@ macro_rules! probe_loop {
 }
 
 struct CoreMap<K, V, U: Uxx, const N: usize> {
-    entries: Vec<Bucket<K, V>, U, N>,
+    entries: VecBase<Bucket<K, V>, U, N>,
     indices: [Option<Pos>; N],
 }
 
@@ -130,7 +133,7 @@ where
         const INIT: Option<Pos> = None;
 
         CoreMap {
-            entries: Vec::default(),
+            entries: VecBase::default(),
             indices: [INIT; N],
         }
     }
@@ -358,7 +361,7 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub struct IndexMap<K, V, S, U: Uxx, const N: usize>
+pub struct IndexMapBase<K, V, S, U: Uxx, const N: usize>
 where
     K: Eq + Hash,
 {
@@ -366,7 +369,9 @@ where
     build_hasher: S,
 }
 
-impl<K, V, S, U: Uxx, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, U, N>
+pub type IndexMap<K, V, S, const N: usize> = IndexMapBase<K, V, S, usize, N>;
+
+impl<K, V, S, U: Uxx, const N: usize> IndexMapBase<K, V, BuildHasherDefault<S>, U, N>
 where
     K: Eq + Hash,
     S: Default + Hasher,
@@ -375,14 +380,14 @@ where
     ///
     /// **NOTE** This constructor will become a `const fn` in the future
     pub fn new() -> Self {
-        IndexMap {
+        IndexMapBase {
             build_hasher: BuildHasherDefault::default(),
             core: CoreMap::new_nonconst(),
         }
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -730,7 +735,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, S, U: Uxx, const N: usize> ops::Index<&'a Q> for IndexMap<K, V, S, U, N>
+impl<'a, K, Q, V, S, U: Uxx, const N: usize> ops::Index<&'a Q> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -744,7 +749,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, S, U: Uxx, const N: usize> ops::IndexMut<&'a Q> for IndexMap<K, V, S, U, N>
+impl<'a, K, Q, V, S, U: Uxx, const N: usize> ops::IndexMut<&'a Q> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -756,7 +761,7 @@ where
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> Clone for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> Clone for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + Clone,
     V: Clone,
@@ -771,7 +776,7 @@ where
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> fmt::Debug for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> fmt::Debug for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
@@ -783,14 +788,14 @@ where
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> Default for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> Default for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
     // N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn default() -> Self {
-        IndexMap {
+        IndexMapBase {
             build_hasher: <_>::default(),
             core: CoreMap::new_nonconst(),
         }
@@ -798,14 +803,14 @@ where
 }
 
 impl<K, V, S, S2, U: Uxx, U2: Uxx, const N: usize, const N2: usize>
-    PartialEq<IndexMap<K, V, S2, U2, N2>> for IndexMap<K, V, S, U, N>
+    PartialEq<IndexMapBase<K, V, S2, U2, N2>> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     V: Eq,
     S: BuildHasher,
     S2: BuildHasher,
 {
-    fn eq(&self, other: &IndexMap<K, V, S2, U2, N2>) -> bool {
+    fn eq(&self, other: &IndexMapBase<K, V, S2, U2, N2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -813,7 +818,7 @@ where
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> Eq for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> Eq for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     V: Eq,
@@ -821,7 +826,7 @@ where
 {
 }
 
-impl<K, V, S, U: Uxx, const N: usize> Extend<(K, V)> for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> Extend<(K, V)> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -836,7 +841,7 @@ where
     }
 }
 
-impl<'a, K, V, S, U: Uxx, const N: usize> Extend<(&'a K, &'a V)> for IndexMap<K, V, S, U, N>
+impl<'a, K, V, S, U: Uxx, const N: usize> Extend<(&'a K, &'a V)> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + Copy,
     V: Copy,
@@ -850,7 +855,7 @@ where
     }
 }
 
-impl<K, V, S, U: Uxx, const N: usize> FromIterator<(K, V)> for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> FromIterator<(K, V)> for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
@@ -859,13 +864,13 @@ where
     where
         I: IntoIterator<Item = (K, V)>,
     {
-        let mut map = IndexMap::default();
+        let mut map = IndexMapBase::default();
         map.extend(iterable);
         map
     }
 }
 
-impl<'a, K, V, S, U: Uxx, const N: usize> IntoIterator for &'a IndexMap<K, V, S, U, N>
+impl<'a, K, V, S, U: Uxx, const N: usize> IntoIterator for &'a IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -878,7 +883,7 @@ where
     }
 }
 
-impl<'a, K, V, S, U: Uxx, const N: usize> IntoIterator for &'a mut IndexMap<K, V, S, U, N>
+impl<'a, K, V, S, U: Uxx, const N: usize> IntoIterator for &'a mut IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher,
@@ -947,8 +952,8 @@ mod tests {
             mem::size_of::<FnvIndexMap<i16, u16, CAP>>(),
             CAP * mem::size_of::<u32>() + // indices
                 CAP * (mem::size_of::<i16>() + // key
-                     mem::size_of::<u16>() + // value
-                     mem::size_of::<u16>() // hash
+                    mem::size_of::<u16>() + // value
+                    mem::size_of::<u16>() // hash
                 ) + // buckets
                 mem::size_of::<usize>() // entries.length
         )

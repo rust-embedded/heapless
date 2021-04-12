@@ -1,21 +1,23 @@
-use crate::{sealed::spsc::Uxx, Vec};
+use crate::{sealed::spsc::Uxx, VecBase};
 use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
 
-pub struct LinearMap<K, V, U: Uxx, const N: usize> {
-    pub(crate) buffer: Vec<(K, V), U, N>,
+pub struct LinearMapBase<K, V, U: Uxx, const N: usize> {
+    pub(crate) buffer: VecBase<(K, V), U, N>,
 }
+
+pub type LinearMap<K, V, const N: usize> = LinearMapBase<K, V, usize, N>;
 
 macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
-        impl<K, V, const N: usize> LinearMap<K, V, $Uxx, N> {
+        impl<K, V, const N: usize> LinearMapBase<K, V, $Uxx, N> {
             /// Creates an empty `LinearMap`
             pub const fn $name() -> Self {
                 Self {
-                    buffer: Vec::$name(),
+                    buffer: VecBase::$name(),
                 }
             }
         }
@@ -26,7 +28,7 @@ impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
 
-impl<K, V, const N: usize> LinearMap<K, V, usize, N> {
+impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap` with length type of `usize`
     ///
     /// # Examples
@@ -41,11 +43,13 @@ impl<K, V, const N: usize> LinearMap<K, V, usize, N> {
     /// static mut MAP: LinearMap<&str, isize, usize, 8> = LinearMap::new();
     /// ```
     pub const fn new() -> Self {
-        Self { buffer: Vec::new() }
+        Self {
+            buffer: VecBase::new(),
+        }
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> LinearMapBase<K, V, U, N>
 where
     K: Eq,
 {
@@ -362,7 +366,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, U: Uxx, const N: usize> ops::Index<&'a Q> for LinearMap<K, V, U, N>
+impl<'a, K, V, Q, U: Uxx, const N: usize> ops::Index<&'a Q> for LinearMapBase<K, V, U, N>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -374,7 +378,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, U: Uxx, const N: usize> ops::IndexMut<&'a Q> for LinearMap<K, V, U, N>
+impl<'a, K, V, Q, U: Uxx, const N: usize> ops::IndexMut<&'a Q> for LinearMapBase<K, V, U, N>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -384,18 +388,18 @@ where
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> Default for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> Default for LinearMapBase<K, V, U, N>
 where
     K: Eq,
 {
     fn default() -> Self {
         Self {
-            buffer: Vec::default(),
+            buffer: VecBase::default(),
         }
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> Clone for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> Clone for LinearMapBase<K, V, U, N>
 where
     K: Eq + Clone,
     V: Clone,
@@ -407,7 +411,7 @@ where
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> fmt::Debug for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> fmt::Debug for LinearMapBase<K, V, U, N>
 where
     K: Eq + fmt::Debug,
     V: fmt::Debug,
@@ -417,7 +421,7 @@ where
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> FromIterator<(K, V)> for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> FromIterator<(K, V)> for LinearMapBase<K, V, U, N>
 where
     K: Eq,
 {
@@ -435,7 +439,7 @@ pub struct IntoIter<K, V, U: Uxx, const N: usize>
 where
     K: Eq,
 {
-    inner: <Vec<(K, V), U, N> as IntoIterator>::IntoIter,
+    inner: <VecBase<(K, V), U, N> as IntoIterator>::IntoIter,
 }
 
 impl<K, V, U: Uxx, const N: usize> Iterator for IntoIter<K, V, U, N>
@@ -448,7 +452,7 @@ where
     }
 }
 
-impl<'a, K, V, U: Uxx, const N: usize> IntoIterator for &'a LinearMap<K, V, U, N>
+impl<'a, K, V, U: Uxx, const N: usize> IntoIterator for &'a LinearMapBase<K, V, U, N>
 where
     K: Eq,
 {
@@ -480,7 +484,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> Drop for LinearMap<K, V, U, N> {
+impl<K, V, U: Uxx, const N: usize> Drop for LinearMapBase<K, V, U, N> {
     fn drop(&mut self) {
         // heapless::Vec implements drop right?
         drop(&self.buffer);
@@ -501,13 +505,13 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, U: Uxx, U2: Uxx, const N: usize, const N2: usize> PartialEq<LinearMap<K, V, U2, N2>>
-    for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, U2: Uxx, const N: usize, const N2: usize> PartialEq<LinearMapBase<K, V, U2, N2>>
+    for LinearMapBase<K, V, U, N>
 where
     K: Eq,
     V: PartialEq,
 {
-    fn eq(&self, other: &LinearMap<K, V, U2, N2>) -> bool {
+    fn eq(&self, other: &LinearMapBase<K, V, U2, N2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -515,7 +519,7 @@ where
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> Eq for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> Eq for LinearMapBase<K, V, U, N>
 where
     K: Eq,
     V: PartialEq,

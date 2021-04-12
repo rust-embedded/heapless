@@ -17,7 +17,7 @@ use core::{
 };
 
 use crate::sealed::{binary_heap::Kind, spsc::Uxx};
-use crate::vec::Vec;
+use crate::vec::VecBase;
 
 /// Min-heap
 pub enum Min {}
@@ -72,20 +72,22 @@ pub enum Max {}
 /// assert!(heap.is_empty())
 /// ```
 
-pub struct BinaryHeap<T, K, U: Uxx, const N: usize> {
+pub struct BinaryHeapBase<T, K, U: Uxx, const N: usize> {
     pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: Vec<T, U, N>,
+    pub(crate) data: VecBase<T, U, N>,
 }
+
+pub type BinaryHeap<T, K, const N: usize> = BinaryHeapBase<T, K, usize, N>;
 
 macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
-        impl<T, K, const N: usize> BinaryHeap<T, K, $Uxx, N> {
+        impl<T, K, const N: usize> BinaryHeapBase<T, K, $Uxx, N> {
             /* Constructors */
             /// Creates an empty BinaryHeap as a $K-heap.
             pub const fn $name() -> Self {
                 Self {
                     _kind: PhantomData,
-                    data: Vec::$name(),
+                    data: VecBase::$name(),
                 }
             }
         }
@@ -96,7 +98,7 @@ impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
 
-impl<T, K, const N: usize> BinaryHeap<T, K, usize, N> {
+impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
     /// Creates an empty BinaryHeap as a $K-heap.
     ///
@@ -113,12 +115,12 @@ impl<T, K, const N: usize> BinaryHeap<T, K, usize, N> {
     pub const fn new() -> Self {
         Self {
             _kind: PhantomData,
-            data: Vec::new(),
+            data: VecBase::new(),
         }
     }
 }
 
-impl<T, K, U: Uxx, const N: usize> BinaryHeap<T, K, U, N>
+impl<T, K, U: Uxx, const N: usize> BinaryHeapBase<T, K, U, N>
 where
     T: Ord,
     K: Kind,
@@ -441,7 +443,7 @@ where
     T: Ord,
     K: Kind,
 {
-    heap: &'a mut BinaryHeap<T, K, U, N>,
+    heap: &'a mut BinaryHeapBase<T, K, U, N>,
     sift: bool,
 }
 
@@ -506,20 +508,20 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
-impl<T, K, U: Uxx, const N: usize> Default for BinaryHeap<T, K, U, N>
+impl<T, K, U: Uxx, const N: usize> Default for BinaryHeapBase<T, K, U, N>
 where
     T: Ord,
     K: Kind,
 {
     fn default() -> Self {
-        BinaryHeap {
+        BinaryHeapBase {
             _kind: PhantomData,
-            data: Vec::default(),
+            data: VecBase::default(),
         }
     }
 }
 
-impl<T, K, U: Uxx, const N: usize> Clone for BinaryHeap<T, K, U, N>
+impl<T, K, U: Uxx, const N: usize> Clone for BinaryHeapBase<T, K, U, N>
 where
     K: Kind,
     T: Ord + Clone,
@@ -532,13 +534,13 @@ where
     }
 }
 
-impl<T, K, U: Uxx, const N: usize> Drop for BinaryHeap<T, K, U, N> {
+impl<T, K, U: Uxx, const N: usize> Drop for BinaryHeapBase<T, K, U, N> {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
     }
 }
 
-impl<T, K, U: Uxx, const N: usize> fmt::Debug for BinaryHeap<T, K, U, N>
+impl<T, K, U: Uxx, const N: usize> fmt::Debug for BinaryHeapBase<T, K, U, N>
 where
     K: Kind,
     T: Ord + fmt::Debug,
@@ -548,7 +550,7 @@ where
     }
 }
 
-impl<'a, T, K, U: Uxx, const N: usize> IntoIterator for &'a BinaryHeap<T, K, U, N>
+impl<'a, T, K, U: Uxx, const N: usize> IntoIterator for &'a BinaryHeapBase<T, K, U, N>
 where
     K: Kind,
     T: Ord,

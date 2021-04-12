@@ -1,13 +1,13 @@
 use crate::{
     sealed::{binary_heap::Kind as BinaryHeapKind, spsc::Uxx},
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+    BinaryHeapBase, IndexMapBase, IndexSetBase, LinearMapBase, StringBase, VecBase,
 };
 use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 // Sequential containers
 
-impl<T, KIND, U: Uxx, const N: usize> Serialize for BinaryHeap<T, KIND, U, N>
+impl<T, KIND, U: Uxx, const N: usize> Serialize for BinaryHeapBase<T, KIND, U, N>
 where
     T: Ord + Serialize,
     KIND: BinaryHeapKind,
@@ -24,7 +24,7 @@ where
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> Serialize for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> Serialize for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash + Serialize,
     S: BuildHasher,
@@ -41,7 +41,7 @@ where
     }
 }
 
-impl<T, U: Uxx, const N: usize> Serialize for Vec<T, U, N>
+impl<T, U: Uxx, const N: usize> Serialize for VecBase<T, U, N>
 where
     T: Serialize,
 {
@@ -59,7 +59,7 @@ where
 
 // Dictionaries
 
-impl<K, V, S, U: Uxx, const N: usize> Serialize for IndexMap<K, V, S, U, N>
+impl<K, V, S, U: Uxx, const N: usize> Serialize for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash + Serialize,
     S: BuildHasher,
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<K, V, U: Uxx, const N: usize> Serialize for LinearMap<K, V, U, N>
+impl<K, V, U: Uxx, const N: usize> Serialize for LinearMapBase<K, V, U, N>
 where
     K: Eq + Serialize,
     V: Serialize,
@@ -96,7 +96,7 @@ where
 
 // String containers
 
-impl<U: Uxx, const N: usize> Serialize for String<U, N> {
+impl<U: Uxx, const N: usize> Serialize for StringBase<U, N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

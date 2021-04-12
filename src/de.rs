@@ -1,6 +1,6 @@
 use crate::{
     sealed::{binary_heap::Kind as BinaryHeapKind, spsc::Uxx},
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
+    BinaryHeapBase, IndexMapBase, IndexSetBase, LinearMapBase, StringBase, VecBase,
 };
 use core::{fmt, marker::PhantomData};
 use hash32::{BuildHasherDefault, Hash, Hasher};
@@ -8,7 +8,7 @@ use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 // Sequential containers
 
-impl<'de, T, KIND, U: Uxx, const N: usize> Deserialize<'de> for BinaryHeap<T, KIND, U, N>
+impl<'de, T, KIND, U: Uxx, const N: usize> Deserialize<'de> for BinaryHeapBase<T, KIND, U, N>
 where
     T: Ord + Deserialize<'de>,
 
@@ -27,7 +27,7 @@ where
             T: Ord + Deserialize<'de>,
             KIND: BinaryHeapKind,
         {
-            type Value = BinaryHeap<T, KIND, U, N>;
+            type Value = BinaryHeapBase<T, KIND, U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -37,7 +37,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = BinaryHeap::default();
+                let mut values = BinaryHeapBase::default();
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
@@ -53,7 +53,7 @@ where
 }
 
 impl<'de, T, S, U: Uxx, const N: usize> Deserialize<'de>
-    for IndexSet<T, BuildHasherDefault<S>, U, N>
+    for IndexSetBase<T, BuildHasherDefault<S>, U, N>
 where
     T: Eq + Hash + Deserialize<'de>,
     S: Hasher + Default,
@@ -69,7 +69,7 @@ where
             T: Eq + Hash + Deserialize<'de>,
             S: Hasher + Default,
         {
-            type Value = IndexSet<T, BuildHasherDefault<S>, U, N>;
+            type Value = IndexSetBase<T, BuildHasherDefault<S>, U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -79,7 +79,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = IndexSet::new();
+                let mut values = IndexSetBase::new();
 
                 while let Some(value) = seq.next_element()? {
                     if values.insert(value).is_err() {
@@ -94,7 +94,7 @@ where
     }
 }
 
-impl<'de, T, U: Uxx, const N: usize> Deserialize<'de> for Vec<T, U, N>
+impl<'de, T, U: Uxx, const N: usize> Deserialize<'de> for VecBase<T, U, N>
 where
     T: Deserialize<'de>,
 {
@@ -108,7 +108,7 @@ where
         where
             T: Deserialize<'de>,
         {
-            type Value = Vec<T, U, N>;
+            type Value = VecBase<T, U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -118,7 +118,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = Vec::default();
+                let mut values = VecBase::default();
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
@@ -139,7 +139,7 @@ where
 // Dictionaries
 
 impl<'de, K, V, S, U: Uxx, const N: usize> Deserialize<'de>
-    for IndexMap<K, V, BuildHasherDefault<S>, U, N>
+    for IndexMapBase<K, V, BuildHasherDefault<S>, U, N>
 where
     K: Eq + Hash + Deserialize<'de>,
     V: Deserialize<'de>,
@@ -159,7 +159,7 @@ where
             V: Deserialize<'de>,
             S: Default + Hasher,
         {
-            type Value = IndexMap<K, V, BuildHasherDefault<S>, U, N>;
+            type Value = IndexMapBase<K, V, BuildHasherDefault<S>, U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map")
@@ -169,7 +169,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = IndexMap::new();
+                let mut values = IndexMapBase::new();
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {
@@ -184,7 +184,7 @@ where
     }
 }
 
-impl<'de, K, V, U: Uxx, const N: usize> Deserialize<'de> for LinearMap<K, V, U, N>
+impl<'de, K, V, U: Uxx, const N: usize> Deserialize<'de> for LinearMapBase<K, V, U, N>
 where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
@@ -200,7 +200,7 @@ where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
         {
-            type Value = LinearMap<K, V, U, N>;
+            type Value = LinearMapBase<K, V, U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map")
@@ -210,7 +210,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = LinearMap::default();
+                let mut values = LinearMapBase::default();
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {
@@ -227,7 +227,7 @@ where
 
 // String containers
 
-impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
+impl<'de, U: Uxx, const N: usize> Deserialize<'de> for StringBase<U, N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -235,7 +235,7 @@ impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
         struct ValueVisitor<'de, U: Uxx, const N: usize>(PhantomData<(&'de (), U)>);
 
         impl<'de, U: Uxx, const N: usize> de::Visitor<'de> for ValueVisitor<'de, U, N> {
-            type Value = String<U, N>;
+            type Value = StringBase<U, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(formatter, "a string no more than {} bytes long", N as u64)
@@ -245,7 +245,7 @@ impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
             where
                 E: de::Error,
             {
-                let mut s = String::default();
+                let mut s = StringBase::default();
                 s.push_str(v)
                     .map_err(|_| E::invalid_length(v.len(), &self))?;
                 Ok(s)
@@ -255,7 +255,7 @@ impl<'de, U: Uxx, const N: usize> Deserialize<'de> for String<U, N> {
             where
                 E: de::Error,
             {
-                let mut s = String::default();
+                let mut s = StringBase::default();
 
                 s.push_str(
                     core::str::from_utf8(v)

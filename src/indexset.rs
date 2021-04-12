@@ -1,5 +1,5 @@
 use crate::{
-    indexmap::{self, IndexMap},
+    indexmap::{self, IndexMapBase},
     sealed::spsc::Uxx,
 };
 use core::{borrow::Borrow, fmt, iter::FromIterator};
@@ -37,7 +37,10 @@ use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 ///     println!("{}", book);
 /// }
 /// ```
-pub type FnvIndexSet<T, U, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, U, N>;
+pub type FnvIndexSetBase<T, U, const N: usize> =
+    IndexSetBase<T, BuildHasherDefault<FnvHasher>, U, N>;
+
+pub type FnvIndexSet<T, const N: usize> = FnvIndexSetBase<T, usize, N>;
 
 /// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
 ///
@@ -77,14 +80,16 @@ pub type FnvIndexSet<T, U, const N: usize> = IndexSet<T, BuildHasherDefault<FnvH
 ///     println!("{}", book);
 /// }
 /// ```
-pub struct IndexSet<T, S, U: Uxx, const N: usize>
+pub struct IndexSetBase<T, S, U: Uxx, const N: usize>
 where
     T: Eq + Hash,
 {
-    map: IndexMap<T, (), S, U, N>,
+    map: IndexMapBase<T, (), S, U, N>,
 }
 
-impl<T, S, U: Uxx, const N: usize> IndexSet<T, BuildHasherDefault<S>, U, N>
+pub type IndexSet<T, S, const N: usize> = IndexSetBase<T, S, usize, N>;
+
+impl<T, S, U: Uxx, const N: usize> IndexSetBase<T, BuildHasherDefault<S>, U, N>
 where
     T: Eq + Hash,
     S: Default + Hasher,
@@ -93,13 +98,13 @@ where
     pub fn new() -> Self {
         assert!(N.is_power_of_two());
 
-        IndexSet {
-            map: IndexMap::new(),
+        IndexSetBase {
+            map: IndexMapBase::new(),
         }
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
@@ -166,7 +171,7 @@ where
     /// ```
     pub fn difference<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, S2, U2, N2>,
+        other: &'a IndexSetBase<T, S2, U2, N2>,
     ) -> Difference<'a, T, S2, U2, N2>
     where
         S2: BuildHasher,
@@ -201,7 +206,7 @@ where
     /// ```
     pub fn symmetric_difference<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, S2, U2, N2>,
+        other: &'a IndexSetBase<T, S2, U2, N2>,
     ) -> impl Iterator<Item = &'a T>
     where
         S2: BuildHasher,
@@ -230,7 +235,7 @@ where
     /// ```
     pub fn intersection<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, S2, U2, N2>,
+        other: &'a IndexSetBase<T, S2, U2, N2>,
     ) -> Intersection<'a, T, S2, U2, N2>
     where
         S2: BuildHasher,
@@ -262,7 +267,7 @@ where
     /// ```
     pub fn union<'a, S2, U2: Uxx, const N2: usize>(
         &'a self,
-        other: &'a IndexSet<T, S2, U2, N2>,
+        other: &'a IndexSetBase<T, S2, U2, N2>,
     ) -> impl Iterator<Item = &'a T>
     where
         S2: BuildHasher,
@@ -357,7 +362,10 @@ where
     /// b.insert(1).unwrap();
     /// assert_eq!(a.is_disjoint(&b), false);
     /// ```
-    pub fn is_disjoint<S2, U2: Uxx, const N2: usize>(&self, other: &IndexSet<T, S2, U2, N2>) -> bool
+    pub fn is_disjoint<S2, U2: Uxx, const N2: usize>(
+        &self,
+        other: &IndexSetBase<T, S2, U2, N2>,
+    ) -> bool
     where
         S2: BuildHasher,
     {
@@ -381,7 +389,10 @@ where
     /// set.insert(4).unwrap();
     /// assert_eq!(set.is_subset(&sup), false);
     /// ```
-    pub fn is_subset<S2, U2: Uxx, const N2: usize>(&self, other: &IndexSet<T, S2, U2, N2>) -> bool
+    pub fn is_subset<S2, U2: Uxx, const N2: usize>(
+        &self,
+        other: &IndexSetBase<T, S2, U2, N2>,
+    ) -> bool
     where
         S2: BuildHasher,
     {
@@ -408,7 +419,10 @@ where
     /// set.insert(2).unwrap();
     /// assert_eq!(set.is_superset(&sub), true);
     /// ```
-    pub fn is_superset<S2, U2: Uxx, const N2: usize>(&self, other: &IndexSet<T, S2, U2, N2>) -> bool
+    pub fn is_superset<S2, U2: Uxx, const N2: usize>(
+        &self,
+        other: &IndexSetBase<T, S2, U2, N2>,
+    ) -> bool
     where
         S2: BuildHasher,
     {
@@ -464,7 +478,7 @@ where
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> Clone for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> Clone for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash + Clone,
     S: Clone,
@@ -476,7 +490,7 @@ where
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> fmt::Debug for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> fmt::Debug for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash + fmt::Debug,
     S: BuildHasher,
@@ -486,31 +500,31 @@ where
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> Default for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> Default for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
 {
     fn default() -> Self {
-        IndexSet {
+        IndexSetBase {
             map: <_>::default(),
         }
     }
 }
 
 impl<T, S1, S2, U1: Uxx, U2: Uxx, const N1: usize, const N2: usize>
-    PartialEq<IndexSet<T, S2, U2, N2>> for IndexSet<T, S1, U1, N1>
+    PartialEq<IndexSetBase<T, S2, U2, N2>> for IndexSetBase<T, S1, U1, N1>
 where
     T: Eq + Hash,
     S1: BuildHasher,
     S2: BuildHasher,
 {
-    fn eq(&self, other: &IndexSet<T, S2, U2, N2>) -> bool {
+    fn eq(&self, other: &IndexSetBase<T, S2, U2, N2>) -> bool {
         self.len() == other.len() && self.is_subset(other)
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> Extend<T> for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> Extend<T> for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
@@ -523,7 +537,7 @@ where
     }
 }
 
-impl<'a, T, S, U: Uxx, const N: usize> Extend<&'a T> for IndexSet<T, S, U, N>
+impl<'a, T, S, U: Uxx, const N: usize> Extend<&'a T> for IndexSetBase<T, S, U, N>
 where
     T: 'a + Eq + Hash + Copy,
     S: BuildHasher,
@@ -536,7 +550,7 @@ where
     }
 }
 
-impl<T, S, U: Uxx, const N: usize> FromIterator<T> for IndexSet<T, S, U, N>
+impl<T, S, U: Uxx, const N: usize> FromIterator<T> for IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash,
     S: BuildHasher + Default,
@@ -545,13 +559,13 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        let mut set = IndexSet::default();
+        let mut set = IndexSetBase::default();
         set.extend(iter);
         set
     }
 }
 
-impl<'a, T, S, U: Uxx, const N: usize> IntoIterator for &'a IndexSet<T, S, U, N>
+impl<'a, T, S, U: Uxx, const N: usize> IntoIterator for &'a IndexSetBase<T, S, U, N>
 where
     T: Eq + Hash,
     S: BuildHasher,
@@ -590,7 +604,7 @@ where
     T: Eq + Hash,
 {
     iter: Iter<'a, T>,
-    other: &'a IndexSet<T, S, U, N>,
+    other: &'a IndexSetBase<T, S, U, N>,
 }
 
 impl<'a, T, S, U: Uxx, const N: usize> Iterator for Difference<'a, T, S, U, N>
@@ -616,7 +630,7 @@ where
     T: Eq + Hash,
 {
     iter: Iter<'a, T>,
-    other: &'a IndexSet<T, S, U, N>,
+    other: &'a IndexSetBase<T, S, U, N>,
 }
 
 impl<'a, T, S, U: Uxx, const N: usize> Iterator for Intersection<'a, T, S, U, N>

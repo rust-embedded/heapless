@@ -2,20 +2,24 @@ use core::{fmt, fmt::Write, hash, ops, str};
 
 use hash32;
 
-use crate::{sealed::spsc::Uxx, Vec};
+use crate::{sealed::spsc::Uxx, VecBase};
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
-pub struct String<U: Uxx, const N: usize> {
-    vec: Vec<u8, U, N>,
+pub struct StringBase<U: Uxx, const N: usize> {
+    vec: VecBase<u8, U, N>,
 }
+
+pub type String<const N: usize> = StringBase<usize, N>;
 
 macro_rules! impl_new {
     ($Uxx:ident, $name:ident) => {
-        impl<const N: usize> String<$Uxx, N> {
+        impl<const N: usize> StringBase<$Uxx, N> {
             /// Constructs a new, empty `String` with a fixed capacity of `N`
             #[inline]
             pub const fn $name() -> Self {
-                Self { vec: Vec::$name() }
+                Self {
+                    vec: VecBase::$name(),
+                }
             }
         }
     };
@@ -25,7 +29,7 @@ impl_new!(u8, u8);
 impl_new!(u16, u16);
 impl_new!(usize, usize);
 
-impl<const N: usize> String<usize, N> {
+impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` and length type of `usize`
     ///
     /// # Examples
@@ -43,11 +47,13 @@ impl<const N: usize> String<usize, N> {
     /// ```
     #[inline]
     pub const fn new() -> Self {
-        Self { vec: Vec::new() }
+        Self {
+            vec: VecBase::new(),
+        }
     }
 }
 
-impl<U: Uxx, const N: usize> String<U, N> {
+impl<U: Uxx, const N: usize> StringBase<U, N> {
     /// Converts a `String` into a byte vector.
     ///
     /// This consumes the `String`, so we do not need to copy its contents.
@@ -66,7 +72,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, U, N> {
+    pub fn into_bytes(self) -> VecBase<u8, U, N> {
         self.vec
     }
 
@@ -132,7 +138,7 @@ impl<U: Uxx, const N: usize> String<U, N> {
     /// }
     /// assert_eq!(s, "olleh");
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, U, N> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut VecBase<u8, U, N> {
         &mut self.vec
     }
 
@@ -301,33 +307,33 @@ impl<U: Uxx, const N: usize> String<U, N> {
     }
 }
 
-impl<U: Uxx, const N: usize> Default for String<U, N> {
+impl<U: Uxx, const N: usize> Default for StringBase<U, N> {
     fn default() -> Self {
         Self {
-            vec: Vec::default(),
+            vec: VecBase::default(),
         }
     }
 }
 
-impl<'a, U: Uxx, const N: usize> From<&'a str> for String<U, N> {
+impl<'a, U: Uxx, const N: usize> From<&'a str> for StringBase<U, N> {
     fn from(s: &'a str) -> Self {
-        let mut new = String::default();
+        let mut new = StringBase::default();
         new.push_str(s).unwrap();
         new
     }
 }
 
-impl<U: Uxx, const N: usize> str::FromStr for String<U, N> {
+impl<U: Uxx, const N: usize> str::FromStr for StringBase<U, N> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut new = String::default();
+        let mut new = StringBase::default();
         new.push_str(s)?;
         Ok(new)
     }
 }
 
-impl<U: Uxx, const N: usize> Clone for String<U, N> {
+impl<U: Uxx, const N: usize> Clone for StringBase<U, N> {
     fn clone(&self) -> Self {
         Self {
             vec: self.vec.clone(),
@@ -335,33 +341,33 @@ impl<U: Uxx, const N: usize> Clone for String<U, N> {
     }
 }
 
-impl<U: Uxx, const N: usize> fmt::Debug for String<U, N> {
+impl<U: Uxx, const N: usize> fmt::Debug for StringBase<U, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<U: Uxx, const N: usize> fmt::Display for String<U, N> {
+impl<U: Uxx, const N: usize> fmt::Display for StringBase<U, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<U: Uxx, const N: usize> hash::Hash for String<U, N> {
+impl<U: Uxx, const N: usize> hash::Hash for StringBase<U, N> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher)
     }
 }
 
-impl<U: Uxx, const N: usize> hash32::Hash for String<U, N> {
+impl<U: Uxx, const N: usize> hash32::Hash for StringBase<U, N> {
     #[inline]
     fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
         <str as hash32::Hash>::hash(self, hasher)
     }
 }
 
-impl<U: Uxx, const N: usize> fmt::Write for String<U, N> {
+impl<U: Uxx, const N: usize> fmt::Write for StringBase<U, N> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -371,7 +377,7 @@ impl<U: Uxx, const N: usize> fmt::Write for String<U, N> {
     }
 }
 
-impl<U: Uxx, const N: usize> ops::Deref for String<U, N> {
+impl<U: Uxx, const N: usize> ops::Deref for StringBase<U, N> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -379,34 +385,34 @@ impl<U: Uxx, const N: usize> ops::Deref for String<U, N> {
     }
 }
 
-impl<U: Uxx, const N: usize> ops::DerefMut for String<U, N> {
+impl<U: Uxx, const N: usize> ops::DerefMut for StringBase<U, N> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<U: Uxx, const N: usize> AsRef<str> for String<U, N> {
+impl<U: Uxx, const N: usize> AsRef<str> for StringBase<U, N> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<U: Uxx, const N: usize> AsRef<[u8]> for String<U, N> {
+impl<U: Uxx, const N: usize> AsRef<[u8]> for StringBase<U, N> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<String<U2, N2>>
-    for String<U1, N1>
+impl<U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<StringBase<U2, N2>>
+    for StringBase<U1, N1>
 {
-    fn eq(&self, rhs: &String<U2, N2>) -> bool {
+    fn eq(&self, rhs: &StringBase<U2, N2>) -> bool {
         str::eq(&**self, &**rhs)
     }
 
-    fn ne(&self, rhs: &String<U2, N2>) -> bool {
+    fn ne(&self, rhs: &StringBase<U2, N2>) -> bool {
         str::ne(&**self, &**rhs)
     }
 }
@@ -444,7 +450,7 @@ impl<U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<String<U2, N2
 // }
 
 // String<U, N> == str
-impl<U: Uxx, const N: usize> PartialEq<str> for String<U, N> {
+impl<U: Uxx, const N: usize> PartialEq<str> for StringBase<U, N> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(&self[..], &other[..])
@@ -456,7 +462,7 @@ impl<U: Uxx, const N: usize> PartialEq<str> for String<U, N> {
 }
 
 // String<U, N> == &'str
-impl<U: Uxx, const N: usize> PartialEq<&str> for String<U, N> {
+impl<U: Uxx, const N: usize> PartialEq<&str> for StringBase<U, N> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(&self[..], &other[..])
@@ -468,36 +474,36 @@ impl<U: Uxx, const N: usize> PartialEq<&str> for String<U, N> {
 }
 
 // str == String<U, N>
-impl<U: Uxx, const N: usize> PartialEq<String<U, N>> for str {
+impl<U: Uxx, const N: usize> PartialEq<StringBase<U, N>> for str {
     #[inline]
-    fn eq(&self, other: &String<U, N>) -> bool {
+    fn eq(&self, other: &StringBase<U, N>) -> bool {
         str::eq(&self[..], &other[..])
     }
     #[inline]
-    fn ne(&self, other: &String<U, N>) -> bool {
+    fn ne(&self, other: &StringBase<U, N>) -> bool {
         str::ne(&self[..], &other[..])
     }
 }
 
 // &'str == String<U, N>
-impl<U: Uxx, const N: usize> PartialEq<String<U, N>> for &str {
+impl<U: Uxx, const N: usize> PartialEq<StringBase<U, N>> for &str {
     #[inline]
-    fn eq(&self, other: &String<U, N>) -> bool {
+    fn eq(&self, other: &StringBase<U, N>) -> bool {
         str::eq(&self[..], &other[..])
     }
     #[inline]
-    fn ne(&self, other: &String<U, N>) -> bool {
+    fn ne(&self, other: &StringBase<U, N>) -> bool {
         str::ne(&self[..], &other[..])
     }
 }
 
-impl<U: Uxx, const N: usize> Eq for String<U, N> {}
+impl<U: Uxx, const N: usize> Eq for StringBase<U, N> {}
 
 macro_rules! impl_from_num {
     ($num:ty, $size:expr) => {
-        impl<U: Uxx, const N: usize> From<$num> for String<U, N> {
+        impl<U: Uxx, const N: usize> From<$num> for StringBase<U, N> {
             fn from(s: $num) -> Self {
-                let mut new = String::default();
+                let mut new = StringBase::default();
                 write!(&mut new, "{}", s).unwrap();
                 new
             }

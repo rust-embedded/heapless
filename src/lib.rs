@@ -72,13 +72,13 @@
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
-pub use binary_heap::BinaryHeap;
+pub use binary_heap::{BinaryHeap, BinaryHeapBase};
 pub use histbuf::HistoryBuffer;
-pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
-pub use indexset::{FnvIndexSet, IndexSet};
-pub use linear_map::LinearMap;
-pub use string::String;
-pub use vec::Vec;
+pub use indexmap::{Bucket, FnvIndexMap, FnvIndexMapBase, IndexMap, IndexMapBase, Pos};
+pub use indexset::{FnvIndexSet, FnvIndexSetBase, IndexSet, IndexSetBase};
+pub use linear_map::{LinearMap, LinearMapBase};
+pub use string::{String, StringBase};
+pub use vec::{Vec, VecBase};
 
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
 mod histbuf;
