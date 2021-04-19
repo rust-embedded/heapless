@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Pool` and `MPMC` now works on `thumbv6m`
 - [breaking-change] `String` has had `utf8` related methods removed as this can be done via `str`
 - [breaking-change] No data structures implement `AsSlice` traits any more, now using `AsRef` and `AsMut`
+- `IndexMap::new()` is now a `const-fn`
 
 ## [v0.6.1] - 2021-03-02
 

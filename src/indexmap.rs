@@ -360,25 +360,16 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
-pub struct IndexMap<K, V, S, const N: usize>
-where
-    K: Eq + Hash,
-{
+pub struct IndexMap<K, V, S, const N: usize> {
     core: CoreMap<K, V, N>,
     build_hasher: S,
 }
 
-impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N>
-where
-    K: Eq + Hash,
-    S: Default + Hasher,
-{
+impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexMap`.
-    ///
-    /// **NOTE** This constructor will become a `const fn` in the future
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         IndexMap {
-            build_hasher: BuildHasherDefault::default(),
+            build_hasher: BuildHasherDefault::new(),
             core: CoreMap::new(),
         }
     }
@@ -737,7 +728,6 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    //   N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     type Output = V;
 
@@ -751,7 +741,6 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    //   N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("key not found")
@@ -763,7 +752,6 @@ where
     K: Eq + Hash + Clone,
     V: Clone,
     S: Clone,
-    //    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -778,7 +766,6 @@ where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
     S: BuildHasher,
-    //    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -789,7 +776,6 @@ impl<K, V, S, const N: usize> Default for IndexMap<K, V, S, N>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    // N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn default() -> Self {
         IndexMap {
