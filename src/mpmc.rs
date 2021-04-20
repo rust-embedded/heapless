@@ -586,5 +586,4 @@ mod tests {
         // this should not block forever
         assert!(q.enqueue(0).is_err());
     }
-
 }
