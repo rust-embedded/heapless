@@ -224,18 +224,27 @@ impl<T, const N: usize> Queue<T, N> {
         }
     }
 
+    // The memory for enqueueing is "owned" by the tail pointer.
+    // NOTE: This internal function uses internal mutability to allow the [`Producer`] to enqueue
+    // items without doing pointer arithmetic and accessing internal fields of this type.
+    unsafe fn inner_enqueue_unchecked(&self, val: T) {
+        let current_tail = self.tail.load(Ordering::Relaxed);
+
+        (self.buffer.get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
+        self.tail
+            .store(Self::increment(current_tail), Ordering::Release);
+    }
+
+    /// Adds an `item` to the end of the queue, without checking if it's full
+    ///
     /// # Unsafety
     ///
     /// If the queue is full this operation will leak a value (T's destructor won't run on
     /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
     /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
     /// twice.
-    unsafe fn enqueue_unchecked(&mut self, val: T) {
-        let current_tail = self.tail.load(Ordering::Relaxed);
-
-        (self.buffer.get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
-        self.tail
-            .store(Self::increment(current_tail), Ordering::Release);
+    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
+        self.inner_enqueue_unchecked(val)
     }
 
     // The memory for dequeuing is "owned" by the head pointer,.
@@ -254,6 +263,29 @@ impl<T, const N: usize> Queue<T, N> {
 
             Some(v)
         }
+    }
+
+    // The memory for dequeuing is "owned" by the head pointer,.
+    // NOTE: This internal function uses internal mutability to allow the [`Consumer`] to dequeue
+    // items without doing pointer arithmetic and accessing internal fields of this type.
+    unsafe fn inner_dequeue_unchecked(&self) -> T {
+        let current_head = self.head.load(Ordering::Relaxed);
+        let v = (self.buffer.get_unchecked(current_head).get() as *const T).read();
+
+        self.head
+            .store(Self::increment(current_head), Ordering::Release);
+
+        v
+    }
+
+    /// Returns the item in the front of the queue, without checking if there is something in the
+    /// queue
+    ///
+    /// # Unsafety
+    ///
+    /// If the queue is empty this operation will return uninitialized memory.
+    pub unsafe fn dequeue_unchecked(&mut self) -> T {
+        self.inner_dequeue_unchecked()
     }
 
     /// Splits a queue into producer and consumer endpoints
@@ -464,6 +496,15 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
         unsafe { self.rb.inner_dequeue() }
     }
 
+    /// Returns the item in the front of the queue, without checking if there are elements in the
+    /// queue
+    ///
+    /// See [`Queue::dequeue_unchecked`] for safety
+    #[inline]
+    pub unsafe fn dequeue_unchecked(&mut self) -> T {
+        self.rb.inner_dequeue_unchecked()
+    }
+
     /// Returns if there are any items to dequeue. When this returns `true`, at least the
     /// first subsequent dequeue will succeed
     #[inline]
@@ -505,12 +546,18 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
 }
 
 impl<'a, T, const N: usize> Producer<'a, T, N> {
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
+    /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full
     #[inline]
     pub fn enqueue(&mut self, val: T) -> Result<(), T> {
         unsafe { self.rb.inner_enqueue(val) }
+    }
+
+    /// Adds an `item` to the end of the queue, without checking if the queue is full
+    ///
+    /// See [`Queue::enqueue_unchecked`] for safety
+    #[inline]
+    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
+        self.rb.inner_enqueue_unchecked(val)
     }
 
     /// Returns if there is any space to enqueue a new item. When this returns true, at
