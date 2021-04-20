@@ -479,7 +479,7 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
     loop {
         cell = buffer.add(usize::from(pos & mask));
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = i16::from(seq) - i16::from(pos.wrapping_add(1));
+        let dif = (seq as i8) - ((pos.wrapping_add(1)) as i8);
 
         if dif == 0 {
             if dequeue_pos
@@ -496,11 +496,7 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
         } else if dif < 0 {
             return None;
         } else {
-            if pos == 255 && dif == 255 {
-                return None;
-            } else {
-                pos = dequeue_pos.load(Ordering::Relaxed);
-            }
+            pos = dequeue_pos.load(Ordering::Relaxed);
         }
     }
 
@@ -523,7 +519,7 @@ unsafe fn enqueue<T>(
     loop {
         cell = buffer.add(usize::from(pos & mask));
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = i16::from(seq) - i16::from(pos);
+        let dif = (seq as i8) - (pos as i8);
 
         if dif == 0 {
             if enqueue_pos
@@ -568,13 +564,26 @@ mod tests {
     }
 
     #[test]
-    fn blocking() {
+    fn drain_at_pos255() {
         let q = Q2::new();
         for _ in 0..255 {
-            q.enqueue(0).unwrap();
-            q.dequeue();
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
         }
         // this should not block forever
-        q.dequeue();
+        assert_eq!(q.dequeue(), None);
+    }
+
+    #[test]
+    fn full_at_wrapped_pos0() {
+        let q = Q2::new();
+        for _ in 0..254 {
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
+        }
+        assert!(q.enqueue(0).is_ok());
+        assert!(q.enqueue(0).is_ok());
+        // this should not block forever
+        assert!(q.enqueue(0).is_err());
     }
 }
