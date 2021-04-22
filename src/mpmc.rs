@@ -481,7 +481,7 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
     loop {
         cell = buffer.add(usize::from(pos & mask));
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as i8) - ((pos.wrapping_add(1)) as i8);
+        let dif = (seq as i8).wrapping_sub((pos.wrapping_add(1)) as i8);
 
         if dif == 0 {
             if dequeue_pos
@@ -521,7 +521,7 @@ unsafe fn enqueue<T>(
     loop {
         cell = buffer.add(usize::from(pos & mask));
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as i8) - (pos as i8);
+        let dif = (seq as i8).wrapping_sub(pos as i8);
 
         if dif == 0 {
             if enqueue_pos

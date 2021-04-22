@@ -131,6 +131,7 @@ fn mpmc_contention() {
 
             for i in 0..(16 * N) {
                 sum = sum.wrapping_add(i);
+                println!("enqueue {}", i);
                 while let Err(_) = Q.enqueue(i) {}
             }
 
@@ -146,6 +147,7 @@ fn mpmc_contention() {
                     match Q.dequeue() {
                         Some(v) => {
                             sum = sum.wrapping_add(v);
+                            println!("dequeue {}", v);
                             break;
                         }
                         _ => {}
