@@ -169,7 +169,7 @@ where
             where
                 A: MapAccess<'de>,
             {
-                let mut values = IndexMapBase::new();
+                let mut values = IndexMapBase::default();
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {

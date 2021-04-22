@@ -323,10 +323,7 @@ where
 /// or create your own.
 ///
 /// Note that the capacity of the `IndexMapBase` must be a power of 2.
-pub struct IndexMapBase<K, V, S, U: Uxx, const N: usize>
-where
-    K: Eq + Hash,
-{
+pub struct IndexMapBase<K, V, S, U: Uxx, const N: usize> {
     core: CoreMap<K, V, U, N>,
     build_hasher: S,
 }
@@ -374,21 +371,38 @@ where
 /// ```
 pub type IndexMap<K, V, S, const N: usize> = IndexMapBase<K, V, S, usize, N>;
 
-impl<K, V, S, U: Uxx, const N: usize> IndexMapBase<K, V, BuildHasherDefault<S>, U, N>
-where
-    K: Eq + Hash,
-    S: Default + Hasher,
-{
-    /// Creates an empty `IndexMap`.
-    ///
-    /// **NOTE** This constructor will become a `const fn` in the future
-    pub fn new() -> Self {
-        IndexMapBase {
-            build_hasher: BuildHasherDefault::default(),
-            core: CoreMap::new_nonconst(),
+macro_rules! impl_new {
+    ($Uxx:ident, $name:ident, $doc:tt) => {
+        impl<K, V, S, const N: usize> IndexMapBase<K, V, BuildHasherDefault<S>, $Uxx, N> {
+            #[doc = $doc]
+            pub const fn $name() -> Self {
+                IndexMapBase {
+                    build_hasher: BuildHasherDefault::new(),
+                    core: CoreMap {
+                        entries: VecBase::$name(),
+                        indices: [None; N],
+                    },
+                }
+            }
         }
-    }
+    };
 }
+
+impl_new!(
+    u8,
+    u8,
+    "Constructs an empty `IndexMap` with capacity of `N`. **Safety**: Assumes `N <= u8::MAX`."
+);
+impl_new!(
+    u16,
+    u16,
+    "Constructs an empty `IndexMap` with capacity of `N`. **Safety**: Assumes `N <= u16::MAX`."
+);
+impl_new!(
+    usize,
+    new,
+    "Constructs an empty `IndexMap` with capacity of `N`."
+);
 
 impl<K, V, S, U: Uxx, const N: usize> IndexMapBase<K, V, S, U, N>
 where
@@ -743,7 +757,6 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    //   N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     type Output = V;
 
@@ -757,7 +770,6 @@ where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
     S: BuildHasher,
-    //   N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("key not found")
@@ -769,7 +781,6 @@ where
     K: Eq + Hash + Clone,
     V: Clone,
     S: Clone,
-    //    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -784,7 +795,6 @@ where
     K: Eq + Hash + fmt::Debug,
     V: fmt::Debug,
     S: BuildHasher,
-    //    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -795,7 +805,6 @@ impl<K, V, S, U: Uxx, const N: usize> Default for IndexMapBase<K, V, S, U, N>
 where
     K: Eq + Hash,
     S: BuildHasher + Default,
-    // N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
 {
     fn default() -> Self {
         IndexMapBase {

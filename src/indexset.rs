@@ -102,7 +102,7 @@ where
         assert!(N.is_power_of_two());
 
         IndexSetBase {
-            map: IndexMapBase::new(),
+            map: IndexMapBase::default(),
         }
     }
 }

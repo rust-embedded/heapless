@@ -12,7 +12,7 @@ use core::slice;
 /// ```
 /// use heapless::HistoryBuffer;
 ///
-/// // Initialize a new buffer with 8 elements, all initially zero.
+/// // Initialize a new buffer with 8 elements.
 /// let mut buf = HistoryBuffer::<_, 8>::new();
 ///
 /// // Starts with no data

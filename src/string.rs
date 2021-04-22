@@ -417,38 +417,6 @@ impl<U1: Uxx, U2: Uxx, const N1: usize, const N2: usize> PartialEq<StringBase<U2
     }
 }
 
-// macro_rules! impl_eq {
-//     ($lhs:ty, $rhs:ty) => {
-//         impl<'a, 'b, U, N> PartialEq<$rhs> for $lhs
-//         where
-//             N: ArrayLength<u8>,
-//         {
-//             #[inline]
-//             fn eq(&self, other: &$rhs) -> bool {
-//                 str::eq(&self[..], &other[..])
-//             }
-//             #[inline]
-//             fn ne(&self, other: &$rhs) -> bool {
-//                 str::ne(&self[..], &other[..])
-//             }
-//         }
-
-//         impl<'a, 'b, U, N> PartialEq<$lhs> for $rhs
-//         where
-//             N: ArrayLength<u8>,
-//         {
-//             #[inline]
-//             fn eq(&self, other: &$lhs) -> bool {
-//                 str::eq(&self[..], &other[..])
-//             }
-//             #[inline]
-//             fn ne(&self, other: &$lhs) -> bool {
-//                 str::ne(&self[..], &other[..])
-//             }
-//         }
-//     };
-// }
-
 // String<U, N> == str
 impl<U: Uxx, const N: usize> PartialEq<str> for StringBase<U, N> {
     #[inline]
