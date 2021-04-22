@@ -263,8 +263,29 @@
 <span id="260">260</span>
 <span id="261">261</span>
 <span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="kw">use</span> <span class="ident">generic_array</span>::{<span class="ident">sequence</span>::<span class="ident">GenericSequence</span>, <span class="ident">ArrayLength</span>, <span class="ident">GenericArray</span>};
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">mem</span>::<span class="ident">MaybeUninit</span>;
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">ptr</span>;
+<span class="kw">use</span> <span class="ident">core</span>::<span class="ident">slice</span>;
 
 <span class="doccomment">/// A &quot;history buffer&quot;, similar to a write-only ring buffer of fixed length.</span>
 <span class="doccomment">///</span>
@@ -272,67 +293,58 @@
 <span class="doccomment">/// is overwritten. Thus, the buffer is useful to keep a history of values with</span>
 <span class="doccomment">/// some desired depth, and for example calculate a rolling average.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The buffer is always fully initialized; depending on the constructor, the</span>
-<span class="doccomment">/// initial value is either the default value for the element type or a supplied</span>
-<span class="doccomment">/// initial value. This simplifies the API and is mostly irrelevant for the</span>
-<span class="doccomment">/// intended use case.</span>
-<span class="doccomment">///</span>
 <span class="doccomment">/// # Examples</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use heapless::HistoryBuffer;</span>
-<span class="doccomment">/// use heapless::consts::*;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// // Initialize a new buffer with 8 elements, all initially zero.</span>
-<span class="doccomment">/// let mut buf = HistoryBuffer::&lt;_, U8&gt;::new();</span>
+<span class="doccomment">/// // Initialize a new buffer with 8 elements.</span>
+<span class="doccomment">/// let mut buf = HistoryBuffer::&lt;_, 8&gt;::new();</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// // Starts with no data</span>
+<span class="doccomment">/// assert_eq!(buf.recent(), None);</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// buf.write(3);</span>
 <span class="doccomment">/// buf.write(5);</span>
 <span class="doccomment">/// buf.extend(&amp;[4, 4]);</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // The most recent written element is a four.</span>
-<span class="doccomment">/// assert_eq!(buf.recent(), &amp;4);</span>
+<span class="doccomment">/// assert_eq!(buf.recent(), Some(&amp;4));</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // To access all elements in an unspecified order, use `as_slice()`.</span>
 <span class="doccomment">/// for el in buf.as_slice() { println!(&quot;{:?}&quot;, el); }</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// // Now we can prepare an average of all values, which comes out to 2.</span>
+<span class="doccomment">/// // Now we can prepare an average of all values, which comes out to 4.</span>
 <span class="doccomment">/// let avg = buf.as_slice().iter().sum::&lt;usize&gt;() / buf.len();</span>
-<span class="doccomment">/// assert_eq!(avg, 2);</span>
+<span class="doccomment">/// assert_eq!(avg, 4);</span>
 <span class="doccomment">/// ```</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-{
-    <span class="ident">data</span>: <span class="ident">GenericArray</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
+    <span class="ident">data</span>: [<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>; <span class="ident">N</span>],
     <span class="ident">write_at</span>: <span class="ident">usize</span>,
+    <span class="ident">filled</span>: <span class="ident">bool</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">T</span>: <span class="ident">Default</span>,
-{
-    <span class="doccomment">/// Constructs a new history buffer, where every element is filled with the</span>
-    <span class="doccomment">/// default value of the type `T`.</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="kw">const</span> <span class="ident">INIT</span>: <span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MaybeUninit</span>::<span class="ident">uninit</span>();
+
+    <span class="doccomment">/// Constructs a new history buffer.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// `HistoryBuffer` currently cannot be constructed in `const` context.</span>
+    <span class="doccomment">/// The construction of a `HistoryBuffer` works in `const` contexts.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Examples</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::HistoryBuffer;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Allocate a 16-element buffer on the stack</span>
-    <span class="doccomment">/// let mut x: HistoryBuffer&lt;u8, U16&gt; = HistoryBuffer::new();</span>
-    <span class="doccomment">/// // All elements are zero</span>
-    <span class="doccomment">/// assert_eq!(x.as_slice(), [0; 16]);</span>
+    <span class="doccomment">/// let x: HistoryBuffer&lt;u8, 16&gt; = HistoryBuffer::new();</span>
+    <span class="doccomment">/// assert_eq!(x.len(), 0);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">data</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
+            <span class="ident">data</span>: [<span class="self">Self</span>::<span class="ident">INIT</span>; <span class="ident">N</span>],
             <span class="ident">write_at</span>: <span class="number">0</span>,
+            <span class="ident">filled</span>: <span class="bool-val">false</span>,
         }
     }
 
@@ -343,10 +355,9 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">T</span>: <span class="ident">Clone</span>,
+    <span class="ident">T</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
     <span class="doccomment">/// Constructs a new history buffer, where every element is the given value.</span>
     <span class="doccomment">///</span>
@@ -354,17 +365,18 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::HistoryBuffer;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Allocate a 16-element buffer on the stack</span>
-    <span class="doccomment">/// let mut x: HistoryBuffer&lt;u8, U16&gt; = HistoryBuffer::new_with(4);</span>
+    <span class="doccomment">/// let mut x: HistoryBuffer&lt;u8, 16&gt; = HistoryBuffer::new_with(4);</span>
     <span class="doccomment">/// // All elements are four</span>
     <span class="doccomment">/// assert_eq!(x.as_slice(), [4; 16]);</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with</span>(<span class="ident">t</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">data</span>: <span class="ident">GenericArray</span>::<span class="ident">generate</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">t</span>.<span class="ident">clone</span>()),
+            <span class="ident">data</span>: [<span class="ident">MaybeUninit</span>::<span class="ident">new</span>(<span class="ident">t</span>); <span class="ident">N</span>],
             <span class="ident">write_at</span>: <span class="number">0</span>,
+            <span class="ident">filled</span>: <span class="bool-val">true</span>,
         }
     }
 
@@ -374,22 +386,36 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-{
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Returns the current fill level of the buffer.</span>
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">filled</span> {
+            <span class="ident">N</span>
+        } <span class="kw">else</span> {
+            <span class="self">self</span>.<span class="ident">write_at</span>
+        }
+    }
+
     <span class="doccomment">/// Returns the capacity of the buffer, which is the length of the</span>
     <span class="doccomment">/// underlying backing array.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">len</span>()
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+        <span class="ident">N</span>
     }
 
     <span class="doccomment">/// Writes an element to the buffer, overwriting the oldest value.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">t</span>: <span class="ident">T</span>) {
-        <span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">write_at</span>] <span class="op">=</span> <span class="ident">t</span>;
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">filled</span> {
+            <span class="comment">// Drop the old before we overwrite it.</span>
+            <span class="kw">unsafe</span> { <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">write_at</span>].<span class="ident">as_mut_ptr</span>()) }
+        }
+        <span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">write_at</span>] <span class="op">=</span> <span class="ident">MaybeUninit</span>::<span class="ident">new</span>(<span class="ident">t</span>);
+
         <span class="self">self</span>.<span class="ident">write_at</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">write_at</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span>() {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">write_at</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">capacity</span>() {
             <span class="self">self</span>.<span class="ident">write_at</span> <span class="op">=</span> <span class="number">0</span>;
+            <span class="self">self</span>.<span class="ident">filled</span> <span class="op">=</span> <span class="bool-val">true</span>;
         }
     }
 
@@ -412,32 +438,32 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::HistoryBuffer;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut x: HistoryBuffer&lt;u8, U16&gt; = HistoryBuffer::new();</span>
+    <span class="doccomment">/// let mut x: HistoryBuffer&lt;u8, 16&gt; = HistoryBuffer::new();</span>
     <span class="doccomment">/// x.write(4);</span>
     <span class="doccomment">/// x.write(10);</span>
-    <span class="doccomment">/// assert_eq!(x.recent(), &amp;10);</span>
+    <span class="doccomment">/// assert_eq!(x.recent(), Some(&amp;10));</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">recent</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">recent</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">write_at</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>]
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">filled</span> {
+                <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">capacity</span>() <span class="op">-</span> <span class="number">1</span>].<span class="ident">as_ptr</span>() })
+            } <span class="kw">else</span> {
+                <span class="prelude-val">None</span>
+            }
         } <span class="kw">else</span> {
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">write_at</span> <span class="op">-</span> <span class="number">1</span>]
+            <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>[<span class="self">self</span>.<span class="ident">write_at</span> <span class="op">-</span> <span class="number">1</span>].<span class="ident">as_ptr</span>() })
         }
     }
 
     <span class="doccomment">/// Returns the array slice backing the buffer, without keeping track</span>
     <span class="doccomment">/// of the write position. Therefore, the element order is unspecified.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">T</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>
+        <span class="kw">unsafe</span> { <span class="ident">slice</span>::<span class="ident">from_raw_parts</span>(<span class="self">self</span>.<span class="ident">data</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span>, <span class="self">self</span>.<span class="ident">len</span>()) }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-{
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>)
     <span class="kw">where</span>
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>,
@@ -448,10 +474,9 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="lifetime">&#39;a</span> <span class="op">+</span> <span class="ident">Clone</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>)
     <span class="kw">where</span>
@@ -461,26 +486,37 @@
     }
 }
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="kw">unsafe</span> {
+            <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="ident">ptr</span>::<span class="ident">slice_from_raw_parts_mut</span>(
+                <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+                <span class="self">self</span>.<span class="ident">len</span>(),
+            ))
+        }
+    }
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">consts</span>::<span class="kw-2">*</span>, <span class="ident">HistoryBuffer</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">HistoryBuffer</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">new</span>() {
-        <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new_with</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new_with</span>(<span class="number">1</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">len</span>(), <span class="number">4</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">1</span>; <span class="number">4</span>]);
 
-        <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">0</span>; <span class="number">4</span>]);
+        <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), []);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">write</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">1</span>);
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">4</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">1</span>, <span class="number">4</span>, <span class="number">0</span>, <span class="number">0</span>]);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">1</span>, <span class="number">4</span>]);
 
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">5</span>);
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">6</span>);
@@ -493,33 +529,35 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">clear</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new_with</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new_with</span>(<span class="number">1</span>);
         <span class="ident">x</span>.<span class="ident">clear</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">0</span>; <span class="number">4</span>]);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), []);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
         <span class="ident">x</span>.<span class="ident">clear_with</span>(<span class="number">1</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">1</span>; <span class="number">4</span>]);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">recent</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="kw-2">&amp;</span><span class="number">0</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="prelude-val">None</span>);
 
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">1</span>);
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">4</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="kw-2">&amp;</span><span class="number">4</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">4</span>));
 
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">5</span>);
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">6</span>);
         <span class="ident">x</span>.<span class="ident">write</span>(<span class="number">10</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="kw-2">&amp;</span><span class="number">10</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">recent</span>(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">10</span>));
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">as_slice</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">U4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer</span>::<span class="ident">new</span>();
+
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), []);
 
         <span class="ident">x</span>.<span class="ident">extend</span>([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>].<span class="ident">iter</span>());
 
@@ -527,4 +565,5 @@
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "heapless";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

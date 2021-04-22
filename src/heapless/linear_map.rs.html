@@ -545,123 +545,41 @@
 <span id="542">542</span>
 <span id="543">543</span>
 <span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="kw">use</span> <span class="ident">core</span>::{
-    <span class="ident">borrow</span>::<span class="ident">Borrow</span>,
-    <span class="ident">fmt</span>,
-    <span class="ident">iter</span>::<span class="ident">FromIterator</span>,
-    <span class="ident">mem</span>::{<span class="self">self</span>, <span class="ident">MaybeUninit</span>},
-    <span class="ident">ops</span>, <span class="ident">ptr</span>, <span class="ident">slice</span>,
-};
-
-<span class="kw">use</span> <span class="ident">generic_array</span>::{<span class="ident">ArrayLength</span>, <span class="ident">GenericArray</span>};
-
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Vec</span>;
+<span class="kw">use</span> <span class="ident">core</span>::{<span class="ident">borrow</span>::<span class="ident">Borrow</span>, <span class="ident">fmt</span>, <span class="ident">iter</span>::<span class="ident">FromIterator</span>, <span class="ident">mem</span>, <span class="ident">ops</span>, <span class="ident">slice</span>};
 
 <span class="doccomment">/// A fixed capacity map / dictionary that performs lookups via linear search</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note that as this map doesn&#39;t use hashing so most operations are **O(N)** instead of O(1)</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span> <span class="kw">pub</span> <span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">GenericArray</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>), <span class="ident">N</span><span class="op">&gt;</span><span class="op">&gt;</span>)
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
-    <span class="ident">K</span>: <span class="ident">Eq</span>;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// `LinearMap` `const` constructor; wrap the returned value in</span>
-    <span class="doccomment">/// [`LinearMap`](../struct.LinearMap.html)</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">buffer</span>: <span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">Vec</span>::<span class="ident">new</span>(),
-        }
-    }
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>), <span class="ident">N</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
-    <span class="ident">K</span>: <span class="ident">Eq</span>,
-{
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates an empty `LinearMap`</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Examples</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // allocate the map on the stack</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;&amp;str, isize, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;&amp;str, isize, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // allocate the map in a static variable</span>
-    <span class="doccomment">/// static mut MAP: LinearMap&lt;&amp;str, isize, U8&gt; = LinearMap(heapless::i::LinearMap::new());</span>
+    <span class="doccomment">/// static mut MAP: LinearMap&lt;&amp;str, isize, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">LinearMap</span>(<span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">LinearMap</span>::<span class="ident">new</span>())
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> { <span class="ident">buffer</span>: <span class="ident">Vec</span>::<span class="ident">new</span>() }
     }
+}
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">K</span>: <span class="ident">Eq</span>,
+{
     <span class="doccomment">/// Returns the number of elements that the map can hold</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Computes in **O(1)** time</span>
@@ -670,13 +588,12 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let map: LinearMap&lt;&amp;str, isize, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let map: LinearMap&lt;&amp;str, isize, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// assert_eq!(map.capacity(), 8);</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="ident">N</span>::<span class="ident">to_usize</span>()
+        <span class="ident">N</span>
     }
 
     <span class="doccomment">/// Clears the map, removing all key-value pairs</span>
@@ -687,15 +604,14 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// map.clear();</span>
     <span class="doccomment">/// assert!(map.is_empty());</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">clear</span>()
+        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">clear</span>()
     }
 
     <span class="doccomment">/// Returns true if the map contains a value for the specified key.</span>
@@ -706,9 +622,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// assert_eq!(map.contains_key(&amp;1), true);</span>
     <span class="doccomment">/// assert_eq!(map.contains_key(&amp;2), false);</span>
@@ -725,9 +640,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// assert_eq!(map.get(&amp;1), Some(&amp;&quot;a&quot;));</span>
     <span class="doccomment">/// assert_eq!(map.get(&amp;2), None);</span>
@@ -750,9 +664,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// if let Some(x) = map.get_mut(&amp;1) {</span>
     <span class="doccomment">///     *x = &quot;b&quot;;</span>
@@ -777,15 +690,14 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut a: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// assert_eq!(a.len(), 0);</span>
     <span class="doccomment">/// a.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// assert_eq!(a.len(), 1);</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">len</span>
+        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">len</span>()
     }
 
     <span class="doccomment">/// Inserts a key-value pair into the map.</span>
@@ -800,9 +712,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// assert_eq!(map.insert(37, &quot;a&quot;).unwrap(), None);</span>
     <span class="doccomment">/// assert_eq!(map.is_empty(), false);</span>
     <span class="doccomment">///</span>
@@ -816,7 +727,7 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">value</span>));
         }
 
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">push</span>((<span class="ident">key</span>, <span class="ident">value</span>))<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">push</span>((<span class="ident">key</span>, <span class="ident">value</span>))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 
@@ -828,9 +739,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut a: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// assert!(a.is_empty());</span>
     <span class="doccomment">/// a.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// assert!(!a.is_empty());</span>
@@ -845,9 +755,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(&quot;a&quot;, 1).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;b&quot;, 2).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;c&quot;, 3).unwrap();</span>
@@ -858,7 +767,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> {
         <span class="ident">Iter</span> {
-            <span class="ident">iter</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">as_slice</span>().<span class="ident">iter</span>(),
+            <span class="ident">iter</span>: <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_slice</span>().<span class="ident">iter</span>(),
         }
     }
 
@@ -869,9 +778,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(&quot;a&quot;, 1).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;b&quot;, 2).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;c&quot;, 3).unwrap();</span>
@@ -887,7 +795,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">IterMut</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> {
         <span class="ident">IterMut</span> {
-            <span class="ident">iter</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_slice</span>().<span class="ident">iter_mut</span>(),
+            <span class="ident">iter</span>: <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_slice</span>().<span class="ident">iter_mut</span>(),
         }
     }
 
@@ -897,9 +805,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(&quot;a&quot;, 1).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;b&quot;, 2).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;c&quot;, 3).unwrap();</span>
@@ -921,9 +828,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(1, &quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// assert_eq!(map.remove(&amp;1), Some(&quot;a&quot;));</span>
     <span class="doccomment">/// assert_eq!(map.remove(&amp;1), None);</span>
@@ -939,7 +845,7 @@
             .<span class="ident">find</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="kw">_</span>, <span class="ident">k</span>)<span class="op">|</span> <span class="ident">k</span>.<span class="ident">borrow</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">key</span>)
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">idx</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">idx</span>);
 
-        <span class="ident">idx</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">swap_remove</span>(<span class="ident">idx</span>).<span class="number">1</span>)
+        <span class="ident">idx</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">swap_remove</span>(<span class="ident">idx</span>).<span class="number">1</span>)
     }
 
     <span class="doccomment">/// An iterator visiting all values in arbitrary order</span>
@@ -948,9 +854,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(&quot;a&quot;, 1).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;b&quot;, 2).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;c&quot;, 3).unwrap();</span>
@@ -969,9 +874,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::LinearMap;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, U8&gt; = LinearMap::new();</span>
+    <span class="doccomment">/// let mut map: LinearMap&lt;_, _, 8&gt; = LinearMap::new();</span>
     <span class="doccomment">/// map.insert(&quot;a&quot;, 1).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;b&quot;, 2).unwrap();</span>
     <span class="doccomment">/// map.insert(&quot;c&quot;, 3).unwrap();</span>
@@ -989,9 +893,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span>, <span class="ident">Q</span><span class="op">&gt;</span> <span class="ident">ops</span>::<span class="ident">Index</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Q</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">Q</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">ops</span>::<span class="ident">Index</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Q</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Eq</span>,
     <span class="ident">Q</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
 {
@@ -1002,9 +905,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span>, <span class="ident">Q</span><span class="op">&gt;</span> <span class="ident">ops</span>::<span class="ident">IndexMut</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Q</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">Q</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">ops</span>::<span class="ident">IndexMut</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Q</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Q</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Eq</span>,
     <span class="ident">Q</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
 {
@@ -1013,9 +915,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span>,
 {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1023,22 +924,20 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span>,
     <span class="ident">V</span>: <span class="ident">Clone</span>,
 {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">LinearMap</span> {
-            <span class="ident">buffer</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">clone</span>(),
-        })
+        <span class="self">Self</span> {
+            <span class="ident">buffer</span>: <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">clone</span>(),
+        }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">fmt</span>::<span class="ident">Debug</span>,
     <span class="ident">V</span>: <span class="ident">fmt</span>::<span class="ident">Debug</span>,
 {
@@ -1047,9 +946,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span>,
 {
     <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
@@ -1057,22 +955,20 @@
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">out</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new</span>();
-        <span class="ident">out</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">extend</span>(<span class="ident">iter</span>);
+        <span class="ident">out</span>.<span class="ident">buffer</span>.<span class="ident">extend</span>(<span class="ident">iter</span>);
         <span class="ident">out</span>
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span>,
 {
     <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>), <span class="ident">N</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">IntoIterator</span><span class="op">&gt;</span>::<span class="ident">IntoIter</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">K</span>, <span class="ident">V</span>);
@@ -1081,28 +977,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
-    <span class="ident">K</span>: <span class="ident">Eq</span>,
-{
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="ident">K</span>, <span class="ident">V</span>);
-    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">IntoIter</span> {
-        <span class="comment">// FIXME this may result in a memcpy at runtime</span>
-        <span class="kw">let</span> <span class="ident">lm</span> <span class="op">=</span> <span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span>, <span class="kw">unsafe</span> { <span class="ident">MaybeUninit</span>::<span class="ident">uninit</span>().<span class="ident">assume_init</span>() });
-        <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="self">self</span>);
-
-        <span class="self">Self</span>::<span class="ident">IntoIter</span> {
-            <span class="ident">inner</span>: <span class="kw">crate</span>::<span class="ident">Vec</span>(<span class="ident">lm</span>.<span class="ident">buffer</span>).<span class="ident">into_iter</span>(),
-        }
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
     <span class="ident">K</span>: <span class="ident">Eq</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">K</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">V</span>);
@@ -1133,13 +1009,12 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
-    <span class="ident">K</span>: <span class="ident">Eq</span>,
-{
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">unsafe</span> { <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_slice</span>()) }
+        <span class="comment">// heapless::Vec implements drop right?</span>
+        <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buffer</span>);
+        <span class="comment">// original code below</span>
+        <span class="comment">// unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }</span>
     }
 }
 
@@ -1155,12 +1030,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span>, <span class="ident">N2</span><span class="op">&gt;</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N2</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N2</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">K</span>: <span class="ident">Eq</span>,
     <span class="ident">V</span>: <span class="ident">PartialEq</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
-    <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">len</span>()
@@ -1170,30 +1043,29 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">V</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">K</span>: <span class="ident">Eq</span>,
     <span class="ident">V</span>: <span class="ident">PartialEq</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span>(<span class="ident">K</span>, <span class="ident">V</span>)<span class="op">&gt;</span>,
 {
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">consts</span>::<span class="kw-2">*</span>, <span class="ident">LinearMap</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">LinearMap</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">static_new</span>() {
-        <span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">_L</span>: <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">i32</span>, <span class="ident">U8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">LinearMap</span>(<span class="kw">crate</span>::<span class="ident">i</span>::<span class="ident">LinearMap</span>::<span class="ident">new</span>());
+        <span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">_L</span>: <span class="ident">LinearMap</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">i32</span>, <span class="number">8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="ident">new</span>();
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">partial_eq</span>() {
         {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">U1</span><span class="op">&gt;</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="number">1</span><span class="op">&gt;</span>::<span class="ident">new</span>();
             <span class="ident">a</span>.<span class="ident">insert</span>(<span class="string">&quot;k1&quot;</span>, <span class="string">&quot;v1&quot;</span>).<span class="ident">unwrap</span>();
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">U2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="number">2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
             <span class="ident">b</span>.<span class="ident">insert</span>(<span class="string">&quot;k1&quot;</span>, <span class="string">&quot;v1&quot;</span>).<span class="ident">unwrap</span>();
 
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">=</span><span class="op">=</span> <span class="ident">b</span>);
@@ -1204,17 +1076,20 @@
         }
 
         {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">U2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="number">2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
             <span class="ident">a</span>.<span class="ident">insert</span>(<span class="string">&quot;k1&quot;</span>, <span class="string">&quot;v1&quot;</span>).<span class="ident">unwrap</span>();
             <span class="ident">a</span>.<span class="ident">insert</span>(<span class="string">&quot;k2&quot;</span>, <span class="string">&quot;v2&quot;</span>).<span class="ident">unwrap</span>();
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">U2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">LinearMap</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="number">2</span><span class="op">&gt;</span>::<span class="ident">new</span>();
             <span class="ident">b</span>.<span class="ident">insert</span>(<span class="string">&quot;k2&quot;</span>, <span class="string">&quot;v2&quot;</span>).<span class="ident">unwrap</span>();
             <span class="ident">b</span>.<span class="ident">insert</span>(<span class="string">&quot;k1&quot;</span>, <span class="string">&quot;v1&quot;</span>).<span class="ident">unwrap</span>();
 
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">=</span><span class="op">=</span> <span class="ident">b</span>);
         }
     }
+
+    <span class="comment">// TODO: drop test</span>
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "heapless";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

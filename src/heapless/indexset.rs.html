@@ -635,53 +635,10 @@
 <span id="632">632</span>
 <span id="633">633</span>
 <span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
-<span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
-<span id="649">649</span>
-<span id="650">650</span>
-<span id="651">651</span>
-<span id="652">652</span>
-<span id="653">653</span>
-<span id="654">654</span>
-<span id="655">655</span>
-<span id="656">656</span>
-<span id="657">657</span>
-<span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
-<span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
-<span id="669">669</span>
-<span id="670">670</span>
-<span id="671">671</span>
-<span id="672">672</span>
-<span id="673">673</span>
-<span id="674">674</span>
 </pre><div class="example-wrap"><pre class="rust ">
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">indexmap</span>::{<span class="self">self</span>, <span class="ident">IndexMap</span>};
 <span class="kw">use</span> <span class="ident">core</span>::{<span class="ident">borrow</span>::<span class="ident">Borrow</span>, <span class="ident">fmt</span>, <span class="ident">iter</span>::<span class="ident">FromIterator</span>};
-
-<span class="kw">use</span> <span class="ident">generic_array</span>::{<span class="ident">typenum</span>::<span class="ident">PowerOfTwo</span>, <span class="ident">ArrayLength</span>};
 <span class="kw">use</span> <span class="ident">hash32</span>::{<span class="ident">BuildHasher</span>, <span class="ident">BuildHasherDefault</span>, <span class="ident">FnvHasher</span>, <span class="ident">Hash</span>, <span class="ident">Hasher</span>};
-
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">indexmap</span>::{<span class="self">self</span>, <span class="ident">Bucket</span>, <span class="ident">IndexMap</span>, <span class="ident">Pos</span>};
 
 <span class="doccomment">/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the</span>
 <span class="doccomment">/// default FNV hasher.</span>
@@ -691,10 +648,9 @@
 <span class="doccomment">/// # Examples</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-<span class="doccomment">/// use heapless::consts::*;</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // A hash set with a capacity of 16 elements allocated on the stack</span>
-<span class="doccomment">/// let mut books = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+<span class="doccomment">/// let mut books = FnvIndexSet::&lt;_, 16&gt;::new();</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // Add some books.</span>
 <span class="doccomment">/// books.insert(&quot;A Dance With Dragons&quot;).unwrap();</span>
@@ -716,7 +672,7 @@
 <span class="doccomment">///     println!(&quot;{}&quot;, book);</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FnvIndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">BuildHasherDefault</span><span class="op">&lt;</span><span class="ident">FnvHasher</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FnvIndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BuildHasherDefault</span><span class="op">&lt;</span><span class="ident">FnvHasher</span><span class="op">&gt;</span>, <span class="ident">N</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).</span>
 <span class="doccomment">///</span>
@@ -732,10 +688,9 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-<span class="doccomment">/// use heapless::consts::*;</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // A hash set with a capacity of 16 elements allocated on the stack</span>
-<span class="doccomment">/// let mut books = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+<span class="doccomment">/// let mut books = FnvIndexSet::&lt;_, 16&gt;::new();</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // Add some books.</span>
 <span class="doccomment">/// books.insert(&quot;A Dance With Dragons&quot;).unwrap();</span>
@@ -757,33 +712,32 @@
 <span class="doccomment">///     println!(&quot;{}&quot;, book);</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
-    <span class="ident">map</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">T</span>, (), <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>,
+    <span class="ident">map</span>: <span class="ident">IndexMap</span><span class="op">&lt;</span><span class="ident">T</span>, (), <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">BuildHasherDefault</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BuildHasherDefault</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Hasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">PowerOfTwo</span>,
 {
     <span class="doccomment">/// Creates an empty `IndexSet`</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">N</span>.<span class="ident">is_power_of_two</span>());
+
         <span class="ident">IndexSet</span> {
             <span class="ident">map</span>: <span class="ident">IndexMap</span>::<span class="ident">new</span>(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// Returns the number of elements the set can hold</span>
     <span class="doccomment">///</span>
@@ -791,9 +745,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let set = FnvIndexSet::&lt;i32, U16&gt;::new();</span>
+    <span class="doccomment">/// let set = FnvIndexSet::&lt;i32, 16&gt;::new();</span>
     <span class="doccomment">/// assert_eq!(set.capacity(), 16);</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
@@ -806,9 +759,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">/// set.insert(&quot;a&quot;).unwrap();</span>
     <span class="doccomment">/// set.insert(&quot;b&quot;).unwrap();</span>
     <span class="doccomment">///</span>
@@ -830,30 +782,28 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, U16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, 16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Can be seen as `a - b`.</span>
     <span class="doccomment">/// for x in a.difference(&amp;b) {</span>
     <span class="doccomment">///     println!(&quot;{}&quot;, x); // Print 1</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let diff: FnvIndexSet&lt;_, U16&gt; = a.difference(&amp;b).collect();</span>
-    <span class="doccomment">/// assert_eq!(diff, [1].iter().collect::&lt;FnvIndexSet&lt;_, U16&gt;&gt;());</span>
+    <span class="doccomment">/// let diff: FnvIndexSet&lt;_, 16&gt; = a.difference(&amp;b).collect();</span>
+    <span class="doccomment">/// assert_eq!(diff, [1].iter().collect::&lt;FnvIndexSet&lt;_, 16&gt;&gt;());</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Note that difference is not symmetric,</span>
     <span class="doccomment">/// // and `b - a` means something else:</span>
-    <span class="doccomment">/// let diff: FnvIndexSet&lt;_, U16&gt; = b.difference(&amp;a).collect();</span>
-    <span class="doccomment">/// assert_eq!(diff, [4].iter().collect::&lt;FnvIndexSet&lt;_, U16&gt;&gt;());</span>
+    <span class="doccomment">/// let diff: FnvIndexSet&lt;_, 16&gt; = b.difference(&amp;a).collect();</span>
+    <span class="doccomment">/// assert_eq!(diff, [4].iter().collect::&lt;FnvIndexSet&lt;_, 16&gt;&gt;());</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>
+        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="ident">Difference</span> {
@@ -869,28 +819,26 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, U16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, 16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Print 1, 4 in that order order.</span>
     <span class="doccomment">/// for x in a.symmetric_difference(&amp;b) {</span>
     <span class="doccomment">///     println!(&quot;{}&quot;, x);</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let diff1: FnvIndexSet&lt;_, U16&gt; = a.symmetric_difference(&amp;b).collect();</span>
-    <span class="doccomment">/// let diff2: FnvIndexSet&lt;_, U16&gt; = b.symmetric_difference(&amp;a).collect();</span>
+    <span class="doccomment">/// let diff1: FnvIndexSet&lt;_, 16&gt; = a.symmetric_difference(&amp;b).collect();</span>
+    <span class="doccomment">/// let diff2: FnvIndexSet&lt;_, 16&gt; = b.symmetric_difference(&amp;a).collect();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(diff1, diff2);</span>
-    <span class="doccomment">/// assert_eq!(diff1, [1, 4].iter().collect::&lt;FnvIndexSet&lt;_, U16&gt;&gt;());</span>
+    <span class="doccomment">/// assert_eq!(diff1, [1, 4].iter().collect::&lt;FnvIndexSet&lt;_, 16&gt;&gt;());</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">symmetric_difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">symmetric_difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>,
+        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="self">self</span>.<span class="ident">difference</span>(<span class="ident">other</span>).<span class="ident">chain</span>(<span class="ident">other</span>.<span class="ident">difference</span>(<span class="self">self</span>))
@@ -903,25 +851,23 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, U16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, 16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Print 2, 3 in that order.</span>
     <span class="doccomment">/// for x in a.intersection(&amp;b) {</span>
     <span class="doccomment">///     println!(&quot;{}&quot;, x);</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let intersection: FnvIndexSet&lt;_, U16&gt; = a.intersection(&amp;b).collect();</span>
-    <span class="doccomment">/// assert_eq!(intersection, [2, 3].iter().collect::&lt;FnvIndexSet&lt;_, U16&gt;&gt;());</span>
+    <span class="doccomment">/// let intersection: FnvIndexSet&lt;_, 16&gt; = a.intersection(&amp;b).collect();</span>
+    <span class="doccomment">/// assert_eq!(intersection, [2, 3].iter().collect::&lt;FnvIndexSet&lt;_, 16&gt;&gt;());</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>
+        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="ident">Intersection</span> {
@@ -937,25 +883,23 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, U16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut a: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut b: FnvIndexSet&lt;_, 16&gt; = [4, 2, 3, 4].iter().cloned().collect();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// // Print 1, 2, 3, 4 in that order.</span>
     <span class="doccomment">/// for x in a.union(&amp;b) {</span>
     <span class="doccomment">///     println!(&quot;{}&quot;, x);</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let union: FnvIndexSet&lt;_, U16&gt; = a.union(&amp;b).collect();</span>
-    <span class="doccomment">/// assert_eq!(union, [1, 2, 3, 4].iter().collect::&lt;FnvIndexSet&lt;_, U16&gt;&gt;());</span>
+    <span class="doccomment">/// let union: FnvIndexSet&lt;_, 16&gt; = a.union(&amp;b).collect();</span>
+    <span class="doccomment">/// assert_eq!(union, [1, 2, 3, 4].iter().collect::&lt;FnvIndexSet&lt;_, 16&gt;&gt;());</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">union</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">union</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>,
+        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="self">self</span>.<span class="ident">iter</span>().<span class="ident">chain</span>(<span class="ident">other</span>.<span class="ident">difference</span>(<span class="self">self</span>))
@@ -967,9 +911,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, U16&gt; = FnvIndexSet::new();</span>
+    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, 16&gt; = FnvIndexSet::new();</span>
     <span class="doccomment">/// assert_eq!(v.len(), 0);</span>
     <span class="doccomment">/// v.insert(1).unwrap();</span>
     <span class="doccomment">/// assert_eq!(v.len(), 1);</span>
@@ -984,9 +927,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, U16&gt; = FnvIndexSet::new();</span>
+    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, 16&gt; = FnvIndexSet::new();</span>
     <span class="doccomment">/// assert!(v.is_empty());</span>
     <span class="doccomment">/// v.insert(1).unwrap();</span>
     <span class="doccomment">/// assert!(!v.is_empty());</span>
@@ -1001,9 +943,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, U16&gt; = FnvIndexSet::new();</span>
+    <span class="doccomment">/// let mut v: FnvIndexSet&lt;_, 16&gt; = FnvIndexSet::new();</span>
     <span class="doccomment">/// v.insert(1).unwrap();</span>
     <span class="doccomment">/// v.clear();</span>
     <span class="doccomment">/// assert!(v.is_empty());</span>
@@ -1021,9 +962,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let set: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let set: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
     <span class="doccomment">/// assert_eq!(set.contains(&amp;1), true);</span>
     <span class="doccomment">/// assert_eq!(set.contains(&amp;4), false);</span>
     <span class="doccomment">/// ```</span>
@@ -1042,10 +982,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let a: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut b = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let a: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut b = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(a.is_disjoint(&amp;b), true);</span>
     <span class="doccomment">/// b.insert(4).unwrap();</span>
@@ -1053,9 +992,8 @@
     <span class="doccomment">/// b.insert(1).unwrap();</span>
     <span class="doccomment">/// assert_eq!(a.is_disjoint(&amp;b), false);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_disjoint</span><span class="op">&lt;</span><span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_disjoint</span><span class="op">&lt;</span><span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="self">self</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="op">!</span><span class="ident">other</span>.<span class="ident">contains</span>(<span class="ident">v</span>))
@@ -1068,10 +1006,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let sup: FnvIndexSet&lt;_, U16&gt; = [1, 2, 3].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let sup: FnvIndexSet&lt;_, 16&gt; = [1, 2, 3].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(set.is_subset(&amp;sup), true);</span>
     <span class="doccomment">/// set.insert(2).unwrap();</span>
@@ -1079,9 +1016,8 @@
     <span class="doccomment">/// set.insert(4).unwrap();</span>
     <span class="doccomment">/// assert_eq!(set.is_subset(&amp;sup), false);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_subset</span><span class="op">&lt;</span><span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_subset</span><span class="op">&lt;</span><span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="self">self</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">other</span>.<span class="ident">contains</span>(<span class="ident">v</span>))
@@ -1094,10 +1030,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let sub: FnvIndexSet&lt;_, U16&gt; = [1, 2].iter().cloned().collect();</span>
-    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let sub: FnvIndexSet&lt;_, 16&gt; = [1, 2].iter().cloned().collect();</span>
+    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(set.is_superset(&amp;sub), false);</span>
     <span class="doccomment">///</span>
@@ -1108,9 +1043,8 @@
     <span class="doccomment">/// set.insert(2).unwrap();</span>
     <span class="doccomment">/// assert_eq!(set.is_superset(&amp;sub), true);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_superset</span><span class="op">&lt;</span><span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_superset</span><span class="op">&lt;</span><span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
     <span class="kw">where</span>
-        <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
     {
         <span class="ident">other</span>.<span class="ident">is_subset</span>(<span class="self">self</span>)
@@ -1126,9 +1060,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(set.insert(2).unwrap(), true);</span>
     <span class="doccomment">/// assert_eq!(set.insert(2).unwrap(), false);</span>
@@ -1150,9 +1083,8 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use heapless::FnvIndexSet;</span>
-    <span class="doccomment">/// use heapless::consts::*;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, U16&gt;::new();</span>
+    <span class="doccomment">/// let mut set = FnvIndexSet::&lt;_, 16&gt;::new();</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// set.insert(2).unwrap();</span>
     <span class="doccomment">/// assert_eq!(set.remove(&amp;2), true);</span>
@@ -1167,11 +1099,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>,
     <span class="ident">S</span>: <span class="ident">Clone</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -1180,22 +1111,20 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">fmt</span>::<span class="ident">Debug</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="ident">f</span>.<span class="ident">debug_set</span>().<span class="ident">entries</span>(<span class="self">self</span>.<span class="ident">iter</span>()).<span class="ident">finish</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span> <span class="op">+</span> <span class="ident">Default</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">IndexSet</span> {
@@ -1204,24 +1133,22 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N1</span>, <span class="ident">N2</span>, <span class="ident">S1</span>, <span class="ident">S2</span><span class="op">&gt;</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N1</span>, <span class="ident">S1</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S1</span>, <span class="ident">S2</span>, <span class="kw">const</span> <span class="ident">N1</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">N2</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span><span class="op">&gt;</span>
+    <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S1</span>, <span class="ident">N1</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S1</span>: <span class="ident">BuildHasher</span>,
     <span class="ident">S2</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N1</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">N2</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N2</span>, <span class="ident">S2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S2</span>, <span class="ident">N2</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">other</span>.<span class="ident">len</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">is_subset</span>(<span class="ident">other</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iterable</span>: <span class="ident">I</span>)
     <span class="kw">where</span>
@@ -1231,11 +1158,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="lifetime">&#39;a</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Copy</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iterable</span>: <span class="ident">I</span>)
     <span class="kw">where</span>
@@ -1245,11 +1171,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span> <span class="op">+</span> <span class="ident">Default</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
@@ -1261,11 +1186,10 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>;
     <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>;
@@ -1295,21 +1219,19 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="ident">iter</span>: <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>,
+    <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Difference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>;
 
@@ -1323,21 +1245,19 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="ident">iter</span>: <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>,
+    <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">IndexSet</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span>, <span class="ident">S</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Intersection</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">S</span>, <span class="ident">N</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">S</span>: <span class="ident">BuildHasher</span>,
     <span class="ident">T</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-    <span class="ident">N</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">T</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Pos</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>;
 
@@ -1351,4 +1271,5 @@
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "heapless";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

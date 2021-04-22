@@ -108,12 +108,6 @@
 <span id="105">105</span>
 <span id="106">106</span>
 <span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! `static` friendly data structures that don&#39;t require dynamic memory allocation</span>
 <span class="doccomment">//!</span>
@@ -127,17 +121,14 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use heapless::Vec; // fixed capacity `std::Vec`</span>
-<span class="doccomment">//! use heapless::consts::U8; // type level integer used to specify capacity</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // on the stack</span>
-<span class="doccomment">//! let mut xs: Vec&lt;u8, U8&gt; = Vec::new(); // can hold up to 8 elements</span>
+<span class="doccomment">//! let mut xs: Vec&lt;u8, 8&gt; = Vec::new(); // can hold up to 8 elements</span>
 <span class="doccomment">//! xs.push(42).unwrap();</span>
 <span class="doccomment">//! assert_eq!(xs.pop(), Some(42));</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // in a `static` variable</span>
-<span class="doccomment">//! // (because `const-fn` has not been fully stabilized you need to use the helper structs in</span>
-<span class="doccomment">//! // the `i` module, which must be wrapped in a tuple struct)</span>
-<span class="doccomment">//! static mut XS: Vec&lt;u8, U8&gt; = Vec(heapless::i::Vec::new());</span>
+<span class="doccomment">//! static mut XS: Vec&lt;u8, 8&gt; = Vec::new();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let xs = unsafe { &amp;mut XS };</span>
 <span class="doccomment">//!</span>
@@ -145,7 +136,7 @@
 <span class="doccomment">//! assert_eq!(xs.pop(), Some(42));</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // in the heap (though kind of pointless because no reallocation)</span>
-<span class="doccomment">//! let mut ys: Box&lt;Vec&lt;u8, U8&gt;&gt; = Box::new(Vec::new());</span>
+<span class="doccomment">//! let mut ys: Box&lt;Vec&lt;u8, 8&gt;&gt; = Box::new(Vec::new());</span>
 <span class="doccomment">//! ys.push(42).unwrap();</span>
 <span class="doccomment">//! assert_eq!(ys.pop(), Some(42));</span>
 <span class="doccomment">//! ```</span>
@@ -183,7 +174,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Minimum Supported Rust Version (MSRV)</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! This crate is guaranteed to compile on stable Rust 1.36 and up with its default set of features.</span>
+<span class="doccomment">//! This crate is guaranteed to compile on stable Rust 1.51 and up with its default set of features.</span>
 <span class="doccomment">//! It *might* compile on older versions but that may change in any new patch release.</span>
 
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">test</span>), <span class="ident">no_std</span>)]</span>
@@ -193,8 +184,6 @@
 <span class="attribute">#![<span class="ident">deny</span>(<span class="ident">warnings</span>)]</span>
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">binary_heap</span>::<span class="ident">BinaryHeap</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">generic_array</span>::<span class="ident">typenum</span>::{<span class="ident">consts</span>, <span class="ident">PowerOfTwo</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">generic_array</span>::<span class="ident">ArrayLength</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">histbuf</span>::<span class="ident">HistoryBuffer</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">indexmap</span>::{<span class="ident">Bucket</span>, <span class="ident">FnvIndexMap</span>, <span class="ident">IndexMap</span>, <span class="ident">Pos</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">indexset</span>::{<span class="ident">FnvIndexSet</span>, <span class="ident">IndexSet</span>};
@@ -216,7 +205,6 @@
 <span class="kw">mod</span> <span class="ident">ser</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">binary_heap</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">i</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">has_cas</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cas&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">mpmc</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">has_cas</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cas&quot;</span>))]</span>
@@ -229,4 +217,5 @@
 
 <span class="kw">mod</span> <span class="ident">sealed</span>;
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "heapless";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -1,4 +1,0 @@
-(function() {var implementors = {};
-implementors["as_slice"] = [];
-implementors["heapless"] = [{"text":"impl&lt;P, T&gt; AsSlice for Box&lt;P&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;P: Pool,<br>&nbsp;&nbsp;&nbsp;&nbsp;P::Data: AsSlice&lt;Element = T&gt;,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;A&gt; AsSlice for Box&lt;A&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;A: AsSlice,&nbsp;</span>","synthetic":false,"types":[]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
