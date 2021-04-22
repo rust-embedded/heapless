@@ -1,36 +1,31 @@
+use crate::{
+    sealed::binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String,
+    Vec,
+};
 use core::{fmt, marker::PhantomData};
-
-use generic_array::{typenum::PowerOfTwo, ArrayLength};
 use hash32::{BuildHasherDefault, Hash, Hasher};
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
-use crate::{
-    indexmap::{Bucket, Pos},
-    sealed::binary_heap::Kind as BinaryHeapKind,
-    BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
-};
-
 // Sequential containers
 
-impl<'de, T, N, KIND> Deserialize<'de> for BinaryHeap<T, N, KIND>
+impl<'de, T, KIND, const N: usize> Deserialize<'de> for BinaryHeap<T, KIND, N>
 where
     T: Ord + Deserialize<'de>,
-    N: ArrayLength<T>,
+
     KIND: BinaryHeapKind,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, T, N, KIND>(PhantomData<(&'de (), T, N, KIND)>);
+        struct ValueVisitor<'de, T, KIND, const N: usize>(PhantomData<(&'de (), T, KIND)>);
 
-        impl<'de, T, N, KIND> de::Visitor<'de> for ValueVisitor<'de, T, N, KIND>
+        impl<'de, T, KIND, const N: usize> de::Visitor<'de> for ValueVisitor<'de, T, KIND, N>
         where
             T: Ord + Deserialize<'de>,
-            N: ArrayLength<T>,
             KIND: BinaryHeapKind,
         {
-            type Value = BinaryHeap<T, N, KIND>;
+            type Value = BinaryHeap<T, KIND, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -55,25 +50,23 @@ where
     }
 }
 
-impl<'de, T, N, S> Deserialize<'de> for IndexSet<T, N, BuildHasherDefault<S>>
+impl<'de, T, S, const N: usize> Deserialize<'de> for IndexSet<T, BuildHasherDefault<S>, N>
 where
     T: Eq + Hash + Deserialize<'de>,
     S: Hasher + Default,
-    N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, T, N, S>(PhantomData<(&'de (), T, N, S)>);
+        struct ValueVisitor<'de, T, S, const N: usize>(PhantomData<(&'de (), T, S)>);
 
-        impl<'de, T, N, S> de::Visitor<'de> for ValueVisitor<'de, T, N, S>
+        impl<'de, T, S, const N: usize> de::Visitor<'de> for ValueVisitor<'de, T, S, N>
         where
             T: Eq + Hash + Deserialize<'de>,
             S: Hasher + Default,
-            N: ArrayLength<Bucket<T, ()>> + ArrayLength<Option<Pos>> + PowerOfTwo,
         {
-            type Value = IndexSet<T, N, BuildHasherDefault<S>>;
+            type Value = IndexSet<T, BuildHasherDefault<S>, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -98,20 +91,18 @@ where
     }
 }
 
-impl<'de, T, N> Deserialize<'de> for Vec<T, N>
+impl<'de, T, const N: usize> Deserialize<'de> for Vec<T, N>
 where
-    N: ArrayLength<T>,
     T: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, T, N>(PhantomData<(&'de (), T, N)>);
+        struct ValueVisitor<'de, T, const N: usize>(PhantomData<(&'de (), T)>);
 
-        impl<'de, T, N> de::Visitor<'de> for ValueVisitor<'de, T, N>
+        impl<'de, T, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, N>
         where
-            N: ArrayLength<T>,
             T: Deserialize<'de>,
         {
             type Value = Vec<T, N>;
@@ -141,27 +132,25 @@ where
 
 // Dictionaries
 
-impl<'de, K, V, N, S> Deserialize<'de> for IndexMap<K, V, N, BuildHasherDefault<S>>
+impl<'de, K, V, S, const N: usize> Deserialize<'de> for IndexMap<K, V, BuildHasherDefault<S>, N>
 where
     K: Eq + Hash + Deserialize<'de>,
     V: Deserialize<'de>,
-    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
     S: Default + Hasher,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, K, V, N, S>(PhantomData<(&'de (), K, V, N, S)>);
+        struct ValueVisitor<'de, K, V, S, const N: usize>(PhantomData<(&'de (), K, V, S)>);
 
-        impl<'de, K, V, N, S> de::Visitor<'de> for ValueVisitor<'de, K, V, N, S>
+        impl<'de, K, V, S, const N: usize> de::Visitor<'de> for ValueVisitor<'de, K, V, S, N>
         where
             K: Eq + Hash + Deserialize<'de>,
             V: Deserialize<'de>,
-            N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>> + PowerOfTwo,
             S: Default + Hasher,
         {
-            type Value = IndexMap<K, V, N, BuildHasherDefault<S>>;
+            type Value = IndexMap<K, V, BuildHasherDefault<S>, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a map")
@@ -186,23 +175,21 @@ where
     }
 }
 
-impl<'de, K, V, N> Deserialize<'de> for LinearMap<K, V, N>
+impl<'de, K, V, const N: usize> Deserialize<'de> for LinearMap<K, V, N>
 where
     K: Eq + Deserialize<'de>,
     V: Deserialize<'de>,
-    N: ArrayLength<(K, V)>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, K, V, N>(PhantomData<(&'de (), K, V, N)>);
+        struct ValueVisitor<'de, K, V, const N: usize>(PhantomData<(&'de (), K, V)>);
 
-        impl<'de, K, V, N> de::Visitor<'de> for ValueVisitor<'de, K, V, N>
+        impl<'de, K, V, const N: usize> de::Visitor<'de> for ValueVisitor<'de, K, V, N>
         where
             K: Eq + Deserialize<'de>,
             V: Deserialize<'de>,
-            N: ArrayLength<(K, V)>,
         {
             type Value = LinearMap<K, V, N>;
 
@@ -231,28 +218,18 @@ where
 
 // String containers
 
-impl<'de, N> Deserialize<'de> for String<N>
-where
-    N: ArrayLength<u8>,
-{
+impl<'de, const N: usize> Deserialize<'de> for String<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, N>(PhantomData<(&'de (), N)>);
+        struct ValueVisitor<'de, const N: usize>(PhantomData<&'de ()>);
 
-        impl<'de, N> de::Visitor<'de> for ValueVisitor<'de, N>
-        where
-            N: ArrayLength<u8>,
-        {
+        impl<'de, const N: usize> de::Visitor<'de> for ValueVisitor<'de, N> {
             type Value = String<N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(
-                    formatter,
-                    "a string no more than {} bytes long",
-                    N::to_u64()
-                )
+                write!(formatter, "a string no more than {} bytes long", N as u64)
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -269,13 +246,15 @@ where
             where
                 E: de::Error,
             {
-                let mut bytes = Vec::new();
-                if bytes.extend_from_slice(v).is_err() {
-                    return Err(E::invalid_value(de::Unexpected::Bytes(v), &self));
-                }
+                let mut s = String::new();
 
-                String::from_utf8(bytes)
-                    .map_err(|_| E::invalid_value(de::Unexpected::Bytes(v), &self))
+                s.push_str(
+                    core::str::from_utf8(v)
+                        .map_err(|_| E::invalid_value(de::Unexpected::Bytes(v), &self))?,
+                )
+                .map_err(|_| E::invalid_length(v.len(), &self))?;
+
+                Ok(s)
             }
         }
 

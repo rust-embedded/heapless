@@ -16,26 +16,14 @@ use core::{
     ptr, slice,
 };
 
-use generic_array::{ArrayLength, GenericArray};
-
 use crate::sealed::binary_heap::Kind;
+use crate::vec::Vec;
 
 /// Min-heap
 pub enum Min {}
 
 /// Max-heap
 pub enum Max {}
-
-impl<A, K> crate::i::BinaryHeap<A, K> {
-    /// `BinaryHeap` `const` constructor; wrap the returned value in
-    /// [`BinaryHeap`](../struct.BinaryHeap.html)
-    pub const fn new() -> Self {
-        Self {
-            _kind: PhantomData,
-            data: crate::i::Vec::new(),
-        }
-    }
-}
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -47,9 +35,8 @@ impl<A, K> crate::i::BinaryHeap<A, K> {
 ///
 /// ```
 /// use heapless::binary_heap::{BinaryHeap, Max};
-/// use heapless::consts::*;
 ///
-/// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+/// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
 ///
 /// // We can use peek to look at the next item in the heap. In this case,
 /// // there's no items in there yet so we get None.
@@ -84,51 +71,51 @@ impl<A, K> crate::i::BinaryHeap<A, K> {
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, N, KIND>(
-    #[doc(hidden)] pub crate::i::BinaryHeap<GenericArray<T, N>, KIND>,
-)
-where
-    T: Ord,
-    N: ArrayLength<T>,
-    KIND: Kind;
 
-impl<T, N, K> BinaryHeap<T, N, K>
-where
-    T: Ord,
-    N: ArrayLength<T>,
-    K: Kind,
-{
+pub struct BinaryHeap<T, K, const N: usize> {
+    pub(crate) _kind: PhantomData<K>,
+    pub(crate) data: Vec<T, N>,
+}
+
+impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
     /// Creates an empty BinaryHeap as a $K-heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
     /// // allocate the binary heap on the stack
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(4).unwrap();
     ///
     /// // allocate the binary heap in a static variable
-    /// static mut HEAP: BinaryHeap<i32, U8, Max> = BinaryHeap(heapless::i::BinaryHeap::new());
+    /// static mut HEAP: BinaryHeap<i32, Max, 8> = BinaryHeap::new();
     /// ```
-    pub fn new() -> Self {
-        BinaryHeap(crate::i::BinaryHeap::new())
+    pub const fn new() -> Self {
+        Self {
+            _kind: PhantomData,
+            data: Vec::new(),
+        }
     }
+}
 
+impl<T, K, const N: usize> BinaryHeap<T, K, N>
+where
+    T: Ord,
+    K: Kind,
+{
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.0.data.capacity()
+        self.data.capacity()
     }
 
     /// Drops all items from the binary heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
@@ -139,32 +126,30 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.0.data.clear()
+        self.data.clear()
     }
 
     /// Returns the length of the binary heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
     /// assert_eq!(heap.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
-        self.0.data.len
+        self.data.len()
     }
 
     /// Checks if the binary heap is empty.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     ///
     /// assert!(heap.is_empty());
     ///
@@ -182,9 +167,8 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(2).unwrap();
     /// heap.push(3).unwrap();
@@ -197,7 +181,7 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> slice::Iter<'_, T> {
-        self.0.data.as_slice().iter()
+        self.data.as_slice().iter()
     }
 
     /// Returns a mutable iterator visiting all values in the underlying vector, in arbitrary order.
@@ -205,7 +189,7 @@ where
     /// **WARNING** Mutating the items in the binary heap can leave the heap in an inconsistent
     /// state.
     pub fn iter_mut(&mut self) -> slice::IterMut<'_, T> {
-        self.0.data.as_mut_slice().iter_mut()
+        self.data.as_mut_slice().iter_mut()
     }
 
     /// Returns the *top* (greatest if max-heap, smallest if min-heap) item in the binary heap, or
@@ -213,9 +197,8 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// assert_eq!(heap.peek(), None);
     ///
     /// heap.push(1).unwrap();
@@ -224,7 +207,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        self.0.data.as_slice().get(0)
+        self.data.as_slice().get(0)
     }
 
     /// Returns a mutable reference to the greatest item in the binary heap, or
@@ -239,9 +222,8 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// assert!(heap.peek_mut().is_none());
     ///
     /// heap.push(1);
@@ -254,7 +236,7 @@ where
     ///
     /// assert_eq!(heap.peek(), Some(&2));
     /// ```
-    pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, N, K>> {
+    pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, K, N>> {
         if self.is_empty() {
             None
         } else {
@@ -270,9 +252,8 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(1).unwrap();
     /// heap.push(3).unwrap();
     ///
@@ -291,10 +272,10 @@ where
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
     pub unsafe fn pop_unchecked(&mut self) -> T {
-        let mut item = self.0.data.pop_unchecked();
+        let mut item = self.data.pop_unchecked();
 
         if !self.is_empty() {
-            mem::swap(&mut item, self.0.data.as_mut_slice().get_unchecked_mut(0));
+            mem::swap(&mut item, self.data.as_mut_slice().get_unchecked_mut(0));
             self.sift_down_to_bottom(0);
         }
         item
@@ -304,9 +285,8 @@ where
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::consts::*;
     ///
-    /// let mut heap: BinaryHeap<_, U8, Max> = BinaryHeap::new();
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
     /// heap.push(3).unwrap();
     /// heap.push(5).unwrap();
     /// heap.push(1).unwrap();
@@ -315,7 +295,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.0.data.is_full() {
+        if self.data.is_full() {
             return Err(item);
         }
 
@@ -326,7 +306,7 @@ where
     /// Pushes an item onto the binary heap without first checking if it's full.
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
-        self.0.data.push_unchecked(item);
+        self.data.push_unchecked(item);
         self.sift_up(0, old_len);
     }
 
@@ -335,7 +315,7 @@ where
         let end = self.len();
         let start = pos;
         unsafe {
-            let mut hole = Hole::new(self.0.data.as_mut_slice(), pos);
+            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
             let mut child = 2 * pos + 1;
             while child < end {
                 let right = child + 1;
@@ -354,7 +334,7 @@ where
     fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         unsafe {
             // Take out the value at `pos` and create a hole.
-            let mut hole = Hole::new(self.0.data.as_mut_slice(), pos);
+            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
 
             while hole.pos() > start {
                 let parent = (hole.pos() - 1) / 2;
@@ -437,20 +417,18 @@ impl<'a, T> Hole<'a, T> {
 ///
 /// [`peek_mut`]: struct.BinaryHeap.html#method.peek_mut
 /// [`BinaryHeap`]: struct.BinaryHeap.html
-pub struct PeekMut<'a, T, N, K>
+pub struct PeekMut<'a, T, K, const N: usize>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
-    heap: &'a mut BinaryHeap<T, N, K>,
+    heap: &'a mut BinaryHeap<T, K, N>,
     sift: bool,
 }
 
-impl<T, N, K> Drop for PeekMut<'_, T, N, K>
+impl<T, K, const N: usize> Drop for PeekMut<'_, T, K, N>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
     fn drop(&mut self) {
@@ -460,41 +438,38 @@ where
     }
 }
 
-impl<T, N, K> Deref for PeekMut<'_, T, N, K>
+impl<T, K, const N: usize> Deref for PeekMut<'_, T, K, N>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
     type Target = T;
     fn deref(&self) -> &T {
         debug_assert!(!self.heap.is_empty());
         // SAFE: PeekMut is only instantiated for non-empty heaps
-        unsafe { self.heap.0.data.as_slice().get_unchecked(0) }
+        unsafe { self.heap.data.as_slice().get_unchecked(0) }
     }
 }
 
-impl<T, N, K> DerefMut for PeekMut<'_, T, N, K>
+impl<T, K, const N: usize> DerefMut for PeekMut<'_, T, K, N>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
         // SAFE: PeekMut is only instantiated for non-empty heaps
-        unsafe { self.heap.0.data.as_mut_slice().get_unchecked_mut(0) }
+        unsafe { self.heap.data.as_mut_slice().get_unchecked_mut(0) }
     }
 }
 
-impl<'a, T, N, K> PeekMut<'a, T, N, K>
+impl<'a, T, K, const N: usize> PeekMut<'a, T, K, N>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
     /// Removes the peeked value from the heap and returns it.
-    pub fn pop(mut this: PeekMut<'a, T, N, K>) -> T {
+    pub fn pop(mut this: PeekMut<'a, T, K, N>) -> T {
         let value = this.heap.pop().unwrap();
         this.sift = false;
         value
@@ -512,10 +487,9 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
-impl<T, N, K> Default for BinaryHeap<T, N, K>
+impl<T, K, const N: usize> Default for BinaryHeap<T, K, N>
 where
     T: Ord,
-    N: ArrayLength<T>,
     K: Kind,
 {
     fn default() -> Self {
@@ -523,34 +497,27 @@ where
     }
 }
 
-impl<T, N, K> Clone for BinaryHeap<T, N, K>
+impl<T, K, const N: usize> Clone for BinaryHeap<T, K, N>
 where
-    N: ArrayLength<T>,
     K: Kind,
     T: Ord + Clone,
 {
     fn clone(&self) -> Self {
-        BinaryHeap(crate::i::BinaryHeap {
-            _kind: self.0._kind,
-            data: self.0.data.clone(),
-        })
+        Self {
+            _kind: self._kind,
+            data: self.data.clone(),
+        }
     }
 }
 
-impl<T, N, K> Drop for BinaryHeap<T, N, K>
-where
-    N: ArrayLength<T>,
-    K: Kind,
-    T: Ord,
-{
+impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N> {
     fn drop(&mut self) {
-        unsafe { ptr::drop_in_place(self.0.data.as_mut_slice()) }
+        unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
     }
 }
 
-impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
+impl<T, K, const N: usize> fmt::Debug for BinaryHeap<T, K, N>
 where
-    N: ArrayLength<T>,
     K: Kind,
     T: Ord + fmt::Debug,
 {
@@ -559,9 +526,8 @@ where
     }
 }
 
-impl<'a, T, N, K> IntoIterator for &'a BinaryHeap<T, N, K>
+impl<'a, T, K, const N: usize> IntoIterator for &'a BinaryHeap<T, K, N>
 where
-    N: ArrayLength<T>,
     K: Kind,
     T: Ord,
 {
@@ -577,19 +543,16 @@ where
 mod tests {
     use std::vec::Vec;
 
-    use crate::{
-        binary_heap::{self, BinaryHeap, Min},
-        consts::*,
-    };
+    use crate::binary_heap::{BinaryHeap, Max, Min};
 
     #[test]
     fn static_new() {
-        static mut _B: BinaryHeap<i32, U16, Min> = BinaryHeap(crate::i::BinaryHeap::new());
+        static mut _B: BinaryHeap<i32, Min, 16> = BinaryHeap::new();
     }
 
     #[test]
     fn min() {
-        let mut heap = BinaryHeap::<_, U16, Min>::new();
+        let mut heap = BinaryHeap::<_, Min, 16>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();
@@ -641,7 +604,7 @@ mod tests {
 
     #[test]
     fn max() {
-        let mut heap = BinaryHeap::<_, U16, binary_heap::Max>::new();
+        let mut heap = BinaryHeap::<_, Max, 16>::new();
         heap.push(1).unwrap();
         heap.push(2).unwrap();
         heap.push(3).unwrap();

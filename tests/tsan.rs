@@ -4,13 +4,12 @@
 
 use std::{sync::mpsc, thread};
 
-use generic_array::typenum::Unsigned;
-use heapless::{consts::*, mpmc::Q64, spsc};
+use heapless::{mpmc::Q64, spsc};
 use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
-    static mut RB: spsc::Queue<i32, U4> = spsc::Queue(heapless::i::Queue::new());
+    static mut RB: spsc::Queue<i32, 4> = spsc::Queue::new();
 
     let rb = unsafe { &mut RB };
 
@@ -31,7 +30,7 @@ fn once() {
 
 #[test]
 fn twice() {
-    static mut RB: spsc::Queue<i32, U4> = spsc::Queue(heapless::i::Queue::new());
+    static mut RB: spsc::Queue<i32, 5> = spsc::Queue::new();
 
     let rb = unsafe { &mut RB };
 
@@ -53,7 +52,7 @@ fn twice() {
 
 #[test]
 fn scoped() {
-    let mut rb: spsc::Queue<i32, U4> = spsc::Queue::new();
+    let mut rb: spsc::Queue<i32, 5> = spsc::Queue::new();
 
     rb.enqueue(0).unwrap();
 
@@ -76,9 +75,9 @@ fn scoped() {
 
 #[test]
 fn contention() {
-    type N = U1024;
+    const N: usize = 1024;
 
-    let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
+    let mut rb: spsc::Queue<u8, 4> = spsc::Queue::new();
 
     {
         let (mut p, mut c) = rb.split();
@@ -87,8 +86,8 @@ fn contention() {
             scope.execute(move || {
                 let mut sum: u32 = 0;
 
-                for i in 0..(2 * N::to_u32()) {
-                    sum = sum.wrapping_add(i);
+                for i in 0..(2 * N) {
+                    sum = sum.wrapping_add(i as u32);
                     while let Err(_) = p.enqueue(i as u8) {}
                 }
 
@@ -98,7 +97,7 @@ fn contention() {
             scope.execute(move || {
                 let mut sum: u32 = 0;
 
-                for _ in 0..(2 * N::to_u32()) {
+                for _ in 0..(2 * N) {
                     loop {
                         match c.dequeue() {
                             Some(v) => {
@@ -163,11 +162,11 @@ fn mpmc_contention() {
 
 #[test]
 fn unchecked() {
-    type N = U1024;
+    const N: usize = 1024;
 
     let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
-    for _ in 0..N::to_usize() / 2 {
+    for _ in 0..N / 2 - 1 {
         rb.enqueue(1).unwrap();
     }
 
@@ -176,31 +175,29 @@ fn unchecked() {
 
         Pool::new(2).scoped(move |scope| {
             scope.execute(move || {
-                for _ in 0..N::to_usize() / 2 {
-                    unsafe {
-                        p.enqueue_unchecked(2);
-                    }
+                for _ in 0..N / 2 - 1 {
+                    p.enqueue(2).unwrap();
                 }
             });
 
             scope.execute(move || {
                 let mut sum: usize = 0;
 
-                for _ in 0..N::to_usize() / 2 {
-                    sum = sum.wrapping_add(usize::from(unsafe { c.dequeue_unchecked() }));
+                for _ in 0..N / 2 - 1 {
+                    sum = sum.wrapping_add(usize::from(c.dequeue().unwrap()));
                 }
 
-                assert_eq!(sum, N::to_usize() / 2);
+                assert_eq!(sum, N / 2 - 1);
             });
         });
     }
 
-    assert_eq!(rb.len(), N::to_usize() / 2);
+    assert_eq!(rb.len(), N / 2 - 1);
 }
 
 #[test]
 fn len_properly_wraps() {
-    type N = U3;
+    const N: usize = 4;
     let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
@@ -217,7 +214,7 @@ fn len_properly_wraps() {
 
 #[test]
 fn iterator_properly_wraps() {
-    type N = U3;
+    const N: usize = 4;
     let mut rb: spsc::Queue<u8, N> = spsc::Queue::new();
 
     rb.enqueue(1).unwrap();
@@ -233,6 +230,7 @@ fn iterator_properly_wraps() {
     assert_eq!(expected, actual)
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "x86-sync-pool"))]
 #[test]
 fn pool() {
     use heapless::pool::singleton::Pool as _;

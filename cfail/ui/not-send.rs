@@ -3,8 +3,8 @@
 use core::marker::PhantomData;
 
 use heapless::{
-    consts,
     spsc::{Consumer, Producer, Queue},
+    HistoryBuffer, Vec,
 };
 
 type NotSend = PhantomData<*const ()>;
@@ -16,8 +16,9 @@ where
 }
 
 fn main() {
-    is_send::<Consumer<NotSend, consts::U4>>();
-    is_send::<Producer<NotSend, consts::U4>>();
-    is_send::<Queue<NotSend, consts::U4>>();
-    is_send::<heapless::Vec<NotSend, consts::U4>>();
+    is_send::<Consumer<NotSend, 4>>();
+    is_send::<Producer<NotSend, 4>>();
+    is_send::<Queue<NotSend, 4>>();
+    is_send::<Vec<NotSend, 4>>();
+    is_send::<HistoryBuffer<NotSend, 4>>();
 }

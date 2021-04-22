@@ -1,11 +1,13 @@
 //! Stack based on LL/SC atomics
 
 pub use core::ptr::NonNull as Ptr;
-use core::{
-    cell::UnsafeCell,
-    ptr,
-    sync::atomic::{AtomicPtr, Ordering},
-};
+use core::{cell::UnsafeCell, ptr};
+
+#[cfg(armv6m)]
+use atomic_polyfill::{AtomicPtr, Ordering};
+
+#[cfg(not(armv6m))]
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// Unfortunate implementation detail required to use the
 /// [`Pool.grow_exact`](struct.Pool.html#method.grow_exact) method

@@ -9,9 +9,8 @@
 //!
 //! ```
 //! use heapless::spsc::Queue;
-//! use heapless::consts::*;
 //!
-//! let mut rb: Queue<u8, U4> = Queue::new();
+//! let mut rb: Queue<u8, _, 4> = Queue::new();
 //!
 //! assert!(rb.enqueue(0).is_ok());
 //! assert!(rb.enqueue(1).is_ok());
@@ -25,10 +24,11 @@
 //! - `Queue` can be `split` and then be used in Single Producer Single Consumer mode
 //!
 //! ```
-//! use heapless::spsc::Queue;
-//! use heapless::consts::*;
+//! use heapless::spsc::{Queue};
 //!
-//! static mut Q: Queue<Event, U4> = Queue(heapless::i::Queue::new());
+//! // Notice, type signature needs to be explicit for now.
+//! // (min_const_eval, does not allow for default type assignments)
+//! static mut Q: Queue<Event, usize, 4> = Queue::new();
 //!
 //! enum Event { A, B }
 //!
@@ -83,9 +83,8 @@
 //! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
 //! and `Ok` is returned by `enqueue`).
 
-use core::{cell::UnsafeCell, fmt, hash, marker::PhantomData, mem::MaybeUninit, ptr};
+use core::{cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
 
-use generic_array::{ArrayLength, GenericArray};
 use hash32;
 
 use crate::sealed::spsc as sealed;
@@ -93,32 +92,23 @@ pub use split::{Consumer, Producer};
 
 mod split;
 
-/// Multi core synchronization - a memory barrier is used for synchronization
-pub struct MultiCore;
-
-/// Single core synchronization - no memory barrier synchronization, just a compiler fence
-pub struct SingleCore;
-
-// Atomic{U8,U16, Usize} with no CAS operations that works on targets that have "no atomic support"
+// Atomic{U8, U16, Usize} with no CAS operations that works on targets that have "no atomic support"
 // according to their specification
-pub(crate) struct Atomic<U, C> {
+pub(crate) struct Atomic<U> {
     v: UnsafeCell<U>,
-    c: PhantomData<C>,
 }
 
-impl<U, C> Atomic<U, C> {
+impl<U> Atomic<U> {
     pub(crate) const fn new(v: U) -> Self {
         Atomic {
             v: UnsafeCell::new(v),
-            c: PhantomData,
         }
     }
 }
 
-impl<U, C> Atomic<U, C>
+impl<U> Atomic<U>
 where
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn get(&self) -> &U {
         unsafe { &*self.v.get() }
@@ -129,7 +119,7 @@ where
     }
 
     fn load_acquire(&self) -> U {
-        unsafe { U::load_acquire::<C>(self.v.get()) }
+        unsafe { U::load_acquire(self.v.get()) }
     }
 
     fn load_relaxed(&self) -> U {
@@ -137,13 +127,13 @@ where
     }
 
     fn store_release(&self, val: U) {
-        unsafe { U::store_release::<C>(self.v.get(), val) }
+        unsafe { U::store_release(self.v.get(), val) }
     }
 }
 
 /// A statically allocated single producer single consumer queue with a capacity of `N` elements
 ///
-/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `U16`, `U32`,
+/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `16`, `32`,
 /// etc.).
 ///
 /// By default `spsc::Queue` will use `usize` integers to hold the indices to its head and tail. For
@@ -154,30 +144,30 @@ where
 /// [`u8`]: struct.Queue.html#method.u8
 /// [`u16`]: struct.Queue.html#method.u16
 ///
-/// *IMPORTANT*: `spsc::Queue<_, _, u8>` has a maximum capacity of 255 elements; `spsc::Queue<_, _,
-/// u16>` has a maximum capacity of 65535 elements.
-///
-/// `spsc::Queue` also comes in a single core variant. This variant can be created using the
-/// following constructors: `u8_sc`, `u16_sc`, `usize_sc` and `new_sc`. This variant is `unsafe` to
-/// create because the programmer must make sure that the queue's consumer and producer endpoints
-/// (if split) are kept on a single core for their entire lifetime.
-pub struct Queue<T, N, U = usize, C = MultiCore>(
-    #[doc(hidden)] pub crate::i::Queue<GenericArray<T, N>, U, C>,
-)
-where
-    N: ArrayLength<T>,
-    U: sealed::Uxx,
-    C: sealed::XCore;
+/// *IMPORTANT*: `spsc::Queue<_, u8, N>` has a maximum capacity of 255 elements; `spsc::Queue<_,
+/// u16, N>` has a maximum capacity of 65535 elements.
 
-impl<T, N, U, C> Queue<T, N, U, C>
+#[cfg(has_atomics)]
+pub struct Queue<T, U, const N: usize>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
+{
+    // this is from where we dequeue items
+    pub(crate) head: Atomic<U>,
+
+    // this is where we enqueue new items
+    pub(crate) tail: Atomic<U>,
+
+    pub(crate) buffer: MaybeUninit<[T; N]>,
+}
+
+impl<T, U, const N: usize> Queue<T, U, N>
+where
+    U: sealed::Uxx,
 {
     /// Returns the maximum number of elements the queue can hold
     pub fn capacity(&self) -> U {
-        U::saturate(N::to_usize())
+        U::saturate(N)
     }
 
     /// Returns `true` if the queue has a length of 0
@@ -186,7 +176,7 @@ where
     }
 
     /// Iterates from the front of the queue to the back
-    pub fn iter(&self) -> Iter<'_, T, N, U, C> {
+    pub fn iter(&self) -> Iter<'_, T, U, N> {
         Iter {
             rb: self,
             index: 0,
@@ -195,7 +185,7 @@ where
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMut<'_, T, N, U, C> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T, U, N> {
         let len = self.len_usize();
         IterMut {
             rb: self,
@@ -205,18 +195,16 @@ where
     }
 
     fn len_usize(&self) -> usize {
-        let head = self.0.head.load_relaxed().into();
-        let tail = self.0.tail.load_relaxed().into();
+        let head = self.head.load_relaxed().into();
+        let tail = self.tail.load_relaxed().into();
 
         U::truncate(tail.wrapping_sub(head)).into()
     }
 }
 
-impl<T, N, U, C> Drop for Queue<T, N, U, C>
+impl<T, U, const N: usize> Drop for Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn drop(&mut self) {
         for item in self {
@@ -227,24 +215,20 @@ where
     }
 }
 
-impl<T, N, U, C> fmt::Debug for Queue<T, N, U, C>
+impl<T, U, const N: usize> fmt::Debug for Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     T: fmt::Debug,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<T, N, U, C> hash::Hash for Queue<T, N, U, C>
+impl<T, U, const N: usize> hash::Hash for Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     T: hash::Hash,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         // iterate over self in order
@@ -254,12 +238,10 @@ where
     }
 }
 
-impl<T, N, U, C> hash32::Hash for Queue<T, N, U, C>
+impl<T, U, const N: usize> hash32::Hash for Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     T: hash32::Hash,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn hash<H: hash32::Hasher>(&self, state: &mut H) {
         // iterate over self in order
@@ -269,28 +251,24 @@ where
     }
 }
 
-impl<'a, T, N, U, C> IntoIterator for &'a Queue<T, N, U, C>
+impl<'a, T, U, const N: usize> IntoIterator for &'a Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     type Item = &'a T;
-    type IntoIter = Iter<'a, T, N, U, C>;
+    type IntoIter = Iter<'a, T, U, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, T, N, U, C> IntoIterator for &'a mut Queue<T, N, U, C>
+impl<'a, T, U, const N: usize> IntoIterator for &'a mut Queue<T, U, N>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     type Item = &'a mut T;
-    type IntoIter = IterMut<'a, T, N, U, C>;
+    type IntoIter = IterMut<'a, T, U, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -298,65 +276,27 @@ where
 }
 
 macro_rules! impl_ {
-    ($uxx:ident, $uxx_sc:ident) => {
-        impl<T, N> Queue<T, N, $uxx, MultiCore>
-        where
-            N: ArrayLength<T>,
-        {
-            /// Creates an empty queue with a fixed capacity of `N`
-            pub fn $uxx() -> Self {
-                Queue(crate::i::Queue::$uxx())
-            }
-        }
-
-        impl<A> crate::i::Queue<A, $uxx, MultiCore> {
-            /// `spsc::Queue` `const` constructor; wrap the returned value in
-            /// [`spsc::Queue`](struct.Queue.html)
-            pub const fn $uxx() -> Self {
-                crate::i::Queue {
-                    buffer: MaybeUninit::uninit(),
+    ($uxx:ident, $doc:tt $(,$unsf:ident)?) => {
+        impl<T, const N: usize> Queue<T, $uxx, N> {
+            #[doc = $doc]
+            pub const $($unsf)* fn $uxx() -> Self {
+                Self {
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
+                    buffer: MaybeUninit::uninit(),
                 }
             }
         }
 
-        impl<T, N> Queue<T, N, $uxx, SingleCore>
-        where
-            N: ArrayLength<T>,
-        {
-            /// Creates an empty queue with a fixed capacity of `N` (single core variant)
-            pub unsafe fn $uxx_sc() -> Self {
-                Queue(crate::i::Queue::$uxx_sc())
-            }
-        }
-
-        impl<A> crate::i::Queue<A, $uxx, SingleCore> {
-            /// `spsc::Queue` `const` constructor; wrap the returned value in
-            /// [`spsc::Queue`](struct.Queue.html)
-            pub const unsafe fn $uxx_sc() -> Self {
-                crate::i::Queue {
-                    buffer: MaybeUninit::uninit(),
-                    head: Atomic::new(0),
-                    tail: Atomic::new(0),
-                }
-            }
-        }
-
-        impl<T, N, C> Queue<T, N, $uxx, C>
-        where
-            N: ArrayLength<T>,
-            C: sealed::XCore,
-        {
+        impl<T, const N: usize> Queue<T, $uxx, N> {
             /// Returns a reference to the item in the front of the queue without dequeuing, or
             /// `None` if the queue is empty.
             ///
             /// # Examples
             /// ```
             /// use heapless::spsc::Queue;
-            /// use heapless::consts::*;
             ///
-            /// let mut queue: Queue<u8, U235, _> = Queue::u8();
+            /// let mut queue: Queue<u8, _, 235> = Queue::new();
             /// let (mut producer, mut consumer) = queue.split();
             /// assert_eq!(None, consumer.peek());
             /// producer.enqueue(1);
@@ -367,10 +307,10 @@ macro_rules! impl_ {
             pub fn peek(&self) -> Option<&T> {
                 let cap = self.capacity();
 
-                let head = self.0.head.get();
-                let tail = self.0.tail.get();
+                let head = self.head.get();
+                let tail = self.tail.get();
 
-                let p = self.0.buffer.as_ptr();
+                let p = self.buffer.as_ptr();
 
                 if *head != *tail {
                     let item = unsafe { &*(p as *const T).add(usize::from(*head % cap)) };
@@ -384,10 +324,10 @@ macro_rules! impl_ {
             pub fn dequeue(&mut self) -> Option<T> {
                 let cap = self.capacity();
 
-                let head = self.0.head.get_mut();
-                let tail = self.0.tail.get_mut();
+                let head = self.head.get_mut();
+                let tail = self.tail.get_mut();
 
-                let p = self.0.buffer.as_ptr();
+                let p = self.buffer.as_ptr();
 
                 if *head != *tail {
                     let item = unsafe { (p as *const T).add(usize::from(*head % cap)).read() };
@@ -403,8 +343,8 @@ macro_rules! impl_ {
             /// Returns back the `item` if the queue is full
             pub fn enqueue(&mut self, item: T) -> Result<(), T> {
                 let cap = self.capacity();
-                let head = *self.0.head.get_mut();
-                let tail = *self.0.tail.get_mut();
+                let head = *self.head.get_mut();
+                let tail = *self.tail.get_mut();
 
                 if tail.wrapping_sub(head) > cap - 1 {
                     Err(item)
@@ -424,12 +364,12 @@ macro_rules! impl_ {
             /// twice.
             pub unsafe fn enqueue_unchecked(&mut self, item: T) {
                 let cap = self.capacity();
-                let tail = self.0.tail.get_mut();
+                let tail = self.tail.get_mut();
 
                 // NOTE(ptr::write) the memory slot that we are about to write to is
                 // uninitialized. We use `ptr::write` to avoid running `T`'s destructor on the
                 // uninitialized memory
-                (self.0.buffer.as_mut_ptr() as *mut T)
+                (self.buffer.as_mut_ptr() as *mut T)
                     .add(usize::from(*tail % cap))
                     .write(item);
                 *tail = tail.wrapping_add(1);
@@ -437,24 +377,22 @@ macro_rules! impl_ {
 
             /// Returns the number of elements in the queue
             pub fn len(&self) -> $uxx {
-                let head = self.0.head.load_relaxed();
-                let tail = self.0.tail.load_relaxed();
+                let head = self.head.load_relaxed();
+                let tail = self.tail.load_relaxed();
                 tail.wrapping_sub(head)
             }
         }
 
-        impl<T, N, C> Clone for Queue<T, N, $uxx, C>
+        impl<T, const N: usize> Clone for Queue<T, $uxx, N>
         where
             T: Clone,
-            N: ArrayLength<T>,
-            C: sealed::XCore,
         {
             fn clone(&self) -> Self {
-                let mut new: Queue<T, N, $uxx, C> = Queue(crate::i::Queue {
+                let mut new: Queue<T, $uxx, N> = Queue {
                     buffer: MaybeUninit::uninit(),
                     head: Atomic::new(0),
                     tail: Atomic::new(0),
-                });
+                };
 
                 for s in self.iter() {
                     unsafe {
@@ -469,88 +407,57 @@ macro_rules! impl_ {
     };
 }
 
-impl<A> crate::i::Queue<A, usize, MultiCore> {
-    /// `spsc::Queue` `const` constructor; wrap the returned value in
-    /// [`spsc::Queue`](struct.Queue.html)
-    pub const fn new() -> Self {
-        crate::i::Queue::usize()
-    }
-}
-
-impl<T, N> Queue<T, N, usize, MultiCore>
-where
-    N: ArrayLength<T>,
-{
+impl<T, const N: usize> Queue<T, usize, N> {
     /// Alias for [`spsc::Queue::usize`](struct.Queue.html#method.usize)
-    pub fn new() -> Self {
-        Queue(crate::i::Queue::new())
+    pub const fn new() -> Self {
+        Queue::usize()
     }
 }
 
-impl<A> crate::i::Queue<A, usize, SingleCore> {
-    /// `spsc::Queue` `const` constructor; wrap the returned value in
-    /// [`spsc::Queue`](struct.Queue.html)
-    pub const unsafe fn new_sc() -> Self {
-        crate::i::Queue::usize_sc()
-    }
-}
+impl_!(
+    u8,
+    "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u8::MAX`.",
+    unsafe
+);
+impl_!(
+    u16,
+    "Creates an empty queue with a fixed capacity of `N`. **Safety**: Assumes `N <= u16::MAX`.",
+    unsafe
+);
+impl_!(usize, "Creates an empty queue with a fixed capacity of `N`");
 
-impl<T, N> Queue<T, N, usize, SingleCore>
-where
-    N: ArrayLength<T>,
-{
-    /// Alias for [`spsc::Queue::usize_sc`](struct.Queue.html#method.usize_sc)
-    pub unsafe fn new_sc() -> Self {
-        Queue(crate::i::Queue::new_sc())
-    }
-}
-
-impl_!(u8, u8_sc);
-impl_!(u16, u16_sc);
-impl_!(usize, usize_sc);
-
-impl<T, N, U, C, N2, U2, C2> PartialEq<Queue<T, N2, U2, C2>> for Queue<T, N, U, C>
+impl<T, U, U2, const N: usize, const N2: usize> PartialEq<Queue<T, U2, N2>> for Queue<T, U, N>
 where
     T: PartialEq,
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
-    N2: ArrayLength<T>,
     U2: sealed::Uxx,
-    C2: sealed::XCore,
 {
-    fn eq(&self, other: &Queue<T, N2, U2, C2>) -> bool {
+    fn eq(&self, other: &Queue<T, U2, N2>) -> bool {
         self.len_usize() == other.len_usize()
             && self.iter().zip(other.iter()).all(|(v1, v2)| v1 == v2)
     }
 }
 
-impl<T, N, U, C> Eq for Queue<T, N, U, C>
+impl<T, U, const N: usize> Eq for Queue<T, U, N>
 where
     T: Eq,
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
 }
 
 /// An iterator over the items of a queue
-pub struct Iter<'a, T, N, U, C>
+pub struct Iter<'a, T, U, const N: usize>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
-    rb: &'a Queue<T, N, U, C>,
+    rb: &'a Queue<T, U, N>,
     index: usize,
     len: usize,
 }
 
-impl<'a, T, N, U, C> Clone for Iter<'a, T, N, U, C>
+impl<'a, T, U, const N: usize> Clone for Iter<'a, T, U, N>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
     fn clone(&self) -> Self {
         Self {
@@ -562,33 +469,29 @@ where
 }
 
 /// A mutable iterator over the items of a queue
-pub struct IterMut<'a, T, N, U, C>
+pub struct IterMut<'a, T, U, const N: usize>
 where
-    N: ArrayLength<T>,
     U: sealed::Uxx,
-    C: sealed::XCore,
 {
-    rb: &'a mut Queue<T, N, U, C>,
+    rb: &'a mut Queue<T, U, N>,
     index: usize,
     len: usize,
 }
 
 macro_rules! iterator {
     (struct $name:ident -> $elem:ty, $ptr:ty, $asptr:ident, $mkref:ident) => {
-        impl<'a, T, N, U, C> Iterator for $name<'a, T, N, U, C>
+        impl<'a, T, U, const N: usize> Iterator for $name<'a, T, U, N>
         where
-            N: ArrayLength<T>,
             U: sealed::Uxx,
-            C: sealed::XCore,
         {
             type Item = $elem;
 
             fn next(&mut self) -> Option<$elem> {
                 if self.index < self.len {
-                    let head = self.rb.0.head.load_relaxed().into();
+                    let head = self.rb.head.load_relaxed().into();
 
                     let cap = self.rb.capacity().into();
-                    let ptr = self.rb.0.buffer.$asptr() as $ptr;
+                    let ptr = self.rb.buffer.$asptr() as $ptr;
                     let i = (head + self.index) % cap;
                     self.index += 1;
                     Some(unsafe { $mkref!(*ptr.offset(i as isize)) })
@@ -598,18 +501,16 @@ macro_rules! iterator {
             }
         }
 
-        impl<'a, T, N, U, C> DoubleEndedIterator for $name<'a, T, N, U, C>
+        impl<'a, T, U, const N: usize> DoubleEndedIterator for $name<'a, T, U, N>
         where
-            N: ArrayLength<T>,
             U: sealed::Uxx,
-            C: sealed::XCore,
         {
             fn next_back(&mut self) -> Option<$elem> {
                 if self.index < self.len {
-                    let head = self.rb.0.head.load_relaxed().into();
+                    let head = self.rb.head.load_relaxed().into();
 
                     let cap = self.rb.capacity().into();
-                    let ptr = self.rb.0.buffer.$asptr() as $ptr;
+                    let ptr = self.rb.buffer.$asptr() as $ptr;
                     // self.len > 0, since it's larger than self.index > 0
                     let i = (head + self.len - 1) % cap;
                     self.len -= 1;
@@ -641,11 +542,16 @@ iterator!(struct IterMut -> &'a mut T, *mut T, as_mut_ptr, make_ref_mut);
 mod tests {
     use hash32::Hasher;
 
-    use crate::{consts::*, spsc::Queue};
+    use crate::spsc::Queue;
+
+    #[test]
+    fn static_usize() {
+        static mut _Q: Queue<i32, usize, 4> = Queue::usize();
+    }
 
     #[test]
     fn static_new() {
-        static mut _Q: Queue<i32, U4> = Queue(crate::i::Queue::new());
+        static mut _Q: Queue<i32, usize, 4> = Queue::new();
     }
 
     #[test]
@@ -671,7 +577,7 @@ mod tests {
         static mut COUNT: i32 = 0;
 
         {
-            let mut v: Queue<Droppable, U4> = Queue::new();
+            let mut v: Queue<Droppable, _, 4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.dequeue().unwrap();
@@ -680,7 +586,7 @@ mod tests {
         assert_eq!(unsafe { COUNT }, 0);
 
         {
-            let mut v: Queue<Droppable, U4> = Queue::new();
+            let mut v: Queue<Droppable, _, 4> = Queue::new();
             v.enqueue(Droppable::new()).ok().unwrap();
             v.enqueue(Droppable::new()).ok().unwrap();
         }
@@ -690,7 +596,7 @@ mod tests {
 
     #[test]
     fn full() {
-        let mut rb: Queue<i32, U4> = Queue::new();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -702,7 +608,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut rb: Queue<i32, U4> = Queue::new();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -718,7 +624,7 @@ mod tests {
 
     #[test]
     fn iter_double_ended() {
-        let mut rb: Queue<i32, U4> = Queue::new();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -735,7 +641,7 @@ mod tests {
 
     #[test]
     fn iter_overflow() {
-        let mut rb: Queue<i32, U4, u8> = Queue::u8();
+        let mut rb: Queue<i32, u8, 4> = unsafe { Queue::u8() };
 
         rb.enqueue(0).unwrap();
         for _ in 0..300 {
@@ -749,7 +655,7 @@ mod tests {
 
     #[test]
     fn iter_mut() {
-        let mut rb: Queue<i32, U4> = Queue::new();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -765,7 +671,7 @@ mod tests {
 
     #[test]
     fn iter_mut_double_ended() {
-        let mut rb: Queue<i32, U4> = Queue::new();
+        let mut rb: Queue<i32, _, 4> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -782,21 +688,17 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let mut rb: Queue<i32, U4> = Queue::new();
-
+        let mut rb: Queue<i32, _, 4> = Queue::new();
         assert_eq!(rb.dequeue(), None);
-
         rb.enqueue(0).unwrap();
-
         assert_eq!(rb.dequeue(), Some(0));
-
         assert_eq!(rb.dequeue(), None);
     }
 
     #[test]
     #[cfg(feature = "smaller-atomics")]
     fn u8() {
-        let mut rb: Queue<u8, U256, _> = Queue::u8();
+        let mut rb: Queue<u8, u8, 256> = Queue::u8();
 
         for _ in 0..255 {
             rb.enqueue(0).unwrap();
@@ -807,7 +709,7 @@ mod tests {
 
     #[test]
     fn wrap_around() {
-        let mut rb: Queue<i32, U3> = Queue::new();
+        let mut rb: Queue<i32, _, 3> = Queue::new();
 
         rb.enqueue(0).unwrap();
         rb.enqueue(1).unwrap();
@@ -823,7 +725,7 @@ mod tests {
 
     #[test]
     fn ready_flag() {
-        let mut rb: Queue<i32, U2> = Queue::new();
+        let mut rb: Queue<i32, _, 2> = Queue::new();
         let (mut p, mut c) = rb.split();
         assert_eq!(c.ready(), false);
         assert_eq!(p.ready(), true);
@@ -851,7 +753,7 @@ mod tests {
 
     #[test]
     fn clone() {
-        let mut rb1: Queue<i32, U4> = Queue::new();
+        let mut rb1: Queue<i32, _, 4> = Queue::new();
         rb1.enqueue(0).unwrap();
         rb1.enqueue(0).unwrap();
         rb1.dequeue().unwrap();
@@ -866,12 +768,12 @@ mod tests {
     fn eq() {
         // generate two queues with same content
         // but different buffer alignment
-        let mut rb1: Queue<i32, U4> = Queue::new();
+        let mut rb1: Queue<i32, _, 4> = Queue::new();
         rb1.enqueue(0).unwrap();
         rb1.enqueue(0).unwrap();
         rb1.dequeue().unwrap();
         rb1.enqueue(0).unwrap();
-        let mut rb2: Queue<i32, U4> = Queue::new();
+        let mut rb2: Queue<i32, _, 4> = Queue::new();
         rb2.enqueue(0).unwrap();
         rb2.enqueue(0).unwrap();
         assert!(rb1 == rb2);
@@ -892,7 +794,7 @@ mod tests {
         // generate two queues with same content
         // but different buffer alignment
         let rb1 = {
-            let mut rb1: Queue<i32, U4> = Queue::new();
+            let mut rb1: Queue<i32, _, 4> = Queue::new();
             rb1.enqueue(0).unwrap();
             rb1.enqueue(0).unwrap();
             rb1.dequeue().unwrap();
@@ -900,7 +802,7 @@ mod tests {
             rb1
         };
         let rb2 = {
-            let mut rb2: Queue<i32, U4> = Queue::new();
+            let mut rb2: Queue<i32, _, 4> = Queue::new();
             rb2.enqueue(0).unwrap();
             rb2.enqueue(0).unwrap();
             rb2

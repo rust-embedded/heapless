@@ -82,11 +82,13 @@
 //!
 //! [0]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
-use core::{
-    cell::UnsafeCell,
-    mem::MaybeUninit,
-    sync::atomic::{AtomicU8, Ordering},
-};
+use core::{cell::UnsafeCell, mem::MaybeUninit};
+
+#[cfg(armv6m)]
+use atomic_polyfill::{AtomicU8, Ordering};
+
+#[cfg(not(armv6m))]
+use core::sync::atomic::{AtomicU8, Ordering};
 
 /// MPMC queue with a capacity for 2 elements
 pub struct Q2<T> {

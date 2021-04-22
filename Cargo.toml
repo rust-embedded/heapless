@@ -2,6 +2,7 @@
 authors = [
   "Jorge Aparicio <jorge@japaric.io>",
   "Per Lindgren <per.lindgren@ltu.se>",
+  "Emil Fresk <emil.fresk@gmail.com>",
 ]
 categories = [
     "data-structures",
@@ -31,10 +32,11 @@ __trybuild = []
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
 
+[target.thumbv6m-none-eabi.dependencies]
+atomic-polyfill = "0.1.2"
+
 [dependencies]
-as-slice = "0.1.5"
-generic-array = "0.14.4"
-hash32 = "0.1.0"
+hash32 = "0.2.1"
 
 [dependencies.serde]
 version = "1"
