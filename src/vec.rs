@@ -31,11 +31,13 @@ use hash32;
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 pub struct Vec<T, const N: usize> {
-    buffer: MaybeUninit<[T; N]>,
+    buffer: [MaybeUninit<T>; N],
     len: usize,
 }
 
 impl<T, const N: usize> Vec<T, N> {
+    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+
     /// Constructs a new, empty vector with a fixed capacity of `N`
     ///
     /// # Examples
@@ -52,7 +54,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
         Self {
-            buffer: MaybeUninit::uninit(),
+            buffer: [Self::INIT; N],
             len: 0,
         }
     }
@@ -129,7 +131,6 @@ impl<T, const N: usize> Vec<T, N> {
     }
 
     /// Clears the vector, removing all values.
-    // PER: Check if non drop types correctly optimized.
     pub fn clear(&mut self) {
         self.truncate(0);
     }
@@ -210,7 +211,7 @@ impl<T, const N: usize> Vec<T, N> {
         debug_assert!(!self.as_slice().is_empty());
 
         self.len -= 1;
-        (self.buffer.as_ptr() as *const T).add(self.len).read()
+        (self.buffer.get_unchecked_mut(self.len).as_ptr() as *const T).read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -222,25 +223,21 @@ impl<T, const N: usize> Vec<T, N> {
         // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         debug_assert!(!self.is_full());
-        (self.buffer.as_mut_ptr() as *mut T)
-            .add(self.len)
-            .write(item);
+
+        *self.buffer.get_unchecked_mut(self.len) = MaybeUninit::new(item);
 
         self.len += 1;
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
-    // PER: Check that non drop types are correctly optimized
     pub fn truncate(&mut self, len: usize) {
-        unsafe {
-            // drop any extra elements
-            while len < self.len {
-                // decrement len before the drop_in_place(), so a panic on Drop
-                // doesn't re-drop the just-failed value.
-                self.len -= 1;
-                let len = self.len;
-                ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len));
-            }
+        // drop any extra elements
+        while len < self.len {
+            // decrement len before the drop_in_place(), so a panic on Drop
+            // doesn't re-drop the just-failed value.
+            self.len -= 1;
+            let len = self.len;
+            unsafe { ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len)) };
         }
     }
 
@@ -528,7 +525,6 @@ impl<const N: usize> fmt::Write for Vec<u8, N> {
     }
 }
 
-// PER: Please check if non drop types are correctly optimized
 impl<T, const N: usize> Drop for Vec<T, N> {
     fn drop(&mut self) {
         // We drop each element used in the vector by turning into a &mut[T]
@@ -623,7 +619,9 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe { (self.vec.buffer.as_ptr() as *const T).add(self.next).read() };
+            let item = unsafe {
+                (self.vec.buffer.get_unchecked_mut(self.next).as_ptr() as *const T).read()
+            };
             self.next += 1;
             Some(item)
         } else {
@@ -653,7 +651,6 @@ where
     }
 }
 
-// PER: is this correct
 impl<T, const N: usize> Drop for IntoIter<T, N> {
     fn drop(&mut self) {
         unsafe {
@@ -914,8 +911,7 @@ mod tests {
     fn collect_from_iter() {
         let slice = &[1, 2, 3];
         let vec: Vec<i32, 4> = slice.iter().cloned().collect();
-        // PER: Auto deref did not work
-        assert_eq!(vec.as_slice(), slice);
+        assert_eq!(&vec, slice);
     }
 
     #[test]
