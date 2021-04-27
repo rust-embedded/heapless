@@ -1122,10 +1122,6 @@
 <span id="1119">1119</span>
 <span id="1120">1120</span>
 <span id="1121">1121</span>
-<span id="1122">1122</span>
-<span id="1123">1123</span>
-<span id="1124">1124</span>
-<span id="1125">1125</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">core</span>::{<span class="ident">fmt</span>, <span class="ident">hash</span>, <span class="ident">iter</span>::<span class="ident">FromIterator</span>, <span class="ident">mem</span>::<span class="ident">MaybeUninit</span>, <span class="ident">ops</span>, <span class="ident">ptr</span>, <span class="ident">slice</span>};
 <span class="kw">use</span> <span class="ident">hash32</span>;
@@ -1160,11 +1156,13 @@
 <span class="doccomment">/// assert_eq!(*vec, [7, 1, 2, 3]);</span>
 <span class="doccomment">/// ```</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="ident">buffer</span>: <span class="ident">MaybeUninit</span><span class="op">&lt;</span>[<span class="ident">T</span>; <span class="ident">N</span>]<span class="op">&gt;</span>,
+    <span class="ident">buffer</span>: [<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>; <span class="ident">N</span>],
     <span class="ident">len</span>: <span class="ident">usize</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="kw">const</span> <span class="ident">INIT</span>: <span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MaybeUninit</span>::<span class="ident">uninit</span>();
+
     <span class="doccomment">/// Constructs a new, empty vector with a fixed capacity of `N`</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Examples</span>
@@ -1181,7 +1179,7 @@
     <span class="doccomment">/// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)</span>
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">buffer</span>: <span class="ident">MaybeUninit</span>::<span class="ident">uninit</span>(),
+            <span class="ident">buffer</span>: [<span class="self">Self</span>::<span class="ident">INIT</span>; <span class="ident">N</span>],
             <span class="ident">len</span>: <span class="number">0</span>,
         }
     }
@@ -1258,7 +1256,6 @@
     }
 
     <span class="doccomment">/// Clears the vector, removing all values.</span>
-    <span class="comment">// PER: Check if non drop types correctly optimized.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">truncate</span>(<span class="number">0</span>);
     }
@@ -1339,7 +1336,7 @@
         <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="op">!</span><span class="self">self</span>.<span class="ident">as_slice</span>().<span class="ident">is_empty</span>());
 
         <span class="self">self</span>.<span class="ident">len</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
-        (<span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>).<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">len</span>).<span class="ident">read</span>()
+        (<span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">get_unchecked_mut</span>(<span class="self">self</span>.<span class="ident">len</span>).<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>).<span class="ident">read</span>()
     }
 
     <span class="doccomment">/// Appends an `item` to the back of the collection</span>
@@ -1351,25 +1348,21 @@
         <span class="comment">// NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We</span>
         <span class="comment">// use `ptr::write` to avoid running `T`&#39;s destructor on the uninitialized memory</span>
         <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="op">!</span><span class="self">self</span>.<span class="ident">is_full</span>());
-        (<span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>)
-            .<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">len</span>)
-            .<span class="ident">write</span>(<span class="ident">item</span>);
+
+        <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">get_unchecked_mut</span>(<span class="self">self</span>.<span class="ident">len</span>) <span class="op">=</span> <span class="ident">MaybeUninit</span>::<span class="ident">new</span>(<span class="ident">item</span>);
 
         <span class="self">self</span>.<span class="ident">len</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
     }
 
     <span class="doccomment">/// Shortens the vector, keeping the first `len` elements and dropping the rest.</span>
-    <span class="comment">// PER: Check that non drop types are correctly optimized</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">truncate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">len</span>: <span class="ident">usize</span>) {
-        <span class="kw">unsafe</span> {
-            <span class="comment">// drop any extra elements</span>
-            <span class="kw">while</span> <span class="ident">len</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">len</span> {
-                <span class="comment">// decrement len before the drop_in_place(), so a panic on Drop</span>
-                <span class="comment">// doesn&#39;t re-drop the just-failed value.</span>
-                <span class="self">self</span>.<span class="ident">len</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
-                <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span>;
-                <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="self">self</span>.<span class="ident">as_mut_slice</span>().<span class="ident">get_unchecked_mut</span>(<span class="ident">len</span>));
-            }
+        <span class="comment">// drop any extra elements</span>
+        <span class="kw">while</span> <span class="ident">len</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">len</span> {
+            <span class="comment">// decrement len before the drop_in_place(), so a panic on Drop</span>
+            <span class="comment">// doesn&#39;t re-drop the just-failed value.</span>
+            <span class="self">self</span>.<span class="ident">len</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
+            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span>;
+            <span class="kw">unsafe</span> { <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="self">self</span>.<span class="ident">as_mut_slice</span>().<span class="ident">get_unchecked_mut</span>(<span class="ident">len</span>)) };
         }
     }
 
@@ -1657,7 +1650,6 @@
     }
 }
 
-<span class="comment">// PER: Please check if non drop types are correctly optimized</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="comment">// We drop each element used in the vector by turning into a &amp;mut[T]</span>
@@ -1752,7 +1744,9 @@
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span>;
     <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">next</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">len</span>() {
-            <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="kw">unsafe</span> { (<span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">buffer</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>).<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">next</span>).<span class="ident">read</span>() };
+            <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="kw">unsafe</span> {
+                (<span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">buffer</span>.<span class="ident">get_unchecked_mut</span>(<span class="self">self</span>.<span class="ident">next</span>).<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span>).<span class="ident">read</span>()
+            };
             <span class="self">self</span>.<span class="ident">next</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
             <span class="prelude-val">Some</span>(<span class="ident">item</span>)
         } <span class="kw">else</span> {
@@ -1782,7 +1776,6 @@
     }
 }
 
-<span class="comment">// PER: is this correct</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">IntoIter</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">unsafe</span> {
@@ -2043,8 +2036,7 @@
     <span class="kw">fn</span> <span class="ident">collect_from_iter</span>() {
         <span class="kw">let</span> <span class="ident">slice</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
         <span class="kw">let</span> <span class="ident">vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="number">4</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>();
-        <span class="comment">// PER: Auto deref did not work</span>
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">vec</span>.<span class="ident">as_slice</span>(), <span class="ident">slice</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="ident">vec</span>, <span class="ident">slice</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
