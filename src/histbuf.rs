@@ -1,8 +1,8 @@
+use core::fmt;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 use core::ptr;
 use core::slice;
-use core::fmt;
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
