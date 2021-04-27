@@ -64,9 +64,9 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    |
    = help: within `heapless::Vec<PhantomData<*const ()>, 4_usize>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because it appears within the type `[PhantomData<*const ()>; 4]`
-   = note: required because it appears within the type `ManuallyDrop<[PhantomData<*const ()>; 4]>`
-   = note: required because it appears within the type `MaybeUninit<[PhantomData<*const ()>; 4]>`
+   = note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
+   = note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
+   = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
    = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, 4_usize>`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
