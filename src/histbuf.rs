@@ -1,6 +1,8 @@
 use core::mem::MaybeUninit;
+use core::ops::Deref;
 use core::ptr;
 use core::slice;
+use core::fmt;
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
@@ -212,6 +214,30 @@ impl<T, const N: usize> Drop for HistoryBuffer<T, N> {
     }
 }
 
+impl<T, const N: usize> Deref for HistoryBuffer<T, N> {
+    type Target = [T];
+
+    fn deref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<T, const N: usize> AsRef<[T]> for HistoryBuffer<T, N> {
+    #[inline]
+    fn as_ref(&self) -> &[T] {
+        self
+    }
+}
+
+impl<T, const N: usize> fmt::Debug for HistoryBuffer<T, N>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <[T] as fmt::Debug>::fmt(self, f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::HistoryBuffer;
@@ -221,6 +247,7 @@ mod tests {
         let x: HistoryBuffer<u8, 4> = HistoryBuffer::new_with(1);
         assert_eq!(x.len(), 4);
         assert_eq!(x.as_slice(), [1; 4]);
+        assert_eq!(*x, [1; 4]);
 
         let x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.as_slice(), []);
