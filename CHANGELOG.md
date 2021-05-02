@@ -14,11 +14,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] Converted all data structures to use the `const generics` MVP
 - [breaking-change] `HistoryBuffer` is now working with const constructors and non-`Copy` data
 - [breaking-change] `HistoryBuffer::as_slice` and others now only return initialized values
+- Added missing `Deref`, `AsRef` and `Debug` for `HistoryBuffer`
 - [breaking-change] `MultiCore`/`SingleCore` and `Uxx` is now removed from `spsc::Queue`
 - [breaking-change] `spsc::Queue` is now `usize` only
 - [breaking-change] `spsc::Queue` now sacrifices one element for correctness (see issue #207), i.e. it creates an `N - 1` sized queue instead of the old that generated an size `N` queue
 - [breaking-change] `String` has had `utf8` related methods removed as this can be done via `str`
-- [breaking-change] No data structures implement `AsSlice` traits any more, now using `AsRef` and `AsMut`
+- [breaking-change] No data structures implement `AsSlice` traits any more, now using `AsRef` and `AsMut` as they work with any size of array now
 
 ### Fixed
 
