@@ -84,11 +84,24 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(armv6m)]
-use atomic_polyfill::{AtomicU8, Ordering};
+#[cfg(all(feature = "mpmc_large", not(armv6m)))]
+type AtomicTargetSize = core::sync::atomic::AtomicUsize;
+#[cfg(all(feature = "mpmc_large", armv6m))]
+type AtomicTargetSize = atomic_polyfill::AtomicUsize;
+#[cfg(all(not(feature = "mpmc_large"), not(armv6m)))]
+type AtomicTargetSize = core::sync::atomic::AtomicU8;
+#[cfg(all(not(feature = "mpmc_large"), armv6m))]
+type AtomicTargetSize = atomic_polyfill::AtomicU8;
 
 #[cfg(not(armv6m))]
-use core::sync::atomic::{AtomicU8, Ordering};
+type Ordering = core::sync::atomic::Ordering;
+#[cfg(armv6m)]
+type Ordering = atomic_polyfill::Ordering;
+
+#[cfg(feature = "mpmc_large")]
+type IntSize = usize;
+#[cfg(not(feature = "mpmc_large"))]
+type IntSize = u8;
 
 /// MPMC queue with a capability for 2 elements.
 pub type Q2<T> = MpMcQueue<T, 2>;
@@ -109,15 +122,15 @@ pub type Q32<T> = MpMcQueue<T, 32>;
 pub type Q64<T> = MpMcQueue<T, 64>;
 
 /// MPMC queue with a capacity for N elements
-/// The max value of N is u8::MAX - 1.
+/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
 pub struct MpMcQueue<T, const N: usize> {
     buffer: UnsafeCell<[Cell<T>; N]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
+    dequeue_pos: AtomicTargetSize,
+    enqueue_pos: AtomicTargetSize,
 }
 
 impl<T, const N: usize> MpMcQueue<T, N> {
-    const MASK: u8 = (N - 1) as u8;
+    const MASK: IntSize = (N - 1) as IntSize;
     const EMPTY_CELL: Cell<T> = Cell::new(0);
 
     const ASSERT: [(); 1] = [()];
@@ -125,7 +138,7 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     /// Creates an empty queue
     pub const fn new() -> Self {
         // Const assert on size.
-        Self::ASSERT[!(N < (u8::MAX as usize)) as usize];
+        Self::ASSERT[!(N < (IntSize::MAX as usize)) as usize];
 
         let mut cell_count = 0;
 
@@ -137,8 +150,8 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
         Self {
             buffer: UnsafeCell::new(result_cells),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
+            dequeue_pos: AtomicTargetSize::new(0),
+            enqueue_pos: AtomicTargetSize::new(0),
         }
     }
 
@@ -166,19 +179,23 @@ unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
 
 struct Cell<T> {
     data: MaybeUninit<T>,
-    sequence: AtomicU8,
+    sequence: AtomicTargetSize,
 }
 
 impl<T> Cell<T> {
     const fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
-            sequence: AtomicU8::new(seq as u8),
+            sequence: AtomicTargetSize::new(seq as IntSize),
         }
     }
 }
 
-unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> Option<T> {
+unsafe fn dequeue<T>(
+    buffer: *mut Cell<T>,
+    dequeue_pos: &AtomicTargetSize,
+    mask: IntSize,
+) -> Option<T> {
     let mut pos = dequeue_pos.load(Ordering::Relaxed);
 
     let mut cell;
@@ -215,8 +232,8 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
 
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
-    enqueue_pos: &AtomicU8,
-    mask: u8,
+    enqueue_pos: &AtomicTargetSize,
+    mask: IntSize,
     item: T,
 ) -> Result<(), T> {
     let mut pos = enqueue_pos.load(Ordering::Relaxed);
