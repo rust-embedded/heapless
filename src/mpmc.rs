@@ -85,27 +85,54 @@
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
 #[cfg(armv6m)]
-use atomic_polyfill::{AtomicU8, Ordering};
+use atomic_polyfill::{AtomicUsize, Ordering};
 
 #[cfg(not(armv6m))]
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
-/// MPMC queue with a capacity for 2 elements
-pub struct Q2<T> {
-    buffer: UnsafeCell<[Cell<T>; 2]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
+/// MPMC queue with a capability for 2 elements.
+pub type Q2<T> = MpMcQueue<T, 2>;
+
+/// MPMC queue with a capability for 4 elements.
+pub type Q4<T> = MpMcQueue<T, 4>;
+
+/// MPMC queue with a capability for 8 elements.
+pub type Q8<T> = MpMcQueue<T, 8>;
+
+/// MPMC queue with a capability for 16 elements.
+pub type Q16<T> = MpMcQueue<T, 16>;
+
+/// MPMC queue with a capability for 32 elements.
+pub type Q32<T> = MpMcQueue<T, 32>;
+
+/// MPMC queue with a capability for 64 elements.
+pub type Q64<T> = MpMcQueue<T, 64>;
+
+/// MPMC queue with a capacity for N elements
+pub struct MpMcQueue<T, const N: usize> {
+    buffer: UnsafeCell<[Cell<T>; N]>,
+    dequeue_pos: AtomicUsize,
+    enqueue_pos: AtomicUsize,
 }
 
-impl<T> Q2<T> {
-    const MASK: u8 = 2 - 1;
+impl<T, const N: usize> MpMcQueue<T, N> {
+    const MASK: usize = N - 1;
+    const EMPTY_CELL: Cell<T> = Cell::new(0);
 
     /// Creates an empty queue
     pub const fn new() -> Self {
+        let mut cell_count = 0;
+
+        let mut result_cells: [Cell<T>; N] = [Self::EMPTY_CELL; N];
+        while cell_count != N {
+            result_cells[cell_count] = Cell::new(cell_count);
+            cell_count += 1;
+        }
+
         Self {
-            buffer: UnsafeCell::new([Cell::new(0), Cell::new(1)]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
+            buffer: UnsafeCell::new(result_cells),
+            dequeue_pos: AtomicUsize::new(0),
+            enqueue_pos: AtomicUsize::new(0),
         }
     }
 
@@ -129,352 +156,23 @@ impl<T> Q2<T> {
     }
 }
 
-unsafe impl<T> Sync for Q2<T> where T: Send {}
-
-/// MPMC queue with a capacity for 4 elements
-pub struct Q4<T> {
-    buffer: UnsafeCell<[Cell<T>; 4]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
-}
-
-impl<T> Q4<T> {
-    const MASK: u8 = 4 - 1;
-
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        Self {
-            buffer: UnsafeCell::new([Cell::new(0), Cell::new(1), Cell::new(2), Cell::new(3)]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
-        }
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
-    }
-
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                self.buffer.get() as *mut _,
-                &self.enqueue_pos,
-                Self::MASK,
-                item,
-            )
-        }
-    }
-}
-
-unsafe impl<T> Sync for Q4<T> where T: Send {}
-
-/// MPMC queue with a capacity for 8 elements
-pub struct Q8<T> {
-    buffer: UnsafeCell<[Cell<T>; 8]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
-}
-
-impl<T> Q8<T> {
-    const MASK: u8 = 8 - 1;
-
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        Self {
-            buffer: UnsafeCell::new([
-                Cell::new(0),
-                Cell::new(1),
-                Cell::new(2),
-                Cell::new(3),
-                Cell::new(4),
-                Cell::new(5),
-                Cell::new(6),
-                Cell::new(7),
-            ]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
-        }
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
-    }
-
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                self.buffer.get() as *mut _,
-                &self.enqueue_pos,
-                Self::MASK,
-                item,
-            )
-        }
-    }
-}
-
-unsafe impl<T> Sync for Q8<T> where T: Send {}
-
-/// MPMC queue with a capacity for 16 elements
-pub struct Q16<T> {
-    buffer: UnsafeCell<[Cell<T>; 16]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
-}
-
-impl<T> Q16<T> {
-    const MASK: u8 = 16 - 1;
-
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        Self {
-            buffer: UnsafeCell::new([
-                Cell::new(0),
-                Cell::new(1),
-                Cell::new(2),
-                Cell::new(3),
-                Cell::new(4),
-                Cell::new(5),
-                Cell::new(6),
-                Cell::new(7),
-                Cell::new(8),
-                Cell::new(9),
-                Cell::new(10),
-                Cell::new(11),
-                Cell::new(12),
-                Cell::new(13),
-                Cell::new(14),
-                Cell::new(15),
-            ]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
-        }
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
-    }
-
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                self.buffer.get() as *mut _,
-                &self.enqueue_pos,
-                Self::MASK,
-                item,
-            )
-        }
-    }
-}
-
-unsafe impl<T> Sync for Q16<T> where T: Send {}
-
-/// MPMC queue with a capacity for 32 elements
-pub struct Q32<T> {
-    buffer: UnsafeCell<[Cell<T>; 32]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
-}
-
-impl<T> Q32<T> {
-    const MASK: u8 = 32 - 1;
-
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        Self {
-            buffer: UnsafeCell::new([
-                Cell::new(0),
-                Cell::new(1),
-                Cell::new(2),
-                Cell::new(3),
-                Cell::new(4),
-                Cell::new(5),
-                Cell::new(6),
-                Cell::new(7),
-                Cell::new(8),
-                Cell::new(9),
-                Cell::new(10),
-                Cell::new(11),
-                Cell::new(12),
-                Cell::new(13),
-                Cell::new(14),
-                Cell::new(15),
-                Cell::new(16),
-                Cell::new(17),
-                Cell::new(18),
-                Cell::new(19),
-                Cell::new(20),
-                Cell::new(21),
-                Cell::new(22),
-                Cell::new(23),
-                Cell::new(24),
-                Cell::new(25),
-                Cell::new(26),
-                Cell::new(27),
-                Cell::new(28),
-                Cell::new(29),
-                Cell::new(30),
-                Cell::new(31),
-            ]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
-        }
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
-    }
-
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                self.buffer.get() as *mut _,
-                &self.enqueue_pos,
-                Self::MASK,
-                item,
-            )
-        }
-    }
-}
-
-unsafe impl<T> Sync for Q32<T> where T: Send {}
-
-/// MPMC queue with a capacity for 64 elements
-pub struct Q64<T> {
-    buffer: UnsafeCell<[Cell<T>; 64]>,
-    dequeue_pos: AtomicU8,
-    enqueue_pos: AtomicU8,
-}
-
-impl<T> Q64<T> {
-    const MASK: u8 = 64 - 1;
-
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        Self {
-            buffer: UnsafeCell::new([
-                Cell::new(0),
-                Cell::new(1),
-                Cell::new(2),
-                Cell::new(3),
-                Cell::new(4),
-                Cell::new(5),
-                Cell::new(6),
-                Cell::new(7),
-                Cell::new(8),
-                Cell::new(9),
-                Cell::new(10),
-                Cell::new(11),
-                Cell::new(12),
-                Cell::new(13),
-                Cell::new(14),
-                Cell::new(15),
-                Cell::new(16),
-                Cell::new(17),
-                Cell::new(18),
-                Cell::new(19),
-                Cell::new(20),
-                Cell::new(21),
-                Cell::new(22),
-                Cell::new(23),
-                Cell::new(24),
-                Cell::new(25),
-                Cell::new(26),
-                Cell::new(27),
-                Cell::new(28),
-                Cell::new(29),
-                Cell::new(30),
-                Cell::new(31),
-                Cell::new(32),
-                Cell::new(33),
-                Cell::new(34),
-                Cell::new(35),
-                Cell::new(36),
-                Cell::new(37),
-                Cell::new(38),
-                Cell::new(39),
-                Cell::new(40),
-                Cell::new(41),
-                Cell::new(42),
-                Cell::new(43),
-                Cell::new(44),
-                Cell::new(45),
-                Cell::new(46),
-                Cell::new(47),
-                Cell::new(48),
-                Cell::new(49),
-                Cell::new(50),
-                Cell::new(51),
-                Cell::new(52),
-                Cell::new(53),
-                Cell::new(54),
-                Cell::new(55),
-                Cell::new(56),
-                Cell::new(57),
-                Cell::new(58),
-                Cell::new(59),
-                Cell::new(60),
-                Cell::new(61),
-                Cell::new(62),
-                Cell::new(63),
-            ]),
-            dequeue_pos: AtomicU8::new(0),
-            enqueue_pos: AtomicU8::new(0),
-        }
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
-    }
-
-    /// Adds an `item` to the end of the queue
-    ///
-    /// Returns back the `item` if the queue is full
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                self.buffer.get() as *mut _,
-                &self.enqueue_pos,
-                Self::MASK,
-                item,
-            )
-        }
-    }
-}
-
-unsafe impl<T> Sync for Q64<T> where T: Send {}
+unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
 
 struct Cell<T> {
     data: MaybeUninit<T>,
-    sequence: AtomicU8,
+    sequence: AtomicUsize,
 }
 
 impl<T> Cell<T> {
-    const fn new(seq: u8) -> Self {
+    const fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
-            sequence: AtomicU8::new(seq),
+            sequence: AtomicUsize::new(seq),
         }
     }
 }
 
-unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> Option<T> {
+unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicUsize, mask: usize) -> Option<T> {
     let mut pos = dequeue_pos.load(Ordering::Relaxed);
 
     let mut cell;
@@ -511,8 +209,8 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> 
 
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
-    enqueue_pos: &AtomicU8,
-    mask: u8,
+    enqueue_pos: &AtomicUsize,
+    mask: usize,
     item: T,
 ) -> Result<(), T> {
     let mut pos = enqueue_pos.load(Ordering::Relaxed);
