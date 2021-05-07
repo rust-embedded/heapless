@@ -85,10 +85,10 @@
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
 #[cfg(armv6m)]
-use atomic_polyfill::{AtomicUsize, Ordering};
+use atomic_polyfill::{AtomicU8, Ordering};
 
 #[cfg(not(armv6m))]
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicU8, Ordering};
 
 /// MPMC queue with a capability for 2 elements.
 pub type Q2<T> = MpMcQueue<T, 2>;
@@ -109,18 +109,24 @@ pub type Q32<T> = MpMcQueue<T, 32>;
 pub type Q64<T> = MpMcQueue<T, 64>;
 
 /// MPMC queue with a capacity for N elements
+/// The max value of N is u8::MAX - 1.
 pub struct MpMcQueue<T, const N: usize> {
     buffer: UnsafeCell<[Cell<T>; N]>,
-    dequeue_pos: AtomicUsize,
-    enqueue_pos: AtomicUsize,
+    dequeue_pos: AtomicU8,
+    enqueue_pos: AtomicU8,
 }
 
 impl<T, const N: usize> MpMcQueue<T, N> {
-    const MASK: usize = N - 1;
+    const MASK: u8 = (N - 1) as u8;
     const EMPTY_CELL: Cell<T> = Cell::new(0);
+
+    const ASSERT: [(); 1] = [()];
 
     /// Creates an empty queue
     pub const fn new() -> Self {
+        // Const assert on size.
+        Self::ASSERT[!(N < (u8::MAX as usize)) as usize];
+
         let mut cell_count = 0;
 
         let mut result_cells: [Cell<T>; N] = [Self::EMPTY_CELL; N];
@@ -131,8 +137,8 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
         Self {
             buffer: UnsafeCell::new(result_cells),
-            dequeue_pos: AtomicUsize::new(0),
-            enqueue_pos: AtomicUsize::new(0),
+            dequeue_pos: AtomicU8::new(0),
+            enqueue_pos: AtomicU8::new(0),
         }
     }
 
@@ -160,19 +166,19 @@ unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
 
 struct Cell<T> {
     data: MaybeUninit<T>,
-    sequence: AtomicUsize,
+    sequence: AtomicU8,
 }
 
 impl<T> Cell<T> {
     const fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
-            sequence: AtomicUsize::new(seq),
+            sequence: AtomicU8::new(seq as u8),
         }
     }
 }
 
-unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicUsize, mask: usize) -> Option<T> {
+unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicU8, mask: u8) -> Option<T> {
     let mut pos = dequeue_pos.load(Ordering::Relaxed);
 
     let mut cell;
@@ -209,8 +215,8 @@ unsafe fn dequeue<T>(buffer: *mut Cell<T>, dequeue_pos: &AtomicUsize, mask: usiz
 
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
-    enqueue_pos: &AtomicUsize,
-    mask: usize,
+    enqueue_pos: &AtomicU8,
+    mask: u8,
     item: T,
 ) -> Result<(), T> {
     let mut pos = enqueue_pos.load(Ordering::Relaxed);
