@@ -4,17 +4,11 @@ authors = [
   "Per Lindgren <per.lindgren@ltu.se>",
   "Emil Fresk <emil.fresk@gmail.com>",
 ]
-categories = [
-    "data-structures",
-    "no-std",
-]
+categories = ["data-structures", "no-std"]
 description = "`static` friendly data structures that don't require dynamic memory allocation"
 documentation = "https://docs.rs/heapless"
 edition = "2018"
-keywords = [
-    "static",
-    "no-heap",
-]
+keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
@@ -28,6 +22,8 @@ ufmt-impl = ["ufmt-write"]
 x86-sync-pool = []
 # only for tests
 __trybuild = []
+# Enable larger MPMC sizes.
+mpmc_large = []
 
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
