@@ -24,6 +24,7 @@ x86-sync-pool = []
 __trybuild = []
 # Enable larger MPMC sizes.
 mpmc_large = []
+defmt-impl = ["defmt"]
 
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
 scoped_threadpool = "0.1.8"
@@ -49,3 +50,12 @@ optional = true
 
 [dev-dependencies.ufmt]
 version = "0.1"
+
+[dependencies.defmt]
+version = "0.2.1"
+optional = true
+
+[dev-dependencies.defmt]
+version = "0.2.1"
+features = ["unstable-test"]
+
