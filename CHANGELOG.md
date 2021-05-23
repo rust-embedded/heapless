@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.7.1] - 2021-05-23
+
+### Changed
+
+- MPMC is now more generic
+
+### Added
+
+- `defmt` for `Vec` and `String`
+
 ## [v0.7.0] - 2021-04-23
 
 ### Changed
@@ -348,7 +358,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.1...HEAD
+[v0.7.1]: https://github.com/japaric/heapless/compare/v0.7.0...v0.7.1
 [v0.7.0]: https://github.com/japaric/heapless/compare/v0.6.1...v0.7.0
 [v0.6.1]: https://github.com/japaric/heapless/compare/v0.6.0...v0.6.1
 [v0.6.0]: https://github.com/japaric/heapless/compare/v0.5.5...v0.6.0
