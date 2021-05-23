@@ -1,7 +1,7 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `pool` mod in crate `heapless`."><meta name="keywords" content="rust, rustlang, rust-lang, pool"><title>heapless::pool - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A heap-less, interrupt-safe, lock-free memory pool (*)"><meta name="keywords" content="rust, rustlang, rust-lang, pool"><title>heapless::pool - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module pool</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><p class="location"><a href="../index.html">heapless</a></p><div id="sidebar-vars" data-name="pool" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
-                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">heapless</a>::<wbr><a class="mod" href="">pool</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/heapless/pool/mod.rs.html#1-644" title="goto source code">[src]</a></span></h1><div class="docblock"><p>A heap-less, interrupt-safe, lock-free memory pool (*)</p>
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module pool</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><p class="location"><a href="../index.html">heapless</a></p><div id="sidebar-vars" data-name="pool" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">heapless</a>::<wbr><a class="mod" href="">pool</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/heapless/pool/mod.rs.html#1-644" title="goto source code">[src]</a></span></h1><div class="docblock"><p>A heap-less, interrupt-safe, lock-free memory pool (*)</p>
 <p>NOTE: This module is not available on targets that do <em>not</em> support CAS operations, e.g. ARMv6-M</p>
 <p>(*) Currently, the implementation is only lock-free <em>and</em> <code>Sync</code> on ARMv7-{A,R,M} &amp; ARMv8-M
 devices</p>
@@ -52,7 +52,7 @@ automatic deallocation of memory blocks on <code>drop</code>.</p>
 <p>This pool internally uses a Treiber stack which is known to be susceptible to the ABA problem.
 The only counter measure against the ABA problem that this implementation currently takes is
 relying on LL/SC (Link-local / Store-conditional) instructions being used to implement CAS loops
-on the target architecture (see section on <a href="#soundness">'Soundness'</a> for more information). For
+on the target architecture (see section on <a href="#soundness">‘Soundness’</a> for more information). For
 this reason, <code>Pool</code> only implements <code>Sync</code> when compiling for some ARM cores.</p>
 <p>Also note that ARMv6-M architecture lacks the primitives for CAS loops so this module does <em>not</em>
 exist for <code>thumbv6m-none-eabi</code>.</p>
@@ -98,13 +98,13 @@ preempted by some interrupt handler somewhere between the <code>head.load</code>
 <p>An example: imagine we are doing on <code>pop</code> on stack that contains these nodes: <code>A -&gt; B -&gt; C</code>,
 <code>A</code> is the head (top), <code>B</code> is next to <code>A</code> and <code>C</code> is next to <code>B</code>. The <code>pop</code> operation will do a
 <code>CAS(&amp;self.head, A, B)</code> operation to atomically change the head to <code>B</code> iff it currently is <code>A</code>.
-Now, let's say a handler preempts the <code>pop</code> operation before the <code>CAS</code> operation starts and it
+Now, let’s say a handler preempts the <code>pop</code> operation before the <code>CAS</code> operation starts and it
 <code>pop</code>s the stack twice and then <code>push</code>es back the <code>A</code> node; now the state of the stack is <code>A -&gt; C</code>. When the original <code>pop</code> operation is resumed it will succeed in doing the <code>CAS</code> operation
 setting <code>B</code> as the head of the stack. However, <code>B</code> was used by the handler as a memory block and
 no longer is a valid free node. As a result the stack, and thus the allocator, is in a invalid
 state.</p>
 <p>However, not all is lost because ARM devices use LL/SC (Link-local / Store-conditional)
-operations to implement CAS loops. Let's look at the actual disassembly of <code>pop</code> for the ARM
+operations to implement CAS loops. Let’s look at the actual disassembly of <code>pop</code> for the ARM
 Cortex-M.</p>
 <pre><code class="language-text">08000130 &lt;&lt;heapless::pool::Pool&lt;T&gt;&gt;::pop&gt;:
  8000130:       6802            ldr     r2, [r0, #0]
@@ -124,7 +124,7 @@ Cortex-M.</p>
  8000154:       4608            mov     r0, r1
  8000156:       4770            bx      lr
 </code></pre>
-<p>LDREX (&quot;load exclusive&quot;) is the LL instruction, and STREX (&quot;store exclusive&quot;) is the SC
+<p>LDREX (“load exclusive”) is the LL instruction, and STREX (“store exclusive”) is the SC
 instruction (see <a href="#references">1</a>). On the Cortex-M, STREX will always fail if the processor
 takes an exception between it and its corresponding LDREX operation (see <a href="#references">2</a>). If
 STREX fails then the CAS loop is retried (see instruction @ <code>0x8000146</code>). On single core
@@ -135,9 +135,9 @@ problem on Cortex-M.</p>
 while the current core is somewhere between LDREX and STREX then the current core will fail its
 STREX operation.</p>
 <h1 id="x86_64-support--limitations" class="section-header"><a href="#x86_64-support--limitations">x86_64 support / limitations</a></h1>
-<p><em>NOTE</em> <code>Pool</code> is only <code>Sync</code> on <code>x86_64</code> if the Cargo feature &quot;x86-sync-pool&quot; is enabled</p>
+<p><em>NOTE</em> <code>Pool</code> is only <code>Sync</code> on <code>x86_64</code> if the Cargo feature “x86-sync-pool” is enabled</p>
 <p>x86_64 support is a gamble. Yes, a gamble. Do you feel lucky enough to use <code>Pool</code> on x86_64?</p>
-<p>As it's not possible to implement <em>ideal</em> LL/SC semantics (*) on x86_64 the architecture is
+<p>As it’s not possible to implement <em>ideal</em> LL/SC semantics (*) on x86_64 the architecture is
 susceptible to the ABA problem described above. To <em>reduce the chances</em> of ABA occurring in
 practice we use version tags (keyword: IBM ABA-prevention tags). Again, this approach does
 <em>not</em> fix / prevent / avoid the ABA problem; it only reduces the chance of it occurring in
@@ -145,12 +145,12 @@ practice but the chances of it occurring are not reduced to zero.</p>
 <p>How we have implemented version tags: instead of using an <code>AtomicPtr</code> to link the stack <code>Node</code>s
 we use an <code>AtomicUsize</code> where the 64-bit <code>usize</code> is always comprised of a monotonically
 increasing 32-bit tag (higher bits) and a 32-bit signed address offset. The address of a node is
-computed by adding the 32-bit offset to an &quot;anchor&quot; address (the address of a static variable
+computed by adding the 32-bit offset to an “anchor” address (the address of a static variable
 that lives somewhere in the <code>.bss</code> linker section). The tag is increased every time a node is
 popped (removed) from the stack.</p>
-<p>To see how version tags can prevent ABA consider the example from the previous section. Let's
+<p>To see how version tags can prevent ABA consider the example from the previous section. Let’s
 start with a stack in this state: <code>(~A, 0) -&gt; (~B, 1) -&gt; (~C, 2)</code>, where <code>~A</code> represents the
-address of node A as a 32-bit offset from the &quot;anchor&quot; and the second tuple element (e.g. <code>0</code>)
+address of node A as a 32-bit offset from the “anchor” and the second tuple element (e.g. <code>0</code>)
 indicates the version of the node. For simplicity, assume a single core system: thread T1 is
 performing <code>pop</code> and before <code>CAS(&amp;self.head, (~A, 0), (~B, 1))</code> is executed a context switch
 occurs and the core resumes T2. T2 pops the stack twice and pushes A back into the stack;
@@ -167,37 +167,37 @@ original value of <code>0</code> and the CAS operation in T1 will succeed and co
 operation will complete within one time slice, assuming time sliced threads. If you have thread
 priorities then the above operation could occur during the lifetime of many high priorities
 threads if T1 is running at low priority.</p>
-<p>Other implementations of version tags use more than 32 bits in their tags (e.g. &quot;Scalable
-Lock-Free Dynamic Memory Allocation&quot; uses 42-bit tags in its super blocks). In theory, one could
+<p>Other implementations of version tags use more than 32 bits in their tags (e.g. “Scalable
+Lock-Free Dynamic Memory Allocation” uses 42-bit tags in its super blocks). In theory, one could
 use double-word CAS on x86_64 to pack a 64-bit tag and a 64-bit pointer in a double-word but
-this CAS operation is not exposed in the standard library (and I think it's not available on
+this CAS operation is not exposed in the standard library (and I think it’s not available on
 older x86_64 processors?)</p>
-<p>(*) Apparently one can emulate proper LL/SC semantics on x86_64 using hazard pointers (?) --
-the technique appears to be documented in &quot;ABA Prevention Using Single-Word Instructions&quot;, which
-is not public AFAICT -- but hazard pointers require Thread Local Storage (TLS), which is a
+<p>(*) Apparently one can emulate proper LL/SC semantics on x86_64 using hazard pointers (?) –
+the technique appears to be documented in “ABA Prevention Using Single-Word Instructions”, which
+is not public AFAICT – but hazard pointers require Thread Local Storage (TLS), which is a
 non-starter for a <code>no_std</code> library like <code>heapless</code>.</p>
 <h2 id="x86_64-limitations" class="section-header"><a href="#x86_64-limitations">x86_64 Limitations</a></h2>
 <p>Because stack nodes must be located within +- 2 GB of the hidden <code>ANCHOR</code> variable, which
 lives in the <code>.bss</code> section, <code>Pool</code> may not be able to manage static references created using
-<code>Box::leak</code> -- these heap allocated chunks of memory may live in a very different address space.
+<code>Box::leak</code> – these heap allocated chunks of memory may live in a very different address space.
 When the <code>Pool</code> is unable to manage a node because of its address it will simply discard it:
 <code>Pool::grow*</code> methods return the number of new memory blocks added to the pool; if these methods
 return <code>0</code> it means the <code>Pool</code> is unable to manage the memory given to them.</p>
 <h1 id="references" class="section-header"><a href="#references">References</a></h1>
 <ol>
-<li><a href="http://infocenter.arm.com/help/topic/com.arm.doc.dui0552a/DUI0552A_cortex_m3_dgug.pdf">Cortex-M3 Devices Generic User Guide (DUI 0552A)</a>, Section 2.2.7 &quot;Synchronization
-primitives&quot;</li>
+<li><a href="http://infocenter.arm.com/help/topic/com.arm.doc.dui0552a/DUI0552A_cortex_m3_dgug.pdf">Cortex-M3 Devices Generic User Guide (DUI 0552A)</a>, Section 2.2.7 “Synchronization
+primitives”</li>
 </ol>
 <ol start="2">
-<li><a href="https://static.docs.arm.com/ddi0403/eb/DDI0403E_B_armv7m_arm.pdf">ARMv7-M Architecture Reference Manual (DDI 0403E.b)</a>, Section A3.4 &quot;Synchronization and
-semaphores&quot;</li>
+<li><a href="https://static.docs.arm.com/ddi0403/eb/DDI0403E_B_armv7m_arm.pdf">ARMv7-M Architecture Reference Manual (DDI 0403E.b)</a>, Section A3.4 “Synchronization and
+semaphores”</li>
 </ol>
 <ol start="3">
 <li>
-<p>&quot;Scalable Lock-Free Dynamic Memory Allocation&quot; Michael, Maged M.</p>
+<p>“Scalable Lock-Free Dynamic Memory Allocation” Michael, Maged M.</p>
 </li>
 <li>
-<p>&quot;Hazard pointers: Safe memory reclamation for lock-free objects.&quot; Michael, Maged M.</p>
+<p>“Hazard pointers: Safe memory reclamation for lock-free objects.” Michael, Maged M.</p>
 </li>
 </ol>
 </div><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
@@ -210,5 +210,5 @@ semaphores&quot;</li>
 </td></tr></table><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
 <table><tr class="module-item"><td><a class="enum" href="enum.Init.html" title="heapless::pool::Init enum">Init</a></td><td class="docblock-short"><p>Initialized type state</p>
 </td></tr><tr class="module-item"><td><a class="enum" href="enum.Uninit.html" title="heapless::pool::Uninit enum">Uninit</a></td><td class="docblock-short"><p>Uninitialized type state</p>
-</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless"></div>
-    <script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless" data-search-js="../../search-index.js"></div>
+    <script src="../../main.js"></script></body></html>
