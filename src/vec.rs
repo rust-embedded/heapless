@@ -107,6 +107,32 @@ impl<T, const N: usize> Vec<T, N> {
         unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
     }
 
+    /// Returns the contents of the vector as an array of length `M` if the length
+    /// of the vector is exactly `M`, otherwise returns `Err(self)`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// let buffer: Vec<u8, 42> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// let array: [u8; 5] = buffer.into_array().unwrap();
+    /// assert_eq!(array, [1, 2, 3, 5, 8]);
+    /// ```
+    pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
+        if self.len() == M {
+            // This is how the unstable `MaybeUninit::array_assume_init` method does it
+            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+
+            // We don't want `self`'s destructor to be called because that would drop all the
+            // items in the array
+            core::mem::forget(self);
+
+            Ok(array)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Extracts a mutable slice containing the entire vector.
     ///
     /// Equivalent to `&s[..]`.
