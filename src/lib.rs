@@ -71,6 +71,7 @@
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
+#![deny(const_err)]
 
 pub use binary_heap::BinaryHeap;
 pub use histbuf::HistoryBuffer;
