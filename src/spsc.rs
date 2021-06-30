@@ -116,6 +116,9 @@ impl<T, const N: usize> Queue<T, N> {
 
     /// Creates an empty queue with a fixed capacity of `N - 1`
     pub const fn new() -> Self {
+        // Const assert N > 1
+        crate::sealed::greater_than_1::<N>();
+
         Queue {
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),

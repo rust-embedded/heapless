@@ -137,6 +137,9 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
     /// Creates an empty queue
     pub const fn new() -> Self {
+        // Const assert
+        crate::sealed::greater_than_0::<N>();
+
         // Const assert on size.
         Self::ASSERT[!(N < (IntSize::MAX as usize)) as usize];
 
