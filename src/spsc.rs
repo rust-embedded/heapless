@@ -1,6 +1,6 @@
 //! Fixed capacity Single Producer Single Consumer (SPSC) queue
 //!
-//! Implementation based on https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular
+//! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!
 //! NOTE: This module is not available on targets that do *not* support atomic loads, e.g. RISC-V
 //! cores w/o the A (Atomic) extension
