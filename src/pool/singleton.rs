@@ -123,7 +123,11 @@ where
     P: Pool,
     P::Data: AsRef<[u8]>,
 {
-    /// Freezes the contents of this memory block
+    #[deprecated(
+        since = "0.7.3",
+        note = "This can access uninitialized memory, use `init(..)` instead (https://github.com/japaric/heapless/issues/212)"
+    )]
+    /// (DO NOT USE, SEE DEPRECATION) Freezes the contents of this memory block
     ///
     /// See [rust-lang/rust#58363](https://github.com/rust-lang/rust/pull/58363) for details.
     pub fn freeze(self) -> Box<P, Init> {
