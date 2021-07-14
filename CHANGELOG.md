@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.7.3] - 2021-07-1
 
+### Added
+
+- Added `Deque`.
+
 ### Changed
 
 - `Box::freeze` is deprecated due to possibility of undefined behavior.

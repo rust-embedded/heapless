@@ -74,6 +74,7 @@
 #![deny(const_err)]
 
 pub use binary_heap::BinaryHeap;
+pub use deque::Deque;
 pub use histbuf::HistoryBuffer;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
@@ -82,6 +83,7 @@ pub use string::String;
 pub use vec::Vec;
 
 // NOTE this code was last ported from v0.4.1 of the indexmap crate
+mod deque;
 mod histbuf;
 mod indexmap;
 mod indexset;
