@@ -425,6 +425,17 @@ impl<T> Box<T, Uninit> {
             _state: PhantomData,
         }
     }
+
+    /// Assumes the memory block is already initialized.
+    ///
+    /// # Safety
+    /// The underlying memory must be already initialized to an acceptable, defined state.
+    pub unsafe fn assume_init(self) -> Box<T, Init> {
+        Box {
+            node: self.node,
+            _state: PhantomData,
+        }
+    }
 }
 
 /// Uninitialized type state
