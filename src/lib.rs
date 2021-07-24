@@ -82,7 +82,6 @@ pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;
 
-// NOTE this code was last ported from v0.4.1 of the indexmap crate
 mod deque;
 mod histbuf;
 mod indexmap;
