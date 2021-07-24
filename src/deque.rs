@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn stack_new() {
-        static mut _V: Deque<i32, 4> = Deque::new();
+        let mut _v: Deque<i32, 4> = Deque::new();
     }
 
     macro_rules! droppable {
