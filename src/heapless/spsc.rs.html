@@ -998,7 +998,7 @@
 
 <span class="doccomment">/// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `16`, `32`,</span>
+<span class="doccomment">/// *IMPORTANT*: To get better performance use a value for `N` that is a power of 2 (e.g. `16`, `32`,</span>
 <span class="doccomment">/// etc.).</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
     <span class="comment">// this is from where we dequeue items</span>
