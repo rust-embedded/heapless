@@ -94,7 +94,7 @@ use core::{
 
 /// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements
 ///
-/// *IMPORTANT*: To get better performance use a capacity that is a power of 2 (e.g. `16`, `32`,
+/// *IMPORTANT*: To get better performance use a value for `N` that is a power of 2 (e.g. `16`, `32`,
 /// etc.).
 pub struct Queue<T, const N: usize> {
     // this is from where we dequeue items
