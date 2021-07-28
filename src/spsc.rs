@@ -297,6 +297,12 @@ impl<T, const N: usize> Queue<T, N> {
     }
 }
 
+impl<T, const N: usize> Default for Queue<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, const N: usize> Clone for Queue<T, N>
 where
     T: Clone,
