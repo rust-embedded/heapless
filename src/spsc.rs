@@ -306,7 +306,7 @@ where
 
         for s in self.iter() {
             unsafe {
-                // NOTE(unsafe) new.capacity() == self.capacity() <= self.len()
+                // NOTE(unsafe) new.capacity() == self.capacity() >= self.len()
                 // no overflow possible
                 new.enqueue_unchecked(s.clone());
             }
