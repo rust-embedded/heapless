@@ -16,7 +16,7 @@ version = "0.7.3"
 
 [features]
 default = ["cas"]
-cas = []
+cas = ["atomic-polyfill"]
 ufmt-impl = ["ufmt-write"]
 # read the docs before enabling: makes `Pool` Sync on x86_64
 x86-sync-pool = []
@@ -30,7 +30,7 @@ defmt-impl = ["defmt"]
 scoped_threadpool = "0.1.8"
 
 [target.thumbv6m-none-eabi.dependencies]
-atomic-polyfill = "0.1.2"
+atomic-polyfill = { version = "0.1.2", optional = true }
 
 [dependencies]
 hash32 = "0.2.1"
