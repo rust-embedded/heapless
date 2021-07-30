@@ -241,6 +241,12 @@ where
     }
 }
 
+impl<T, const N: usize> Default for HistoryBuffer<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::HistoryBuffer;

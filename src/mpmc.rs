@@ -178,6 +178,12 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     }
 }
 
+impl<T, const N: usize> Default for MpMcQueue<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
 
 struct Cell<T> {
