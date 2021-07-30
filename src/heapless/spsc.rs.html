@@ -1210,7 +1210,7 @@
 
         <span class="kw">for</span> <span class="ident">s</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">iter</span>() {
             <span class="kw">unsafe</span> {
-                <span class="comment">// NOTE(unsafe) new.capacity() == self.capacity() &lt;= self.len()</span>
+                <span class="comment">// NOTE(unsafe) new.capacity() == self.capacity() &gt;= self.len()</span>
                 <span class="comment">// no overflow possible</span>
                 <span class="ident">new</span>.<span class="ident">enqueue_unchecked</span>(<span class="ident">s</span>.<span class="ident">clone</span>());
             }
