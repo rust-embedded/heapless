@@ -901,6 +901,12 @@
 <span id="898">898</span>
 <span id="899">899</span>
 <span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Fixed capacity Single Producer Single Consumer (SPSC) queue</span>
 <span class="doccomment">//!</span>
@@ -1198,6 +1204,12 @@
     <span class="doccomment">/// Splits a queue into producer and consumer endpoints</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Producer</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>, <span class="ident">Consumer</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>) {
         (<span class="ident">Producer</span> { <span class="ident">rb</span>: <span class="self">self</span> }, <span class="ident">Consumer</span> { <span class="ident">rb</span>: <span class="self">self</span> })
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span><span class="ident">::new</span>()
     }
 }
 
