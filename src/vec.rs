@@ -1,4 +1,4 @@
-use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 use hash32;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
@@ -763,6 +763,26 @@ where
 
 // Implements Eq if underlying data is Eq
 impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
+
+impl<T, const N: usize> PartialOrd for Vec<T, N>
+where
+    T: PartialOrd,
+{
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        PartialOrd::partial_cmp(&**self, &**other)
+    }
+}
+
+impl<T, const N: usize> Ord for Vec<T, N>
+where
+    T: Ord,
+{
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&**self, &**other)
+    }
+}
 
 impl<T, const N: usize> ops::Deref for Vec<T, N> {
     type Target = [T];
