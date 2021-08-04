@@ -439,9 +439,9 @@ impl<const N: usize> PartialEq<String<N>> for &str {
 
 impl<const N: usize> Eq for String<N> {}
 
-impl<const N: usize> PartialOrd for String<N> {
+impl<const N1: usize, const N2: usize> PartialOrd<String<N2>> for String<N1> {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &String<N2>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }

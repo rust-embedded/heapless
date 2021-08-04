@@ -764,12 +764,11 @@ where
 // Implements Eq if underlying data is Eq
 impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
 
-impl<T, const N: usize> PartialOrd for Vec<T, N>
+impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
 where
     T: PartialOrd,
 {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Vec<T, N2>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
