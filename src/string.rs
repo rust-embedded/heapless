@@ -495,6 +495,22 @@ mod tests {
     }
 
     #[test]
+    fn cmp() {
+        let s1: String<4> = String::from("abcd");
+        let s2: String<4> = String::from("zzzz");
+
+        assert!(s1 < s2);
+    }
+
+    #[test]
+    fn cmp_heterogenous_size() {
+        let s1: String<4> = String::from("abcd");
+        let s2: String<8> = String::from("zzzz");
+
+        assert!(s1 < s2);
+    }
+
+    #[test]
     fn debug() {
         use core::fmt::Write;
 

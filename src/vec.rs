@@ -908,6 +908,32 @@ mod tests {
     }
 
     #[test]
+    fn cmp() {
+        let mut xs: Vec<i32, 4> = Vec::new();
+        let mut ys: Vec<i32, 4> = Vec::new();
+
+        assert_eq!(xs, ys);
+
+        xs.push(1).unwrap();
+        ys.push(2).unwrap();
+
+        assert!(xs < ys);
+    }
+
+    #[test]
+    fn cmp_heterogenous_size() {
+        let mut xs: Vec<i32, 4> = Vec::new();
+        let mut ys: Vec<i32, 8> = Vec::new();
+
+        assert_eq!(xs, ys);
+
+        xs.push(1).unwrap();
+        ys.push(2).unwrap();
+
+        assert!(xs < ys);
+    }
+
+    #[test]
     fn full() {
         let mut v: Vec<i32, 4> = Vec::new();
 
