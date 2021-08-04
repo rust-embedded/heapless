@@ -1,4 +1,4 @@
-use core::{fmt, fmt::Write, hash, ops, str};
+use core::{cmp::Ordering, fmt, fmt::Write, hash, ops, str};
 
 use hash32;
 
@@ -438,6 +438,20 @@ impl<const N: usize> PartialEq<String<N>> for &str {
 }
 
 impl<const N: usize> Eq for String<N> {}
+
+impl<const N: usize> PartialOrd for String<N> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        PartialOrd::partial_cmp(&**self, &**other)
+    }
+}
+
+impl<const N: usize> Ord for String<N> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&**self, &**other)
+    }
+}
 
 macro_rules! impl_from_num {
     ($num:ty, $size:expr) => {
