@@ -1,4 +1,4 @@
-use core::{fmt, fmt::Write, hash, ops, str};
+use core::{cmp::Ordering, fmt, fmt::Write, hash, ops, str};
 
 use hash32;
 
@@ -439,6 +439,20 @@ impl<const N: usize> PartialEq<String<N>> for &str {
 
 impl<const N: usize> Eq for String<N> {}
 
+impl<const N1: usize, const N2: usize> PartialOrd<String<N2>> for String<N1> {
+    #[inline]
+    fn partial_cmp(&self, other: &String<N2>) -> Option<Ordering> {
+        PartialOrd::partial_cmp(&**self, &**other)
+    }
+}
+
+impl<const N: usize> Ord for String<N> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&**self, &**other)
+    }
+}
+
 macro_rules! impl_from_num {
     ($num:ty, $size:expr) => {
         impl<const N: usize> From<$num> for String<N> {
@@ -478,6 +492,22 @@ mod tests {
 
         assert_eq!(s1, "abcd");
         assert_eq!(s2, "abcd efgh");
+    }
+
+    #[test]
+    fn cmp() {
+        let s1: String<4> = String::from("abcd");
+        let s2: String<4> = String::from("zzzz");
+
+        assert!(s1 < s2);
+    }
+
+    #[test]
+    fn cmp_heterogenous_size() {
+        let s1: String<4> = String::from("abcd");
+        let s2: String<8> = String::from("zzzz");
+
+        assert!(s1 < s2);
     }
 
     #[test]

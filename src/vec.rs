@@ -1,4 +1,4 @@
-use core::{fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 use hash32;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
@@ -764,6 +764,25 @@ where
 // Implements Eq if underlying data is Eq
 impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
 
+impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
+where
+    T: PartialOrd,
+{
+    fn partial_cmp(&self, other: &Vec<T, N2>) -> Option<Ordering> {
+        PartialOrd::partial_cmp(&**self, &**other)
+    }
+}
+
+impl<T, const N: usize> Ord for Vec<T, N>
+where
+    T: Ord,
+{
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&**self, &**other)
+    }
+}
+
 impl<T, const N: usize> ops::Deref for Vec<T, N> {
     type Target = [T];
 
@@ -886,6 +905,32 @@ mod tests {
         ys.push(1).unwrap();
 
         assert_eq!(xs, ys);
+    }
+
+    #[test]
+    fn cmp() {
+        let mut xs: Vec<i32, 4> = Vec::new();
+        let mut ys: Vec<i32, 4> = Vec::new();
+
+        assert_eq!(xs, ys);
+
+        xs.push(1).unwrap();
+        ys.push(2).unwrap();
+
+        assert!(xs < ys);
+    }
+
+    #[test]
+    fn cmp_heterogenous_size() {
+        let mut xs: Vec<i32, 4> = Vec::new();
+        let mut ys: Vec<i32, 8> = Vec::new();
+
+        assert_eq!(xs, ys);
+
+        xs.push(1).unwrap();
+        ys.push(2).unwrap();
+
+        assert!(xs < ys);
     }
 
     #[test]
