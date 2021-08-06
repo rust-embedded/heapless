@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-## [v0.7.3] - 2021-07-1
+## [v0.7.4] - 2021-08-06
+
+### Added
+
+- Implement `Default` for `MpMcQueue`, `Queue` and `HistoryBuffer`
+- Implement `PartialOrd` and `Ord` for `Vec` and `String`
+
+### Fixed
+
+- Fixed comments in SPSC
+
+## [v0.7.3] - 2021-07-01
 
 ### Changed
 
@@ -371,7 +382,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.4...HEAD
+[v0.7.4]: https://github.com/japaric/heapless/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/japaric/heapless/compare/v0.7.2...v0.7.3
 [v0.7.2]: https://github.com/japaric/heapless/compare/v0.7.1...v0.7.2
 [v0.7.1]: https://github.com/japaric/heapless/compare/v0.7.0...v0.7.1
