@@ -191,6 +191,44 @@ impl<T, const N: usize> Deque<T, N> {
         }
     }
 
+    /// Provides a reference to the front element, or None if the `Deque` is empty.
+    pub fn front(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(unsafe { &*self.buffer.get_unchecked(self.front).as_ptr() })
+        }
+    }
+
+    /// Provides a mutable reference to the front element, or None if the `Deque` is empty.
+    pub fn front_mut(&mut self) -> Option<&mut T> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(unsafe { &mut *self.buffer.get_unchecked_mut(self.front).as_mut_ptr() })
+        }
+    }
+
+    /// Provides a reference to the back element, or None if the `Deque` is empty.
+    pub fn back(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            let index = Self::decrement(self.back);
+            Some(unsafe { &*self.buffer.get_unchecked(index).as_ptr() })
+        }
+    }
+
+    /// Provides a mutable reference to the back element, or None if the `Deque` is empty.
+    pub fn back_mut(&mut self) -> Option<&mut T> {
+        if self.is_empty() {
+            None
+        } else {
+            let index = Self::decrement(self.back);
+            Some(unsafe { &mut *self.buffer.get_unchecked_mut(index).as_mut_ptr() })
+        }
+    }
+
     /// Removes the item from the front of the deque and returns it, or `None` if it's empty
     pub fn pop_front(&mut self) -> Option<T> {
         if self.is_empty() {
@@ -604,6 +642,39 @@ mod tests {
         assert!(v.pop_front().is_none());
         assert!(v.pop_back().is_none());
         assert!(v.is_empty());
+    }
+
+    #[test]
+    fn front_back() {
+        let mut v: Deque<i32, 4> = Deque::new();
+        assert_eq!(v.front(), None);
+        assert_eq!(v.front_mut(), None);
+        assert_eq!(v.back(), None);
+        assert_eq!(v.back_mut(), None);
+
+        v.push_back(4).unwrap();
+        assert_eq!(v.front(), Some(&4));
+        assert_eq!(v.front_mut(), Some(&mut 4));
+        assert_eq!(v.back(), Some(&4));
+        assert_eq!(v.back_mut(), Some(&mut 4));
+
+        v.push_front(3).unwrap();
+        assert_eq!(v.front(), Some(&3));
+        assert_eq!(v.front_mut(), Some(&mut 3));
+        assert_eq!(v.back(), Some(&4));
+        assert_eq!(v.back_mut(), Some(&mut 4));
+
+        v.pop_back().unwrap();
+        assert_eq!(v.front(), Some(&3));
+        assert_eq!(v.front_mut(), Some(&mut 3));
+        assert_eq!(v.back(), Some(&3));
+        assert_eq!(v.back_mut(), Some(&mut 3));
+
+        v.pop_front().unwrap();
+        assert_eq!(v.front(), None);
+        assert_eq!(v.front_mut(), None);
+        assert_eq!(v.back(), None);
+        assert_eq!(v.back_mut(), None);
     }
 
     #[test]
