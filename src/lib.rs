@@ -101,6 +101,7 @@ mod defmt;
 pub mod mpmc;
 #[cfg(all(has_cas, feature = "cas"))]
 pub mod pool;
+pub mod sorted_linked_list;
 #[cfg(has_atomics)]
 pub mod spsc;
 
