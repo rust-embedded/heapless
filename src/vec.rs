@@ -846,7 +846,7 @@ mod tests {
 
     #[test]
     fn stack_new() {
-        static mut _V: Vec<i32, 4> = Vec::new();
+        let mut _v: Vec<i32, 4> = Vec::new();
     }
 
     macro_rules! droppable {
