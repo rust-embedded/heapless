@@ -236,8 +236,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// # Safety
     ///
     /// This assumes the vec to have at least one element.
-    pub(crate) unsafe fn pop_unchecked(&mut self) -> T {
-        debug_assert!(!self.as_slice().is_empty());
+    pub unsafe fn pop_unchecked(&mut self) -> T {
+        debug_assert!(!self.is_empty());
 
         self.len -= 1;
         (self.buffer.get_unchecked_mut(self.len).as_ptr() as *const T).read()
@@ -479,6 +479,12 @@ impl<T, const N: usize> Vec<T, N> {
     #[inline]
     pub fn is_full(&self) -> bool {
         self.len == self.capacity()
+    }
+
+    /// Returns true if the vec is empty
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 
     /// Returns `true` if `needle` is a prefix of the Vec.
@@ -847,6 +853,30 @@ mod tests {
     #[test]
     fn stack_new() {
         let mut _v: Vec<i32, 4> = Vec::new();
+    }
+
+    #[test]
+    fn is_full_empty() {
+        let mut v: Vec<i32, 4> = Vec::new();
+
+        assert!(v.is_empty());
+        assert!(!v.is_full());
+
+        v.push(1).unwrap();
+        assert!(!v.is_empty());
+        assert!(!v.is_full());
+
+        v.push(1).unwrap();
+        assert!(!v.is_empty());
+        assert!(!v.is_full());
+
+        v.push(1).unwrap();
+        assert!(!v.is_empty());
+        assert!(!v.is_full());
+
+        v.push(1).unwrap();
+        assert!(!v.is_empty());
+        assert!(v.is_full());
     }
 
     macro_rules! droppable {
