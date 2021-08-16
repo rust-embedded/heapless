@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.7.5] - 2021-08-16
+
+### Added
+
+- Added `SortedLinkedList`
+- Added `Vec::is_empty`, one does not need to go through a slice anymore
+
+### Changed
+
+- `Vec::pop_unchecked` is now public
+
 ## [v0.7.4] - 2021-08-06
 
 ### Added
@@ -22,7 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- Added `Deque`.
+- Added `Deque`
 
 ### Changed
 
@@ -386,7 +397,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.5...HEAD
+[v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.4...v0.7.5
 [v0.7.4]: https://github.com/japaric/heapless/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/japaric/heapless/compare/v0.7.2...v0.7.3
 [v0.7.2]: https://github.com/japaric/heapless/compare/v0.7.1...v0.7.2
