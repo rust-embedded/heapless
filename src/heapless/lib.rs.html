@@ -111,6 +111,7 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
+<span id="112">112</span>
 </pre><pre class="rust">
 <span class="doccomment">//! `static` friendly data structures that don&#39;t require dynamic memory allocation</span>
 <span class="doccomment">//!</span>
@@ -216,6 +217,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">mpmc</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">has_cas</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cas&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">pool</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">sorted_linked_list</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">has_atomics</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">spsc</span>;
 
