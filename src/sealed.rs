@@ -22,6 +22,36 @@ pub mod binary_heap {
     }
 }
 
+/// Sealed traits and implementations for `LinkedList`
+pub mod sorted_linked_list {
+    use crate::sorted_linked_list::{Max, Min};
+    use core::cmp::Ordering;
+
+    /// The linked list kind: min-list or max-list
+    pub unsafe trait Kind {
+        #[doc(hidden)]
+        fn ordering() -> Ordering;
+    }
+
+    unsafe impl Kind for Min {
+        fn ordering() -> Ordering {
+            Ordering::Less
+        }
+    }
+
+    unsafe impl Kind for Max {
+        fn ordering() -> Ordering {
+            Ordering::Greater
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[allow(path_statements)]
+pub(crate) const fn smaller_than<const N: usize, const MAX: usize>() {
+    Assert::<N, MAX>::LESS;
+}
+
 #[allow(dead_code)]
 #[allow(path_statements)]
 pub(crate) const fn greater_than_0<const N: usize>() {
