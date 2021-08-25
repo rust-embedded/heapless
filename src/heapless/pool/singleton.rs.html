@@ -396,6 +396,9 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
 </pre><pre class="rust">
 <span class="doccomment">//! `Pool` as a global singleton</span>
 
@@ -418,7 +421,10 @@
     <span class="ident">armv7r</span>,
     <span class="ident">armv7m</span>,
     <span class="ident">armv8m_main</span>,
-    <span class="ident">all</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;x86-sync-pool&quot;</span>),
+    <span class="ident">all</span>(
+        <span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>),
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;x86-sync-pool&quot;</span>
+    ),
     <span class="ident">test</span>
 ))]</span>
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>

@@ -645,6 +645,17 @@
 <span id="643">643</span>
 <span id="644">644</span>
 <span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
 </pre><pre class="rust">
 <span class="doccomment">//! A heap-less, interrupt-safe, lock-free memory pool (\*)</span>
 <span class="doccomment">//!</span>
@@ -801,7 +812,8 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # x86_64 support / limitations</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! *NOTE* `Pool` is only `Sync` on `x86_64` if the Cargo feature &quot;x86-sync-pool&quot; is enabled</span>
+<span class="doccomment">//! *NOTE* `Pool` is only `Sync` on `x86_64` and `x86` (`i686`) if the Cargo feature &quot;x86-sync-pool&quot;</span>
+<span class="doccomment">//! is enabled</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! x86_64 support is a gamble. Yes, a gamble. Do you feel lucky enough to use `Pool` on x86_64?</span>
 <span class="doccomment">//!</span>
@@ -851,6 +863,10 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## x86_64 Limitations</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! *NOTE* this limitation does not apply to `x86` (32-bit address space). If you run into this</span>
+<span class="doccomment">//! issue, on an x86_64 processor try running your code compiled for `x86`, e.g. `cargo run --target</span>
+<span class="doccomment">//! i686-unknown-linux-musl`</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! Because stack nodes must be located within +- 2 GB of the hidden `ANCHOR` variable, which</span>
 <span class="doccomment">//! lives in the `.bss` section, `Pool` may not be able to manage static references created using</span>
 <span class="doccomment">//! `Box::leak` -- these heap allocated chunks of memory may live in a very different address space.</span>
@@ -888,8 +904,11 @@
 <span class="kw">use</span> <span class="ident">stack</span>::{<span class="ident">Ptr</span>, <span class="ident">Stack</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">singleton</span>;
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;cas.rs&quot;</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>), <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;llsc.rs&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>), <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;cas.rs&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(
+    <span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>)),
+    <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;llsc.rs&quot;</span>
+)]</span>
 <span class="kw">mod</span> <span class="ident">stack</span>;
 
 <span class="doccomment">/// A lock-free memory pool</span>
@@ -907,7 +926,10 @@
     <span class="ident">armv7r</span>,
     <span class="ident">armv7m</span>,
     <span class="ident">armv8m_main</span>,
-    <span class="ident">all</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;x86-sync-pool&quot;</span>),
+    <span class="ident">all</span>(
+        <span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>),
+        <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;x86-sync-pool&quot;</span>
+    ),
     <span class="ident">test</span>
 ))]</span>
 <span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Sync</span> <span class="kw">for</span> <span class="ident">Pool</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
@@ -1003,7 +1025,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">while</span> <span class="ident">len</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">sz</span> {
             <span class="kw">match</span> () {
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>)]</span>
+                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>))]</span>
                 () <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="ident">Ptr::new</span>(<span class="ident">p</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>) {
                         <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">p</span>);
@@ -1011,7 +1033,7 @@
                     }
                 }
 
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>))]</span>
+                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>)))]</span>
                 () <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="kw">unsafe</span> { <span class="ident">Ptr::new_unchecked</span>(<span class="ident">p</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>) });
                     <span class="ident">n</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
@@ -1041,14 +1063,14 @@
         <span class="kw">let</span> <span class="ident">cap</span> <span class="op">=</span> <span class="ident">nodes</span>.<span class="ident">len</span>();
         <span class="kw">for</span> <span class="ident">p</span> <span class="kw">in</span> <span class="ident">nodes</span> {
             <span class="kw">match</span> () {
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>)]</span>
+                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>))]</span>
                 () <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="ident">Ptr::new</span>(<span class="ident">p</span>) {
                         <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">p</span>);
                     }
                 }
 
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>))]</span>
+                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>, <span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>)))]</span>
                 () <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">core::ptr::NonNull::from</span>(<span class="ident">p</span>)),
             }
         }
