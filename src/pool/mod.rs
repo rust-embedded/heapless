@@ -267,7 +267,10 @@ pub struct Pool<T> {
     armv7r,
     armv7m,
     armv8m_main,
-    all(target_arch = "x86_64", feature = "x86-sync-pool"),
+    all(
+        any(target_arch = "x86_64", target_arch = "x86"),
+        feature = "x86-sync-pool"
+    ),
     test
 ))]
 unsafe impl<T> Sync for Pool<T> {}
