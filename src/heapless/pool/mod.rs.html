@@ -644,6 +644,7 @@
 <span id="642">642</span>
 <span id="643">643</span>
 <span id="644">644</span>
+<span id="645">645</span>
 </pre><pre class="rust">
 <span class="doccomment">//! A heap-less, interrupt-safe, lock-free memory pool (\*)</span>
 <span class="doccomment">//!</span>
@@ -1006,15 +1007,16 @@
                 () <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="ident">Ptr::new</span>(<span class="ident">p</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>) {
                         <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="ident">p</span>);
+                        <span class="ident">n</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
                     }
                 }
 
                 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>))]</span>
                 () <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="self">self</span>.<span class="ident">stack</span>.<span class="ident">push</span>(<span class="kw">unsafe</span> { <span class="ident">Ptr::new_unchecked</span>(<span class="ident">p</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>) });
+                    <span class="ident">n</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
                 }
             }
-            <span class="ident">n</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
             <span class="ident">p</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">p</span>.<span class="ident">add</span>(<span class="ident">sz</span>) };
             <span class="ident">len</span> <span class="op">-</span><span class="op">=</span> <span class="ident">sz</span>;
