@@ -5,12 +5,10 @@
 
 use core::{
     cell::UnsafeCell,
-    convert::TryFrom,
     marker::PhantomData,
-    mem,
-    num::NonZeroUsize,
+    num::NonZeroU64,
     ptr::NonNull,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 /// Unfortunate implementation detail required to use the
@@ -88,14 +86,16 @@ impl<T> Stack<T> {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
 fn anchor<T>() -> *mut T {
     static mut ANCHOR: u8 = 0;
-    (unsafe { &mut ANCHOR } as *mut u8 as usize & !(mem::align_of::<T>() - 1)) as *mut T
+    (unsafe { &mut ANCHOR } as *mut u8 as usize & !(core::mem::align_of::<T>() - 1)) as *mut T
 }
 
-/// Anchored pointer. This is a (signed) 32-bit offset from `anchor` plus a 32-bit tag
+/// On x86_64, anchored pointer. This is a (signed) 32-bit offset from `anchor` plus a 32-bit tag
+/// On x86, this is a pointer plus a 32-bit tag
 pub struct Ptr<T> {
-    inner: NonZeroUsize,
+    inner: NonZeroU64,
     _marker: PhantomData<*mut T>,
 }
 
@@ -108,27 +108,35 @@ impl<T> Clone for Ptr<T> {
 impl<T> Copy for Ptr<T> {}
 
 impl<T> Ptr<T> {
+    #[cfg(target_arch = "x86_64")]
     pub fn new(p: *mut T) -> Option<Self> {
+        use core::convert::TryFrom;
+
         i32::try_from((p as isize).wrapping_sub(anchor::<T>() as isize))
             .ok()
             .map(|offset| unsafe { Ptr::from_parts(0, offset) })
     }
 
+    #[cfg(target_arch = "x86")]
+    pub fn new(p: *mut T) -> Option<Self> {
+        Some(unsafe { Ptr::from_parts(0, p as i32) })
+    }
+
     unsafe fn from_parts(tag: u32, offset: i32) -> Self {
         Self {
-            inner: NonZeroUsize::new_unchecked((tag as usize) << 32 | (offset as u32 as usize)),
+            inner: NonZeroU64::new_unchecked((tag as u64) << 32 | (offset as u32 as u64)),
             _marker: PhantomData,
         }
     }
 
-    fn from_usize(p: usize) -> Option<Self> {
-        NonZeroUsize::new(p).map(|inner| Self {
+    fn from_u64(p: u64) -> Option<Self> {
+        NonZeroU64::new(p).map(|inner| Self {
             inner,
             _marker: PhantomData,
         })
     }
 
-    fn into_usize(&self) -> usize {
+    fn into_u64(&self) -> u64 {
         self.inner.get()
     }
 
@@ -147,12 +155,18 @@ impl<T> Ptr<T> {
         self.inner.get() as i32
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn as_raw(&self) -> NonNull<T> {
         unsafe {
             NonNull::new_unchecked(
                 (anchor::<T>() as *mut u8).offset(self.offset() as isize) as *mut T
             )
         }
+    }
+
+    #[cfg(target_arch = "x86")]
+    fn as_raw(&self) -> NonNull<T> {
+        unsafe { NonNull::new_unchecked(self.offset() as *mut T) }
     }
 
     pub fn dangling() -> Self {
@@ -165,14 +179,14 @@ impl<T> Ptr<T> {
 }
 
 struct Atomic<T> {
-    inner: AtomicUsize,
+    inner: AtomicU64,
     _marker: PhantomData<*mut T>,
 }
 
 impl<T> Atomic<T> {
     const fn null() -> Self {
         Self {
-            inner: AtomicUsize::new(0),
+            inner: AtomicU64::new(0),
             _marker: PhantomData,
         }
     }
@@ -186,17 +200,17 @@ impl<T> Atomic<T> {
     ) -> Result<(), Option<Ptr<T>>> {
         self.inner
             .compare_exchange_weak(
-                current.map(|p| p.into_usize()).unwrap_or(0),
-                new.map(|p| p.into_usize()).unwrap_or(0),
+                current.map(|p| p.into_u64()).unwrap_or(0),
+                new.map(|p| p.into_u64()).unwrap_or(0),
                 succ,
                 fail,
             )
             .map(drop)
-            .map_err(Ptr::from_usize)
+            .map_err(Ptr::from_u64)
     }
 
     fn load(&self, ord: Ordering) -> Option<Ptr<T>> {
-        NonZeroUsize::new(self.inner.load(ord)).map(|inner| Ptr {
+        NonZeroU64::new(self.inner.load(ord)).map(|inner| Ptr {
             inner,
             _marker: PhantomData,
         })
@@ -204,6 +218,6 @@ impl<T> Atomic<T> {
 
     fn store(&self, val: Option<Ptr<T>>, ord: Ordering) {
         self.inner
-            .store(val.map(|p| p.into_usize()).unwrap_or(0), ord)
+            .store(val.map(|p| p.into_u64()).unwrap_or(0), ord)
     }
 }
