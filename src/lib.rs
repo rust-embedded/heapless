@@ -43,6 +43,7 @@
 //!
 //! List of currently implemented data structures:
 //!
+//! - [`Arc`](pool/singleton/arc/struct.Arc.html) -- Thread-safe reference-counting pointer backed by a memory pool
 //! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
@@ -79,6 +80,8 @@ pub use histbuf::HistoryBuffer;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
+#[cfg(all(has_cas, feature = "cas"))]
+pub use pool::singleton::arc::Arc;
 pub use string::String;
 pub use vec::Vec;
 
