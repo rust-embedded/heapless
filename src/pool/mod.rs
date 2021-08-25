@@ -153,7 +153,8 @@
 //!
 //! # x86_64 support / limitations
 //!
-//! *NOTE* `Pool` is only `Sync` on `x86_64` if the Cargo feature "x86-sync-pool" is enabled
+//! *NOTE* `Pool` is only `Sync` on `x86_64` and `x86` (`i686`) if the Cargo feature "x86-sync-pool"
+//! is enabled
 //!
 //! x86_64 support is a gamble. Yes, a gamble. Do you feel lucky enough to use `Pool` on x86_64?
 //!
@@ -203,6 +204,10 @@
 //!
 //! ## x86_64 Limitations
 //!
+//! *NOTE* this limitation does not apply to `x86` (32-bit address space). If you run into this
+//! issue, on an x86_64 processor try running your code compiled for `x86`, e.g. `cargo run --target
+//! i686-unknown-linux-musl`
+//!
 //! Because stack nodes must be located within +- 2 GB of the hidden `ANCHOR` variable, which
 //! lives in the `.bss` section, `Pool` may not be able to manage static references created using
 //! `Box::leak` -- these heap allocated chunks of memory may live in a very different address space.
@@ -240,8 +245,11 @@ pub use stack::Node;
 use stack::{Ptr, Stack};
 
 pub mod singleton;
-#[cfg_attr(target_arch = "x86_64", path = "cas.rs")]
-#[cfg_attr(not(target_arch = "x86_64"), path = "llsc.rs")]
+#[cfg_attr(any(target_arch = "x86_64", target_arch = "x86"), path = "cas.rs")]
+#[cfg_attr(
+    not(any(target_arch = "x86_64", target_arch = "x86")),
+    path = "llsc.rs"
+)]
 mod stack;
 
 /// A lock-free memory pool
@@ -355,14 +363,14 @@ impl<T> Pool<T> {
         let mut n = 0;
         while len >= sz {
             match () {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
                 () => {
                     if let Some(p) = Ptr::new(p as *mut _) {
                         self.stack.push(p);
                     }
                 }
 
-                #[cfg(not(target_arch = "x86_64"))]
+                #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
                 () => {
                     self.stack.push(unsafe { Ptr::new_unchecked(p as *mut _) });
                 }
@@ -392,14 +400,14 @@ impl<T> Pool<T> {
         let cap = nodes.len();
         for p in nodes {
             match () {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
                 () => {
                     if let Some(p) = Ptr::new(p) {
                         self.stack.push(p);
                     }
                 }
 
-                #[cfg(not(target_arch = "x86_64"))]
+                #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
                 () => self.stack.push(core::ptr::NonNull::from(p)),
             }
         }

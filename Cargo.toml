@@ -26,7 +26,7 @@ __trybuild = []
 mpmc_large = []
 defmt-impl = ["defmt"]
 
-[target.x86_64-unknown-linux-gnu.dev-dependencies]
+[target.'cfg(any(target_arch = "x86_64", target_arch = "x86"))'.dev-dependencies]
 scoped_threadpool = "0.1.8"
 
 [target.thumbv6m-none-eabi.dependencies]
@@ -58,4 +58,3 @@ optional = true
 [dev-dependencies.defmt]
 version = "0.2.1"
 features = ["unstable-test"]
-
