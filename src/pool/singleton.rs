@@ -12,6 +12,8 @@ use core::{
 
 use super::{Init, Node, Uninit};
 
+pub mod arc;
+
 /// Instantiates a pool as a global singleton
 // NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)
 #[cfg(any(

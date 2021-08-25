@@ -79,6 +79,8 @@ pub use histbuf::HistoryBuffer;
 pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
+#[cfg(all(has_cas, feature = "cas"))]
+pub use pool::singleton::arc::Arc;
 pub use string::String;
 pub use vec::Vec;
 
