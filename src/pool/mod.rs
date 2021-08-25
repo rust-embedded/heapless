@@ -359,15 +359,16 @@ impl<T> Pool<T> {
                 () => {
                     if let Some(p) = Ptr::new(p as *mut _) {
                         self.stack.push(p);
+                        n += 1;
                     }
                 }
 
                 #[cfg(not(target_arch = "x86_64"))]
                 () => {
                     self.stack.push(unsafe { Ptr::new_unchecked(p as *mut _) });
+                    n += 1;
                 }
             }
-            n += 1;
 
             p = unsafe { p.add(sz) };
             len -= sz;
