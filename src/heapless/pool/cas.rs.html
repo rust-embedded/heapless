@@ -223,6 +223,13 @@
 <span id="221">221</span>
 <span id="222">222</span>
 <span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Stack based on CAS atomics</span>
 <span class="doccomment">//!</span>
@@ -232,7 +239,7 @@
 <span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">cell::UnsafeCell</span>,
     <span class="ident">marker::PhantomData</span>,
-    <span class="ident">num::NonZeroU64</span>,
+    <span class="ident">num</span>::{<span class="ident">NonZeroU32</span>, <span class="ident">NonZeroU64</span>},
     <span class="ident">ptr::NonNull</span>,
     <span class="ident">sync::atomic</span>::{<span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>},
 };
@@ -333,6 +340,10 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">Ptr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
 
+<span class="kw">fn</span> <span class="ident">initial_tag_value</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NonZeroU32</span> {
+    <span class="ident">NonZeroU32::new</span>(<span class="number">1</span>).<span class="ident">unwrap</span>()
+}
+
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Ptr</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86_64&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">p</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
@@ -340,17 +351,17 @@
 
         <span class="ident">i32::try_from</span>((<span class="ident">p</span> <span class="kw">as</span> <span class="ident">isize</span>).<span class="ident">wrapping_sub</span>(<span class="ident">anchor</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="ident">isize</span>))
             .<span class="ident">ok</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">offset</span><span class="op">|</span> <span class="kw">unsafe</span> { <span class="ident">Ptr::from_parts</span>(<span class="number">0</span>, <span class="ident">offset</span>) })
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">offset</span><span class="op">|</span> <span class="kw">unsafe</span> { <span class="ident">Ptr::from_parts</span>(<span class="ident">initial_tag_value</span>(), <span class="ident">offset</span>) })
     }
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_arch</span> <span class="op">=</span> <span class="string">&quot;x86&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">p</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="ident">Ptr::from_parts</span>(<span class="number">0</span>, <span class="ident">p</span> <span class="kw">as</span> <span class="ident">i32</span>) })
+        <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="ident">Ptr::from_parts</span>(<span class="ident">initial_tag_value</span>(), <span class="ident">p</span> <span class="kw">as</span> <span class="ident">i32</span>) })
     }
 
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_parts</span>(<span class="ident">tag</span>: <span class="ident">u32</span>, <span class="ident">offset</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_parts</span>(<span class="ident">tag</span>: <span class="ident">NonZeroU32</span>, <span class="ident">offset</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">NonZeroU64::new_unchecked</span>((<span class="ident">tag</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span> <span class="op">|</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u32</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+            <span class="ident">inner</span>: <span class="ident">NonZeroU64::new_unchecked</span>((<span class="ident">tag</span>.<span class="ident">get</span>() <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span> <span class="op">|</span> (<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u32</span> <span class="kw">as</span> <span class="ident">u64</span>)),
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
         }
     }
@@ -366,12 +377,15 @@
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">get</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
-        (<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">get</span>() <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">32</span>) <span class="kw">as</span> <span class="ident">u32</span>
+    <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NonZeroU32</span> {
+        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">get</span>() <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">32</span>) <span class="kw">as</span> <span class="ident">u32</span>;
+        <span class="macro">debug_assert_ne!</span>(<span class="number">0</span>, <span class="ident">tag</span>, <span class="string">&quot;broken non-zero invariant&quot;</span>);
+        <span class="kw">unsafe</span> { <span class="ident">NonZeroU32::new_unchecked</span>(<span class="ident">tag</span>) }
     }
 
     <span class="kw">fn</span> <span class="ident">incr_tag</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tag</span>().<span class="ident">wrapping_add</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">maybe_zero_tag</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tag</span>().<span class="ident">get</span>().<span class="ident">wrapping_add</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">NonZeroU32::new</span>(<span class="ident">maybe_zero_tag</span>).<span class="ident">unwrap_or</span>(<span class="ident">initial_tag_value</span>());
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">offset</span>();
 
         <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Ptr::from_parts</span>(<span class="ident">tag</span>, <span class="ident">offset</span>) };
@@ -396,7 +410,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dangling</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">unsafe</span> { <span class="self">Self</span><span class="ident">::from_parts</span>(<span class="number">0</span>, <span class="number">1</span>) }
+        <span class="kw">unsafe</span> { <span class="self">Self</span><span class="ident">::from_parts</span>(<span class="ident">initial_tag_value</span>(), <span class="number">1</span>) }
     }
 
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
