@@ -87,9 +87,26 @@ impl<T> Stack<T> {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn anchor<T>() -> *mut T {
-    static mut ANCHOR: u8 = 0;
-    (unsafe { &mut ANCHOR } as *mut u8 as usize & !(core::mem::align_of::<T>() - 1)) as *mut T
+fn anchor<T>(init: Option<*mut T>) -> *mut T {
+    use core::sync::atomic::AtomicU8;
+
+    use spin::Once;
+
+    static LAZY_ANCHOR: Once<usize> = Once::new();
+
+    let likely_unaligned_address = if let Some(init) = init {
+        *LAZY_ANCHOR.call_once(|| init as usize)
+    } else {
+        LAZY_ANCHOR.get().copied().unwrap_or_else(|| {
+            // we may hit this branch with Pool of ZSTs where `grow` does not need to be called
+            static BSS_ANCHOR: AtomicU8 = AtomicU8::new(0);
+            &BSS_ANCHOR as *const _ as usize
+        })
+    };
+
+    let alignment_mask = !(core::mem::align_of::<T>() - 1);
+    let well_aligned_address = likely_unaligned_address & alignment_mask;
+    well_aligned_address as *mut T
 }
 
 /// On x86_64, anchored pointer. This is a (signed) 32-bit offset from `anchor` plus a 32-bit tag
@@ -116,7 +133,7 @@ impl<T> Ptr<T> {
     pub fn new(p: *mut T) -> Option<Self> {
         use core::convert::TryFrom;
 
-        i32::try_from((p as isize).wrapping_sub(anchor::<T>() as isize))
+        i32::try_from((p as isize).wrapping_sub(anchor::<T>(Some(p)) as isize))
             .ok()
             .map(|offset| unsafe { Ptr::from_parts(initial_tag_value(), offset) })
     }
@@ -166,7 +183,7 @@ impl<T> Ptr<T> {
     fn as_raw(&self) -> NonNull<T> {
         unsafe {
             NonNull::new_unchecked(
-                (anchor::<T>() as *mut u8).offset(self.offset() as isize) as *mut T
+                (anchor::<T>(None) as *mut u8).offset(self.offset() as isize) as *mut T,
             )
         }
     }
