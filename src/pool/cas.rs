@@ -6,7 +6,7 @@
 use core::{
     cell::UnsafeCell,
     marker::PhantomData,
-    num::NonZeroU64,
+    num::{NonZeroU32, NonZeroU64},
     ptr::NonNull,
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -107,6 +107,10 @@ impl<T> Clone for Ptr<T> {
 
 impl<T> Copy for Ptr<T> {}
 
+fn initial_tag_value() -> NonZeroU32 {
+    NonZeroU32::new(1).unwrap()
+}
+
 impl<T> Ptr<T> {
     #[cfg(target_arch = "x86_64")]
     pub fn new(p: *mut T) -> Option<Self> {
@@ -114,17 +118,17 @@ impl<T> Ptr<T> {
 
         i32::try_from((p as isize).wrapping_sub(anchor::<T>() as isize))
             .ok()
-            .map(|offset| unsafe { Ptr::from_parts(0, offset) })
+            .map(|offset| unsafe { Ptr::from_parts(initial_tag_value(), offset) })
     }
 
     #[cfg(target_arch = "x86")]
     pub fn new(p: *mut T) -> Option<Self> {
-        Some(unsafe { Ptr::from_parts(0, p as i32) })
+        Some(unsafe { Ptr::from_parts(initial_tag_value(), p as i32) })
     }
 
-    unsafe fn from_parts(tag: u32, offset: i32) -> Self {
+    unsafe fn from_parts(tag: NonZeroU32, offset: i32) -> Self {
         Self {
-            inner: NonZeroU64::new_unchecked((tag as u64) << 32 | (offset as u32 as u64)),
+            inner: NonZeroU64::new_unchecked((tag.get() as u64) << 32 | (offset as u32 as u64)),
             _marker: PhantomData,
         }
     }
@@ -140,12 +144,15 @@ impl<T> Ptr<T> {
         self.inner.get()
     }
 
-    fn tag(&self) -> u32 {
-        (self.inner.get() >> 32) as u32
+    fn tag(&self) -> NonZeroU32 {
+        let tag = (self.inner.get() >> 32) as u32;
+        debug_assert_ne!(0, tag, "broken non-zero invariant");
+        unsafe { NonZeroU32::new_unchecked(tag) }
     }
 
     fn incr_tag(&mut self) {
-        let tag = self.tag().wrapping_add(1);
+        let maybe_zero_tag = self.tag().get().wrapping_add(1);
+        let tag = NonZeroU32::new(maybe_zero_tag).unwrap_or(initial_tag_value());
         let offset = self.offset();
 
         *self = unsafe { Ptr::from_parts(tag, offset) };
@@ -170,7 +177,7 @@ impl<T> Ptr<T> {
     }
 
     pub fn dangling() -> Self {
-        unsafe { Self::from_parts(0, 1) }
+        unsafe { Self::from_parts(initial_tag_value(), 1) }
     }
 
     pub unsafe fn as_ref(&self) -> &T {
