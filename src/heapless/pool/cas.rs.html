@@ -230,6 +230,7 @@
 <span id="228">228</span>
 <span id="229">229</span>
 <span id="230">230</span>
+<span id="231">231</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Stack based on CAS atomics</span>
 <span class="doccomment">//!</span>
@@ -410,7 +411,8 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dangling</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">unsafe</span> { <span class="self">Self</span><span class="ident">::from_parts</span>(<span class="ident">initial_tag_value</span>(), <span class="number">1</span>) }
+        <span class="comment">// `anchor()` returns a well-aligned pointer so an offset of 0 will also produce a well-aligned pointer</span>
+        <span class="kw">unsafe</span> { <span class="self">Self</span><span class="ident">::from_parts</span>(<span class="ident">initial_tag_value</span>(), <span class="number">0</span>) }
     }
 
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
