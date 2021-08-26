@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["byteorder","hash32","heapless","stable_deref_trait"];
+window.ALL_CRATES = ["byteorder","hash32","heapless","lock_api","scopeguard","spin","stable_deref_trait"];
