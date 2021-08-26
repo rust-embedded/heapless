@@ -177,7 +177,7 @@ impl<T> Ptr<T> {
     }
 
     pub fn dangling() -> Self {
-        unsafe { Self::from_parts(initial_tag_value(), 1) }
+        unsafe { Self::from_parts(initial_tag_value(), core::mem::align_of::<T>() as i32) }
     }
 
     pub unsafe fn as_ref(&self) -> &T {

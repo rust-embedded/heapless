@@ -355,6 +355,17 @@ mod tests {
     }
 
     #[test]
+    fn boxed_zst_is_well_aligned() {
+        #[repr(align(2))]
+        pub struct Zst2;
+
+        pool!(A: Zst2);
+
+        let x = A::alloc().unwrap().init(Zst2);
+        assert_eq!(0, &*x as *const Zst2 as usize % 2);
+    }
+
+    #[test]
     fn destructors() {
         static COUNT: AtomicUsize = AtomicUsize::new(0);
 
