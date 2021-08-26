@@ -363,6 +363,14 @@ mod tests {
 
         let x = A::alloc().unwrap().init(Zst2);
         assert_eq!(0, &*x as *const Zst2 as usize % 2);
+
+        #[repr(align(4096))]
+        pub struct Zst4096;
+
+        pool!(B: Zst4096);
+
+        let x = B::alloc().unwrap().init(Zst4096);
+        assert_eq!(0, &*x as *const Zst4096 as usize % 4096);
     }
 
     #[test]
