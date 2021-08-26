@@ -177,7 +177,8 @@ impl<T> Ptr<T> {
     }
 
     pub fn dangling() -> Self {
-        unsafe { Self::from_parts(initial_tag_value(), 1) }
+        // `anchor()` returns a well-aligned pointer so an offset of 0 will also produce a well-aligned pointer
+        unsafe { Self::from_parts(initial_tag_value(), 0) }
     }
 
     pub unsafe fn as_ref(&self) -> &T {
