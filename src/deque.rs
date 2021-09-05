@@ -1,3 +1,4 @@
+use core::fmt;
 use core::iter::FusedIterator;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
@@ -371,6 +372,12 @@ impl<T, const N: usize> Drop for Deque<T, N> {
         // safety: `self` is left in an inconsistent state but it doesn't matter since
         // it's getting dropped. Nothing should be able to observe `self` after drop.
         unsafe { self.drop_contents() }
+    }
+}
+
+impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self).finish()
     }
 }
 
