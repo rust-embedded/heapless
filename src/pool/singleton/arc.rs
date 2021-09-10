@@ -54,8 +54,14 @@ use core::{
     marker::PhantomData,
     ops::Deref,
     ptr,
-    sync::atomic::{self, AtomicUsize, Ordering},
+    sync::atomic,
 };
+
+#[cfg(armv6m)]
+use atomic_polyfill::{AtomicUsize, Ordering};
+
+#[cfg(not(armv6m))]
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::pool::{self, stack::Ptr, Node};
 
