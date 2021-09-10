@@ -418,6 +418,8 @@
 <span id="416">416</span>
 <span id="417">417</span>
 <span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
 </pre><pre class="rust">
 <span class="doccomment">//! `Pool` as a global singleton</span>
 
@@ -432,6 +434,8 @@
 };
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Init</span>, <span class="ident">Node</span>, <span class="ident">Uninit</span>};
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">arc</span>;
 
 <span class="doccomment">/// Instantiates a pool as a global singleton</span>
 <span class="comment">// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)</span>

@@ -112,6 +112,9 @@
 <span id="110">110</span>
 <span id="111">111</span>
 <span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
 </pre><pre class="rust">
 <span class="doccomment">//! `static` friendly data structures that don&#39;t require dynamic memory allocation</span>
 <span class="doccomment">//!</span>
@@ -158,6 +161,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! List of currently implemented data structures:</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! - [`Arc`](pool/singleton/arc/struct.Arc.html) -- Thread-safe reference-counting pointer backed by a memory pool</span>
 <span class="doccomment">//! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue</span>
 <span class="doccomment">//! - [`IndexMap`](struct.IndexMap.html) -- hash table</span>
 <span class="doccomment">//! - [`IndexSet`](struct.IndexSet.html) -- hash set</span>
@@ -194,6 +198,8 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">indexmap</span>::{<span class="ident">Bucket</span>, <span class="ident">FnvIndexMap</span>, <span class="ident">IndexMap</span>, <span class="ident">Pos</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">indexset</span>::{<span class="ident">FnvIndexSet</span>, <span class="ident">IndexSet</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">linear_map::LinearMap</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">all</span>(<span class="ident">has_cas</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;cas&quot;</span>))]</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">pool::singleton::arc::Arc</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">string::String</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">vec::Vec</span>;
 
