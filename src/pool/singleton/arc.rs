@@ -47,6 +47,30 @@
 //!     // ..
 //! }
 //! ```
+//!
+//! The `grow_exact` API is also available on the "Arc pool". It requires using
+//! `Node<ArcInner<Type>>` as the array element type. Example below:
+//!
+//! ``` ignore
+//! use heapless::pool::{singleton::arc::ArcInner, Node};
+//!
+//! pub struct BigStruct { /* .. */ }
+//!
+//! arc_pool!(P: BigStruct);
+//!
+//! #[cortex_m_rt::entry]
+//! fn main() -> ! {
+//!     static mut MEMORY: MaybeUninit<[Node<ArcInner<BigStruct>>; 2]> = MaybeUninit::uninit();
+//!
+//!     P::grow_exact(MEMORY);
+//!
+//!     // 2 allocations are guaranteed to work
+//!     let x = P::alloc(BigStruct::new()).ok().expect("OOM");
+//!     let y = P::alloc(BigStruct::new()).ok().expect("OOM");
+//!
+//!     // ..
+//! }
+//! ```
 
 use core::{
     cmp, fmt,
@@ -113,6 +137,16 @@ macro_rules! arc_pool {
             /// This method returns the number of *new* blocks that can be allocated.
             pub fn grow(memory: &'static mut [u8]) -> usize {
                 <Self as $crate::pool::singleton::arc::Pool>::ptr().grow(memory)
+            }
+
+            /// Increases the capacity of the pool
+            ///
+            /// Unlike `grow`, this method fully utilizes the given memory block
+            pub fn grow_exact<A>(memory: &'static mut MaybeUninit<A>) -> usize
+            where
+                A: AsMut<[$crate::pool::Node<$crate::pool::singleton::arc::ArcInner<$ty>>]>,
+            {
+                <Self as $crate::pool::singleton::arc::Pool>::ptr().grow_exact(memory)
             }
         }
     };
@@ -348,7 +382,7 @@ where
 
 impl<P> Unpin for Arc<P> where P: Pool {}
 
-#[doc(hidden)]
+/// Unfortunate implementation detail required to use the `grow_exact` API
 pub struct ArcInner<T> {
     data: T,
     strong: AtomicUsize,
