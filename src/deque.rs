@@ -350,7 +350,7 @@ impl<T, const N: usize> Deque<T, N> {
         let done = self.is_empty();
         IterMut {
             _phantom: PhantomData,
-            buffer: &mut self.buffer[0] as *mut MaybeUninit<T>,
+            buffer: &mut self.buffer as *mut _ as *mut MaybeUninit<T>,
             front: self.front,
             back: self.back,
             done,
