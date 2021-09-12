@@ -74,6 +74,7 @@ fn scoped() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // too slow
 fn contention() {
     const N: usize = 1024;
 
@@ -118,6 +119,7 @@ fn contention() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // too slow
 fn mpmc_contention() {
     const N: u32 = 64;
 
@@ -163,6 +165,7 @@ fn mpmc_contention() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // too slow
 fn unchecked() {
     const N: usize = 1024;
 
