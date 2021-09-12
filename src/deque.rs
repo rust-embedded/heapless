@@ -168,22 +168,21 @@ impl<T, const N: usize> Deque<T, N> {
 
     /// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.
     pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
+        let ptr = self.buffer.as_mut_ptr();
+
         // NOTE(unsafe) avoid bound checks in the slicing operation
         unsafe {
             if self.is_empty() {
                 (&mut [], &mut [])
             } else if self.back <= self.front {
                 (
-                    slice::from_raw_parts_mut(
-                        self.buffer.as_mut_ptr().add(self.front) as *mut T,
-                        N - self.front,
-                    ),
-                    slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.back),
+                    slice::from_raw_parts_mut(ptr.add(self.front) as *mut T, N - self.front),
+                    slice::from_raw_parts_mut(ptr as *mut T, self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts_mut(
-                        self.buffer.as_mut_ptr().add(self.front) as *mut T,
+                        ptr.add(self.front) as *mut T,
                         self.back - self.front,
                     ),
                     &mut [],
