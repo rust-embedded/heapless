@@ -906,6 +906,8 @@
 <span id="904">904</span>
 <span id="905">905</span>
 <span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Fixed capacity Single Producer Single Consumer (SPSC) queue</span>
 <span class="doccomment">//!</span>
@@ -1530,6 +1532,7 @@
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">miri</span>, <span class="ident">ignore</span>)]</span> <span class="comment">// too slow</span>
     <span class="kw">fn</span> <span class="ident">len</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rb</span>: <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="number">3</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Queue::new</span>();
 
@@ -1550,6 +1553,7 @@
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">miri</span>, <span class="ident">ignore</span>)]</span> <span class="comment">// too slow</span>
     <span class="kw">fn</span> <span class="ident">try_overflow</span>() {
         <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">23</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rb</span>: <span class="ident">Queue</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Queue::new</span>();

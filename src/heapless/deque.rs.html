@@ -852,7 +852,6 @@
 <span id="850">850</span>
 <span id="851">851</span>
 <span id="852">852</span>
-<span id="853">853</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">core::fmt</span>;
 <span class="kw">use</span> <span class="ident">core::iter::FusedIterator</span>;
@@ -1024,22 +1023,21 @@
 
     <span class="doccomment">/// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_mut_slices</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">T</span>], <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">T</span>]) {
+        <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_ptr</span>();
+
         <span class="comment">// NOTE(unsafe) avoid bound checks in the slicing operation</span>
         <span class="kw">unsafe</span> {
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_empty</span>() {
                 (<span class="kw-2">&amp;</span><span class="kw-2">mut</span> [], <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [])
             } <span class="kw">else</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">back</span> <span class="op">&lt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">front</span> {
                 (
-                    <span class="ident">slice::from_raw_parts_mut</span>(
-                        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">front</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>,
-                        <span class="ident">N</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">front</span>,
-                    ),
-                    <span class="ident">slice::from_raw_parts_mut</span>(<span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="self">self</span>.<span class="ident">back</span>),
+                    <span class="ident">slice::from_raw_parts_mut</span>(<span class="ident">ptr</span>.<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">front</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">N</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">front</span>),
+                    <span class="ident">slice::from_raw_parts_mut</span>(<span class="ident">ptr</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="self">self</span>.<span class="ident">back</span>),
                 )
             } <span class="kw">else</span> {
                 (
                     <span class="ident">slice::from_raw_parts_mut</span>(
-                        <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">as_mut_ptr</span>().<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">front</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>,
+                        <span class="ident">ptr</span>.<span class="ident">add</span>(<span class="self">self</span>.<span class="ident">front</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>,
                         <span class="self">self</span>.<span class="ident">back</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">front</span>,
                     ),
                     <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [],
@@ -1207,7 +1205,7 @@
         <span class="kw">let</span> <span class="ident">done</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">is_empty</span>();
         <span class="ident">IterMut</span> {
             <span class="ident">_phantom</span>: <span class="ident">PhantomData</span>,
-            <span class="ident">buffer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">buffer</span>[<span class="number">0</span>] <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+            <span class="ident">buffer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">buffer</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
             <span class="ident">front</span>: <span class="self">self</span>.<span class="ident">front</span>,
             <span class="ident">back</span>: <span class="self">self</span>.<span class="ident">back</span>,
             <span class="ident">done</span>,
