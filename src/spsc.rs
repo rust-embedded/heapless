@@ -621,6 +621,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // too slow
     fn len() {
         let mut rb: Queue<i32, 3> = Queue::new();
 
@@ -641,6 +642,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // too slow
     fn try_overflow() {
         const N: usize = 23;
         let mut rb: Queue<i32, N> = Queue::new();
