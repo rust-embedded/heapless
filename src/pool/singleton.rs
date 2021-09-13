@@ -17,6 +17,7 @@ pub mod arc;
 /// Instantiates a pool as a global singleton
 // NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)
 #[cfg(any(
+    armv6m,
     armv7a,
     armv7r,
     armv7m,
