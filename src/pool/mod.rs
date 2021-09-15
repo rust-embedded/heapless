@@ -350,13 +350,12 @@ impl<T> Pool<T> {
     ///
     /// This method returns the number of *new* blocks that can be allocated.
     pub fn grow(&self, memory: &'static mut [u8]) -> usize {
-        let sz = mem::size_of::<Node<T>>();
-
-        if sz == 0 {
-            // SZT use no memory so a pool of SZT always has maximum capacity
+        if mem::size_of::<T>() == 0 {
+            // ZST use no memory so a pool of ZST always has maximum capacity
             return usize::max_value();
         }
 
+        let sz = mem::size_of::<Node<T>>();
         let mut p = memory.as_mut_ptr();
         let mut len = memory.len();
 
