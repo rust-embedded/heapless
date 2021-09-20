@@ -7,7 +7,7 @@ use core::{
     marker::PhantomData,
     mem::{self, MaybeUninit},
     ops::{Deref, DerefMut},
-    ptr,
+    ptr::{self, NonNull},
 };
 
 use super::{Init, Node, Uninit};
@@ -109,8 +109,14 @@ where
 
         mem::forget(self);
 
-        unsafe {
-            ptr::write(node.as_ref().data.get(), val);
+        if mem::size_of::<P::Data>() == 0 {
+            // no memory operation needed for ZST
+            // BUT we want to avoid calling `val`s destructor
+            mem::forget(val)
+        } else {
+            unsafe {
+                ptr::write(node.as_ref().data.get(), val);
+            }
         }
 
         Box {
@@ -167,7 +173,11 @@ where
         let node = self.inner.node;
 
         mem::forget(self);
-        mem::forget(unsafe { ptr::read(node.as_ref().data.get()) });
+        if mem::size_of::<P::Data>() == 0 {
+            // no need to do a pointer dereference in this case
+        } else {
+            mem::forget(unsafe { ptr::read(node.as_ref().data.get()) });
+        }
 
         Box {
             inner: super::Box {
@@ -228,8 +238,14 @@ where
 {
     fn drop(&mut self) {
         if TypeId::of::<S>() == TypeId::of::<Init>() {
+            let p = if mem::size_of::<P::Data>() == 0 {
+                // any pointer will do to invoke the destructor of a ZST
+                NonNull::dangling().as_ptr()
+            } else {
+                unsafe { self.inner.node.as_ref().data.get() }
+            };
             unsafe {
-                ptr::drop_in_place(self.inner.node.as_ref().data.get());
+                ptr::drop_in_place(p);
             }
         }
 

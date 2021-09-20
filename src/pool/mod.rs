@@ -238,7 +238,7 @@ use core::{
     marker::PhantomData,
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
-    ptr,
+    ptr::{self, NonNull},
 };
 
 pub use stack::Node;
@@ -294,6 +294,11 @@ impl<T> Pool<T> {
     /// *NOTE:* This method does *not* have bounded execution time because it contains a CAS loop
     pub fn alloc(&self) -> Option<Box<T, Uninit>> {
         if mem::size_of::<T>() == 0 {
+            // NOTE because we return a dangling pointer to a NODE, which has non-zero size
+            // even when T is a ZST, in this case we need to make sure we
+            // - don't do pointer arithmetic on this pointer
+            // - dereference that offset-ed pointer as a ZST
+            // because miri doesn't like that
             return Some(Box {
                 node: Ptr::dangling(),
                 _state: PhantomData,
@@ -320,8 +325,14 @@ impl<T> Pool<T> {
         S: 'static,
     {
         if TypeId::of::<S>() == TypeId::of::<Init>() {
+            let p = if mem::size_of::<T>() == 0 {
+                // any pointer will do to invoke the destructor of a ZST
+                NonNull::dangling().as_ptr()
+            } else {
+                unsafe { value.node.as_ref().data.get() }
+            };
             unsafe {
-                ptr::drop_in_place(value.node.as_ref().data.get());
+                ptr::drop_in_place(p);
             }
         }
 
@@ -339,13 +350,12 @@ impl<T> Pool<T> {
     ///
     /// This method returns the number of *new* blocks that can be allocated.
     pub fn grow(&self, memory: &'static mut [u8]) -> usize {
-        let sz = mem::size_of::<Node<T>>();
-
-        if sz == 0 {
-            // SZT use no memory so a pool of SZT always has maximum capacity
+        if mem::size_of::<T>() == 0 {
+            // ZST use no memory so a pool of ZST always has maximum capacity
             return usize::max_value();
         }
 
+        let sz = mem::size_of::<Node<T>>();
         let mut p = memory.as_mut_ptr();
         let mut len = memory.len();
 
@@ -428,8 +438,14 @@ pub struct Box<T, STATE = Init> {
 impl<T> Box<T, Uninit> {
     /// Initializes this memory block
     pub fn init(self, val: T) -> Box<T, Init> {
-        unsafe {
-            ptr::write(self.node.as_ref().data.get(), val);
+        if mem::size_of::<T>() == 0 {
+            // no memory operation needed for ZST
+            // BUT we want to avoid calling `val`s destructor
+            mem::forget(val)
+        } else {
+            unsafe {
+                ptr::write(self.node.as_ref().data.get(), val);
+            }
         }
 
         Box {
@@ -473,13 +489,23 @@ impl<T> Deref for Box<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { &*self.node.as_ref().data.get() }
+        if mem::size_of::<T>() == 0 {
+            // any pointer will do for ZST
+            unsafe { &*NonNull::dangling().as_ptr() }
+        } else {
+            unsafe { &*self.node.as_ref().data.get() }
+        }
     }
 }
 
 impl<T> DerefMut for Box<T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.node.as_ref().data.get() }
+        if mem::size_of::<T>() == 0 {
+            // any pointer will do for ZST
+            unsafe { &mut *NonNull::dangling().as_ptr() }
+        } else {
+            unsafe { &mut *self.node.as_ref().data.get() }
+        }
     }
 }
 

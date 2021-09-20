@@ -183,7 +183,7 @@ impl<T> Ptr<T> {
     fn as_raw(&self) -> NonNull<T> {
         unsafe {
             NonNull::new_unchecked(
-                (anchor::<T>(None) as *mut u8).offset(self.offset() as isize) as *mut T,
+                (anchor::<T>(None) as isize).wrapping_add(self.offset() as isize) as *mut T,
             )
         }
     }
