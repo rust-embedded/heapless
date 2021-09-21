@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.7.6] - 2021-09-21
+
+### Added
+
+- Added `ArcPool`
+- Added `Debug` impl for `Deque`
+
+### Fixed
+
+- ZSTs in `Pool` now works correctly
+- Some MIRI errors were resolved
+- Allow `pool!` on thumbv6
+- Fixed possible UB in `Pool` on x86
+
 ## [v0.7.5] - 2021-08-16
 
 ### Added
@@ -397,7 +411,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.6...HEAD
+[v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.5...v0.7.6
 [v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.4...v0.7.5
 [v0.7.4]: https://github.com/japaric/heapless/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/japaric/heapless/compare/v0.7.2...v0.7.3

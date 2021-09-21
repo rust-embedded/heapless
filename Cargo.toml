@@ -12,7 +12,7 @@ keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.7.5"
+version = "0.7.6"
 
 [features]
 default = ["cas"]
