@@ -389,6 +389,7 @@
 <span id="389">389</span>
 <span id="390">390</span>
 <span id="391">391</span>
+<span id="392">392</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Like [`std::sync::Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html) but backed by a</span>
 <span class="doccomment">//! memory [`Pool`](trait.Pool.html) rather than `#[global_allocator]`</span>
@@ -484,6 +485,7 @@
 <span class="doccomment">/// Instantiates a pool of Arc pointers as a global singleton</span>
 <span class="comment">// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(
+    <span class="ident">armv6m</span>,
     <span class="ident">armv7a</span>,
     <span class="ident">armv7r</span>,
     <span class="ident">armv7m</span>,

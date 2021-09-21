@@ -434,6 +434,7 @@
 <span id="434">434</span>
 <span id="435">435</span>
 <span id="436">436</span>
+<span id="437">437</span>
 </pre><pre class="rust">
 <span class="doccomment">//! `Pool` as a global singleton</span>
 
@@ -454,6 +455,7 @@
 <span class="doccomment">/// Instantiates a pool as a global singleton</span>
 <span class="comment">// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(
+    <span class="ident">armv6m</span>,
     <span class="ident">armv7a</span>,
     <span class="ident">armv7r</span>,
     <span class="ident">armv7m</span>,
