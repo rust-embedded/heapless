@@ -122,6 +122,7 @@ pub type Q32<T> = MpMcQueue<T, 32>;
 pub type Q64<T> = MpMcQueue<T, 64>;
 
 /// MPMC queue with a capacity for N elements
+/// N must be a power of 2
 /// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
 pub struct MpMcQueue<T, const N: usize> {
     buffer: UnsafeCell<[Cell<T>; N]>,
@@ -138,7 +139,8 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     /// Creates an empty queue
     pub const fn new() -> Self {
         // Const assert
-        crate::sealed::greater_than_0::<N>();
+        crate::sealed::greater_than_1::<N>();
+        crate::sealed::power_of_two::<N>();
 
         // Const assert on size.
         Self::ASSERT[!(N < (IntSize::MAX as usize)) as usize];

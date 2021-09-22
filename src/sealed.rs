@@ -65,6 +65,13 @@ pub(crate) const fn greater_than_1<const N: usize>() {
 }
 
 #[allow(dead_code)]
+#[allow(path_statements)]
+pub(crate) const fn power_of_two<const N: usize>() {
+    Assert::<N, 0>::GREATER;
+    Assert::<N, 0>::POWER_OF_TWO;
+}
+
+#[allow(dead_code)]
 /// Const assert hack
 pub struct Assert<const L: usize, const R: usize>;
 
@@ -87,4 +94,7 @@ impl<const L: usize, const R: usize> Assert<L, R> {
 
     /// Const assert hack
     pub const LESS: usize = R - L - 1;
+
+    /// Const assert hack
+    pub const POWER_OF_TWO: usize = 0 - (L & (L - 1));
 }
