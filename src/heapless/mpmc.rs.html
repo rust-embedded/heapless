@@ -319,6 +319,8 @@
 <span id="319">319</span>
 <span id="320">320</span>
 <span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
 </pre><pre class="rust">
 <span class="doccomment">//! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue</span>
 <span class="doccomment">//!</span>
@@ -444,6 +446,7 @@
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Q64</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MpMcQueue</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="number">64</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// MPMC queue with a capacity for N elements</span>
+<span class="doccomment">/// N must be a power of 2</span>
 <span class="doccomment">/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MpMcQueue</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
     <span class="ident">buffer</span>: <span class="ident">UnsafeCell</span><span class="op">&lt;</span>[<span class="ident">Cell</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>; <span class="ident">N</span>]<span class="op">&gt;</span>,
@@ -460,7 +463,8 @@
     <span class="doccomment">/// Creates an empty queue</span>
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="comment">// Const assert</span>
-        <span class="kw">crate</span><span class="ident">::sealed::greater_than_0</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
+        <span class="kw">crate</span><span class="ident">::sealed::greater_than_1</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
+        <span class="kw">crate</span><span class="ident">::sealed::power_of_two</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
 
         <span class="comment">// Const assert on size.</span>
         <span class="self">Self</span><span class="ident">::ASSERT</span>[<span class="op">!</span>(<span class="ident">N</span> <span class="op">&lt;</span> (<span class="ident">IntSize::MAX</span> <span class="kw">as</span> <span class="ident">usize</span>)) <span class="kw">as</span> <span class="ident">usize</span>];
