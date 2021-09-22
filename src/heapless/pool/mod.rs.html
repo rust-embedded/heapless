@@ -680,12 +680,13 @@
 <span id="680">680</span>
 <span id="681">681</span>
 <span id="682">682</span>
+<span id="683">683</span>
 </pre><pre class="rust">
 <span class="doccomment">//! A heap-less, interrupt-safe, lock-free memory pool (\*)</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv7-{A,R,M} &amp; ARMv8-M</span>
+<span class="doccomment">//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv6, ARMv7-{A,R,M} &amp; ARMv8-M</span>
 <span class="doccomment">//! devices</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Examples</span>
@@ -946,6 +947,7 @@
 
 <span class="comment">// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(
+    <span class="ident">armv6m</span>,
     <span class="ident">armv7a</span>,
     <span class="ident">armv7r</span>,
     <span class="ident">armv7m</span>,
