@@ -2,7 +2,7 @@
 //!
 //! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
 //!
-//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv7-{A,R,M} & ARMv8-M
+//! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv6, ARMv7-{A,R,M} & ARMv8-M
 //! devices
 //!
 //! # Examples
@@ -263,6 +263,7 @@ pub struct Pool<T> {
 
 // NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)
 #[cfg(any(
+    armv6m,
     armv7a,
     armv7r,
     armv7m,

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.7.7] - 2021-09-22
+
+### Fixed
+
+- Fixed so `Pool` is `Sync` on ARMv6
+
 ## [v0.7.6] - 2021-09-21
 
 ### Added
@@ -411,8 +417,9 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.6...HEAD
-[v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.5...v0.7.6
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.7...HEAD
+[v0.7.7]: https://github.com/japaric/heapless/compare/v0.7.6...v0.7.7
+[v0.7.6]: https://github.com/japaric/heapless/compare/v0.7.5...v0.7.6
 [v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.4...v0.7.5
 [v0.7.4]: https://github.com/japaric/heapless/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/japaric/heapless/compare/v0.7.2...v0.7.3
