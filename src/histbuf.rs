@@ -185,7 +185,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     // Re-arranges the data so that the underlying array slice is ordered oldest to newest
     pub fn order(&mut self) {
         let offset = self.write_at;
-        for i in 0..offset {
+        for i in 0..self.len()-offset {
             self.data.swap(i, offset+i);
         }
         self.write_at = 0;
