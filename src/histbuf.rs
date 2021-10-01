@@ -198,6 +198,8 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// x.write(4);
     /// x.write(5);
     ///
+    /// x.order();
+    ///
     /// assert_eq!(x.as_slice(), [0, 1, 2, 3, 4, 5]);
     /// ```
     pub fn order(&mut self) {
