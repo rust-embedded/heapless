@@ -181,6 +181,14 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
+
+    // Re-arranges the data so that the underlying array slice is ordered oldest to newest
+    pub fn order(&mut self) {
+        for i in 0..self.write_at {
+            self.data.swap(i, offset+i);
+        }
+        self.write_at = 0;
+    }
 }
 
 impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
