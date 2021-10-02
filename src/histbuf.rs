@@ -342,15 +342,15 @@ mod tests {
 
     #[test]
     fn order() {
-        let mut x:HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         x.extend([0, 0, 0, 1, 2, 3, 4, 5]);
         x.order();
         assert_eq!(x.as_slice(), [0, 1, 2, 3, 4, 5]);
 
-        let mut x:HistoryBuffer<u8, 4> = HistoryBuffer::new();
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
 
         x.extend([0, 1, 2, 3, 4, 5, 6]);
         x.order();
-        assert_eq!(x.as_slice(), [3,4,5,6]);
+        assert_eq!(x.as_slice(), [3, 4, 5, 6]);
     }
 }
