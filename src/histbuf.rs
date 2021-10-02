@@ -182,7 +182,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
 
-    /// Re-arranges the backing buffer to that it is ordered from oldest to newest
+    /// Re-arranges the backing buffer so that it is ordered from oldest to newest
     ///
     /// # Example
     /// ```
@@ -203,10 +203,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.as_slice(), [0, 1, 2, 3, 4, 5]);
     /// ```
     pub fn order(&mut self) {
-        let offset = self.write_at;
-        for i in 0..self.len()-offset {
-            self.data.swap(i, offset+i);
-        }
+        self.data.rotate_left(self.write_at);
         self.write_at = 0;
     }
 }
@@ -346,15 +343,14 @@ mod tests {
     #[test]
     fn order() {
         let mut x:HistoryBuffer<u8, 6> = HistoryBuffer::new();
-        x.write(0);
-        x.write(0);
-        x.write(0);
-        x.write(1);
-        x.write(2);
-        x.write(3);
-        x.write(4);
-        x.write(5);
+        x.extend([0, 0, 0, 1, 2, 3, 4, 5]);
         x.order();
         assert_eq!(x.as_slice(), [0, 1, 2, 3, 4, 5]);
+
+        let mut x:HistoryBuffer<u8, 4> = HistoryBuffer::new();
+
+        x.extend([0, 1, 2, 3, 4, 5, 6]);
+        x.order();
+        assert_eq!(x.as_slice(), [3,4,5,6]);
     }
 }
