@@ -203,8 +203,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.as_slice(), [0, 1, 2, 3, 4, 5]);
     /// ```
     pub fn order(&mut self) {
-        self.data.rotate_left(self.write_at);
-        self.write_at = 0;
+        if self.filled {
+            self.data.rotate_left(self.write_at);
+            self.write_at = 0;
+        }
     }
 }
 
