@@ -352,5 +352,11 @@ mod tests {
         x.extend([0, 1, 2, 3, 4, 5, 6]);
         x.order();
         assert_eq!(x.as_slice(), [3, 4, 5, 6]);
+
+        // test to make sure we do not break the length
+        let mut x: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        x.extend([1, 2, 3]);
+        x.order();
+        assert_eq!(x.len(), 3);
     }
 }
