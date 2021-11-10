@@ -99,7 +99,7 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-#[cfg(feature = "defmt-impl")]
+#[cfg(any(feature = "defmt02", feature = "defmt03"))]
 mod defmt;
 #[cfg(all(has_cas, feature = "cas"))]
 pub mod mpmc;

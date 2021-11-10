@@ -1,6 +1,10 @@
 //! Defmt implementations for heapless types
 //!
 
+#[cfg(feature = "defmt02")]
+use defmt02 as defmt;
+#[cfg(feature = "defmt03")]
+use defmt03 as defmt;
 use crate::Vec;
 use defmt::Formatter;
 

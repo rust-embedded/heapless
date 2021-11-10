@@ -24,7 +24,6 @@ x86-sync-pool = []
 __trybuild = []
 # Enable larger MPMC sizes.
 mpmc_large = []
-defmt-impl = ["defmt"]
 
 [target.'cfg(any(target_arch = "x86_64", target_arch = "x86"))'.dev-dependencies]
 scoped_threadpool = "0.1.8"
@@ -34,6 +33,16 @@ atomic-polyfill = { version = "0.1.2", optional = true }
 
 [dependencies]
 hash32 = "0.2.1"
+
+[dependencies.defmt02]
+package = "defmt"
+version = "0.2"
+optional = true
+
+[dependencies.defmt03]
+package = "defmt"
+version = "0.3"
+optional = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 spin = "0.9.2"
@@ -54,10 +63,3 @@ optional = true
 [dev-dependencies.ufmt]
 version = "0.1"
 
-[dependencies.defmt]
-version = "0.2.1"
-optional = true
-
-[dev-dependencies.defmt]
-version = "0.2.1"
-features = ["unstable-test"]
