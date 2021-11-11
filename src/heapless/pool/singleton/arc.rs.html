@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;pool&#x2F;singleton&#x2F;arc.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>arc.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;pool&#x2F;singleton&#x2F;arc.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>arc.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -390,8 +390,7 @@
 <span id="390">390</span>
 <span id="391">391</span>
 <span id="392">392</span>
-</pre><pre class="rust">
-<span class="doccomment">//! Like [`std::sync::Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html) but backed by a</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Like [`std::sync::Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html) but backed by a</span>
 <span class="doccomment">//! memory [`Pool`](trait.Pool.html) rather than `#[global_allocator]`</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Note that the same limitations that apply to [&quot;Box&quot; pool] also apply to the &quot;Arc&quot; pool.</span>
@@ -480,7 +479,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">armv6m</span>))]</span>
 <span class="kw">use</span> <span class="ident">core::sync::atomic</span>::{<span class="ident">AtomicUsize</span>, <span class="ident">Ordering</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::pool</span>::{<span class="self">self</span>, <span class="ident">stack::Ptr</span>, <span class="ident">Node</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pool</span>::{<span class="self">self</span>, <span class="ident">stack::Ptr</span>, <span class="ident">Node</span>};
 
 <span class="doccomment">/// Instantiates a pool of Arc pointers as a global singleton</span>
 <span class="comment">// NOTE(any(test)) makes testing easier (no need to enable Cargo features for testing)</span>
@@ -501,13 +500,13 @@
     ($(<span class="attribute">#[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">attr</span>:<span class="ident">tt</span>)<span class="kw-2">*</span>]</span>)<span class="op">*</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ident</span>:<span class="ident">ident</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>:<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="kw">pub</span> <span class="kw">struct</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ident</span>;
 
-        <span class="kw">impl</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::Pool</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ident</span> {
+        <span class="kw">impl</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::Pool</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ident</span> {
             <span class="kw">type</span> <span class="ident">Data</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>;
 
-            <span class="kw">fn</span> <span class="ident">ptr</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::Pool</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+            <span class="kw">fn</span> <span class="ident">ptr</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::Pool</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span> {
                 $(<span class="attribute">#[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">attr</span>)<span class="kw-2">*</span>]</span>)<span class="op">*</span>
-                <span class="kw">static</span> <span class="ident">POOL</span>: <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::Pool</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
-                    <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::Pool::new</span>();
+                <span class="kw">static</span> <span class="ident">POOL</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::Pool</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
+                    <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::Pool::new</span>();
 
                 <span class="kw-2">&amp;</span><span class="ident">POOL</span>
             }
@@ -517,11 +516,11 @@
             <span class="doccomment">/// Allocates a new `Arc` and writes `data` to it</span>
             <span class="doccomment">///</span>
             <span class="doccomment">/// Returns an `Err`or if the backing memory pool is empty</span>
-            <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc</span>(<span class="ident">data</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span>
+            <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc</span>(<span class="ident">data</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::Arc</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span>
             <span class="kw">where</span>
                 <span class="self">Self</span>: <span class="ident">Sized</span>,
             {
-                <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::Arc::new</span>(<span class="ident">data</span>)
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::Arc::new</span>(<span class="ident">data</span>)
             }
 
             <span class="doccomment">/// Increases the capacity of the pool</span>
@@ -530,7 +529,7 @@
             <span class="doccomment">///</span>
             <span class="doccomment">/// This method returns the number of *new* blocks that can be allocated.</span>
             <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">grow</span>(<span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-                <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::Pool</span><span class="op">&gt;</span><span class="ident">::ptr</span>().<span class="ident">grow</span>(<span class="ident">memory</span>)
+                <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::Pool</span><span class="op">&gt;</span><span class="ident">::ptr</span>().<span class="ident">grow</span>(<span class="ident">memory</span>)
             }
 
             <span class="doccomment">/// Increases the capacity of the pool</span>
@@ -538,9 +537,9 @@
             <span class="doccomment">/// Unlike `grow`, this method fully utilizes the given memory block</span>
             <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">grow_exact</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>(<span class="ident">memory</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="kw-2">mut</span> <span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span>
             <span class="kw">where</span>
-                <span class="ident">A</span>: <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::Node</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span>]<span class="op">&gt;</span>,
+                <span class="ident">A</span>: <span class="ident">AsMut</span><span class="op">&lt;</span>[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::Node</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::ArcInner</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">ty</span><span class="op">&gt;</span><span class="op">&gt;</span>]<span class="op">&gt;</span>,
             {
-                <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span><span class="macro-nonterminal">::pool::singleton::arc::Pool</span><span class="op">&gt;</span><span class="ident">::ptr</span>().<span class="ident">grow_exact</span>(<span class="ident">memory</span>)
+                <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::pool::singleton::arc::Pool</span><span class="op">&gt;</span><span class="ident">::ptr</span>().<span class="ident">grow_exact</span>(<span class="ident">memory</span>)
             }
         }
     };
@@ -552,7 +551,7 @@
     <span class="kw">type</span> <span class="ident">Data</span>: <span class="lifetime">&#39;static</span>;
 
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">ptr</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">pool::Pool</span><span class="op">&lt;</span><span class="ident">ArcInner</span><span class="op">&lt;</span><span class="self">Self</span><span class="ident">::Data</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">ptr</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">pool::Pool</span><span class="op">&lt;</span><span class="ident">ArcInner</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Data</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 }
 
 <span class="comment">// mostly a verbatim copy of liballoc(/src/sync.rs) as of v1.54.0 minus the `Weak` API</span>
@@ -623,7 +622,7 @@
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">never</span>)]</span>
     <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">drop_slow</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="comment">// run `P::Data`&#39;s destructor</span>
-        <span class="ident">ptr::drop_in_place</span>(<span class="self">Self</span><span class="ident">::get_mut_unchecked</span>(<span class="self">self</span>));
+        <span class="ident">ptr::drop_in_place</span>(<span class="ident"><span class="self">Self</span>::get_mut_unchecked</span>(<span class="self">self</span>));
 
         <span class="comment">// XXX memory pool instead of `#[global_allocator]`</span>
         <span class="comment">// return memory to pool</span>
@@ -656,7 +655,7 @@
             <span class="macro">panic!</span>();
         }
 
-        <span class="self">Self</span><span class="ident">::from_inner</span>(<span class="self">self</span>.<span class="ident">ptr</span>)
+        <span class="ident"><span class="self">Self</span>::from_inner</span>(<span class="self">self</span>.<span class="ident">ptr</span>)
     }
 }
 
@@ -783,7 +782,7 @@
     <span class="comment">// XXX `Weak` API not implemented</span>
     <span class="comment">// weak: AtomicUsize,</span>
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="heapless" data-search-index-js="../../../../search-index.js" data-search-js="../../../../search.js"></div>
     <script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script>
 </body></html>

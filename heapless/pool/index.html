@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A heap-less, interrupt-safe, lock-free memory pool (*)"><meta name="keywords" content="rust, rustlang, rust-lang, pool"><title>heapless::pool - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><h2 class="location">Module pool</h2><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><div id="sidebar-vars" data-name="pool" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">heapless</a>::<wbr><a class="mod" href="#">pool</a><button id="copy-path" onclick="copy_path(this)" title="copy path"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item import" title="Copy item import to clipboard"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/heapless/pool/mod.rs.html#1-683" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A heap-less, interrupt-safe, lock-free memory pool (*)</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A heap-less, interrupt-safe, lock-free memory pool (*)"><meta name="keywords" content="rust, rustlang, rust-lang, pool"><title>heapless::pool - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../heapless/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><h2 class="location">Module pool</h2><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><div id="sidebar-vars" data-name="pool" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">heapless</a>::<wbr><a class="mod" href="#">pool</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/heapless/pool/mod.rs.html#1-683" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A heap-less, interrupt-safe, lock-free memory pool (*)</p>
 <p>NOTE: This module is not available on targets that do <em>not</em> support CAS operations, e.g. ARMv6-M</p>
 <p>(*) Currently, the implementation is only lock-free <em>and</em> <code>Sync</code> on ARMv6, ARMv7-{A,R,M} &amp; ARMv8-M
 devices</p>
@@ -6,8 +6,7 @@ devices</p>
 <p>The most common way of using this pool is as a global singleton; the singleton mode gives you
 automatic deallocation of memory blocks on <code>drop</code>.</p>
 
-<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore">
-<span class="attribute">#![<span class="ident">no_main</span>]</span>
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="attribute">#![<span class="ident">no_main</span>]</span>
 <span class="attribute">#![<span class="ident">no_std</span>]</span>
 
 <span class="kw">use</span> <span class="ident">heapless</span>::{<span class="ident">pool</span>, <span class="ident">pool::singleton::Box</span>};
@@ -44,7 +43,7 @@ automatic deallocation of memory blocks on <code>drop</code>.</p>
 
     <span class="comment">// return the memory block to the pool</span>
     <span class="ident">drop</span>(<span class="ident">y</span>);
-}</pre></div>
+}</code></pre></div>
 <h1 id="portability" class="section-header"><a href="#portability">Portability</a></h1>
 <p>This pool internally uses a Treiber stack which is known to be susceptible to the ABA problem.
 The only counter measure against the ABA problem that this implementation currently takes is
@@ -60,8 +59,7 @@ top of the stack and use it as a memory block. The pop operation consists of swa
 current head (top) node with the node below it. The Rust code for the <code>pop</code> operation is shown
 below:</p>
 
-<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore">
-<span class="kw">fn</span> <span class="ident">pop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="kw">fn</span> <span class="ident">pop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">fetch_order</span> <span class="op">=</span> ..;
     <span class="kw">let</span> <span class="ident">set_order</span> <span class="op">=</span> ..;
 
@@ -87,7 +85,7 @@ below:</p>
             <span class="kw">break</span> <span class="prelude-val">None</span>;
         }
     }
-}</pre></div>
+}</code></pre></div>
 <p>In general, the <code>pop</code> operation is susceptible to the ABA problem. If this operation gets
 preempted by some interrupt handler somewhere between the <code>head.load</code> and the
 <code>compare_and_exchange_weak</code>, and that handler modifies the stack in such a way that the head
@@ -103,7 +101,7 @@ state.</p>
 <p>However, not all is lost because ARM devices use LL/SC (Link-local / Store-conditional)
 operations to implement CAS loops. Let’s look at the actual disassembly of <code>pop</code> for the ARM
 Cortex-M.</p>
-<div class="example-wrap"><pre class="language-text">08000130 &lt;&lt;heapless::pool::Pool&lt;T&gt;&gt;::pop&gt;:
+<div class="example-wrap"><pre class="language-text"><code>08000130 &lt;&lt;heapless::pool::Pool&lt;T&gt;&gt;::pop&gt;:
  8000130:       6802            ldr     r2, [r0, #0]
  8000132:       e00c            b.n     800014e &lt;&lt;heapless::pool::Pool&lt;T&gt;&gt;::pop+0x1e&gt;
  8000134:       4611            mov     r1, r2
@@ -119,7 +117,7 @@ Cortex-M.</p>
  8000150:       d1f0            bne.n   8000134 &lt;&lt;heapless::pool::Pool&lt;T&gt;&gt;::pop+0x4&gt;
  8000152:       2100            movs    r1, #0
  8000154:       4608            mov     r0, r1
- 8000156:       4770            bx      lr</pre></div>
+ 8000156:       4770            bx      lr</code></pre></div>
 <p>LDREX (“load exclusive”) is the LL instruction, and STREX (“store exclusive”) is the SC
 instruction (see <a href="#references">1</a>). On the Cortex-M, STREX will always fail if the processor
 takes an exception between it and its corresponding LDREX operation (see <a href="#references">2</a>). If
