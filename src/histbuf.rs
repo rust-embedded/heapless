@@ -272,6 +272,7 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
+#[derive(Clone)]
 pub struct OrderedIter<'a, T, const N: usize> {
     buf: &'a HistoryBuffer<T, N>,
     cur: usize,
