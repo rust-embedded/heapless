@@ -181,6 +181,31 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
+
+    /// Returns an iterator for iterating over the buffer from oldest to newest
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+    /// buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+    /// let expected = [1, 2, 3, 4, 5, 6];
+    /// for (x, y) in buffer.ordered().zip(expected.iter()) {
+    ///     assert_eq!(x, y)
+    /// }
+    ///
+    /// ```
+    pub fn ordered<'a>(&'a self) -> OrderedIter<'a, T, N> {
+        if !self.filled {
+            return OrderedIter { buf: self, cur: 0 };
+        }
+        OrderedIter {
+            buf: self,
+            cur: self.write_at,
+        }
+    }
 }
 
 impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
@@ -244,6 +269,33 @@ where
 impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub struct OrderedIter<'a, T, const N: usize> {
+    buf: &'a HistoryBuffer<T, N>,
+    cur: usize,
+}
+
+impl<'a, T, const N: usize> Iterator for OrderedIter<'a, T, N> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        let mut next = self.cur + 1;
+
+        // roll-over
+        if next == self.buf.len() {
+            next = 0;
+        }
+
+        // end of iteration
+        if next == self.buf.write_at {
+            return None;
+        }
+
+        let item = &self.buf[self.cur];
+        self.cur = next;
+        Some(item)
     }
 }
 
@@ -313,5 +365,24 @@ mod tests {
         x.extend([1, 2, 3, 4, 5].iter());
 
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
+    }
+
+    #[test]
+    fn ordered() {
+        // test on a filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+        let expected = [1, 2, 3, 4, 5, 6];
+        for (x, y) in buffer.ordered().zip(expected.iter()) {
+            assert_eq!(x, y);
+        }
+
+        // test on a un-filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([1, 2, 3]);
+        let expected = [1, 2, 3];
+        for (x, y) in buffer.ordered().zip(expected.iter()) {
+            assert_eq!(x, y);
+        }
     }
 }
