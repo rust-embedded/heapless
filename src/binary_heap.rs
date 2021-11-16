@@ -9,6 +9,7 @@
 // n)` in-place heapsort.
 
 use core::{
+    cmp::Ordering,
     fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop},
@@ -16,7 +17,6 @@ use core::{
     ptr, slice,
 };
 
-use crate::sealed::binary_heap::Kind;
 use crate::vec::Vec;
 
 /// Min-heap
@@ -24,6 +24,32 @@ pub enum Min {}
 
 /// Max-heap
 pub enum Max {}
+
+/// The binary heap kind: min-heap or max-heap
+pub trait Kind: private::Sealed {
+    #[doc(hidden)]
+    fn ordering() -> Ordering;
+}
+
+impl Kind for Min {
+    fn ordering() -> Ordering {
+        Ordering::Less
+    }
+}
+
+impl Kind for Max {
+    fn ordering() -> Ordering {
+        Ordering::Greater
+    }
+}
+
+/// Sealed traits
+mod private {
+    pub trait Sealed {}
+}
+
+impl private::Sealed for Max {}
+impl private::Sealed for Min {}
 
 /// A priority queue implemented with a binary heap.
 ///
