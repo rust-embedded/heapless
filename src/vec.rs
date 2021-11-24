@@ -1,4 +1,7 @@
-use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{
+    cmp::Ordering, convert::TryFrom, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr,
+    slice,
+};
 use hash32;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
@@ -566,6 +569,14 @@ impl<T, const N: usize> Drop for Vec<T, N> {
         unsafe {
             ptr::drop_in_place(self.as_mut_slice());
         }
+    }
+}
+
+impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
+    type Error = ();
+
+    fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
+        Vec::from_slice(slice)
     }
 }
 
