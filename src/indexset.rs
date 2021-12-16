@@ -1,6 +1,6 @@
 use crate::indexmap::{self, IndexMap};
 use core::{borrow::Borrow, fmt, iter::FromIterator};
-use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
+use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash};
 
 /// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
 /// default FNV hasher.
@@ -74,22 +74,13 @@ pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHash
 ///     println!("{}", book);
 /// }
 /// ```
-pub struct IndexSet<T, S, const N: usize>
-where
-    T: Eq + Hash,
-{
+pub struct IndexSet<T, S, const N: usize> {
     map: IndexMap<T, (), S, N>,
 }
 
-impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N>
-where
-    T: Eq + Hash,
-    S: Default + Hasher,
-{
+impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexSet`
-    pub fn new() -> Self {
-        assert!(N.is_power_of_two());
-
+    pub const fn new() -> Self {
         IndexSet {
             map: IndexMap::new(),
         }
