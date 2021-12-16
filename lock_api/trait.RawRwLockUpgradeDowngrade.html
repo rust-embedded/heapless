@@ -4,10 +4,10 @@
 }</code></pre></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Additional methods for RwLocks which support upgradable locks and lock
 downgrading.</p>
 </div></details><h2 id="required-methods" class="small-section-header">Required methods<a href="#required-methods" class="anchor"></a></h2><div class="methods"><details class="rustdoc-toggle" open><summary><div id="tymethod.downgrade_upgradable" class="method has-srclink"><div class="rightside"><a class="srclink" href="../src/lock_api/rwlock.rs.html#270" title="goto source code">[src]</a></div><h4 class="code-header">unsafe fn <a href="#tymethod.downgrade_upgradable" class="fnname">downgrade_upgradable</a>(&amp;self)</h4></div></summary><div class="docblock"><p>Downgrades an upgradable lock to a shared lock.</p>
-<h1 id="safety" class="section-header"><a href="#safety">Safety</a></h1>
+<h5 id="safety" class="section-header"><a href="#safety">Safety</a></h5>
 <p>This method may only be called if an upgradable lock is held in the current context.</p>
 </div></details><details class="rustdoc-toggle" open><summary><div id="tymethod.downgrade_to_upgradable" class="method has-srclink"><div class="rightside"><a class="srclink" href="../src/lock_api/rwlock.rs.html#277" title="goto source code">[src]</a></div><h4 class="code-header">unsafe fn <a href="#tymethod.downgrade_to_upgradable" class="fnname">downgrade_to_upgradable</a>(&amp;self)</h4></div></summary><div class="docblock"><p>Downgrades an exclusive lock to an upgradable lock.</p>
-<h1 id="safety-1" class="section-header"><a href="#safety-1">Safety</a></h1>
+<h5 id="safety-1" class="section-header"><a href="#safety-1">Safety</a></h5>
 <p>This method may only be called if an exclusive lock is held in the current context.</p>
 </div></details></div><h2 id="implementors" class="small-section-header">Implementors<a href="#implementors" class="anchor"></a></h2><div class="item-list" id="implementors-list"></div><script type="text/javascript" src="../implementors/lock_api/trait.RawRwLockUpgradeDowngrade.js" async></script></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="lock_api" data-search-index-js="../search-index.js" data-search-js="../search.js"></div>
     <script src="../main.js"></script>

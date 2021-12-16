@@ -667,12 +667,12 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">fmt::Debug</span>, <span class="ident">R</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">Once</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Once {{ data: &quot;</span>)
+            <span class="prelude-val">Some</span>(<span class="ident">s</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Once {{ data: &quot;</span>)
 				.<span class="ident">and_then</span>(<span class="op">|</span>()<span class="op">|</span> <span class="ident">s</span>.<span class="ident">fmt</span>(<span class="ident">f</span>))
 				.<span class="ident">and_then</span>(<span class="op">|</span>()<span class="op">|</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;}}&quot;</span>)),
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Once {{ &lt;uninitialized&gt; }}&quot;</span>)
+            <span class="prelude-val">None</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Once {{ &lt;uninitialized&gt; }}&quot;</span>)
         }
     }
 }
@@ -707,19 +707,19 @@
         <span class="comment">// # Safety</span>
         <span class="comment">//</span>
         <span class="comment">// For this to be safe, the inner number must have a valid corresponding enum variant.</span>
-        <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">new_unchecked</span>(<span class="ident">inner</span>: <span class="ident">u8</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">new_unchecked</span>(<span class="ident">inner</span>: <span class="ident">u8</span>) -&gt; <span class="self">Self</span> {
             <span class="ident">core::mem::transmute</span>(<span class="ident">inner</span>)
         }
     }
 
     <span class="kw">impl</span> <span class="ident">AtomicStatus</span> {
         <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">status</span>: <span class="ident">Status</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">status</span>: <span class="ident">Status</span>) -&gt; <span class="self">Self</span> {
             <span class="comment">// SAFETY: We got the value directly from status, so transmuting back is fine.</span>
             <span class="self">Self</span>(<span class="ident">AtomicU8::new</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u8</span>))
         }
         <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ordering</span>: <span class="ident">Ordering</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Status</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ordering</span>: <span class="ident">Ordering</span>) -&gt; <span class="ident">Status</span> {
             <span class="comment">// SAFETY: We know that the inner integer must have been constructed from a Status in</span>
             <span class="comment">// the first place.</span>
             <span class="kw">unsafe</span> { <span class="ident">Status::new_unchecked</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">load</span>(<span class="ident">ordering</span>)) }
@@ -731,18 +731,18 @@
             <span class="self">self</span>.<span class="number">0</span>.<span class="ident">store</span>(<span class="ident">status</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="ident">ordering</span>);
         }
         <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compare_exchange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">old</span>: <span class="ident">Status</span>, <span class="ident">new</span>: <span class="ident">Status</span>, <span class="ident">success</span>: <span class="ident">Ordering</span>, <span class="ident">failure</span>: <span class="ident">Ordering</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Status</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compare_exchange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">old</span>: <span class="ident">Status</span>, <span class="ident">new</span>: <span class="ident">Status</span>, <span class="ident">success</span>: <span class="ident">Ordering</span>, <span class="ident">failure</span>: <span class="ident">Ordering</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Status</span>, <span class="ident">Status</span><span class="op">&gt;</span> {
             <span class="kw">match</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">compare_exchange</span>(<span class="ident">old</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="ident">new</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="ident">success</span>, <span class="ident">failure</span>) {
                 <span class="comment">// SAFETY: A compare exchange will always return a value that was later stored into</span>
                 <span class="comment">// the atomic u8, but due to the invariant that it must be a valid Status, we know</span>
                 <span class="comment">// that both Ok(_) and Err(_) will be safely transmutable.</span>
 
-                <span class="prelude-val">Ok</span>(<span class="ident">ok</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="ident">Status::new_unchecked</span>(<span class="ident">ok</span>) }),
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="ident">Status::new_unchecked</span>(<span class="ident">err</span>) }),
+                <span class="prelude-val">Ok</span>(<span class="ident">ok</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="ident">Status::new_unchecked</span>(<span class="ident">ok</span>) }),
+                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="ident">Status::new_unchecked</span>(<span class="ident">err</span>) }),
             }
         }
         <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Status</span> {
+        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Status</span> {
             <span class="comment">// SAFETY: Since we know that the u8 inside must be a valid Status, we can safely cast</span>
             <span class="comment">// it to a &amp;mut Status.</span>
             <span class="kw">unsafe</span> { <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span>((<span class="self">self</span>.<span class="number">0</span>.<span class="ident">get_mut</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">u8</span>).<span class="ident">cast</span>::<span class="op">&lt;</span><span class="ident">Status</span><span class="op">&gt;</span>()) }
@@ -788,12 +788,12 @@
     <span class="doccomment">/// # 2</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">call_once</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">call_once</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
         <span class="comment">// SAFETY: We perform an Acquire load because if this were to return COMPLETE, then we need</span>
         <span class="comment">// the preceding stores done while initializing, to become visible after this load.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">status</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>);
 
-        <span class="kw">if</span> <span class="ident">status</span> <span class="op">=</span><span class="op">=</span> <span class="ident">Status::Incomplete</span> {
+        <span class="kw">if</span> <span class="ident">status</span> <span class="op">==</span> <span class="ident">Status::Incomplete</span> {
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">compare_exchange</span>(
                 <span class="ident">Status::Incomplete</span>,
                 <span class="ident">Status::Running</span>,
@@ -812,7 +812,7 @@
                 <span class="comment">// visible to us.</span>
                 <span class="ident">Ordering::Acquire</span>,
             ) {
-                <span class="prelude-val">Ok</span>(<span class="ident">_must_be_state_incomplete</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="prelude-val">Ok</span>(<span class="ident">_must_be_state_incomplete</span>) =&gt; {
                     <span class="comment">// The compare-exchange suceeded, so we shall initialize it.</span>
 
                     <span class="comment">// We use a guard (Finish) to catch panics caused by builder</span>
@@ -850,16 +850,16 @@
                 }
                 <span class="comment">// The compare-exchange failed, so we know for a fact that the status cannot be</span>
                 <span class="comment">// INCOMPLETE, or it would have succeeded.</span>
-                <span class="prelude-val">Err</span>(<span class="ident">other_status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">other_status</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">other_status</span>) =&gt; <span class="ident">status</span> <span class="op">=</span> <span class="ident">other_status</span>,
             }
         }
 
         <span class="kw">match</span> <span class="ident">status</span> {
             <span class="comment">// SAFETY: We have either checked with an Acquire load, that the status is COMPLETE, or</span>
             <span class="comment">// initialized it ourselves, in which case no additional synchronization is needed.</span>
-            <span class="ident">Status::Complete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() },
-            <span class="ident">Status::Panicked</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic!</span>(<span class="string">&quot;Once panicked&quot;</span>),
-            <span class="ident">Status::Running</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
+            <span class="ident">Status::Complete</span> =&gt; <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() },
+            <span class="ident">Status::Panicked</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Once panicked&quot;</span>),
+            <span class="ident">Status::Running</span> =&gt; <span class="self">self</span>
                 .<span class="ident">poll</span>()
                 .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                     <span class="kw">if</span> <span class="macro">cfg!</span>(<span class="ident">debug_assertions</span>) {
@@ -883,7 +883,7 @@
             <span class="comment">// reached, is if we lost the CAS (otherwise we would have returned early), in</span>
             <span class="comment">// which case we know for a fact that the state cannot be changed back to INCOMPLETE as</span>
             <span class="comment">// `Once`s are monotonic.</span>
-            <span class="ident">Status::Incomplete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">unsafe</span> { <span class="ident">unreachable</span>() },
+            <span class="ident">Status::Incomplete</span> =&gt; <span class="kw">unsafe</span> { <span class="ident">unreachable</span>() },
         }
 
     }
@@ -897,11 +897,11 @@
     <span class="doccomment">/// This function will panic if the [`Once`] previously panicked while attempting</span>
     <span class="doccomment">/// to initialize. This is similar to the poisoning behaviour of `std::sync`&#39;s</span>
     <span class="doccomment">/// primitives.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
         <span class="kw">loop</span> {
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">poll</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="ident">x</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">R::relax</span>(),
+                <span class="prelude-val">Some</span>(<span class="ident">x</span>) =&gt; <span class="kw">break</span> <span class="ident">x</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="ident">R::relax</span>(),
             }
         }
     }
@@ -916,16 +916,16 @@
     <span class="doccomment">/// This function will panic if the [`Once`] previously panicked while attempting</span>
     <span class="doccomment">/// to initialize. This is similar to the poisoning behaviour of `std::sync`&#39;s</span>
     <span class="doccomment">/// primitives.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">poll</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">loop</span> {
             <span class="comment">// SAFETY: Acquire is safe here, because if the status is COMPLETE, then we want to make</span>
             <span class="comment">// sure that all memory accessed done while initializing that value, are visible when</span>
             <span class="comment">// we return a reference to the inner data after this load.</span>
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>) {
-                <span class="ident">Status::Incomplete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
-                <span class="ident">Status::Running</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">R::relax</span>(), <span class="comment">// We spin</span>
-                <span class="ident">Status::Complete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() }),
-                <span class="ident">Status::Panicked</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic!</span>(<span class="string">&quot;Once previously poisoned by a panicked&quot;</span>),
+                <span class="ident">Status::Incomplete</span> =&gt; <span class="kw">return</span> <span class="prelude-val">None</span>,
+                <span class="ident">Status::Running</span> =&gt; <span class="ident">R::relax</span>(), <span class="comment">// We spin</span>
+                <span class="ident">Status::Complete</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() }),
+                <span class="ident">Status::Panicked</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Once previously poisoned by a panicked&quot;</span>),
             }
         }
     }
@@ -941,12 +941,12 @@
     };
 
     <span class="doccomment">/// Creates a new [`Once`].</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>{
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span>{
         <span class="ident"><span class="self">Self</span>::INIT</span>
     }
 
     <span class="doccomment">/// Creates a new initialized [`Once`].</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">initialized</span>(<span class="ident">data</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">initialized</span>(<span class="ident">data</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">phantom</span>: <span class="ident">PhantomData</span>,
             <span class="ident">status</span>: <span class="ident">AtomicStatus::new</span>(<span class="ident">Status::Complete</span>),
@@ -959,14 +959,14 @@
     <span class="doccomment">/// While this method itself is safe, accessing the pointer before the [`Once`] has been</span>
     <span class="doccomment">/// initialized is UB, unless this method has already been written to from a pointer coming</span>
     <span class="doccomment">/// from this method.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_mut_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_mut_ptr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span> {
         <span class="comment">// SAFETY:</span>
         <span class="comment">// * MaybeUninit&lt;T&gt; always has exactly the same layout as T</span>
         <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">get</span>().<span class="ident">cast</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>()
     }
 
     <span class="doccomment">/// Get a reference to the initialized instance. Must only be called once COMPLETE.</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
         <span class="comment">// SAFETY:</span>
         <span class="comment">// * `UnsafeCell`/inner deref: data never changes again</span>
         <span class="comment">// * `MaybeUninit`/outer deref: data was initialized</span>
@@ -974,7 +974,7 @@
     }
 
     <span class="doccomment">/// Get a reference to the initialized instance. Must only be called once COMPLETE.</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span> {
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span> {
         <span class="comment">// SAFETY:</span>
         <span class="comment">// * `UnsafeCell`/inner deref: data never changes again</span>
         <span class="comment">// * `MaybeUninit`/outer deref: data was initialized</span>
@@ -982,7 +982,7 @@
     }
 
     <span class="doccomment">/// Get a reference to the initialized instance. Must only be called once COMPLETE.</span>
-    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_into_inner</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
+    <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">force_into_inner</span>(<span class="self">self</span>) -&gt; <span class="ident">T</span> {
         <span class="comment">// SAFETY:</span>
         <span class="comment">// * `UnsafeCell`/inner deref: data never changes again</span>
         <span class="comment">// * `MaybeUninit`/outer deref: data was initialized</span>
@@ -990,12 +990,12 @@
     }
 
     <span class="doccomment">/// Returns a reference to the inner value if the [`Once`] has been initialized.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="comment">// SAFETY: Just as with `poll`, Acquire is safe here because we want to be able to see the</span>
         <span class="comment">// nonatomic stores done when initializing, once we have loaded and checked the status.</span>
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>) {
-            <span class="ident">Status::Complete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() }),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">Status::Complete</span> =&gt; <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get</span>() }),
+            <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
         }
     }
 
@@ -1007,7 +1007,7 @@
     <span class="doccomment">/// memory will be returned, immediately triggering undefined behaviour (even if the reference goes unused).</span>
     <span class="doccomment">/// However, this can be useful in some instances for exposing the `Once` to FFI or when the overhead of atomically</span>
     <span class="doccomment">/// checking initialization is unacceptable and the `Once` has already been initialized.</span>
-    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">get_unchecked</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">T</span> {
+    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">get_unchecked</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">T</span> {
         <span class="macro">debug_assert_eq!</span>(
             <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::SeqCst</span>),
             <span class="ident">Status::Complete</span>,
@@ -1020,10 +1020,10 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Because this method requires a mutable reference to the [`Once`], no synchronization</span>
     <span class="doccomment">/// overhead is required to access the inner value. In effect, it is zero-cost.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">status</span>.<span class="ident">get_mut</span>() {
-            <span class="ident">Status::Complete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get_mut</span>() }),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">Status::Complete</span> =&gt; <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_get_mut</span>() }),
+            <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
         }
     }
 
@@ -1031,10 +1031,10 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Because this method requires ownership of the [`Once`], no synchronization overhead</span>
     <span class="doccomment">/// is required to access the inner value. In effect, it is zero-cost.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_into_inner</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_into_inner</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">status</span>.<span class="ident">get_mut</span>() {
-            <span class="ident">Status::Complete</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_into_inner</span>() }),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">Status::Complete</span> =&gt; <span class="prelude-val">Some</span>(<span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">force_into_inner</span>() }),
+            <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
         }
     }
 
@@ -1043,14 +1043,14 @@
     <span class="doccomment">/// This is done using [`Acquire`](core::sync::atomic::Ordering::Acquire) ordering, and</span>
     <span class="doccomment">/// therefore it is safe to access the value directly via</span>
     <span class="doccomment">/// [`get_unchecked`](Self::get_unchecked) if this returns true.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_completed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_completed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
         <span class="comment">// TODO: Add a similar variant for Relaxed?</span>
-        <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>) <span class="op">=</span><span class="op">=</span> <span class="ident">Status::Complete</span>
+        <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>) <span class="op">==</span> <span class="ident">Status::Complete</span>
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Once</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::initialized</span>(<span class="ident">data</span>)
     }
 }
@@ -1058,7 +1058,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Once</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">R</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="comment">// No need to do any atomic access here, we have &amp;mut!</span>
-        <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">status</span>.<span class="ident">get_mut</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Status::Complete</span> {
+        <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">status</span>.<span class="ident">get_mut</span>() <span class="op">==</span> <span class="ident">Status::Complete</span> {
             <span class="kw">unsafe</span> {
                 <span class="comment">//TODO: Use MaybeUninit::assume_init_drop once stabilised</span>
                 <span class="ident">core::ptr::drop_in_place</span>((<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>.<span class="ident">get</span>()).<span class="ident">as_mut_ptr</span>());

@@ -460,7 +460,7 @@
     <span class="kw">const</span> <span class="ident">ASSERT</span>: [(); <span class="number">1</span>] <span class="op">=</span> [()];
 
     <span class="doccomment">/// Creates an empty queue</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
         <span class="comment">// Const assert</span>
         <span class="ident"><span class="kw">crate</span>::sealed::greater_than_1</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
         <span class="ident"><span class="kw">crate</span>::sealed::power_of_two</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
@@ -484,14 +484,14 @@
     }
 
     <span class="doccomment">/// Returns the item in the front of the queue, or `None` if the queue is empty</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dequeue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dequeue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> { <span class="ident">dequeue</span>(<span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">get</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dequeue_pos</span>, <span class="ident"><span class="self">Self</span>::MASK</span>) }
     }
 
     <span class="doccomment">/// Adds an `item` to the end of the queue</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns back the `item` if the queue is full</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enqueue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">item</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enqueue</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">item</span>: <span class="ident">T</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="ident">enqueue</span>(
                 <span class="self">self</span>.<span class="ident">buffer</span>.<span class="ident">get</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
@@ -504,7 +504,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">MpMcQueue</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::new</span>()
     }
 }
@@ -517,7 +517,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Cell</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">seq</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">seq</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">data</span>: <span class="ident">MaybeUninit::uninit</span>(),
             <span class="ident">sequence</span>: <span class="ident">AtomicTargetSize::new</span>(<span class="ident">seq</span> <span class="kw">as</span> <span class="ident">IntSize</span>),
@@ -529,7 +529,7 @@
     <span class="ident">buffer</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">Cell</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">dequeue_pos</span>: <span class="kw-2">&amp;</span><span class="ident">AtomicTargetSize</span>,
     <span class="ident">mask</span>: <span class="ident">IntSize</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pos</span> <span class="op">=</span> <span class="ident">dequeue_pos</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cell</span>;
@@ -538,7 +538,7 @@
         <span class="kw">let</span> <span class="ident">seq</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">cell</span>).<span class="ident">sequence</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>);
         <span class="kw">let</span> <span class="ident">dif</span> <span class="op">=</span> (<span class="ident">seq</span> <span class="kw">as</span> <span class="ident">i8</span>).<span class="ident">wrapping_sub</span>((<span class="ident">pos</span>.<span class="ident">wrapping_add</span>(<span class="number">1</span>)) <span class="kw">as</span> <span class="ident">i8</span>);
 
-        <span class="kw">if</span> <span class="ident">dif</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+        <span class="kw">if</span> <span class="ident">dif</span> <span class="op">==</span> <span class="number">0</span> {
             <span class="kw">if</span> <span class="ident">dequeue_pos</span>
                 .<span class="ident">compare_exchange_weak</span>(
                     <span class="ident">pos</span>,
@@ -569,7 +569,7 @@
     <span class="ident">enqueue_pos</span>: <span class="kw-2">&amp;</span><span class="ident">AtomicTargetSize</span>,
     <span class="ident">mask</span>: <span class="ident">IntSize</span>,
     <span class="ident">item</span>: <span class="ident">T</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">T</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pos</span> <span class="op">=</span> <span class="ident">enqueue_pos</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cell</span>;
@@ -578,7 +578,7 @@
         <span class="kw">let</span> <span class="ident">seq</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">cell</span>).<span class="ident">sequence</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>);
         <span class="kw">let</span> <span class="ident">dif</span> <span class="op">=</span> (<span class="ident">seq</span> <span class="kw">as</span> <span class="ident">i8</span>).<span class="ident">wrapping_sub</span>(<span class="ident">pos</span> <span class="kw">as</span> <span class="ident">i8</span>);
 
-        <span class="kw">if</span> <span class="ident">dif</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+        <span class="kw">if</span> <span class="ident">dif</span> <span class="op">==</span> <span class="number">0</span> {
             <span class="kw">if</span> <span class="ident">enqueue_pos</span>
                 .<span class="ident">compare_exchange_weak</span>(
                     <span class="ident">pos</span>,

@@ -2,7 +2,7 @@
 <p>Implementation based on <a href="https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular">https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular</a></p>
 <p>NOTE: This module is not available on targets that do <em>not</em> support atomic loads, e.g. RISC-V
 cores w/o the A (Atomic) extension</p>
-<h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1>
+<h2 id="examples" class="section-header"><a href="#examples">Examples</a></h2>
 <ul>
 <li><code>Queue</code> can be used as a plain queue</li>
 </ul>
@@ -36,9 +36,9 @@ cores w/o the A (Atomic) extension</p>
     <span class="kw">loop</span> {
         <span class="comment">// `dequeue` is a lockless operation</span>
         <span class="kw">match</span> <span class="ident">consumer</span>.<span class="ident">dequeue</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">Event::A</span>) <span class="op">=</span><span class="op">&gt;</span> { <span class="comment">/* .. */</span> },
-            <span class="prelude-val">Some</span>(<span class="ident">Event::B</span>) <span class="op">=</span><span class="op">&gt;</span> { <span class="comment">/* .. */</span> },
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> { <span class="comment">/* sleep */</span> },
+            <span class="prelude-val">Some</span>(<span class="ident">Event::A</span>) =&gt; { <span class="comment">/* .. */</span> },
+            <span class="prelude-val">Some</span>(<span class="ident">Event::B</span>) =&gt; { <span class="comment">/* .. */</span> },
+            <span class="prelude-val">None</span> =&gt; { <span class="comment">/* sleep */</span> },
         }
     }
 }
@@ -58,14 +58,15 @@ cores w/o the A (Atomic) extension</p>
 
     <span class="comment">// ..</span>
 }</code></pre></div>
-<h1 id="benchmarks" class="section-header"><a href="#benchmarks">Benchmarks</a></h1>
+<h2 id="benchmarks" class="section-header"><a href="#benchmarks">Benchmarks</a></h2>
 <p>Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles</p>
-<table><thead><tr><th><code>-C opt-level</code></th><th><code>3</code></th></tr></thead><tbody>
+<div><table><thead><tr><th><code>-C opt-level</code></th><th><code>3</code></th></tr></thead><tbody>
 <tr><td><code>Consumer&lt;u8&gt;::dequeue</code></td><td>15</td></tr>
 <tr><td><code>Queue&lt;u8&gt;::dequeue</code></td><td>12</td></tr>
 <tr><td><code>Producer&lt;u8&gt;::enqueue</code></td><td>16</td></tr>
 <tr><td><code>Queue&lt;u8&gt;::enqueue</code></td><td>14</td></tr>
 </tbody></table>
+</div>
 <ul>
 <li>All execution times are in clock cycles. 1 clock cycle = 125 ns.</li>
 <li>Execution time is <em>dependent</em> of <code>mem::size_of::&lt;T&gt;()</code>. Both operations include one
@@ -75,13 +76,13 @@ cores w/o the A (Atomic) extension</p>
 and <code>Ok</code> is returned by <code>enqueue</code>).</li>
 </ul>
 </div></details><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
-<div class="item-table"><div class="item-left module-item"><a class="struct" href="struct.Consumer.html" title="heapless::spsc::Consumer struct">Consumer</a></div><div class="item-right docblock-short"><p>A queue “consumer”; it can dequeue items from the queue
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Consumer.html" title="heapless::spsc::Consumer struct">Consumer</a></div><div class="item-right docblock-short"><p>A queue “consumer”; it can dequeue items from the queue
 NOTE the consumer semantically owns the <code>head</code> pointer of the queue</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.Iter.html" title="heapless::spsc::Iter struct">Iter</a></div><div class="item-right docblock-short"><p>An iterator over the items of a queue</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.IterMut.html" title="heapless::spsc::IterMut struct">IterMut</a></div><div class="item-right docblock-short"><p>A mutable iterator over the items of a queue</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.Producer.html" title="heapless::spsc::Producer struct">Producer</a></div><div class="item-right docblock-short"><p>A queue “producer”; it can enqueue items into the queue
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Iter.html" title="heapless::spsc::Iter struct">Iter</a></div><div class="item-right docblock-short"><p>An iterator over the items of a queue</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.IterMut.html" title="heapless::spsc::IterMut struct">IterMut</a></div><div class="item-right docblock-short"><p>A mutable iterator over the items of a queue</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Producer.html" title="heapless::spsc::Producer struct">Producer</a></div><div class="item-right docblock-short"><p>A queue “producer”; it can enqueue items into the queue
 NOTE the producer semantically owns the <code>tail</code> pointer of the queue</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.Queue.html" title="heapless::spsc::Queue struct">Queue</a></div><div class="item-right docblock-short"><p>A statically allocated single producer single consumer queue with a capacity of <code>N - 1</code> elements</p>
-</div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Queue.html" title="heapless::spsc::Queue struct">Queue</a></div><div class="item-right docblock-short"><p>A statically allocated single producer single consumer queue with a capacity of <code>N - 1</code> elements</p>
+</div></div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script>
 </body></html>

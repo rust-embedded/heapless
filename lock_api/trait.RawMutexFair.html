@@ -8,14 +8,14 @@ thread if there is one, without giving other threads the opportunity to
 “steal” the lock in the meantime. This is typically slower than unfair
 unlocking, but may be necessary in certain circumstances.</p>
 </div></details><h2 id="required-methods" class="small-section-header">Required methods<a href="#required-methods" class="anchor"></a></h2><div class="methods"><details class="rustdoc-toggle" open><summary><div id="tymethod.unlock_fair" class="method has-srclink"><div class="rightside"><a class="srclink" href="../src/lock_api/mutex.rs.html#96" title="goto source code">[src]</a></div><h4 class="code-header">unsafe fn <a href="#tymethod.unlock_fair" class="fnname">unlock_fair</a>(&amp;self)</h4></div></summary><div class="docblock"><p>Unlocks this mutex using a fair unlock protocol.</p>
-<h1 id="safety" class="section-header"><a href="#safety">Safety</a></h1>
+<h5 id="safety" class="section-header"><a href="#safety">Safety</a></h5>
 <p>This method may only be called if the mutex is held in the current context, see
 the documentation of <a href="trait.RawMutex.html#tymethod.unlock"><code>unlock</code></a>.</p>
 </div></details></div><h2 id="provided-methods" class="small-section-header">Provided methods<a href="#provided-methods" class="anchor"></a></h2><div class="methods"><details class="rustdoc-toggle" open><summary><div id="method.bump" class="method has-srclink"><div class="rightside"><a class="srclink" href="../src/lock_api/mutex.rs.html#110-113" title="goto source code">[src]</a></div><h4 class="code-header">unsafe fn <a href="#method.bump" class="fnname">bump</a>(&amp;self)</h4></div></summary><div class="docblock"><p>Temporarily yields the mutex to a waiting thread if there is one.</p>
 <p>This method is functionally equivalent to calling <code>unlock_fair</code> followed
 by <code>lock</code>, however it can be much more efficient in the case where there
 are no waiting threads.</p>
-<h1 id="safety-1" class="section-header"><a href="#safety-1">Safety</a></h1>
+<h5 id="safety-1" class="section-header"><a href="#safety-1">Safety</a></h5>
 <p>This method may only be called if the mutex is held in the current context, see
 the documentation of <a href="trait.RawMutex.html#tymethod.unlock"><code>unlock</code></a>.</p>
 </div></details></div><h2 id="implementors" class="small-section-header">Implementors<a href="#implementors" class="anchor"></a></h2><div class="item-list" id="implementors-list"></div><script type="text/javascript" src="../implementors/lock_api/trait.RawMutexFair.js" async></script></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="lock_api" data-search-index-js="../search-index.js" data-search-js="../search.js"></div>

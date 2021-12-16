@@ -340,7 +340,7 @@
     <span class="doccomment">///     handle.join().unwrap();</span>
     <span class="doccomment">/// }</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BarrierWaitResult</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">wait</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">BarrierWaitResult</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lock</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">lock</span>.<span class="ident">lock</span>();
         <span class="ident">lock</span>.<span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
@@ -348,7 +348,7 @@
             <span class="comment">// not the leader</span>
             <span class="kw">let</span> <span class="ident">local_gen</span> <span class="op">=</span> <span class="ident">lock</span>.<span class="ident">generation_id</span>;
 
-            <span class="kw">while</span> <span class="ident">local_gen</span> <span class="op">=</span><span class="op">=</span> <span class="ident">lock</span>.<span class="ident">generation_id</span> <span class="op">&amp;&amp;</span>
+            <span class="kw">while</span> <span class="ident">local_gen</span> <span class="op">==</span> <span class="ident">lock</span>.<span class="ident">generation_id</span> <span class="op">&amp;&amp;</span>
                 <span class="ident">lock</span>.<span class="ident">count</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">num_threads</span> {
                 <span class="ident">drop</span>(<span class="ident">lock</span>);
                 <span class="ident">R::relax</span>();
@@ -381,7 +381,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// let barrier = spin::Barrier::new(10);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">n</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">n</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">lock</span>: <span class="ident">Mutex::new</span>(<span class="ident">BarrierState</span> {
                 <span class="ident">count</span>: <span class="number">0</span>,
@@ -409,7 +409,7 @@
     <span class="doccomment">/// let barrier_wait_result = barrier.wait();</span>
     <span class="doccomment">/// println!(&quot;{:?}&quot;, barrier_wait_result.is_leader());</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_leader</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> { <span class="self">self</span>.<span class="number">0</span> }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_leader</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> { <span class="self">self</span>.<span class="number">0</span> }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -436,8 +436,8 @@
         <span class="comment">// At this point, all spawned threads should be blocked,</span>
         <span class="comment">// so we shouldn&#39;t get anything from the port</span>
         <span class="macro">assert!</span>(<span class="kw">match</span> <span class="ident">rx</span>.<span class="ident">try_recv</span>() {
-            <span class="prelude-val">Err</span>(<span class="ident">TryRecvError::Empty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">TryRecvError::Empty</span>) =&gt; <span class="bool-val">true</span>,
+            <span class="kw">_</span> =&gt; <span class="bool-val">false</span>,
         });
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">leader_found</span> <span class="op">=</span> <span class="ident">barrier</span>.<span class="ident">wait</span>().<span class="ident">is_leader</span>();

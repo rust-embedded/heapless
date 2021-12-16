@@ -4,7 +4,7 @@
 exclusive lock to a shared lock.</p>
 </div></details><h2 id="required-methods" class="small-section-header">Required methods<a href="#required-methods" class="anchor"></a></h2><div class="methods"><details class="rustdoc-toggle" open><summary><div id="tymethod.downgrade" class="method has-srclink"><div class="rightside"><a class="srclink" href="../src/lock_api/rwlock.rs.html#148" title="goto source code">[src]</a></div><h4 class="code-header">unsafe fn <a href="#tymethod.downgrade" class="fnname">downgrade</a>(&amp;self)</h4></div></summary><div class="docblock"><p>Atomically downgrades an exclusive lock into a shared lock without
 allowing any thread to take an exclusive lock in the meantime.</p>
-<h1 id="safety" class="section-header"><a href="#safety">Safety</a></h1>
+<h5 id="safety" class="section-header"><a href="#safety">Safety</a></h5>
 <p>This method may only be called if an exclusive lock is held in the current context.</p>
 </div></details></div><h2 id="implementors" class="small-section-header">Implementors<a href="#implementors" class="anchor"></a></h2><div class="item-list" id="implementors-list"></div><script type="text/javascript" src="../implementors/lock_api/trait.RawRwLockDowngrade.js" async></script></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="lock_api" data-search-index-js="../search-index.js" data-search-js="../search.js"></div>
     <script src="../main.js"></script>

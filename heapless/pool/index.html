@@ -2,7 +2,7 @@
 <p>NOTE: This module is not available on targets that do <em>not</em> support CAS operations, e.g. ARMv6-M</p>
 <p>(*) Currently, the implementation is only lock-free <em>and</em> <code>Sync</code> on ARMv6, ARMv7-{A,R,M} &amp; ARMv8-M
 devices</p>
-<h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1>
+<h2 id="examples" class="section-header"><a href="#examples">Examples</a></h2>
 <p>The most common way of using this pool is as a global singleton; the singleton mode gives you
 automatic deallocation of memory blocks on <code>drop</code>.</p>
 
@@ -19,7 +19,7 @@ automatic deallocation of memory blocks on <code>drop</code>.</p>
 );
 
 <span class="attribute">#[<span class="ident">entry</span>]</span>
-<span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
+<span class="kw">fn</span> <span class="ident">main</span>() -&gt; <span class="op">!</span> {
     <span class="kw">static</span> <span class="kw-2">mut</span> <span class="ident">MEMORY</span>: [<span class="ident">u8</span>; <span class="number">1024</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="number">1024</span>];
 
     <span class="comment">// increase the capacity of the pool by ~8 blocks</span>
@@ -44,7 +44,7 @@ automatic deallocation of memory blocks on <code>drop</code>.</p>
     <span class="comment">// return the memory block to the pool</span>
     <span class="ident">drop</span>(<span class="ident">y</span>);
 }</code></pre></div>
-<h1 id="portability" class="section-header"><a href="#portability">Portability</a></h1>
+<h2 id="portability" class="section-header"><a href="#portability">Portability</a></h2>
 <p>This pool internally uses a Treiber stack which is known to be susceptible to the ABA problem.
 The only counter measure against the ABA problem that this implementation currently takes is
 relying on LL/SC (Link-local / Store-conditional) instructions being used to implement CAS loops
@@ -52,14 +52,14 @@ on the target architecture (see section on <a href="#soundness">‘Soundness’<
 this reason, <code>Pool</code> only implements <code>Sync</code> when compiling for some ARM cores.</p>
 <p>Also note that ARMv6-M architecture lacks the primitives for CAS loops so this module does <em>not</em>
 exist for <code>thumbv6m-none-eabi</code>.</p>
-<h1 id="soundness" class="section-header"><a href="#soundness">Soundness</a></h1>
+<h2 id="soundness" class="section-header"><a href="#soundness">Soundness</a></h2>
 <p>This pool uses a Treiber stack to keep a list of free memory blocks (nodes). Each of these
 nodes has a pointer to the next node. To claim a memory block we simply pop a node from the
 top of the stack and use it as a memory block. The pop operation consists of swapping the
 current head (top) node with the node below it. The Rust code for the <code>pop</code> operation is shown
 below:</p>
 
-<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="kw">fn</span> <span class="ident">pop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore"><code><span class="kw">fn</span> <span class="ident">pop</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">fetch_order</span> <span class="op">=</span> ..;
     <span class="kw">let</span> <span class="ident">set_order</span> <span class="op">=</span> ..;
 
@@ -76,9 +76,9 @@ below:</p>
                 .<span class="ident">head</span>
                 .<span class="ident">compare_exchange_weak</span>(<span class="ident">head</span>, <span class="ident">next</span>, <span class="ident">set_order</span>, <span class="ident">fetch_order</span>)
             {
-                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="ident">nn_head</span>),
+                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="ident">nn_head</span>),
                 <span class="comment">// head was changed by some interrupt handler / thread</span>
-                <span class="prelude-val">Err</span>(<span class="ident">new_head</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">head</span> <span class="op">=</span> <span class="ident">new_head</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">new_head</span>) =&gt; <span class="ident">head</span> <span class="op">=</span> <span class="ident">new_head</span>,
             }
         } <span class="kw">else</span> {
             <span class="comment">// stack is observed as empty</span>
@@ -128,7 +128,7 @@ problem on Cortex-M.</p>
 <p>In the case of multi-core systems if any other core successfully does a STREX op on the head
 while the current core is somewhere between LDREX and STREX then the current core will fail its
 STREX operation.</p>
-<h1 id="x86_64-support--limitations" class="section-header"><a href="#x86_64-support--limitations">x86_64 support / limitations</a></h1>
+<h2 id="x86_64-support--limitations" class="section-header"><a href="#x86_64-support--limitations">x86_64 support / limitations</a></h2>
 <p><em>NOTE</em> <code>Pool</code> is only <code>Sync</code> on <code>x86_64</code> and <code>x86</code> (<code>i686</code>) if the Cargo feature “x86-sync-pool”
 is enabled</p>
 <p>x86_64 support is a gamble. Yes, a gamble. Do you feel lucky enough to use <code>Pool</code> on x86_64?</p>
@@ -171,7 +171,7 @@ older x86_64 processors?)</p>
 the technique appears to be documented in “ABA Prevention Using Single-Word Instructions”, which
 is not public AFAICT – but hazard pointers require Thread Local Storage (TLS), which is a
 non-starter for a <code>no_std</code> library like <code>heapless</code>.</p>
-<h2 id="x86_64-limitations" class="section-header"><a href="#x86_64-limitations">x86_64 Limitations</a></h2>
+<h3 id="x86_64-limitations" class="section-header"><a href="#x86_64-limitations">x86_64 Limitations</a></h3>
 <p><em>NOTE</em> this limitation does not apply to <code>x86</code> (32-bit address space). If you run into this
 issue, on an x86_64 processor try running your code compiled for <code>x86</code>, e.g. <code>cargo run --target i686-unknown-linux-musl</code></p>
 <p>Because stack nodes must be located within +- 2 GB of the hidden <code>ANCHOR</code> variable, which
@@ -180,7 +180,7 @@ lives in the <code>.bss</code> section, <code>Pool</code> may not be able to man
 When the <code>Pool</code> is unable to manage a node because of its address it will simply discard it:
 <code>Pool::grow*</code> methods return the number of new memory blocks added to the pool; if these methods
 return <code>0</code> it means the <code>Pool</code> is unable to manage the memory given to them.</p>
-<h1 id="references" class="section-header"><a href="#references">References</a></h1>
+<h2 id="references" class="section-header"><a href="#references">References</a></h2>
 <ol>
 <li><a href="http://infocenter.arm.com/help/topic/com.arm.doc.dui0552a/DUI0552A_cortex_m3_dgug.pdf">Cortex-M3 Devices Generic User Guide (DUI 0552A)</a>, Section 2.2.7 “Synchronization
 primitives”</li>
@@ -198,15 +198,15 @@ semaphores”</li>
 </li>
 </ol>
 </div></details><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
-<div class="item-table"><div class="item-left module-item"><a class="mod" href="singleton/index.html" title="heapless::pool::singleton mod">singleton</a></div><div class="item-right docblock-short"><p><code>Pool</code> as a global singleton</p>
-</div></div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
-<div class="item-table"><div class="item-left module-item"><a class="struct" href="struct.Box.html" title="heapless::pool::Box struct">Box</a></div><div class="item-right docblock-short"><p>A memory block</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.Node.html" title="heapless::pool::Node struct">Node</a></div><div class="item-right docblock-short"><p>Unfortunate implementation detail required to use the
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="mod" href="singleton/index.html" title="heapless::pool::singleton mod">singleton</a></div><div class="item-right docblock-short"><p><code>Pool</code> as a global singleton</p>
+</div></div></div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Box.html" title="heapless::pool::Box struct">Box</a></div><div class="item-right docblock-short"><p>A memory block</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Node.html" title="heapless::pool::Node struct">Node</a></div><div class="item-right docblock-short"><p>Unfortunate implementation detail required to use the
 <a href="struct.Pool.html#method.grow_exact"><code>Pool.grow_exact</code></a> method</p>
-</div><div class="item-left module-item"><a class="struct" href="struct.Pool.html" title="heapless::pool::Pool struct">Pool</a></div><div class="item-right docblock-short"><p>A lock-free memory pool</p>
-</div></div><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
-<div class="item-table"><div class="item-left module-item"><a class="enum" href="enum.Init.html" title="heapless::pool::Init enum">Init</a></div><div class="item-right docblock-short"><p>Initialized type state</p>
-</div><div class="item-left module-item"><a class="enum" href="enum.Uninit.html" title="heapless::pool::Uninit enum">Uninit</a></div><div class="item-right docblock-short"><p>Uninitialized type state</p>
-</div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Pool.html" title="heapless::pool::Pool struct">Pool</a></div><div class="item-right docblock-short"><p>A lock-free memory pool</p>
+</div></div></div><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.Init.html" title="heapless::pool::Init enum">Init</a></div><div class="item-right docblock-short"><p>Initialized type state</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.Uninit.html" title="heapless::pool::Uninit enum">Uninit</a></div><div class="item-right docblock-short"><p>Uninitialized type state</p>
+</div></div></div></section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="heapless" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script>
 </body></html>
