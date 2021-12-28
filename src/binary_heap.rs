@@ -74,7 +74,7 @@ pub enum Max {}
 
 pub struct BinaryHeap<T, K, const N: usize> {
     pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: Vec<T, N>,
+    pub(crate) data: ManuallyDrop<Vec<T, N>>,
 }
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
@@ -94,7 +94,7 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     pub const fn new() -> Self {
         Self {
             _kind: PhantomData,
-            data: Vec::new(),
+            data: ManuallyDrop::new(Vec::new()),
         }
     }
 }
@@ -308,6 +308,14 @@ where
         let old_len = self.len();
         self.data.push_unchecked(item);
         self.sift_up(0, old_len);
+    }
+
+    /// Returns the underlying ```Vec<T,N>```. Order is arbitrary and time is O(1).
+    pub fn into_vec(self) -> Vec<T, N> {
+        // prevents dropping self.data at the end of this fn
+        let mut dropless_heap = ManuallyDrop::new(self);
+        // https://users.rust-lang.org/t/moving-out-of-a-type-implementing-drop/38225/5
+        unsafe { ManuallyDrop::take(&mut dropless_heap.data) }
     }
 
     /* Private API */
