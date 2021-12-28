@@ -56,8 +56,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
+        // Const assert N >= 0
+        crate::sealed::greater_than_eq_0::<N>();
 
         Self {
             buffer: [Self::INIT; N],
@@ -1232,5 +1232,24 @@ mod tests {
         assert!(!v.ends_with(b"abc"));
         assert!(!v.ends_with(b"ba"));
         assert!(!v.ends_with(b"a"));
+    }
+
+    #[test]
+    fn zero_capacity() {
+        let mut v: Vec<u8, 0> = Vec::new();
+        // Validate capacity
+        assert_eq!(v.capacity(), 0);
+
+        // Make sure there is no capacity
+        assert!(v.push(1).is_err());
+
+        // Validate length
+        assert_eq!(v.len(), 0);
+
+        // Validate pop
+        assert_eq!(v.pop(), None);
+
+        // Validate slice
+        assert_eq!(v.as_slice(), &[]);
     }
 }
