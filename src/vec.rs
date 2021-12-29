@@ -1251,5 +1251,11 @@ mod tests {
 
         // Validate slice
         assert_eq!(v.as_slice(), &[]);
+
+        // Validate empty
+        assert!(v.is_empty());
+
+        // Validate full
+        assert!(v.is_full());
     }
 }
