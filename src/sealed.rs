@@ -54,6 +54,12 @@ pub(crate) const fn smaller_than<const N: usize, const MAX: usize>() {
 
 #[allow(dead_code)]
 #[allow(path_statements)]
+pub(crate) const fn greater_than_eq_0<const N: usize>() {
+    Assert::<N, 0>::GREATER_EQ;
+}
+
+#[allow(dead_code)]
+#[allow(path_statements)]
 pub(crate) const fn greater_than_0<const N: usize>() {
     Assert::<N, 0>::GREATER;
 }
