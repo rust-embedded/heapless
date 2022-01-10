@@ -1,6 +1,5 @@
 use crate::{
-    sealed::binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
 use core::{fmt, marker::PhantomData};
 use hash32::{BuildHasherDefault, Hash, Hasher};
