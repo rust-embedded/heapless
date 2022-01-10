@@ -1234,6 +1234,31 @@
 <span id="1234">1234</span>
 <span id="1235">1235</span>
 <span id="1236">1236</span>
+<span id="1237">1237</span>
+<span id="1238">1238</span>
+<span id="1239">1239</span>
+<span id="1240">1240</span>
+<span id="1241">1241</span>
+<span id="1242">1242</span>
+<span id="1243">1243</span>
+<span id="1244">1244</span>
+<span id="1245">1245</span>
+<span id="1246">1246</span>
+<span id="1247">1247</span>
+<span id="1248">1248</span>
+<span id="1249">1249</span>
+<span id="1250">1250</span>
+<span id="1251">1251</span>
+<span id="1252">1252</span>
+<span id="1253">1253</span>
+<span id="1254">1254</span>
+<span id="1255">1255</span>
+<span id="1256">1256</span>
+<span id="1257">1257</span>
+<span id="1258">1258</span>
+<span id="1259">1259</span>
+<span id="1260">1260</span>
+<span id="1261">1261</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">cmp::Ordering</span>, <span class="ident">convert::TryFrom</span>, <span class="ident">fmt</span>, <span class="ident">hash</span>, <span class="ident">iter::FromIterator</span>, <span class="ident">mem::MaybeUninit</span>, <span class="ident">ops</span>, <span class="ident">ptr</span>,
     <span class="ident">slice</span>,
@@ -1292,8 +1317,8 @@
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)</span>
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="comment">// Const assert N &gt; 0</span>
-        <span class="ident"><span class="kw">crate</span>::sealed::greater_than_0</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
+        <span class="comment">// Const assert N &gt;= 0</span>
+        <span class="ident"><span class="kw">crate</span>::sealed::greater_than_eq_0</span>::<span class="op">&lt;</span><span class="ident">N</span><span class="op">&gt;</span>();
 
         <span class="self">Self</span> {
             <span class="ident">buffer</span>: [<span class="ident"><span class="self">Self</span>::INIT</span>; <span class="ident">N</span>],
@@ -2468,6 +2493,31 @@
         <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">v</span>.<span class="ident">ends_with</span>(<span class="string">b&quot;abc&quot;</span>));
         <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">v</span>.<span class="ident">ends_with</span>(<span class="string">b&quot;ba&quot;</span>));
         <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">v</span>.<span class="ident">ends_with</span>(<span class="string">b&quot;a&quot;</span>));
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">zero_capacity</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">0</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="comment">// Validate capacity</span>
+        <span class="macro">assert_eq!</span>(<span class="ident">v</span>.<span class="ident">capacity</span>(), <span class="number">0</span>);
+
+        <span class="comment">// Make sure there is no capacity</span>
+        <span class="macro">assert!</span>(<span class="ident">v</span>.<span class="ident">push</span>(<span class="number">1</span>).<span class="ident">is_err</span>());
+
+        <span class="comment">// Validate length</span>
+        <span class="macro">assert_eq!</span>(<span class="ident">v</span>.<span class="ident">len</span>(), <span class="number">0</span>);
+
+        <span class="comment">// Validate pop</span>
+        <span class="macro">assert_eq!</span>(<span class="ident">v</span>.<span class="ident">pop</span>(), <span class="prelude-val">None</span>);
+
+        <span class="comment">// Validate slice</span>
+        <span class="macro">assert_eq!</span>(<span class="ident">v</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[]);
+
+        <span class="comment">// Validate empty</span>
+        <span class="macro">assert!</span>(<span class="ident">v</span>.<span class="ident">is_empty</span>());
+
+        <span class="comment">// Validate full</span>
+        <span class="macro">assert!</span>(<span class="ident">v</span>.<span class="ident">is_full</span>());
     }
 }
 </code></pre></div>
