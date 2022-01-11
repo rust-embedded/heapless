@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Added
+- Added support for AVR architecture.
 
 ### Changed
 
