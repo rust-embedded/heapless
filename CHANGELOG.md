@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added `OldestOrdered` iterator for `HistoryBuffer`
 
+### Changed
+
+- `atomic-polyfill` is now enabled and used for `cas` atomic emulation on `riscv` targets
+
 ## [v0.7.9] - 2021-12-16
 
 ### Fixed
