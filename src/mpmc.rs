@@ -84,18 +84,18 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(all(feature = "mpmc_large", not(armv6m)))]
+#[cfg(all(feature = "mpmc_large", not(use_atomic_polyfill)))]
 type AtomicTargetSize = core::sync::atomic::AtomicUsize;
-#[cfg(all(feature = "mpmc_large", armv6m))]
+#[cfg(all(feature = "mpmc_large", use_atomic_polyfill))]
 type AtomicTargetSize = atomic_polyfill::AtomicUsize;
-#[cfg(all(not(feature = "mpmc_large"), not(armv6m)))]
+#[cfg(all(not(feature = "mpmc_large"), not(use_atomic_polyfill)))]
 type AtomicTargetSize = core::sync::atomic::AtomicU8;
-#[cfg(all(not(feature = "mpmc_large"), armv6m))]
+#[cfg(all(not(feature = "mpmc_large"), use_atomic_polyfill))]
 type AtomicTargetSize = atomic_polyfill::AtomicU8;
 
-#[cfg(not(armv6m))]
+#[cfg(not(use_atomic_polyfill))]
 type Ordering = core::sync::atomic::Ordering;
-#[cfg(armv6m)]
+#[cfg(use_atomic_polyfill)]
 type Ordering = atomic_polyfill::Ordering;
 
 #[cfg(feature = "mpmc_large")]

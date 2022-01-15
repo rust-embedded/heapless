@@ -3,10 +3,10 @@
 pub use core::ptr::NonNull as Ptr;
 use core::{cell::UnsafeCell, ptr};
 
-#[cfg(armv6m)]
+#[cfg(use_atomic_polyfill)]
 use atomic_polyfill::{AtomicPtr, Ordering};
 
-#[cfg(not(armv6m))]
+#[cfg(not(use_atomic_polyfill))]
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// Unfortunate implementation detail required to use the
