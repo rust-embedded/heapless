@@ -384,26 +384,19 @@ mod tests {
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
 
-        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
-        buffer.write(1);
-        let mut iter = buffer.oldest_ordered();
-        assert_eq!(iter.next(), Some(&1));
-        assert_eq!(iter.next(), None);
-
-        // test on a filled buffer
-        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
-        buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
-        assert_eq!(buffer.len(), 6);
-
-        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
-
         // test on a un-filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([1, 2, 3]);
         assert_eq!(buffer.len(), 3);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
 
-        // comprehensive test
+        // test on a filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+        assert_eq!(buffer.len(), 6);
+        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+
+        // comprehensive test all cases
         for n in 0..50 {
             const N: usize = 7;
             let mut buffer: HistoryBuffer<u8, N> = HistoryBuffer::new();
