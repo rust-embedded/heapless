@@ -52,10 +52,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    // Let the code know if it should use atomic-polyfill or not
+    // Let the code know if it should use atomic-polyfill or not, and what aspects
+    // of polyfill it requires
     match &target[..] {
-        "thumbv6m-none-eabi" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
-            println!("cargo:rustc-cfg=use_atomic_polyfill");
+        "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
+            println!("cargo:rustc-cfg=full_atomic_polyfill");
+            println!("cargo:rustc-cfg=cas_atomic_polyfill");
+        }
+
+        "thumbv6m-none-eabi" => {
+            println!("cargo:rustc-cfg=cas_atomic_polyfill");
         }
         _ => {}
     }

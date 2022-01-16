@@ -2,8 +2,8 @@
 //!
 //! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!
-//! NOTE: This module is not available on targets that do *not* support atomic loads, e.g. RISC-V
-//! cores w/o the A (Atomic) extension
+//! NOTE: This module is not available on targets that do *not* support atomic loads and are not
+//! supported by [`atomic_polyfill`]. (e.g., MSP430).
 //!
 //! # Examples
 //!
@@ -84,13 +84,12 @@
 //! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
 //! and `Ok` is returned by `enqueue`).
 
-use core::{
-    cell::UnsafeCell,
-    fmt, hash,
-    mem::MaybeUninit,
-    ptr,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use core::{cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
+
+#[cfg(full_atomic_polyfill)]
+use atomic_polyfill::{AtomicUsize, Ordering};
+#[cfg(not(full_atomic_polyfill))]
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements
 ///
