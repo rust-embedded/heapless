@@ -368,6 +368,10 @@ pub struct IndexMap<K, V, S, const N: usize> {
 impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexMap`.
     pub const fn new() -> Self {
+        // Const assert
+        crate::sealed::greater_than_1::<N>();
+        crate::sealed::power_of_two::<N>();
+
         IndexMap {
             build_hasher: BuildHasherDefault::new(),
             core: CoreMap::new(),

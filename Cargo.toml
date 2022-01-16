@@ -12,7 +12,7 @@ keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.7.7"
+version = "0.7.9"
 
 [features]
 default = ["cas"]
@@ -24,6 +24,7 @@ x86-sync-pool = []
 __trybuild = []
 # Enable larger MPMC sizes.
 mpmc_large = []
+# This flag has no version guarantee, the `defmt` dependency can be updated in a patch release
 defmt-impl = ["defmt"]
 
 [target.'cfg(any(target_arch = "x86_64", target_arch = "x86"))'.dev-dependencies]
@@ -55,9 +56,5 @@ optional = true
 version = "0.1"
 
 [dependencies.defmt]
-version = "0.2.1"
+version = ">=0.2.0,<0.4"
 optional = true
-
-[dev-dependencies.defmt]
-version = "0.2.1"
-features = ["unstable-test"]

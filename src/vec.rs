@@ -1,4 +1,7 @@
-use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{
+    cmp::Ordering, convert::TryFrom, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr,
+    slice,
+};
 use hash32;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
@@ -53,8 +56,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
+        // Const assert N >= 0
+        crate::sealed::greater_than_eq_0::<N>();
 
         Self {
             buffer: [Self::INIT; N],
@@ -566,6 +569,14 @@ impl<T, const N: usize> Drop for Vec<T, N> {
         unsafe {
             ptr::drop_in_place(self.as_mut_slice());
         }
+    }
+}
+
+impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
+    type Error = ();
+
+    fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
+        Vec::from_slice(slice)
     }
 }
 
@@ -1221,5 +1232,30 @@ mod tests {
         assert!(!v.ends_with(b"abc"));
         assert!(!v.ends_with(b"ba"));
         assert!(!v.ends_with(b"a"));
+    }
+
+    #[test]
+    fn zero_capacity() {
+        let mut v: Vec<u8, 0> = Vec::new();
+        // Validate capacity
+        assert_eq!(v.capacity(), 0);
+
+        // Make sure there is no capacity
+        assert!(v.push(1).is_err());
+
+        // Validate length
+        assert_eq!(v.len(), 0);
+
+        // Validate pop
+        assert_eq!(v.pop(), None);
+
+        // Validate slice
+        assert_eq!(v.as_slice(), &[]);
+
+        // Validate empty
+        assert!(v.is_empty());
+
+        // Validate full
+        assert!(v.is_full());
     }
 }

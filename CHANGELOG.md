@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added `OldestOrdered` iterator for `HistoryBuffer`
 
+## [v0.7.9] - 2021-12-16
+
+### Fixed
+
+- Fix `IndexMap` and `IndexSet` bounds
+- Make `IndexSet::new()` a `const fn`
+
+## [v0.7.8] - 2021-11-11
+
+### Added
+
+- A span of `defmt` versions is now supported (`0.2` and `0.3`)
+
 ## [v0.7.7] - 2021-09-22
 
 ### Fixed
@@ -421,7 +434,9 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.9...HEAD
+[v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
+[v0.7.8]: https://github.com/japaric/heapless/compare/v0.7.7...v0.7.8
 [v0.7.7]: https://github.com/japaric/heapless/compare/v0.7.6...v0.7.7
 [v0.7.6]: https://github.com/japaric/heapless/compare/v0.7.5...v0.7.6
 [v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.4...v0.7.5
