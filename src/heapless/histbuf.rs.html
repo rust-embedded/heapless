@@ -315,6 +315,122 @@
 <span id="315">315</span>
 <span id="316">316</span>
 <span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core::fmt</span>;
 <span class="kw">use</span> <span class="ident">core::mem::MaybeUninit</span>;
 <span class="kw">use</span> <span class="ident">core::ops::Deref</span>;
@@ -498,6 +614,38 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">T</span>] {
         <span class="kw">unsafe</span> { <span class="ident">slice::from_raw_parts</span>(<span class="self">self</span>.<span class="ident">data</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span>, <span class="self">self</span>.<span class="ident">len</span>()) }
     }
+
+    <span class="doccomment">/// Returns an iterator for iterating over the buffer from oldest to newest.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Examples</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// use heapless::HistoryBuffer;</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// let mut buffer: HistoryBuffer&lt;u8, 6&gt; = HistoryBuffer::new();</span>
+    <span class="doccomment">/// buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);</span>
+    <span class="doccomment">/// let expected = [1, 2, 3, 4, 5, 6];</span>
+    <span class="doccomment">/// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {</span>
+    <span class="doccomment">///     assert_eq!(x, y)</span>
+    <span class="doccomment">/// }</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// ```</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">oldest_ordered</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>) -&gt; <span class="ident">OldestOrdered</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">filled</span> {
+            <span class="ident">OldestOrdered</span> {
+                <span class="ident">buf</span>: <span class="self">self</span>,
+                <span class="ident">cur</span>: <span class="self">self</span>.<span class="ident">write_at</span>,
+                <span class="ident">wrapped</span>: <span class="bool-val">false</span>,
+            }
+        } <span class="kw">else</span> {
+            <span class="comment">// special case: act like we wrapped already to handle empty buffer.</span>
+            <span class="ident">OldestOrdered</span> {
+                <span class="ident">buf</span>: <span class="self">self</span>,
+                <span class="ident">cur</span>: <span class="number">0</span>,
+                <span class="ident">wrapped</span>: <span class="bool-val">true</span>,
+            }
+        }
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
@@ -564,9 +712,38 @@
     }
 }
 
+<span class="doccomment">/// An iterator on the underlying buffer ordered from oldest data to newest</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OldestOrdered</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
+    <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span>,
+    <span class="ident">cur</span>: <span class="ident">usize</span>,
+    <span class="ident">wrapped</span>: <span class="ident">bool</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">OldestOrdered</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">N</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span>;
+
+    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">cur</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">filled</span> {
+            <span class="comment">// roll-over</span>
+            <span class="self">self</span>.<span class="ident">cur</span> <span class="op">=</span> <span class="number">0</span>;
+            <span class="self">self</span>.<span class="ident">wrapped</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        }
+
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">cur</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">write_at</span> <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">wrapped</span> {
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
+
+        <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">buf</span>[<span class="self">self</span>.<span class="ident">cur</span>];
+        <span class="self">self</span>.<span class="ident">cur</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="prelude-val">Some</span>(<span class="ident">item</span>)
+    }
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::HistoryBuffer</span>;
+    <span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">new</span>() {
@@ -630,6 +807,61 @@
         <span class="ident">x</span>.<span class="ident">extend</span>([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>].<span class="ident">iter</span>());
 
         <span class="macro">assert_eq!</span>(<span class="ident">x</span>.<span class="ident">as_slice</span>(), [<span class="number">5</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">ordered</span>() {
+        <span class="comment">// test on an empty buffer</span>
+        <span class="kw">let</span> <span class="ident">buffer</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">6</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer::new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">buffer</span>.<span class="ident">oldest_ordered</span>();
+        <span class="macro">assert_eq!</span>(<span class="ident">iter</span>.<span class="ident">next</span>(), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">iter</span>.<span class="ident">next</span>(), <span class="prelude-val">None</span>);
+
+        <span class="comment">// test on a un-filled buffer</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">6</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer::new</span>();
+        <span class="ident">buffer</span>.<span class="ident">extend</span>([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]);
+        <span class="macro">assert_eq!</span>(<span class="ident">buffer</span>.<span class="ident">len</span>(), <span class="number">3</span>);
+        <span class="ident">assert_eq_iter</span>(<span class="ident">buffer</span>.<span class="ident">oldest_ordered</span>(), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]);
+
+        <span class="comment">// test on a filled buffer</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="number">6</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer::new</span>();
+        <span class="ident">buffer</span>.<span class="ident">extend</span>([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]);
+        <span class="macro">assert_eq!</span>(<span class="ident">buffer</span>.<span class="ident">len</span>(), <span class="number">6</span>);
+        <span class="ident">assert_eq_iter</span>(<span class="ident">buffer</span>.<span class="ident">oldest_ordered</span>(), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]);
+
+        <span class="comment">// comprehensive test all cases</span>
+        <span class="kw">for</span> <span class="ident">n</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">50</span> {
+            <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">7</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span>: <span class="ident">HistoryBuffer</span><span class="op">&lt;</span><span class="ident">u8</span>, <span class="ident">N</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HistoryBuffer::new</span>();
+            <span class="ident">buffer</span>.<span class="ident">extend</span>(<span class="number">0</span>..<span class="ident">n</span>);
+            <span class="ident">assert_eq_iter</span>(
+                <span class="ident">buffer</span>.<span class="ident">oldest_ordered</span>().<span class="ident">copied</span>(),
+                <span class="ident">n</span>.<span class="ident">saturating_sub</span>(<span class="ident">N</span> <span class="kw">as</span> <span class="ident">u8</span>)..<span class="ident">n</span>,
+            );
+        }
+    }
+
+    <span class="doccomment">/// Compares two iterators item by item, making sure they stop at the same time.</span>
+    <span class="kw">fn</span> <span class="ident">assert_eq_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Debug</span><span class="op">&gt;</span>(
+        <span class="ident">a</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">I</span><span class="op">&gt;</span>,
+        <span class="ident">b</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">I</span><span class="op">&gt;</span>,
+    ) {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">into_iter</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">into_iter</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">loop</span> {
+            <span class="kw">let</span> <span class="ident">a_item</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">next</span>();
+            <span class="kw">let</span> <span class="ident">b_item</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">next</span>();
+
+            <span class="macro">assert_eq!</span>(<span class="ident">a_item</span>, <span class="ident">b_item</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">i</span>);
+
+            <span class="ident">i</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+
+            <span class="kw">if</span> <span class="ident">b_item</span>.<span class="ident">is_none</span>() {
+                <span class="kw">break</span>;
+            }
+        }
     }
 }
 </code></pre></div>
