@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `OldestOrdered` iterator for `HistoryBuffer`
+
 ## [v0.7.9] - 2021-12-16
 
 ### Fixed
