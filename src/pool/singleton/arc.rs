@@ -81,10 +81,10 @@ use core::{
     sync::atomic,
 };
 
-#[cfg(armv6m)]
+#[cfg(cas_atomic_polyfill)]
 use atomic_polyfill::{AtomicUsize, Ordering};
 
-#[cfg(not(armv6m))]
+#[cfg(not(cas_atomic_polyfill))]
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::pool::{self, stack::Ptr, Node};
