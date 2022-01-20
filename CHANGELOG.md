@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `cargo test` can now run on non-`x86` hosts
+
 ## [v0.7.9] - 2021-12-16
 
 ### Fixed
