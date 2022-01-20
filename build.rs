@@ -21,10 +21,19 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=armv7a");
     }
 
-    // built-in targets with no atomic / CAS support as of nightly-2019-12-17
+    // built-in targets with no atomic / CAS support as of nightly-2022-01-13
+    // AND not supported by the atomic-polyfill crate
     // see the `no-atomics.sh` / `no-cas.sh` script sitting next to this file
     match &target[..] {
-        "msp430-none-elf" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {}
+        "avr-unknown-gnu-atmega328"
+        | "bpfeb-unknown-none"
+        | "bpfel-unknown-none"
+        | "msp430-none-elf"
+        // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
+        // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
+        | "thumbv4t-none-eabi"
+        // | "thumbv6m-none-eabi"           // supported by atomic-polyfill
+         => {}
 
         _ => {
             println!("cargo:rustc-cfg=has_cas");
@@ -32,12 +41,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     match &target[..] {
-        "msp430-none-elf" | "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {}
+        "avr-unknown-gnu-atmega328"
+        | "msp430-none-elf"
+        // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
+        // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
+        => {}
 
         _ => {
             println!("cargo:rustc-cfg=has_atomics");
         }
     };
+
+    // Let the code know if it should use atomic-polyfill or not, and what aspects
+    // of polyfill it requires
+    match &target[..] {
+        "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
+            println!("cargo:rustc-cfg=full_atomic_polyfill");
+            println!("cargo:rustc-cfg=cas_atomic_polyfill");
+        }
+
+        "thumbv6m-none-eabi" => {
+            println!("cargo:rustc-cfg=cas_atomic_polyfill");
+        }
+        _ => {}
+    }
 
     Ok(())
 }

@@ -33,6 +33,12 @@ scoped_threadpool = "0.1.8"
 [target.thumbv6m-none-eabi.dependencies]
 atomic-polyfill = { version = "0.1.2", optional = true }
 
+[target.riscv32i-unknown-none-elf.dependencies]
+atomic-polyfill = { version = "0.1.4", optional = true }
+
+[target.riscv32imc-unknown-none-elf.dependencies]
+atomic-polyfill = { version = "0.1.4", optional = true }
+
 [dependencies]
 hash32 = "0.2.1"
 
@@ -58,3 +64,6 @@ version = "0.1"
 [dependencies.defmt]
 version = ">=0.2.0,<0.4"
 optional = true
+
+[package.metadata.docs.rs]
+all-features = true

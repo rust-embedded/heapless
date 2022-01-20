@@ -1,6 +1,7 @@
 //! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue
 //!
-//! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
+//! NOTE: This module is not available on targets that do *not* support CAS operations and are not
+//! emulated by the [`atomic_polyfill`] crate (e.g., MSP430).
 //!
 //! # Example
 //!
@@ -73,8 +74,10 @@
 //!
 //! # Portability
 //!
-//! This module is not exposed to architectures that lack the instructions to implement CAS loops.
-//! Those architectures include ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`).
+//! This module requires CAS atomic instructions which are not available on all architectures
+//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be emulated
+//! however with [`atomic_polyfill`], which is enabled with the `cas` feature and is enabled by default
+//! for `thumbv6m-none-eabi` and `riscv32` targets. MSP430 is currently not supported by [`atomic_polyfill`].
 //!
 //! # References
 //!
@@ -84,18 +87,18 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(all(feature = "mpmc_large", not(armv6m)))]
+#[cfg(all(feature = "mpmc_large", not(cas_atomic_polyfill)))]
 type AtomicTargetSize = core::sync::atomic::AtomicUsize;
-#[cfg(all(feature = "mpmc_large", armv6m))]
+#[cfg(all(feature = "mpmc_large", cas_atomic_polyfill))]
 type AtomicTargetSize = atomic_polyfill::AtomicUsize;
-#[cfg(all(not(feature = "mpmc_large"), not(armv6m)))]
+#[cfg(all(not(feature = "mpmc_large"), not(cas_atomic_polyfill)))]
 type AtomicTargetSize = core::sync::atomic::AtomicU8;
-#[cfg(all(not(feature = "mpmc_large"), armv6m))]
+#[cfg(all(not(feature = "mpmc_large"), cas_atomic_polyfill))]
 type AtomicTargetSize = atomic_polyfill::AtomicU8;
 
-#[cfg(not(armv6m))]
+#[cfg(not(cas_atomic_polyfill))]
 type Ordering = core::sync::atomic::Ordering;
-#[cfg(armv6m)]
+#[cfg(cas_atomic_polyfill)]
 type Ordering = atomic_polyfill::Ordering;
 
 #[cfg(feature = "mpmc_large")]
