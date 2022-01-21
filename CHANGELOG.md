@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+### Added
+
+### Changed
+
+## [v0.7.10] - 2022-01-21
+
+### Fixed
+
 - `cargo test` can now run on non-`x86` hosts
 
 ### Added
@@ -442,7 +450,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.9...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.10...HEAD
+[v0.7.10]: https://github.com/japaric/heapless/compare/v0.7.9...v0.7.10
 [v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
 [v0.7.8]: https://github.com/japaric/heapless/compare/v0.7.7...v0.7.8
 [v0.7.7]: https://github.com/japaric/heapless/compare/v0.7.6...v0.7.7
