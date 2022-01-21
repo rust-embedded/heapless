@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `cargo test` can now run on non-`x86` hosts
+
 ### Added
 
 - Added `OldestOrdered` iterator for `HistoryBuffer`
