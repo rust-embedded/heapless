@@ -15,7 +15,11 @@
 //! #![no_main]
 //! #![no_std]
 //!
-//! use heapless::{pool, pool::singleton::Box};
+//! use cortex_m_rt::{entry, exception};
+//! use heapless::{
+//!     pool,
+//!     pool::singleton::{Box, Pool},
+//! };
 //!
 //! // instantiate a memory pool of `[u8; 128]` blocks as a global singleton
 //! pool!(
