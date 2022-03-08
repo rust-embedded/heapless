@@ -15,8 +15,10 @@ repository = "https://github.com/japaric/heapless"
 version = "0.7.10"
 
 [features]
-default = ["cas"]
+default = ["atomics"]
+atomics = ["loadstore", "cas"]
 cas = ["atomic-polyfill"]
+loadstore = ["atomic-polyfill"]
 ufmt-impl = ["ufmt-write"]
 # read the docs before enabling: makes `Pool` Sync on x86_64
 x86-sync-pool = []
