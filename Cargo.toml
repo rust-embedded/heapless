@@ -31,13 +31,17 @@ defmt-impl = ["defmt"]
 scoped_threadpool = "0.1.8"
 
 [target.thumbv6m-none-eabi.dependencies]
-atomic-polyfill = { version = "0.1.2", optional = true }
+atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
 
 [target.riscv32i-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
 
 [target.riscv32imc-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
+
+[target.avr-atmega328p.dependencies]
+atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
+
 
 [dependencies]
 hash32 = "0.2.1"

@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match &target[..] {
         "avr-unknown-gnu-atmega328"
         | "msp430-none-elf"
+        | "avr-atmega328p"
         // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
         // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
         => {}
@@ -55,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Let the code know if it should use atomic-polyfill or not, and what aspects
     // of polyfill it requires
     match &target[..] {
-        "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
+        "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" | "avr-atmega328p" => {
             println!("cargo:rustc-cfg=full_atomic_polyfill");
             println!("cargo:rustc-cfg=cas_atomic_polyfill");
         }
