@@ -68,16 +68,16 @@
 //! It *might* compile on older versions but that may change in any new patch release.
 
 #![cfg_attr(not(test), no_std)]
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-#![deny(warnings)]
+//#![deny(warnings)]
 #![deny(const_err)]
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
-pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
+pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos, Entry, OccupiedEntry, VacantEntry};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 #[cfg(all(has_cas, feature = "cas"))]
