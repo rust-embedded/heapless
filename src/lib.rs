@@ -68,10 +68,10 @@
 //! It *might* compile on older versions but that may change in any new patch release.
 
 #![cfg_attr(not(test), no_std)]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-//#![deny(warnings)]
+#![deny(warnings)]
 #![deny(const_err)]
 
 pub use binary_heap::BinaryHeap;
