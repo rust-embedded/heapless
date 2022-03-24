@@ -98,7 +98,11 @@ impl Pos {
     }
 }
 
-struct Insert<V> {
+enum Insert<K, V> {
+    Success(Inserted<V>),
+    Full((K, V)),
+}
+struct Inserted<V> {
     index: usize,
     old_value: Option<V>,
 }
@@ -175,7 +179,7 @@ where
         });
     }
 
-    fn insert(&mut self, hash: HashValue, key: K, value: V) -> Insert<V> {
+    fn insert(&mut self, hash: HashValue, key: K, value: V) -> Insert<K, V> {
         let mut probe = hash.desired_pos(Self::mask());
         let mut dist = 0;
 
@@ -191,32 +195,38 @@ where
                 let their_dist = entry_hash.probe_distance(Self::mask(), probe);
 
                 if their_dist < dist {
+                    if self.entries.is_full() {
+                        return Insert::Full((key, value));
+                    }
                     // robin hood: steal the spot if it's better for us
                     let index = self.entries.len();
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
-                    return Insert {
+                    return Insert::Success(Inserted {
                         index: self.insert_phase_2(probe, Pos::new(index, hash)),
                         old_value: None
-                    }
+                    });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
                 {
-                    return Insert {
+                    return Insert::Success(Inserted {
                         index: i,
                         old_value: Some(mem::replace(
                             unsafe { &mut self.entries.get_unchecked_mut(i).value },
                             value,
                         )),
-                    };
+                    });
                 }
             } else {
+                if self.entries.is_full() {
+                    return Insert::Full((key, value))
+                }
                 // empty bucket, insert here
                 let index = self.entries.len();
                 *pos = Some(Pos::new(index, hash));
                 unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
-                return Insert {
+                return Insert::Success(Inserted {
                     index,
                     old_value: None,
-                }
+                });
             }
             dist += 1;
         });
@@ -394,11 +404,15 @@ impl<'a, K, V, const N: usize> VacantEntry<'a, K, V, N> where K: Eq + Hash {
         if self.core.entries.is_full() {
             Err(value)
         } else {
-            let index = self.core.insert(self.hash_val, self.key, value).index;
-            unsafe {
-                // SAFETY: Already checked existence at instantiation and the only mutable reference
-                // to the map is internally held.
-                Ok(&mut self.core.entries.get_unchecked_mut(index).value)
+            match self.core.insert(self.hash_val, self.key, value) {
+                Insert::Success(inserted) => {
+                    unsafe {
+                        // SAFETY: Already checked existence at instantiation and the only mutable reference
+                        // to the map is internally held.
+                        Ok(&mut self.core.entries.get_unchecked_mut(inserted.index).value)
+                    }
+                }
+                Insert::Full((_, v)) => Err(v),
             }
         }
     }
@@ -777,11 +791,10 @@ where
     /// assert_eq!(map[&37], "c");
     /// ```
     pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, (K, V)> {
-        if self.core.entries.is_full() {
-            Err((key, value))
-        } else {
-            let hash = hash_with(&key, &self.build_hasher);
-            Ok(self.core.insert(hash, key, value).old_value)
+        let hash = hash_with(&key, &self.build_hasher);
+        match self.core.insert(hash, key, value) {
+            Insert::Success(inserted) => Ok(inserted.old_value),
+            Insert::Full((k, v)) => Err((k, v))
         }
     }
 
@@ -1127,6 +1140,15 @@ mod tests {
         for (k, v) in clone.into_iter() {
             assert_eq!(v, *src.get(k).unwrap());
         }
+    }
+
+    #[test]
+    fn insert_replaces_on_full_map() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.insert("k1", "v1").unwrap();
+        a.insert("k2", "v2").unwrap();
+        a.insert("k1", "v2").unwrap();
+        assert_eq!(a.get("k1"), a.get("k2"));
     }
 
     const MAP_SLOTS: usize = 4096;
