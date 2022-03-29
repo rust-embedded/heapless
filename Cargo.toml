@@ -42,6 +42,9 @@ atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", bran
 [target.avr-atmega328p.dependencies]
 atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
 
+[target.avr-atmega2560.dependencies]
+atomic-polyfill = { git="https://github.com/mutantbob/atomic-polyfill.git", branch="main", optional = true }
+
 
 [dependencies]
 hash32 = "0.2.1"
