@@ -40,10 +40,10 @@ atomic-polyfill = { version = "0.1.4", optional = true }
 atomic-polyfill = { version = "0.1.4", optional = true }
 
 [target.avr-atmega328p.dependencies]
-atomic-polyfill = { version = "0.1.7", optional = true }
+atomic-polyfill = { version = "0.1.8", optional = true }
 
 [target.avr-atmega2560.dependencies]
-atomic-polyfill = { version = "0.1.7", optional = true }
+atomic-polyfill = { version = "0.1.8", optional = true }
 
 
 [dependencies]
