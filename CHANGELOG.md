@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `pool` example in docstring.
 
 ### Added
+- Added support for AVR architecture.
 
 - Added support for AVR architecture
 
