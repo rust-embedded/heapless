@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Added support for AVR architecture
+
 ### Changed
 
 ## [v0.7.10] - 2022-01-21

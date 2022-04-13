@@ -95,7 +95,7 @@ where
 
 // Internal macro for generating indexes for the linkedlist and const new for the linked list
 macro_rules! impl_index_and_const_new {
-    ($name:ident, $ty:ty, $new_name:ident, $max_val:literal) => {
+    ($name:ident, $ty:ty, $new_name:ident, $max_val:expr) => {
         /// Index for the [`SortedLinkedList`] with specific backing storage.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $name($ty);
@@ -178,12 +178,11 @@ macro_rules! impl_index_and_const_new {
     };
 }
 
-impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, 254); // val is 2^8 - 2 (one less than max)
-impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, 65_534); // val is 2^16 - 2
-#[cfg(target_pointer_width = "16")]
-impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, 65_534); // val is 2^16 - 2
-#[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
-impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, 4_294_967_294); // val is 2^32 - 2
+impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
+impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
+impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, {
+    usize::MAX as usize - 1
+});
 
 impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
