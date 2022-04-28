@@ -482,11 +482,11 @@ impl<T, const N: usize> Vec<T, N> {
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         let length = self.len();
         debug_assert!(index < length);
-        ptr::swap(
-            self.as_mut_slice().get_unchecked_mut(index),
-            self.as_mut_slice().get_unchecked_mut(length - 1),
-        );
-        self.pop_unchecked()
+        let value = ptr::read(self.as_ptr().add(index));
+        let base_ptr = self.as_mut_ptr();
+        ptr::copy(base_ptr.add(length - 1), base_ptr.add(index), 1);
+        self.len -= 1;
+        value
     }
 
     /// Returns true if the vec is full
