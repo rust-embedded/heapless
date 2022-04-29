@@ -1,4 +1,5 @@
 [![crates.io](https://img.shields.io/crates/v/heapless.svg)](https://crates.io/crates/heapless)
+
 [![crates.io](https://img.shields.io/crates/d/heapless.svg)](https://crates.io/crates/heapless)
 
 # `heapless`
