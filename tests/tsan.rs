@@ -1,11 +1,11 @@
-#![feature(scoped_threads)]
+#![cfg_attr(unstable_channel, feature(scoped_threads))]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
-use std::{sync::mpsc, thread};
+use std::thread;
 
-use heapless::{mpmc::Q64, spsc};
+use heapless::spsc;
 
 #[test]
 fn once() {
@@ -51,6 +51,7 @@ fn twice() {
 }
 
 #[test]
+#[cfg(unstable_channel)]
 fn scoped() {
     let mut rb: spsc::Queue<i32, 5> = spsc::Queue::new();
 
@@ -75,6 +76,7 @@ fn scoped() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
+#[cfg(unstable_channel)]
 fn contention() {
     const N: usize = 1024;
 
@@ -120,7 +122,12 @@ fn contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
+#[cfg(unstable_channel)]
 fn mpmc_contention() {
+    use std::sync::mpsc;
+
+    use heapless::mpmc::Q64;
+
     const N: u32 = 64;
 
     static Q: Q64<u32> = Q64::new();
@@ -166,6 +173,7 @@ fn mpmc_contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
+#[cfg(unstable_channel)]
 fn unchecked() {
     const N: usize = 1024;
 
