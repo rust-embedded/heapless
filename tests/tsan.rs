@@ -254,7 +254,7 @@ fn pool() {
 
     A::grow(unsafe { &mut M });
 
-    thread::pool(move |scope| {
+    thread::scope(move |scope| {
         scope.spawn(move || {
             for _ in 0..N / 4 {
                 let a = A::alloc().unwrap();
