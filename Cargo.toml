@@ -27,9 +27,6 @@ mpmc_large = []
 # This flag has no version guarantee, the `defmt` dependency can be updated in a patch release
 defmt-impl = ["defmt"]
 
-[target.'cfg(not(target_os = "none"))'.dev-dependencies]
-scoped_threadpool = "0.1.8"
-
 [target.thumbv6m-none-eabi.dependencies]
 atomic-polyfill = { version = "0.1.2", optional = true }
 

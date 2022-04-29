@@ -1,3 +1,4 @@
+#![feature(scoped_threads)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
@@ -5,7 +6,6 @@
 use std::{sync::mpsc, thread};
 
 use heapless::{mpmc::Q64, spsc};
-use scoped_threadpool::Pool;
 
 #[test]
 fn once() {
@@ -59,12 +59,12 @@ fn scoped() {
     {
         let (mut p, mut c) = rb.split();
 
-        Pool::new(2).scoped(move |scope| {
-            scope.execute(move || {
+        thread::scope(move |scope| {
+            scope.spawn(move || {
                 p.enqueue(1).unwrap();
             });
 
-            scope.execute(move || {
+            scope.spawn(move || {
                 c.dequeue().unwrap();
             });
         });
@@ -83,8 +83,8 @@ fn contention() {
     {
         let (mut p, mut c) = rb.split();
 
-        Pool::new(2).scoped(move |scope| {
-            scope.execute(move || {
+        thread::scope(move |scope| {
+            scope.spawn(move || {
                 let mut sum: u32 = 0;
 
                 for i in 0..(2 * N) {
@@ -95,7 +95,7 @@ fn contention() {
                 println!("producer: {}", sum);
             });
 
-            scope.execute(move || {
+            scope.spawn(move || {
                 let mut sum: u32 = 0;
 
                 for _ in 0..(2 * N) {
@@ -126,9 +126,9 @@ fn mpmc_contention() {
     static Q: Q64<u32> = Q64::new();
 
     let (s, r) = mpsc::channel();
-    Pool::new(2).scoped(|scope| {
+    thread::scope(|scope| {
         let s1 = s.clone();
-        scope.execute(move || {
+        scope.spawn(move || {
             let mut sum: u32 = 0;
 
             for i in 0..(16 * N) {
@@ -141,7 +141,7 @@ fn mpmc_contention() {
         });
 
         let s2 = s.clone();
-        scope.execute(move || {
+        scope.spawn(move || {
             let mut sum: u32 = 0;
 
             for _ in 0..(16 * N) {
@@ -178,14 +178,14 @@ fn unchecked() {
     {
         let (mut p, mut c) = rb.split();
 
-        Pool::new(2).scoped(move |scope| {
-            scope.execute(move || {
+        thread::scope(move |scope| {
+            scope.spawn(move || {
                 for _ in 0..N / 2 - 1 {
                     p.enqueue(2).unwrap();
                 }
             });
 
-            scope.execute(move || {
+            scope.spawn(move || {
                 let mut sum: usize = 0;
 
                 for _ in 0..N / 2 - 1 {
@@ -246,8 +246,8 @@ fn pool() {
 
     A::grow(unsafe { &mut M });
 
-    Pool::new(2).scoped(move |scope| {
-        scope.execute(move || {
+    thread::pool(move |scope| {
+        scope.spawn(move || {
             for _ in 0..N / 4 {
                 let a = A::alloc().unwrap();
                 let b = A::alloc().unwrap();
@@ -257,7 +257,7 @@ fn pool() {
             }
         });
 
-        scope.execute(move || {
+        scope.spawn(move || {
             for _ in 0..N / 2 {
                 let a = A::alloc().unwrap();
                 let a = a.init([2; 8]);
