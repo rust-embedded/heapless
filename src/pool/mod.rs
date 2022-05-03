@@ -254,9 +254,17 @@ use stack::{Ptr, Stack};
 pub mod singleton;
 #[cfg_attr(any(target_arch = "x86_64", target_arch = "x86"), path = "cas.rs")]
 #[cfg_attr(
-    not(any(target_arch = "x86_64", target_arch = "x86")),
+    not(any(
+        target_arch = "x86_64",
+        target_arch = "x86",
+        armv7a,
+        armv7r,
+        armv7m,
+        armv8m_main
+    )),
     path = "llsc.rs"
 )]
+#[cfg_attr(any(armv7a, armv7r, armv7m, armv8m_main), path = "llsc-arm.rs")]
 mod stack;
 
 /// A lock-free memory pool
