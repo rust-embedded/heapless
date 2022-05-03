@@ -12,8 +12,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `pool` example in docstring.
 * Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
   and `Hole::move_to()` (internal to the binary heap implementation).
+* Inserting an item that replaces an already present item will no longer 
+fail with an error
 
 ### Added
+
+* Add Entry Api to IndexMap
 
 ### Changed
 
