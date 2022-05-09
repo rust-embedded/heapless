@@ -85,6 +85,10 @@ pub use pool::singleton::arc::Arc;
 pub use string::String;
 pub use vec::Vec;
 
+#[macro_use]
+#[cfg(test)]
+mod test_helpers;
+
 mod deque;
 mod histbuf;
 mod indexmap;

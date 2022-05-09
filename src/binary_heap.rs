@@ -537,12 +537,6 @@ where
     }
 }
 
-impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N> {
-    fn drop(&mut self) {
-        unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
-    }
-}
-
 impl<T, K, const N: usize> fmt::Debug for BinaryHeap<T, K, N>
 where
     K: Kind,
@@ -575,6 +569,45 @@ mod tests {
     #[test]
     fn static_new() {
         static mut _B: BinaryHeap<i32, Min, 16> = BinaryHeap::new();
+    }
+
+    #[test]
+    fn drop() {
+        droppable!();
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(unsafe { COUNT }, 0);
     }
 
     #[test]
