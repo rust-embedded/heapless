@@ -203,7 +203,7 @@ where
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
                     return Insert::Success(Inserted {
                         index: self.insert_phase_2(probe, Pos::new(index, hash)),
-                        old_value: None
+                        old_value: None,
                     });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
                 {
@@ -217,7 +217,7 @@ where
                 }
             } else {
                 if self.entries.is_full() {
-                    return Insert::Full((key, value))
+                    return Insert::Full((key, value));
                 }
                 // empty bucket, insert here
                 let index = self.entries.len();
@@ -321,7 +321,7 @@ pub enum Entry<'a, K, V, const N: usize> {
     /// The entry corresponding to the key `K` exists in the map
     Occupied(OccupiedEntry<'a, K, V, N>),
     /// The entry corresponding to the key `K` does not exist in the map
-    Vacant(VacantEntry<'a, K, V, N>)
+    Vacant(VacantEntry<'a, K, V, N>),
 }
 
 /// An occupied entry which can be manipulated
@@ -332,8 +332,10 @@ pub struct OccupiedEntry<'a, K, V, const N: usize> {
     core: &'a mut CoreMap<K, V, N>,
 }
 
-impl<'a, K, V, const N: usize> OccupiedEntry<'a, K, V, N> where K: Eq + Hash {
-
+impl<'a, K, V, const N: usize> OccupiedEntry<'a, K, V, N>
+where
+    K: Eq + Hash,
+{
     /// Gets a reference to the key that this entity corresponds to
     pub fn key(&self) -> &K {
         &self.key
@@ -348,30 +350,33 @@ impl<'a, K, V, const N: usize> OccupiedEntry<'a, K, V, N> where K: Eq + Hash {
     pub fn get(&self) -> &V {
         // SAFETY: Already checked existence at instantiation and the only mutable reference
         // to the map is internally held.
-        unsafe {
-            &self.core.entries.get_unchecked(self.pos).value
-        }
+        unsafe { &self.core.entries.get_unchecked(self.pos).value }
     }
 
     /// Gets a mutable reference to the value associated with this entry
     pub fn get_mut(&mut self) -> &mut V {
         // SAFETY: Already checked existence at instantiation and the only mutable reference
         // to the map is internally held.
-        unsafe {&mut self.core.entries.get_unchecked_mut(self.pos).value}
+        unsafe { &mut self.core.entries.get_unchecked_mut(self.pos).value }
     }
 
     /// Consumes this entry and yields a reference to the underlying value
     pub fn into_mut(self) -> &'a mut V {
         // SAFETY: Already checked existence at instantiation and the only mutable reference
         // to the map is internally held.
-        unsafe {&mut self.core.entries.get_unchecked_mut(self.pos).value}
+        unsafe { &mut self.core.entries.get_unchecked_mut(self.pos).value }
     }
 
     /// Overwrites the underlying map's value with this entry's value
     pub fn insert(self, value: V) -> V {
         // SAFETY: Already checked existence at instantiation and the only mutable reference
         // to the map is internally held.
-        unsafe { mem::replace(&mut self.core.entries.get_unchecked_mut(self.pos).value, value)}
+        unsafe {
+            mem::replace(
+                &mut self.core.entries.get_unchecked_mut(self.pos).value,
+                value,
+            )
+        }
     }
 
     /// Removes this entry from the map and yields its value
@@ -386,8 +391,10 @@ pub struct VacantEntry<'a, K, V, const N: usize> {
     hash_val: HashValue,
     core: &'a mut CoreMap<K, V, N>,
 }
-impl<'a, K, V, const N: usize> VacantEntry<'a, K, V, N> where K: Eq + Hash {
-
+impl<'a, K, V, const N: usize> VacantEntry<'a, K, V, N>
+where
+    K: Eq + Hash,
+{
     /// Get the key associated with this entry
     pub fn key(&self) -> &K {
         &self.key
@@ -416,7 +423,6 @@ impl<'a, K, V, const N: usize> VacantEntry<'a, K, V, N> where K: Eq + Hash {
             }
         }
     }
-
 }
 
 /// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/1/indexmap/map/struct.IndexMap.html)
@@ -598,7 +604,6 @@ where
         }
     }
 
-
     /// Returns an entry for the corresponding key
     /// ```
     /// use heapless::FnvIndexMap;
@@ -621,13 +626,13 @@ where
                 key,
                 probe,
                 pos,
-                core: &mut self.core
+                core: &mut self.core,
             })
         } else {
             Entry::Vacant(VacantEntry {
                 key,
                 hash_val,
-                core: &mut self.core
+                core: &mut self.core,
             })
         }
     }
@@ -794,7 +799,7 @@ where
         let hash = hash_with(&key, &self.build_hasher);
         match self.core.insert(hash, key, value) {
             Insert::Success(inserted) => Ok(inserted.old_value),
-            Insert::Full((k, v)) => Err((k, v))
+            Insert::Full((k, v)) => Err((k, v)),
         }
     }
 
@@ -1082,9 +1087,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::indexmap::Entry;
     use crate::FnvIndexMap;
     use core::mem;
-    use crate::indexmap::Entry;
 
     #[test]
     fn size() {
@@ -1239,7 +1244,7 @@ mod tests {
         match entry {
             Entry::Occupied(o) => {
                 assert_eq!((key, value), o.remove_entry());
-            },
+            }
             Entry::Vacant(_) => {
                 panic!("Entry not found")
             }
@@ -1258,7 +1263,7 @@ mod tests {
         match entry {
             Entry::Occupied(o) => {
                 assert_eq!(value, o.remove());
-            },
+            }
             Entry::Vacant(_) => {
                 panic!("Entry not found");
             }
