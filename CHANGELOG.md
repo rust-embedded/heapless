@@ -7,16 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [v0.7.11] - 2022-05-09
+
 ### Fixed
 
 * Fixed `pool` example in docstring.
 * Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
   and `Hole::move_to()` (internal to the binary heap implementation).
 * Fixed `BinaryHeap` elements are being dropped twice
-
-### Added
-
-### Changed
 
 ## [v0.7.10] - 2022-01-21
 
@@ -455,7 +459,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.10...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.11...HEAD
+[v0.7.11]: https://github.com/japaric/heapless/compare/v0.7.10...v0.7.11
 [v0.7.10]: https://github.com/japaric/heapless/compare/v0.7.9...v0.7.10
 [v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
 [v0.7.8]: https://github.com/japaric/heapless/compare/v0.7.7...v0.7.8
