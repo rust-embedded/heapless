@@ -912,7 +912,7 @@ mod tests {
             v.pop().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: Vec<Droppable, 2> = Vec::new();
@@ -920,7 +920,7 @@ mod tests {
             v.push(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
@@ -1055,7 +1055,7 @@ mod tests {
             let _ = items.next();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut vec: Vec<Droppable, 2> = Vec::new();
@@ -1065,7 +1065,7 @@ mod tests {
             // Move none
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut vec: Vec<Droppable, 2> = Vec::new();
@@ -1075,7 +1075,7 @@ mod tests {
             let _ = items.next(); // Move partly
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]

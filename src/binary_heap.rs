@@ -582,7 +582,7 @@ mod tests {
             v.pop().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
@@ -590,7 +590,7 @@ mod tests {
             v.push(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
@@ -599,7 +599,7 @@ mod tests {
             v.pop().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
@@ -607,7 +607,7 @@ mod tests {
             v.push(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
