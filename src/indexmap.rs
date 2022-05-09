@@ -871,16 +871,16 @@ impl<K, V, const N: usize> Iterator for IntoIter<K, V, N> {
 }
 
 impl<K, V, S, const N: usize> IntoIterator for IndexMap<K, V, S, N>
-    where
-        K: Eq + Hash,
-        S: BuildHasher,
+where
+    K: Eq + Hash,
+    S: BuildHasher,
 {
     type Item = (K, V);
     type IntoIter = IntoIter<K, V, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
-            entries: self.core.entries
+            entries: self.core.entries,
         }
     }
 }
