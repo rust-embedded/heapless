@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed `pool` example in docstring.
 * Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
   and `Hole::move_to()` (internal to the binary heap implementation).
+* Fixed `BinaryHeap` elements are being dropped twice
 
 ### Added
 

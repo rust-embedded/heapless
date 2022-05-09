@@ -901,29 +901,6 @@ mod tests {
         assert!(v.is_full());
     }
 
-    macro_rules! droppable {
-        () => {
-            struct Droppable;
-            impl Droppable {
-                fn new() -> Self {
-                    unsafe {
-                        COUNT += 1;
-                    }
-                    Droppable
-                }
-            }
-            impl Drop for Droppable {
-                fn drop(&mut self) {
-                    unsafe {
-                        COUNT -= 1;
-                    }
-                }
-            }
-
-            static mut COUNT: i32 = 0;
-        };
-    }
-
     #[test]
     fn drop() {
         droppable!();
