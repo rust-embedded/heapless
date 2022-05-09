@@ -565,29 +565,6 @@ mod tests {
         let mut _v: Deque<i32, 4> = Deque::new();
     }
 
-    macro_rules! droppable {
-        () => {
-            struct Droppable;
-            impl Droppable {
-                fn new() -> Self {
-                    unsafe {
-                        COUNT += 1;
-                    }
-                    Droppable
-                }
-            }
-            impl Drop for Droppable {
-                fn drop(&mut self) {
-                    unsafe {
-                        COUNT -= 1;
-                    }
-                }
-            }
-
-            static mut COUNT: i32 = 0;
-        };
-    }
-
     #[test]
     fn drop() {
         droppable!();
@@ -599,7 +576,7 @@ mod tests {
             v.pop_front().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: Deque<Droppable, 2> = Deque::new();
@@ -607,14 +584,14 @@ mod tests {
             v.push_back(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
         {
             let mut v: Deque<Droppable, 2> = Deque::new();
             v.push_front(Droppable::new()).ok().unwrap();
             v.push_front(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
@@ -754,7 +731,7 @@ mod tests {
             let _ = items.next();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut deque: Deque<Droppable, 2> = Deque::new();
@@ -764,7 +741,7 @@ mod tests {
             // Move none
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut deque: Deque<Droppable, 2> = Deque::new();
@@ -774,7 +751,7 @@ mod tests {
             let _ = items.next(); // Move partly
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
