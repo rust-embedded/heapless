@@ -1,4 +1,4 @@
-use core::{cmp::Ordering, fmt, fmt::Write, hash, ops, str};
+use core::{cmp::Ordering, fmt, fmt::Write, hash, iter, ops, str};
 
 use hash32;
 
@@ -307,6 +307,36 @@ impl<const N: usize> str::FromStr for String<N> {
     }
 }
 
+impl<const N: usize> iter::FromIterator<char> for String<N> {
+    fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
+        let mut new = String::new();
+        for c in iter {
+            new.push(c).unwrap();
+        }
+        new
+    }
+}
+
+impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
+    fn from_iter<T: IntoIterator<Item = &'a char>>(iter: T) -> Self {
+        let mut new = String::new();
+        for c in iter {
+            new.push(*c).unwrap();
+        }
+        new
+    }
+}
+
+impl<'a, const N: usize> iter::FromIterator<&'a str> for String<N> {
+    fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
+        let mut new = String::new();
+        for c in iter {
+            new.push_str(c).unwrap();
+        }
+        new
+    }
+}
+
 impl<const N: usize> Clone for String<N> {
     fn clone(&self) -> Self {
         Self {
@@ -556,6 +586,20 @@ mod tests {
 
         let e: () = String::<2>::from_str("123").unwrap_err();
         assert_eq!(e, ());
+    }
+
+    #[test]
+    fn from_iter() {
+        let mut v: Vec<char, 5> = Vec::new();
+        v.push('h').unwrap();
+        v.push('e').unwrap();
+        v.push('l').unwrap();
+        v.push('l').unwrap();
+        v.push('o').unwrap();
+        let string1: String<5> = v.iter().collect(); //&char
+        let string2: String<5> = "hello".chars().collect(); //char
+        assert_eq!(string1, "hello");
+        assert_eq!(string2, "hello");
     }
 
     #[test]
