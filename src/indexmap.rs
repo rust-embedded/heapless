@@ -98,10 +98,13 @@ impl Pos {
     }
 }
 
-pub enum Inserted<V> {
-    Done,
-    Swapped { prev_value: V },
-    RobinHood { probe: usize, old_pos: Pos },
+enum Insert<K, V> {
+    Success(Inserted<V>),
+    Full((K, V)),
+}
+struct Inserted<V> {
+    index: usize,
+    old_value: Option<V>,
 }
 
 macro_rules! probe_loop {
@@ -176,16 +179,10 @@ where
         });
     }
 
-    // First phase: Look for the preferred location for key.
-    //
-    // We will know if `key` is already in the map, before we need to insert it.
-    // When we insert they key, it might be that we need to continue displacing
-    // entries (robin hood hashing), in which case Inserted::RobinHood is returned
-    fn insert_phase_1(&mut self, hash: HashValue, key: K, value: V) -> Inserted<V> {
+    fn insert(&mut self, hash: HashValue, key: K, value: V) -> Insert<K, V> {
         let mut probe = hash.desired_pos(Self::mask());
         let mut dist = 0;
 
-        let inserted;
         probe_loop!(probe < self.indices.len(), {
             let pos = &mut self.indices[probe];
 
@@ -198,39 +195,45 @@ where
                 let their_dist = entry_hash.probe_distance(Self::mask(), probe);
 
                 if their_dist < dist {
+                    if self.entries.is_full() {
+                        return Insert::Full((key, value));
+                    }
                     // robin hood: steal the spot if it's better for us
                     let index = self.entries.len();
-                    inserted = Inserted::RobinHood {
-                        probe: probe,
-                        old_pos: Pos::new(index, hash),
-                    };
-                    break;
+                    unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
+                    return Insert::Success(Inserted {
+                        index: self.insert_phase_2(probe, Pos::new(index, hash)),
+                        old_value: None,
+                    });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
                 {
-                    return Inserted::Swapped {
-                        prev_value: mem::replace(
+                    return Insert::Success(Inserted {
+                        index: i,
+                        old_value: Some(mem::replace(
                             unsafe { &mut self.entries.get_unchecked_mut(i).value },
                             value,
-                        ),
-                    };
+                        )),
+                    });
                 }
             } else {
+                if self.entries.is_full() {
+                    return Insert::Full((key, value));
+                }
                 // empty bucket, insert here
                 let index = self.entries.len();
                 *pos = Some(Pos::new(index, hash));
-                inserted = Inserted::Done;
-                break;
+                unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
+                return Insert::Success(Inserted {
+                    index,
+                    old_value: None,
+                });
             }
             dist += 1;
         });
-
-        // NOTE(unsafe) we already checked (in `insert`) that we aren't exceeding the capacity
-        unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) }
-        inserted
     }
 
     // phase 2 is post-insert where we forward-shift `Pos` in the indices.
-    fn insert_phase_2(&mut self, mut probe: usize, mut old_pos: Pos) {
+    fn insert_phase_2(&mut self, mut probe: usize, mut old_pos: Pos) -> usize {
         probe_loop!(probe < self.indices.len(), {
             let pos = unsafe { self.indices.get_unchecked_mut(probe) };
 
@@ -242,7 +245,7 @@ where
 
             if is_none {
                 *pos = Some(old_pos);
-                break;
+                return probe;
             }
         });
     }
@@ -309,6 +312,115 @@ where
         Self {
             entries: self.entries.clone(),
             indices: self.indices.clone(),
+        }
+    }
+}
+
+/// A view into an entry in the map
+pub enum Entry<'a, K, V, const N: usize> {
+    /// The entry corresponding to the key `K` exists in the map
+    Occupied(OccupiedEntry<'a, K, V, N>),
+    /// The entry corresponding to the key `K` does not exist in the map
+    Vacant(VacantEntry<'a, K, V, N>),
+}
+
+/// An occupied entry which can be manipulated
+pub struct OccupiedEntry<'a, K, V, const N: usize> {
+    key: K,
+    probe: usize,
+    pos: usize,
+    core: &'a mut CoreMap<K, V, N>,
+}
+
+impl<'a, K, V, const N: usize> OccupiedEntry<'a, K, V, N>
+where
+    K: Eq + Hash,
+{
+    /// Gets a reference to the key that this entity corresponds to
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Removes this entry from the map and yields its corresponding key and value
+    pub fn remove_entry(self) -> (K, V) {
+        self.core.remove_found(self.probe, self.pos)
+    }
+
+    /// Gets a reference to the value associated with this entry
+    pub fn get(&self) -> &V {
+        // SAFETY: Already checked existence at instantiation and the only mutable reference
+        // to the map is internally held.
+        unsafe { &self.core.entries.get_unchecked(self.pos).value }
+    }
+
+    /// Gets a mutable reference to the value associated with this entry
+    pub fn get_mut(&mut self) -> &mut V {
+        // SAFETY: Already checked existence at instantiation and the only mutable reference
+        // to the map is internally held.
+        unsafe { &mut self.core.entries.get_unchecked_mut(self.pos).value }
+    }
+
+    /// Consumes this entry and yields a reference to the underlying value
+    pub fn into_mut(self) -> &'a mut V {
+        // SAFETY: Already checked existence at instantiation and the only mutable reference
+        // to the map is internally held.
+        unsafe { &mut self.core.entries.get_unchecked_mut(self.pos).value }
+    }
+
+    /// Overwrites the underlying map's value with this entry's value
+    pub fn insert(self, value: V) -> V {
+        // SAFETY: Already checked existence at instantiation and the only mutable reference
+        // to the map is internally held.
+        unsafe {
+            mem::replace(
+                &mut self.core.entries.get_unchecked_mut(self.pos).value,
+                value,
+            )
+        }
+    }
+
+    /// Removes this entry from the map and yields its value
+    pub fn remove(self) -> V {
+        self.remove_entry().1
+    }
+}
+
+/// A view into an empty slot in the underlying map
+pub struct VacantEntry<'a, K, V, const N: usize> {
+    key: K,
+    hash_val: HashValue,
+    core: &'a mut CoreMap<K, V, N>,
+}
+impl<'a, K, V, const N: usize> VacantEntry<'a, K, V, N>
+where
+    K: Eq + Hash,
+{
+    /// Get the key associated with this entry
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Consumes this entry to yield to key associated with it
+    pub fn into_key(self) -> K {
+        self.key
+    }
+
+    /// Inserts this entry into to underlying map, yields a mutable reference to the inserted value.
+    /// If the map is at capacity the value is returned instead.
+    pub fn insert(self, value: V) -> Result<&'a mut V, V> {
+        if self.core.entries.is_full() {
+            Err(value)
+        } else {
+            match self.core.insert(self.hash_val, self.key, value) {
+                Insert::Success(inserted) => {
+                    unsafe {
+                        // SAFETY: Already checked existence at instantiation and the only mutable reference
+                        // to the map is internally held.
+                        Ok(&mut self.core.entries.get_unchecked_mut(inserted.index).value)
+                    }
+                }
+                Insert::Full((_, v)) => Err(v),
+            }
         }
     }
 }
@@ -492,8 +604,38 @@ where
         }
     }
 
-    // TODO
-    // pub fn entry(&mut self, key: K) -> Entry<K, V> { .. }
+    /// Returns an entry for the corresponding key
+    /// ```
+    /// use heapless::FnvIndexMap;
+    /// use heapless::Entry;
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
+    /// if let Entry::Vacant(v) = map.entry("a") {
+    ///     v.insert(1).unwrap();
+    /// }
+    /// if let Entry::Occupied(mut o) = map.entry("a") {
+    ///     println!("found {}", *o.get()); // Prints 1
+    ///     o.insert(2);
+    /// }
+    /// // Prints 2
+    /// println!("val: {}", *map.get("a").unwrap());
+    /// ```
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V, N> {
+        let hash_val = hash_with(&key, &self.build_hasher);
+        if let Some((probe, pos)) = self.core.find(hash_val, &key) {
+            Entry::Occupied(OccupiedEntry {
+                key,
+                probe,
+                pos,
+                core: &mut self.core,
+            })
+        } else {
+            Entry::Vacant(VacantEntry {
+                key,
+                hash_val,
+                core: &mut self.core,
+            })
+        }
+    }
 
     /// Return the number of key-value pairs in the map.
     ///
@@ -654,17 +796,10 @@ where
     /// assert_eq!(map[&37], "c");
     /// ```
     pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, (K, V)> {
-        if self.core.entries.is_full() {
-            Err((key, value))
-        } else {
-            Ok(match self.insert_phase_1(key, value) {
-                Inserted::Swapped { prev_value } => Some(prev_value),
-                Inserted::Done => None,
-                Inserted::RobinHood { probe, old_pos } => {
-                    self.core.insert_phase_2(probe, old_pos);
-                    None
-                }
-            })
+        let hash = hash_with(&key, &self.build_hasher);
+        match self.core.insert(hash, key, value) {
+            Insert::Success(inserted) => Ok(inserted.old_value),
+            Insert::Full((k, v)) => Err((k, v)),
         }
     }
 
@@ -719,11 +854,6 @@ where
         }
         let h = hash_with(key, &self.build_hasher);
         self.core.find(h, key)
-    }
-
-    fn insert_phase_1(&mut self, key: K, value: V) -> Inserted<V> {
-        let hash = hash_with(&key, &self.build_hasher);
-        self.core.insert_phase_1(hash, key, value)
     }
 }
 
@@ -957,6 +1087,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::indexmap::Entry;
     use crate::FnvIndexMap;
     use core::mem;
 
@@ -1014,5 +1145,169 @@ mod tests {
         for (k, v) in clone.into_iter() {
             assert_eq!(v, *src.get(k).unwrap());
         }
+    }
+
+    #[test]
+    fn insert_replaces_on_full_map() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.insert("k1", "v1").unwrap();
+        a.insert("k2", "v2").unwrap();
+        a.insert("k1", "v2").unwrap();
+        assert_eq!(a.get("k1"), a.get("k2"));
+    }
+
+    const MAP_SLOTS: usize = 4096;
+    fn almost_filled_map() -> FnvIndexMap<usize, usize, MAP_SLOTS> {
+        let mut almost_filled = FnvIndexMap::new();
+        for i in 1..MAP_SLOTS {
+            almost_filled.insert(i, i).unwrap();
+        }
+        almost_filled
+    }
+
+    #[test]
+    fn entry_find() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Found entry without inserting");
+            }
+            Entry::Vacant(v) => {
+                assert_eq!(&key, v.key());
+                assert_eq!(key, v.into_key());
+            }
+        }
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(mut o) => {
+                assert_eq!(&key, o.key());
+                assert_eq!(&value, o.get());
+                assert_eq!(&value, o.get_mut());
+                assert_eq!(&value, o.into_mut());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        }
+    }
+
+    #[test]
+    fn entry_vacant_insert() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Entry found when empty");
+            }
+            Entry::Vacant(v) => {
+                v.insert(value).unwrap();
+            }
+        };
+        assert_eq!(value, *src.get(&key).unwrap())
+    }
+
+    #[test]
+    fn entry_occupied_insert() {
+        let key = 0;
+        let value = 0;
+        let value2 = 5;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.insert(value2));
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(value2, *src.get(&key).unwrap())
+    }
+
+    #[test]
+    fn entry_remove_entry() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!((key, value), o.remove_entry());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found")
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn entry_remove() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.remove());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn entry_roll_through_all() {
+        let mut src: FnvIndexMap<usize, usize, MAP_SLOTS> = FnvIndexMap::new();
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(_) => {
+                    panic!("Entry found before insert");
+                }
+                Entry::Vacant(v) => {
+                    v.insert(i).unwrap();
+                }
+            }
+        }
+        let add_mod = 99;
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(o) => {
+                    assert_eq!(i, o.insert(i + add_mod));
+                }
+                Entry::Vacant(_) => {
+                    panic!("Entry not found after insert");
+                }
+            }
+        }
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(o) => {
+                    assert_eq!((i, i + add_mod), o.remove_entry());
+                }
+                Entry::Vacant(_) => {
+                    panic!("Entry not found after insert");
+                }
+            }
+        }
+        for i in 0..MAP_SLOTS {
+            assert!(matches!(src.entry(i), Entry::Vacant(_)));
+        }
+        assert!(src.is_empty());
     }
 }

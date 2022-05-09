@@ -77,7 +77,7 @@
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
-pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
+pub use indexmap::{Bucket, Entry, FnvIndexMap, IndexMap, OccupiedEntry, Pos, VacantEntry};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 #[cfg(all(has_cas, feature = "cas"))]

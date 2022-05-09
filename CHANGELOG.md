@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+* Add Entry Api to IndexMap
+* Implement IntoIterator trait for Indexmap
+* Implement FromIterator for String
+
 ### Changed
 
 ### Fixed
+
+* Inserting an item that replaces an already present item will no longer
+fail with an error
 
 ## [v0.7.11] - 2022-05-09
 
