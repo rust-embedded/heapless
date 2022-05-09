@@ -857,6 +857,34 @@ where
     }
 }
 
+#[derive(Clone)]
+pub struct IntoIter<K, V, const N: usize> {
+    entries: Vec<Bucket<K, V>, N>,
+}
+
+impl<K, V, const N: usize> Iterator for IntoIter<K, V, N> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.entries.pop().map(|bucket| (bucket.key, bucket.value))
+    }
+}
+
+impl<K, V, S, const N: usize> IntoIterator for IndexMap<K, V, S, N>
+    where
+        K: Eq + Hash,
+        S: BuildHasher,
+{
+    type Item = (K, V);
+    type IntoIter = IntoIter<K, V, N>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            entries: self.core.entries
+        }
+    }
+}
+
 impl<'a, K, V, S, const N: usize> IntoIterator for &'a IndexMap<K, V, S, N>
 where
     K: Eq + Hash,
@@ -972,6 +1000,19 @@ mod tests {
             b.insert("k1", "v1").unwrap();
 
             assert!(a == b);
+        }
+    }
+
+    #[test]
+    fn into_iter() {
+        let mut src: FnvIndexMap<_, _, 4> = FnvIndexMap::new();
+        src.insert("k1", "v1").unwrap();
+        src.insert("k2", "v2").unwrap();
+        src.insert("k3", "v3").unwrap();
+        src.insert("k4", "v4").unwrap();
+        let clone = src.clone();
+        for (k, v) in clone.into_iter() {
+            assert_eq!(v, *src.get(k).unwrap());
         }
     }
 }
