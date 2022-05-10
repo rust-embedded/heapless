@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+* Optimize the codegen of `Vec::clone`
+
 ### Fixed
 
 * Inserting an item that replaces an already present item will no longer
