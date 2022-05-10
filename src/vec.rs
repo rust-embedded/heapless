@@ -34,12 +34,18 @@ use hash32;
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 pub struct Vec<T, const N: usize> {
-    buffer: [MaybeUninit<T>; N],
+    // NOTE order is important for optimizations. the `len` first layout lets the compiler optimize
+    // `new` to: reserve stack space and zero the first word. With the fields in the reverse order
+    // the compiler optimizes `new` to `memclr`-ing the *entire* stack space, including the `buffer`
+    // field which should be left uninitialized. Optimizations were last checked with Rust 1.60
     len: usize,
+
+    buffer: [MaybeUninit<T>; N],
 }
 
 impl<T, const N: usize> Vec<T, N> {
-    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+    const ELEM: MaybeUninit<T> = MaybeUninit::uninit();
+    const INIT: [MaybeUninit<T>; N] = [Self::ELEM; N]; // important for optimization of `new`
 
     /// Constructs a new, empty vector with a fixed capacity of `N`
     ///
@@ -60,8 +66,8 @@ impl<T, const N: usize> Vec<T, N> {
         crate::sealed::greater_than_eq_0::<N>();
 
         Self {
-            buffer: [Self::INIT; N],
             len: 0,
+            buffer: Self::INIT,
         }
     }
 
@@ -92,7 +98,12 @@ impl<T, const N: usize> Vec<T, N> {
         T: Clone,
     {
         let mut new = Self::new();
-        new.extend_from_slice(self.as_slice()).unwrap();
+        // avoid `extend_from_slice` as that introduces a runtime check / panicking branch
+        for elem in self {
+            unsafe {
+                new.push_unchecked(elem.clone());
+            }
+        }
         new
     }
 
