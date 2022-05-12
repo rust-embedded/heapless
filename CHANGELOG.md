@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 * Optimize the codegen of `Vec::clone`
+* `riscv32i` targets unconditionally (`no-default-features`) depends on `atomic-polyfill`
 
 ### Fixed
 
