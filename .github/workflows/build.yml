@@ -53,6 +53,7 @@ jobs:
           - nightly
         features:
           - ""
+          - "cas"
           - "serde"
     steps:
       - name: Checkout
@@ -92,7 +93,7 @@ jobs:
         with:
           use-cross: false
           command: check
-          args: --target=${{ matrix.target }} --features=${{ matrix.features }}
+          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
 
   # Run cpass tests
   testcpass:
