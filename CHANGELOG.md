@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.7.12] - 2022-05-12
+
+### Added
+
 * Added support for AVR architecture.
 * Add `entry` API to `IndexMap`
 * Implement `IntoIterator` trait for `Indexmap`
@@ -472,7 +480,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.11...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.12...HEAD
+[v0.7.12]: https://github.com/japaric/heapless/compare/v0.7.11...v0.7.12
 [v0.7.11]: https://github.com/japaric/heapless/compare/v0.7.10...v0.7.11
 [v0.7.10]: https://github.com/japaric/heapless/compare/v0.7.9...v0.7.10
 [v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
