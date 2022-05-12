@@ -31,10 +31,10 @@ defmt-impl = ["defmt"]
 atomic-polyfill = { version = "0.1.2", optional = true }
 
 [target.riscv32i-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { version = "0.1.4" }
 
 [target.riscv32imc-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { version = "0.1.4" }
 
 [dependencies]
 hash32 = "0.2.1"
