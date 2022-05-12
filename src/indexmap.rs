@@ -604,6 +604,46 @@ where
         }
     }
 
+    /// Get the first key-value pair
+    ///
+    /// Computes in **O(1)** time
+    pub fn first(&self) -> Option<(&K, &V)> {
+        self.core
+            .entries
+            .first()
+            .map(|bucket| (&bucket.key, &bucket.value))
+    }
+
+    /// Get the first key-value pair, with mutable access to the value
+    ///
+    /// Computes in **O(1)** time
+    pub fn first_mut(&mut self) -> Option<(&K, &mut V)> {
+        self.core
+            .entries
+            .first_mut()
+            .map(|bucket| (&bucket.key, &mut bucket.value))
+    }
+
+    /// Get the last key-value pair
+    ///
+    /// Computes in **O(1)** time
+    pub fn last(&self) -> Option<(&K, &V)> {
+        self.core
+            .entries
+            .last()
+            .map(|bucket| (&bucket.key, &bucket.value))
+    }
+
+    /// Get the last key-value pair, with mutable access to the value
+    ///
+    /// Computes in **O(1)** time
+    pub fn last_mut(&mut self) -> Option<(&K, &mut V)> {
+        self.core
+            .entries
+            .last_mut()
+            .map(|bucket| (&bucket.key, &mut bucket.value))
+    }
+
     /// Returns an entry for the corresponding key
     /// ```
     /// use heapless::FnvIndexMap;
@@ -1087,8 +1127,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::indexmap::Entry;
-    use crate::FnvIndexMap;
+    use crate::{indexmap::Entry, FnvIndexMap};
+
     use core::mem;
 
     #[test]
@@ -1309,5 +1349,29 @@ mod tests {
             assert!(matches!(src.entry(i), Entry::Vacant(_)));
         }
         assert!(src.is_empty());
+    }
+
+    #[test]
+    fn first_last() {
+        let mut map = FnvIndexMap::<_, _, 4>::new();
+
+        assert_eq!(None, map.first());
+        assert_eq!(None, map.last());
+
+        map.insert(0, 0).unwrap();
+        map.insert(2, 2).unwrap();
+
+        assert_eq!(Some((&0, &0)), map.first());
+        assert_eq!(Some((&2, &2)), map.last());
+
+        map.insert(1, 1).unwrap();
+
+        assert_eq!(Some((&1, &1)), map.last());
+
+        *map.first_mut().unwrap().1 += 1;
+        *map.last_mut().unwrap().1 += 1;
+
+        assert_eq!(Some((&0, &1)), map.first());
+        assert_eq!(Some((&1, &2)), map.last());
     }
 }

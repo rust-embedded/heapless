@@ -128,6 +128,20 @@ where
         }
     }
 
+    /// Get the first value
+    ///
+    /// Computes in **O(1)** time
+    pub fn first(&self) -> Option<&T> {
+        self.map.first().map(|(k, _v)| k)
+    }
+
+    /// Get the last value
+    ///
+    /// Computes in **O(1)** time
+    pub fn last(&self) -> Option<&T> {
+        self.map.last().map(|(k, _v)| k)
+    }
+
     /// Visits the values representing the difference, i.e. the values that are in `self` but not in
     /// `other`.
     ///
