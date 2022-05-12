@@ -271,12 +271,13 @@ impl<T, const N: usize> Deque<T, N> {
         }
     }
 
-    /// Removes an item from the front of the deque and returns it
+    /// Removes an item from the front of the deque and returns it, without checking that the deque
+    /// is not empty
     ///
     /// # Safety
     ///
-    /// This assumes the deque is not empty.
-    pub(crate) unsafe fn pop_front_unchecked(&mut self) -> T {
+    /// It's undefined behavior to call this on an empty deque
+    pub unsafe fn pop_front_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
         let index = self.front;
@@ -285,12 +286,13 @@ impl<T, const N: usize> Deque<T, N> {
         (self.buffer.get_unchecked_mut(index).as_ptr() as *const T).read()
     }
 
-    /// Removes an item from the back of the deque and returns it
+    /// Removes an item from the back of the deque and returns it, without checking that the deque
+    /// is not empty
     ///
     /// # Safety
     ///
-    /// This assumes the deque is not empty.
-    pub(crate) unsafe fn pop_back_unchecked(&mut self) -> T {
+    /// It's undefined behavior to call this on an empty deque
+    pub unsafe fn pop_back_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
         self.full = false;
