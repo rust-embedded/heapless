@@ -1,6 +1,7 @@
 //! A heap-less, interrupt-safe, lock-free memory pool (\*)
 //!
-//! NOTE: This module is not available on targets that do *not* support CAS operations, e.g. ARMv6-M
+//! NOTE: This module is not available on targets that do *not* support CAS operations and are not
+//! emulated by the [`atomic_polyfill`] crate (e.g., MSP430).
 //!
 //! (\*) Currently, the implementation is only lock-free *and* `Sync` on ARMv6, ARMv7-{A,R,M} & ARMv8-M
 //! devices
@@ -14,7 +15,11 @@
 //! #![no_main]
 //! #![no_std]
 //!
-//! use heapless::{pool, pool::singleton::Box};
+//! use cortex_m_rt::{entry, exception};
+//! use heapless::{
+//!     pool,
+//!     pool::singleton::{Box, Pool},
+//! };
 //!
 //! // instantiate a memory pool of `[u8; 128]` blocks as a global singleton
 //! pool!(
@@ -59,8 +64,10 @@
 //! on the target architecture (see section on ['Soundness'](#soundness) for more information). For
 //! this reason, `Pool` only implements `Sync` when compiling for some ARM cores.
 //!
-//! Also note that ARMv6-M architecture lacks the primitives for CAS loops so this module does *not*
-//! exist for `thumbv6m-none-eabi`.
+//! This module requires CAS atomic instructions which are not available on all architectures
+//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be emulated
+//! however with [`atomic_polyfill`], which is enabled with the `cas` feature and is enabled by default
+//! for `thumbv6m-none-eabi` and `riscv32` targets. MSP430 is currently not supported by [`atomic_polyfill`].
 //!
 //! # Soundness
 //!

@@ -76,14 +76,18 @@
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
-pub use histbuf::HistoryBuffer;
-pub use indexmap::{Bucket, FnvIndexMap, IndexMap, Pos};
+pub use histbuf::{HistoryBuffer, OldestOrdered};
+pub use indexmap::{Bucket, Entry, FnvIndexMap, IndexMap, OccupiedEntry, Pos, VacantEntry};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
 #[cfg(all(has_cas, feature = "cas"))]
 pub use pool::singleton::arc::Arc;
 pub use string::String;
 pub use vec::Vec;
+
+#[macro_use]
+#[cfg(test)]
+mod test_helpers;
 
 mod deque;
 mod histbuf;

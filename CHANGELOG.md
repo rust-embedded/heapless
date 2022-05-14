@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [v0.7.12] - 2022-05-12
+
+### Added
+
+* Added support for AVR architecture.
+* Add `entry` API to `IndexMap`
+* Implement `IntoIterator` trait for `Indexmap`
+* Implement `FromIterator` for `String`
+* Add `first` and `last` methods to `IndexMap` and `IndexSet`
+* Add `pop_{front_back}_unchecked` methods to `Deque`
+
+### Changed
+
+* Optimize the codegen of `Vec::clone`
+* `riscv32i` and `riscv32imc` targets unconditionally (e.g. `build --no-default-features`) depends on `atomic-polyfill`
+
+### Fixed
+
+* Inserting an item that replaces an already present item will no longer
+fail with an error
+
+## [v0.7.11] - 2022-05-09
+
+### Fixed
+
+* Fixed `pool` example in docstring.
+* Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
+  and `Hole::move_to()` (internal to the binary heap implementation).
+* Fixed `BinaryHeap` elements are being dropped twice
+
+## [v0.7.10] - 2022-01-21
+
+### Fixed
+
+- `cargo test` can now run on non-`x86` hosts
+
+### Added
+
+- Added `OldestOrdered` iterator for `HistoryBuffer`
+
+### Changed
+
+- `atomic-polyfill` is now enabled and used for `cas` atomic emulation on `riscv` targets
+
 ## [v0.7.9] - 2021-12-16
 
 ### Fixed
@@ -430,7 +480,10 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.9...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.12...HEAD
+[v0.7.12]: https://github.com/japaric/heapless/compare/v0.7.11...v0.7.12
+[v0.7.11]: https://github.com/japaric/heapless/compare/v0.7.10...v0.7.11
+[v0.7.10]: https://github.com/japaric/heapless/compare/v0.7.9...v0.7.10
 [v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
 [v0.7.8]: https://github.com/japaric/heapless/compare/v0.7.7...v0.7.8
 [v0.7.7]: https://github.com/japaric/heapless/compare/v0.7.6...v0.7.7

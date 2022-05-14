@@ -181,6 +181,38 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
+
+    /// Returns an iterator for iterating over the buffer from oldest to newest.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+    /// buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+    /// let expected = [1, 2, 3, 4, 5, 6];
+    /// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {
+    ///     assert_eq!(x, y)
+    /// }
+    ///
+    /// ```
+    pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
+        if self.filled {
+            OldestOrdered {
+                buf: self,
+                cur: self.write_at,
+                wrapped: false,
+            }
+        } else {
+            // special case: act like we wrapped already to handle empty buffer.
+            OldestOrdered {
+                buf: self,
+                cur: 0,
+                wrapped: true,
+            }
+        }
+    }
 }
 
 impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
@@ -247,9 +279,38 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
+/// An iterator on the underlying buffer ordered from oldest data to newest
+#[derive(Clone)]
+pub struct OldestOrdered<'a, T, const N: usize> {
+    buf: &'a HistoryBuffer<T, N>,
+    cur: usize,
+    wrapped: bool,
+}
+
+impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        if self.cur == self.buf.len() && self.buf.filled {
+            // roll-over
+            self.cur = 0;
+            self.wrapped = true;
+        }
+
+        if self.cur == self.buf.write_at && self.wrapped {
+            return None;
+        }
+
+        let item = &self.buf[self.cur];
+        self.cur += 1;
+        Some(item)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::HistoryBuffer;
+    use core::fmt::Debug;
 
     #[test]
     fn new() {
@@ -313,5 +374,60 @@ mod tests {
         x.extend([1, 2, 3, 4, 5].iter());
 
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
+    }
+
+    #[test]
+    fn ordered() {
+        // test on an empty buffer
+        let buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        let mut iter = buffer.oldest_ordered();
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next(), None);
+
+        // test on a un-filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([1, 2, 3]);
+        assert_eq!(buffer.len(), 3);
+        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
+
+        // test on a filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+        assert_eq!(buffer.len(), 6);
+        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+
+        // comprehensive test all cases
+        for n in 0..50 {
+            const N: usize = 7;
+            let mut buffer: HistoryBuffer<u8, N> = HistoryBuffer::new();
+            buffer.extend(0..n);
+            assert_eq_iter(
+                buffer.oldest_ordered().copied(),
+                n.saturating_sub(N as u8)..n,
+            );
+        }
+    }
+
+    /// Compares two iterators item by item, making sure they stop at the same time.
+    fn assert_eq_iter<I: Eq + Debug>(
+        a: impl IntoIterator<Item = I>,
+        b: impl IntoIterator<Item = I>,
+    ) {
+        let mut a = a.into_iter();
+        let mut b = b.into_iter();
+
+        let mut i = 0;
+        loop {
+            let a_item = a.next();
+            let b_item = b.next();
+
+            assert_eq!(a_item, b_item, "{}", i);
+
+            i += 1;
+
+            if b_item.is_none() {
+                break;
+            }
+        }
     }
 }

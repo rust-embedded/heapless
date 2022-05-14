@@ -34,12 +34,18 @@ use hash32;
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 pub struct Vec<T, const N: usize> {
-    buffer: [MaybeUninit<T>; N],
+    // NOTE order is important for optimizations. the `len` first layout lets the compiler optimize
+    // `new` to: reserve stack space and zero the first word. With the fields in the reverse order
+    // the compiler optimizes `new` to `memclr`-ing the *entire* stack space, including the `buffer`
+    // field which should be left uninitialized. Optimizations were last checked with Rust 1.60
     len: usize,
+
+    buffer: [MaybeUninit<T>; N],
 }
 
 impl<T, const N: usize> Vec<T, N> {
-    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+    const ELEM: MaybeUninit<T> = MaybeUninit::uninit();
+    const INIT: [MaybeUninit<T>; N] = [Self::ELEM; N]; // important for optimization of `new`
 
     /// Constructs a new, empty vector with a fixed capacity of `N`
     ///
@@ -56,12 +62,12 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
+        // Const assert N >= 0
+        crate::sealed::greater_than_eq_0::<N>();
 
         Self {
-            buffer: [Self::INIT; N],
             len: 0,
+            buffer: Self::INIT,
         }
     }
 
@@ -92,7 +98,12 @@ impl<T, const N: usize> Vec<T, N> {
         T: Clone,
     {
         let mut new = Self::new();
-        new.extend_from_slice(self.as_slice()).unwrap();
+        // avoid `extend_from_slice` as that introduces a runtime check / panicking branch
+        for elem in self {
+            unsafe {
+                new.push_unchecked(elem.clone());
+            }
+        }
         new
     }
 
@@ -263,13 +274,24 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
     pub fn truncate(&mut self, len: usize) {
-        // drop any extra elements
-        while len < self.len {
-            // decrement len before the drop_in_place(), so a panic on Drop
-            // doesn't re-drop the just-failed value.
-            self.len -= 1;
-            let len = self.len;
-            unsafe { ptr::drop_in_place(self.as_mut_slice().get_unchecked_mut(len)) };
+        // This is safe because:
+        //
+        // * the slice passed to `drop_in_place` is valid; the `len > self.len`
+        //   case avoids creating an invalid slice, and
+        // * the `len` of the vector is shrunk before calling `drop_in_place`,
+        //   such that no value will be dropped twice in case `drop_in_place`
+        //   were to panic once (if it panics twice, the program aborts).
+        unsafe {
+            // Note: It's intentional that this is `>` and not `>=`.
+            //       Changing it to `>=` has negative performance
+            //       implications in some cases. See rust-lang/rust#78884 for more.
+            if len > self.len {
+                return;
+            }
+            let remaining_len = self.len - len;
+            let s = ptr::slice_from_raw_parts_mut(self.as_mut_ptr().add(len), remaining_len);
+            self.len = len;
+            ptr::drop_in_place(s);
         }
     }
 
@@ -471,11 +493,11 @@ impl<T, const N: usize> Vec<T, N> {
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         let length = self.len();
         debug_assert!(index < length);
-        ptr::swap(
-            self.as_mut_slice().get_unchecked_mut(index),
-            self.as_mut_slice().get_unchecked_mut(length - 1),
-        );
-        self.pop_unchecked()
+        let value = ptr::read(self.as_ptr().add(index));
+        let base_ptr = self.as_mut_ptr();
+        ptr::copy(base_ptr.add(length - 1), base_ptr.add(index), 1);
+        self.len -= 1;
+        value
     }
 
     /// Returns true if the vec is full
@@ -890,29 +912,6 @@ mod tests {
         assert!(v.is_full());
     }
 
-    macro_rules! droppable {
-        () => {
-            struct Droppable;
-            impl Droppable {
-                fn new() -> Self {
-                    unsafe {
-                        COUNT += 1;
-                    }
-                    Droppable
-                }
-            }
-            impl Drop for Droppable {
-                fn drop(&mut self) {
-                    unsafe {
-                        COUNT -= 1;
-                    }
-                }
-            }
-
-            static mut COUNT: i32 = 0;
-        };
-    }
-
     #[test]
     fn drop() {
         droppable!();
@@ -924,7 +923,7 @@ mod tests {
             v.pop().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: Vec<Droppable, 2> = Vec::new();
@@ -932,7 +931,7 @@ mod tests {
             v.push(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
@@ -1067,7 +1066,7 @@ mod tests {
             let _ = items.next();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut vec: Vec<Droppable, 2> = Vec::new();
@@ -1077,7 +1076,7 @@ mod tests {
             // Move none
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut vec: Vec<Droppable, 2> = Vec::new();
@@ -1087,7 +1086,7 @@ mod tests {
             let _ = items.next(); // Move partly
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
@@ -1232,5 +1231,30 @@ mod tests {
         assert!(!v.ends_with(b"abc"));
         assert!(!v.ends_with(b"ba"));
         assert!(!v.ends_with(b"a"));
+    }
+
+    #[test]
+    fn zero_capacity() {
+        let mut v: Vec<u8, 0> = Vec::new();
+        // Validate capacity
+        assert_eq!(v.capacity(), 0);
+
+        // Make sure there is no capacity
+        assert!(v.push(1).is_err());
+
+        // Validate length
+        assert_eq!(v.len(), 0);
+
+        // Validate pop
+        assert_eq!(v.pop(), None);
+
+        // Validate slice
+        assert_eq!(v.as_slice(), &[]);
+
+        // Validate empty
+        assert!(v.is_empty());
+
+        // Validate full
+        assert!(v.is_full());
     }
 }

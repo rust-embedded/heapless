@@ -53,6 +53,7 @@ jobs:
           - nightly
         features:
           - ""
+          - "cas"
           - "serde"
     steps:
       - name: Checkout
@@ -92,7 +93,7 @@ jobs:
         with:
           use-cross: false
           command: check
-          args: --target=${{ matrix.target }} --features=${{ matrix.features }}
+          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
 
   # Run cpass tests
   testcpass:
@@ -289,50 +290,6 @@ jobs:
 
       - name: Run miri
         run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
-
-  # Only runs when pushing to master branch
-  deploy:
-    name: deploy
-    runs-on: ubuntu-20.04
-    needs:
-      - style
-      - check
-      - testcpass
-      - testtsan
-      - testcfail
-    # Only run this when pushing to master branch
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v2
-        with:
-        # Semantic version range syntax or exact version of a Python version
-          python-version: '3.x'
-          # Optional - x64 or x86 architecture, defaults to x64
-          architecture: 'x64'
-
-      # You can test your matrix by printing the current Python version
-      - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
-
-      - name: mdBook Action
-        uses: peaceiris/actions-mdbook@v1.1.13
-        with:
-          mdbook-version: 'latest'
-
-      - name: Remove cargo-config
-        run: rm -f .cargo/config
-
-      - name: Build docs
-        run: cargo doc
-
-      - name: Deploy to GH-pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
 
   # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
   #

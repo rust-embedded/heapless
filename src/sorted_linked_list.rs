@@ -25,7 +25,7 @@
 //!
 //! [`BinaryHeap`]: `crate::binary_heap::BinaryHeap`
 
-use crate::sealed::sorted_linked_list::Kind as LLKind;
+use core::cmp::Ordering;
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
@@ -50,6 +50,32 @@ pub struct Min;
 /// Marker for Max sorted [`SortedLinkedList`].
 pub struct Max;
 
+/// The linked list kind: min-list or max-list
+pub trait Kind: private::Sealed {
+    #[doc(hidden)]
+    fn ordering() -> Ordering;
+}
+
+impl Kind for Min {
+    fn ordering() -> Ordering {
+        Ordering::Less
+    }
+}
+
+impl Kind for Max {
+    fn ordering() -> Ordering {
+        Ordering::Greater
+    }
+}
+
+/// Sealed traits
+mod private {
+    pub trait Sealed {}
+}
+
+impl private::Sealed for Max {}
+impl private::Sealed for Min {}
+
 /// A node in the [`SortedLinkedList`].
 pub struct Node<T, Idx> {
     val: MaybeUninit<T>,
@@ -57,19 +83,19 @@ pub struct Node<T, Idx> {
 }
 
 /// The linked list.
-pub struct SortedLinkedList<T, Idx, Kind, const N: usize>
+pub struct SortedLinkedList<T, Idx, K, const N: usize>
 where
     Idx: SortedLinkedListIndex,
 {
     list: [Node<T, Idx>; N],
     head: Idx,
     free: Idx,
-    _kind: PhantomData<Kind>,
+    _kind: PhantomData<K>,
 }
 
 // Internal macro for generating indexes for the linkedlist and const new for the linked list
 macro_rules! impl_index_and_const_new {
-    ($name:ident, $ty:ty, $new_name:ident, $max_val:literal) => {
+    ($name:ident, $ty:ty, $new_name:ident, $max_val:expr) => {
         /// Index for the [`SortedLinkedList`] with specific backing storage.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $name($ty);
@@ -115,7 +141,7 @@ macro_rules! impl_index_and_const_new {
             }
         }
 
-        impl<T, Kind, const N: usize> SortedLinkedList<T, $name, Kind, N> {
+        impl<T, K, const N: usize> SortedLinkedList<T, $name, K, N> {
             const UNINIT: Node<T, $name> = Node {
                 val: MaybeUninit::uninit(),
                 next: $name::none(),
@@ -152,11 +178,11 @@ macro_rules! impl_index_and_const_new {
     };
 }
 
-impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, 254); // val is 2^8 - 2 (one less than max)
-impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, 65_534); // val is 2^16 - 2
-impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, 4_294_967_294); // val is 2^32 - 2
+impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
+impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
+impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
-impl<T, Idx, Kind, const N: usize> SortedLinkedList<T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
     Idx: SortedLinkedListIndex,
 {
@@ -205,11 +231,11 @@ where
     }
 }
 
-impl<T, Idx, Kind, const N: usize> SortedLinkedList<T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     /// Pushes a value onto the list without checking if the list is full.
     ///
@@ -230,7 +256,7 @@ where
             if self
                 .read_data_in_node_at(head)
                 .cmp(self.read_data_in_node_at(new))
-                != Kind::ordering()
+                != K::ordering()
             {
                 self.node_at_mut(new).next = self.head;
                 self.head = Idx::new_unchecked(new);
@@ -242,7 +268,7 @@ where
                     if self
                         .read_data_in_node_at(next)
                         .cmp(self.read_data_in_node_at(new))
-                        != Kind::ordering()
+                        != K::ordering()
                     {
                         break;
                     }
@@ -307,7 +333,7 @@ where
     /// assert_eq!(iter.next(), Some(&1));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn iter(&self) -> Iter<'_, T, Idx, Kind, N> {
+    pub fn iter(&self) -> Iter<'_, T, Idx, K, N> {
         Iter {
             list: self,
             index: self.head,
@@ -336,7 +362,7 @@ where
     /// assert_eq!(ll.pop(), Ok(1));
     /// assert_eq!(ll.pop(), Err(()));
     /// ```
-    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMut<'_, T, Idx, Kind, N>>
+    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMut<'_, T, Idx, K, N>>
     where
         F: FnMut(&T) -> bool,
     {
@@ -486,21 +512,21 @@ where
 }
 
 /// Iterator for the linked list.
-pub struct Iter<'a, T, Idx, Kind, const N: usize>
+pub struct Iter<'a, T, Idx, K, const N: usize>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
-    list: &'a SortedLinkedList<T, Idx, Kind, N>,
+    list: &'a SortedLinkedList<T, Idx, K, N>,
     index: Idx,
 }
 
-impl<'a, T, Idx, Kind, const N: usize> Iterator for Iter<'a, T, Idx, Kind, N>
+impl<'a, T, Idx, K, const N: usize> Iterator for Iter<'a, T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     type Item = &'a T;
 
@@ -515,24 +541,24 @@ where
 }
 
 /// Comes from [`SortedLinkedList::find_mut`].
-pub struct FindMut<'a, T, Idx, Kind, const N: usize>
+pub struct FindMut<'a, T, Idx, K, const N: usize>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
-    list: &'a mut SortedLinkedList<T, Idx, Kind, N>,
+    list: &'a mut SortedLinkedList<T, Idx, K, N>,
     is_head: bool,
     prev_index: Idx,
     index: Idx,
     maybe_changed: bool,
 }
 
-impl<'a, T, Idx, Kind, const N: usize> FindMut<'a, T, Idx, Kind, N>
+impl<'a, T, Idx, K, const N: usize> FindMut<'a, T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     fn pop_internal(&mut self) -> T {
         if self.is_head {
@@ -616,11 +642,11 @@ where
     }
 }
 
-impl<T, Idx, Kind, const N: usize> Drop for FindMut<'_, T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> Drop for FindMut<'_, T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     fn drop(&mut self) {
         // Only resort the list if the element has changed
@@ -631,11 +657,11 @@ where
     }
 }
 
-impl<T, Idx, Kind, const N: usize> Deref for FindMut<'_, T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> Deref for FindMut<'_, T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     type Target = T;
 
@@ -645,11 +671,11 @@ where
     }
 }
 
-impl<T, Idx, Kind, const N: usize> DerefMut for FindMut<'_, T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> DerefMut for FindMut<'_, T, Idx, K, N>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.maybe_changed = true;
@@ -659,11 +685,11 @@ where
 }
 
 // /// Useful for debug during development.
-// impl<T, Idx, Kind, const N: usize> fmt::Debug for FindMut<'_, T, Idx, Kind, N>
+// impl<T, Idx, K, const N: usize> fmt::Debug for FindMut<'_, T, Idx, K, N>
 // where
 //     T: Ord + core::fmt::Debug,
 //     Idx: SortedLinkedListIndex,
-//     Kind: LLKind,
+//     K: Kind,
 // {
 //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //         f.debug_struct("FindMut")
@@ -683,18 +709,18 @@ where
 //     }
 // }
 
-impl<T, Idx, Kind, const N: usize> fmt::Debug for SortedLinkedList<T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> fmt::Debug for SortedLinkedList<T, Idx, K, N>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
-    Kind: LLKind,
+    K: Kind,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<T, Idx, Kind, const N: usize> Drop for SortedLinkedList<T, Idx, Kind, N>
+impl<T, Idx, K, const N: usize> Drop for SortedLinkedList<T, Idx, K, N>
 where
     Idx: SortedLinkedListIndex,
 {

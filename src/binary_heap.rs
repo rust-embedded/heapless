@@ -9,6 +9,7 @@
 // n)` in-place heapsort.
 
 use core::{
+    cmp::Ordering,
     fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop},
@@ -16,7 +17,6 @@ use core::{
     ptr, slice,
 };
 
-use crate::sealed::binary_heap::Kind;
 use crate::vec::Vec;
 
 /// Min-heap
@@ -24,6 +24,32 @@ pub enum Min {}
 
 /// Max-heap
 pub enum Max {}
+
+/// The binary heap kind: min-heap or max-heap
+pub trait Kind: private::Sealed {
+    #[doc(hidden)]
+    fn ordering() -> Ordering;
+}
+
+impl Kind for Min {
+    fn ordering() -> Ordering {
+        Ordering::Less
+    }
+}
+
+impl Kind for Max {
+    fn ordering() -> Ordering {
+        Ordering::Greater
+    }
+}
+
+/// Sealed traits
+mod private {
+    pub trait Sealed {}
+}
+
+impl private::Sealed for Max {}
+impl private::Sealed for Min {}
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -410,8 +436,9 @@ impl<'a, T> Hole<'a, T> {
     unsafe fn move_to(&mut self, index: usize) {
         debug_assert!(index != self.pos);
         debug_assert!(index < self.data.len());
-        let index_ptr: *const _ = self.data.get_unchecked(index);
-        let hole_ptr = self.data.get_unchecked_mut(self.pos);
+        let ptr = self.data.as_mut_ptr();
+        let index_ptr: *const _ = ptr.add(index);
+        let hole_ptr = ptr.add(self.pos);
         ptr::copy_nonoverlapping(index_ptr, hole_ptr, 1);
         self.pos = index;
     }
@@ -518,12 +545,6 @@ where
     }
 }
 
-impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N> {
-    fn drop(&mut self) {
-        unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
-    }
-}
-
 impl<T, K, const N: usize> fmt::Debug for BinaryHeap<T, K, N>
 where
     K: Kind,
@@ -556,6 +577,45 @@ mod tests {
     #[test]
     fn static_new() {
         static mut _B: BinaryHeap<i32, Min, 16> = BinaryHeap::new();
+    }
+
+    #[test]
+    fn drop() {
+        droppable!();
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
