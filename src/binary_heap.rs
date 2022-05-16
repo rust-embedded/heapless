@@ -336,6 +336,11 @@ where
         self.sift_up(0, old_len);
     }
 
+    /// Returns the underlying ```Vec<T,N>```. Order is arbitrary and time is O(1).
+    pub fn into_vec(self) -> Vec<T, N> {
+        self.data
+    }
+
     /* Private API */
     fn sift_down_to_bottom(&mut self, mut pos: usize) {
         let end = self.len();
