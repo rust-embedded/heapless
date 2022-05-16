@@ -616,6 +616,26 @@ mod tests {
     }
 
     #[test]
+    fn into_vec() {
+        droppable!();
+
+        let mut h: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+        h.push(Droppable::new()).ok().unwrap();
+        h.push(Droppable::new()).ok().unwrap();
+        h.pop().unwrap();
+
+        assert_eq!(Droppable::count(), 1);
+
+        let v = h.into_vec();
+
+        assert_eq!(Droppable::count(), 1);
+
+        core::mem::drop(v);
+
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
     fn min() {
         let mut heap = BinaryHeap::<_, Min, 16>::new();
         heap.push(1).unwrap();
