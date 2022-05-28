@@ -336,6 +336,11 @@ where
         self.sift_up(0, old_len);
     }
 
+    /// Returns the underlying ```Vec<T,N>```. Order is arbitrary and time is O(1).
+    pub fn into_vec(self) -> Vec<T, N> {
+        self.data
+    }
+
     /* Private API */
     fn sift_down_to_bottom(&mut self, mut pos: usize) {
         let end = self.len();
@@ -428,8 +433,9 @@ impl<'a, T> Hole<'a, T> {
     unsafe fn move_to(&mut self, index: usize) {
         debug_assert!(index != self.pos);
         debug_assert!(index < self.data.len());
-        let index_ptr: *const _ = self.data.get_unchecked(index);
-        let hole_ptr = self.data.get_unchecked_mut(self.pos);
+        let ptr = self.data.as_mut_ptr();
+        let index_ptr: *const _ = ptr.add(index);
+        let hole_ptr = ptr.add(self.pos);
         ptr::copy_nonoverlapping(index_ptr, hole_ptr, 1);
         self.pos = index;
     }
@@ -536,12 +542,6 @@ where
     }
 }
 
-impl<T, K, const N: usize> Drop for BinaryHeap<T, K, N> {
-    fn drop(&mut self) {
-        unsafe { ptr::drop_in_place(self.data.as_mut_slice()) }
-    }
-}
-
 impl<T, K, const N: usize> fmt::Debug for BinaryHeap<T, K, N>
 where
     K: Kind,
@@ -574,6 +574,65 @@ mod tests {
     #[test]
     fn static_new() {
         static mut _B: BinaryHeap<i32, Min, 16> = BinaryHeap::new();
+    }
+
+    #[test]
+    fn drop() {
+        droppable!();
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            v.pop().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: BinaryHeap<Droppable, Min, 2> = BinaryHeap::new();
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn into_vec() {
+        droppable!();
+
+        let mut h: BinaryHeap<Droppable, Max, 2> = BinaryHeap::new();
+        h.push(Droppable::new()).ok().unwrap();
+        h.push(Droppable::new()).ok().unwrap();
+        h.pop().unwrap();
+
+        assert_eq!(Droppable::count(), 1);
+
+        let v = h.into_vec();
+
+        assert_eq!(Droppable::count(), 1);
+
+        core::mem::drop(v);
+
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]

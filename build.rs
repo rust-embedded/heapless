@@ -2,6 +2,8 @@
 
 use std::{env, error::Error};
 
+use rustc_version::Channel;
+
 fn main() -> Result<(), Box<dyn Error>> {
     let target = env::var("TARGET")?;
 
@@ -69,6 +71,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("cargo:rustc-cfg=cas_atomic_polyfill");
         }
         _ => {}
+    }
+
+    if !matches!(
+        rustc_version::version_meta().unwrap().channel,
+        Channel::Stable | Channel::Beta
+    ) {
+        println!("cargo:rustc-cfg=unstable_channel");
     }
 
     Ok(())

@@ -12,7 +12,7 @@ keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.7.10"
+version = "0.7.13"
 
 [features]
 default = ["cas"]
@@ -27,17 +27,14 @@ mpmc_large = []
 # This flag has no version guarantee, the `defmt` dependency can be updated in a patch release
 defmt-impl = ["defmt"]
 
-[target.'cfg(not(target_os = "none"))'.dev-dependencies]
-scoped_threadpool = "0.1.8"
-
 [target.thumbv6m-none-eabi.dependencies]
 atomic-polyfill = { version = "0.1.2", optional = true }
 
 [target.riscv32i-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { version = "0.1.4" }
 
 [target.riscv32imc-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "0.1.4", optional = true }
+atomic-polyfill = { version = "0.1.4" }
 
 [target.avr-atmega328p.dependencies]
 atomic-polyfill = { version = "0.1.8", optional = true }
@@ -71,6 +68,9 @@ version = "0.1"
 [dependencies.defmt]
 version = ">=0.2.0,<0.4"
 optional = true
+
+[build-dependencies]
+rustc_version = "0.4.0"
 
 [package.metadata.docs.rs]
 all-features = true

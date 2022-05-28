@@ -271,12 +271,13 @@ impl<T, const N: usize> Deque<T, N> {
         }
     }
 
-    /// Removes an item from the front of the deque and returns it
+    /// Removes an item from the front of the deque and returns it, without checking that the deque
+    /// is not empty
     ///
     /// # Safety
     ///
-    /// This assumes the deque is not empty.
-    pub(crate) unsafe fn pop_front_unchecked(&mut self) -> T {
+    /// It's undefined behavior to call this on an empty deque
+    pub unsafe fn pop_front_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
         let index = self.front;
@@ -285,12 +286,13 @@ impl<T, const N: usize> Deque<T, N> {
         (self.buffer.get_unchecked_mut(index).as_ptr() as *const T).read()
     }
 
-    /// Removes an item from the back of the deque and returns it
+    /// Removes an item from the back of the deque and returns it, without checking that the deque
+    /// is not empty
     ///
     /// # Safety
     ///
-    /// This assumes the deque is not empty.
-    pub(crate) unsafe fn pop_back_unchecked(&mut self) -> T {
+    /// It's undefined behavior to call this on an empty deque
+    pub unsafe fn pop_back_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
         self.full = false;
@@ -565,29 +567,6 @@ mod tests {
         let mut _v: Deque<i32, 4> = Deque::new();
     }
 
-    macro_rules! droppable {
-        () => {
-            struct Droppable;
-            impl Droppable {
-                fn new() -> Self {
-                    unsafe {
-                        COUNT += 1;
-                    }
-                    Droppable
-                }
-            }
-            impl Drop for Droppable {
-                fn drop(&mut self) {
-                    unsafe {
-                        COUNT -= 1;
-                    }
-                }
-            }
-
-            static mut COUNT: i32 = 0;
-        };
-    }
-
     #[test]
     fn drop() {
         droppable!();
@@ -599,7 +578,7 @@ mod tests {
             v.pop_front().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut v: Deque<Droppable, 2> = Deque::new();
@@ -607,14 +586,14 @@ mod tests {
             v.push_back(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
         {
             let mut v: Deque<Droppable, 2> = Deque::new();
             v.push_front(Droppable::new()).ok().unwrap();
             v.push_front(Droppable::new()).ok().unwrap();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
@@ -754,7 +733,7 @@ mod tests {
             let _ = items.next();
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut deque: Deque<Droppable, 2> = Deque::new();
@@ -764,7 +743,7 @@ mod tests {
             // Move none
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
 
         {
             let mut deque: Deque<Droppable, 2> = Deque::new();
@@ -774,7 +753,7 @@ mod tests {
             let _ = items.next(); // Move partly
         }
 
-        assert_eq!(unsafe { COUNT }, 0);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
