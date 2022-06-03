@@ -45,8 +45,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     match &target[..] {
         "avr-unknown-gnu-atmega328"
         | "msp430-none-elf"
-        | "avr-atmega328p"
-        | "avr-atmega2560"
         // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
         // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
         => {}
