@@ -92,6 +92,16 @@ impl<T, const N: usize> Vec<T, N> {
         Ok(v)
     }
 
+    /// Constructs a new vector with a fixed capacity of `N` from it's raw parts
+    #[inline]
+    pub unsafe fn from_array_unchecked(buffer: [MaybeUninit<T>; N], len: usize) -> Self
+    {
+        Vec {
+            buffer,
+            len
+        }
+    }
+
     /// Clones a vec into a new vec
     pub(crate) fn clone(&self) -> Self
     where
