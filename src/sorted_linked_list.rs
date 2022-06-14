@@ -180,9 +180,7 @@ macro_rules! impl_index_and_const_new {
 
 impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
-impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, {
-    usize::MAX as usize - 1
-});
+impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
 impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
