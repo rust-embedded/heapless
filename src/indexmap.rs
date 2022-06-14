@@ -952,6 +952,10 @@ where
     S: BuildHasher + Default,
 {
     fn default() -> Self {
+        // Const assert
+        crate::sealed::greater_than_1::<N>();
+        crate::sealed::power_of_two::<N>();
+
         IndexMap {
             build_hasher: <_>::default(),
             core: CoreMap::new(),
