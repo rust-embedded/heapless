@@ -36,10 +36,7 @@ atomic-polyfill = { version = "0.1.4" }
 [target.riscv32imc-unknown-none-elf.dependencies]
 atomic-polyfill = { version = "0.1.4" }
 
-[target.avr-atmega328p.dependencies]
-atomic-polyfill = { version = "0.1.8", optional = true }
-
-[target.avr-atmega2560.dependencies]
+[target.'cfg(target_arch = "avr")'.dependencies]
 atomic-polyfill = { version = "0.1.8", optional = true }
 
 
