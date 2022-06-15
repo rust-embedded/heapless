@@ -23,10 +23,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=armv7a");
     }
 
+    let is_avr = env::var("CARGO_CFG_TARGET_ARCH") == Ok("avr".to_string());
+
     // built-in targets with no atomic / CAS support as of nightly-2022-01-13
     // AND not supported by the atomic-polyfill crate
     // see the `no-atomics.sh` / `no-cas.sh` script sitting next to this file
-    match &target[..] {
+    if is_avr {
+        // lacks cas
+    } else {
+        match &target[..] {
         "avr-unknown-gnu-atmega328"
         | "bpfeb-unknown-none"
         | "bpfel-unknown-none"
@@ -40,11 +45,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         _ => {
             println!("cargo:rustc-cfg=has_cas");
         }
+    }
     };
 
-    match &target[..] {
-        "avr-unknown-gnu-atmega328"
-        | "msp430-none-elf"
+    if is_avr {
+        // lacks atomics
+    } else {
+        match &target[..] {
+        "msp430-none-elf"
         // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
         // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
         => {}
@@ -52,20 +60,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         _ => {
             println!("cargo:rustc-cfg=has_atomics");
         }
+    }
     };
 
     // Let the code know if it should use atomic-polyfill or not, and what aspects
     // of polyfill it requires
-    match &target[..] {
-        "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
-            println!("cargo:rustc-cfg=full_atomic_polyfill");
-            println!("cargo:rustc-cfg=cas_atomic_polyfill");
-        }
+    if is_avr {
+        println!("cargo:rustc-cfg=full_atomic_polyfill");
+        println!("cargo:rustc-cfg=cas_atomic_polyfill");
+    } else {
+        match &target[..] {
+            "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
+                println!("cargo:rustc-cfg=full_atomic_polyfill");
+                println!("cargo:rustc-cfg=cas_atomic_polyfill");
+            }
 
-        "thumbv6m-none-eabi" => {
-            println!("cargo:rustc-cfg=cas_atomic_polyfill");
+            "thumbv6m-none-eabi" => {
+                println!("cargo:rustc-cfg=cas_atomic_polyfill");
+            }
+            _ => {}
         }
-        _ => {}
     }
 
     if !matches!(
