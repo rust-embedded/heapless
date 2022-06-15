@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- `IndexSet` and `IndexMap`'s `default` method now compile time checks that their capacity is a power of two.
+
 ## [v0.7.13] - 2022-05-16
 
 ### Added
