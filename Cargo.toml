@@ -12,7 +12,7 @@ keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
-version = "0.7.13"
+version = "0.7.14"
 
 [features]
 default = ["cas"]
@@ -38,7 +38,6 @@ atomic-polyfill = { version = "0.1.4" }
 
 [target.'cfg(target_arch = "avr")'.dependencies]
 atomic-polyfill = { version = "0.1.8", optional = true }
-
 
 [dependencies]
 hash32 = "0.2.1"

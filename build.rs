@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=armv7a");
     }
 
-    let is_avr = env::var("CARGO_CFG_TARGET_ARCH") == Ok("avr".to_string());
+    let is_avr = env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("avr");
 
     // built-in targets with no atomic / CAS support as of nightly-2022-01-13
     // AND not supported by the atomic-polyfill crate
@@ -32,20 +32,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         // lacks cas
     } else {
         match &target[..] {
-        "avr-unknown-gnu-atmega328"
-        | "bpfeb-unknown-none"
-        | "bpfel-unknown-none"
-        | "msp430-none-elf"
-        // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
-        // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
-        | "thumbv4t-none-eabi"
-        // | "thumbv6m-none-eabi"           // supported by atomic-polyfill
-         => {}
+            "avr-unknown-gnu-atmega328"
+                | "bpfeb-unknown-none"
+                | "bpfel-unknown-none"
+                | "msp430-none-elf"
+                // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
+                // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
+                | "thumbv4t-none-eabi"
+                // | "thumbv6m-none-eabi"           // supported by atomic-polyfill
+                => {}
 
-        _ => {
-            println!("cargo:rustc-cfg=has_cas");
+            _ => {
+                println!("cargo:rustc-cfg=has_cas");
+            }
         }
-    }
     };
 
     if is_avr {

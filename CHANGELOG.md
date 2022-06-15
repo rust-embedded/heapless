@@ -8,9 +8,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Added support for AVR architecture.
 
 ### Changed
+
+### Fixed
+
+## [v0.7.14] - 2022-06-15
+
+### Added
+
+- Added support for AVR architecture.
 
 ### Fixed
 
@@ -489,7 +496,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.13...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.14...HEAD
+[v0.7.14]: https://github.com/japaric/heapless/compare/v0.7.13...v0.7.14
 [v0.7.13]: https://github.com/japaric/heapless/compare/v0.7.12...v0.7.13
 [v0.7.12]: https://github.com/japaric/heapless/compare/v0.7.11...v0.7.12
 [v0.7.11]: https://github.com/japaric/heapless/compare/v0.7.10...v0.7.11
