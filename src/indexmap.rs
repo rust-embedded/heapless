@@ -416,7 +416,7 @@ where
                     unsafe {
                         // SAFETY: Already checked existence at instantiation and the only mutable reference
                         // to the map is internally held.
-                        Ok(&mut self.core.entries.get_unchecked_mut(inserted.index).value)
+                        Ok(&mut (*self.core.entries.as_mut_ptr().add(inserted.index)).value)
                     }
                 }
                 Insert::Full((_, v)) => Err(v),
