@@ -107,6 +107,16 @@ impl<T, const N: usize> Vec<T, N> {
         new
     }
 
+    /// Returns a raw pointer to the vector’s buffer.
+    pub fn as_ptr(&self) -> *const T {
+        self.buffer.as_ptr() as *const T
+    }
+
+    /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.buffer.as_mut_ptr() as *mut T
+    }
+
     /// Extracts a slice containing the entire vector.
     ///
     /// Equivalent to `&s[..]`.
