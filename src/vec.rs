@@ -567,6 +567,58 @@ impl<T, const N: usize> Vec<T, N> {
         let (v, n) = (self.len(), needle.len());
         v >= n && needle == &self[v - n..]
     }
+
+    /// Inserts an element at position `index` within the vector, shifting all
+    /// elements after it to the right.
+    ///
+    /// Returns back the `element` if the vector is full.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index > len`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// vec.insert(1, 4);
+    /// assert_eq!(vec, [1, 4, 2, 3]);
+    /// vec.insert(4, 5);
+    /// assert_eq!(vec, [1, 4, 2, 3, 5]);
+    /// ```
+    pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
+        let len = self.len();
+        if index > len {
+            panic!(
+                "insertion index (is {}) should be <= len (is {})",
+                index, len
+            );
+        }
+
+        // check there's space for the new element
+        if self.is_full() {
+            return Err(element);
+        }
+
+        unsafe {
+            // infallible
+            // The spot to put the new value
+            {
+                let p = self.as_mut_ptr().add(index);
+                // Shift everything over to make space. (Duplicating the
+                // `index`th element into two consecutive places.)
+                ptr::copy(p, p.offset(1), len - index);
+                // Write it in, overwriting the first copy of the `index`th
+                // element.
+                ptr::write(p, element);
+            }
+            self.set_len(len + 1);
+        }
+
+        Ok(())
+    }
 }
 
 // Trait implementations
