@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Added `Vec::insert(index, element)`
+- Added `Vec::remove(index)`
+- Added `Vec::retain(f)`
+- Added `Vec::retain_mut(f)`
+
 ### Changed
 
 ### Fixed
