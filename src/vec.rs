@@ -619,6 +619,54 @@ impl<T, const N: usize> Vec<T, N> {
 
         Ok(())
     }
+
+    /// Removes and returns the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*). If you don't need the order of elements
+    /// to be preserved, use [`swap_remove`] instead. If you'd like to remove
+    /// elements from the beginning of the `Vec`, consider using
+    /// [`VecDeque::pop_front`] instead.
+    ///
+    /// [`swap_remove`]: Vec::swap_remove
+    /// [`VecDeque::pop_front`]: crate::VecDeque::pop_front
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// assert_eq!(v.remove(1), 2);
+    /// assert_eq!(v, [1, 3]);
+    /// ```
+    pub fn remove(&mut self, index: usize) -> T {
+        let len = self.len();
+        if index >= len {
+            panic!("removal index (is {}) should be < len (is {})", index, len);
+        }
+        unsafe {
+            // infallible
+            let ret;
+            {
+                // the place we are taking from.
+                let ptr = self.as_mut_ptr().add(index);
+                // copy it out, unsafely having a copy of the value on
+                // the stack and in the vector at the same time.
+                ret = ptr::read(ptr);
+
+                // Shift everything down to fill in that spot.
+                ptr::copy(ptr.offset(1), ptr, len - index - 1);
+            }
+            self.set_len(len - 1);
+            ret
+        }
+    }
 }
 
 // Trait implementations
