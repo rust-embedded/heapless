@@ -567,6 +567,262 @@ impl<T, const N: usize> Vec<T, N> {
         let (v, n) = (self.len(), needle.len());
         v >= n && needle == &self[v - n..]
     }
+
+    /// Inserts an element at position `index` within the vector, shifting all
+    /// elements after it to the right.
+    ///
+    /// Returns back the `element` if the vector is full.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index > len`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// vec.insert(1, 4);
+    /// assert_eq!(vec, [1, 4, 2, 3]);
+    /// vec.insert(4, 5);
+    /// assert_eq!(vec, [1, 4, 2, 3, 5]);
+    /// ```
+    pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
+        let len = self.len();
+        if index > len {
+            panic!(
+                "insertion index (is {}) should be <= len (is {})",
+                index, len
+            );
+        }
+
+        // check there's space for the new element
+        if self.is_full() {
+            return Err(element);
+        }
+
+        unsafe {
+            // infallible
+            // The spot to put the new value
+            {
+                let p = self.as_mut_ptr().add(index);
+                // Shift everything over to make space. (Duplicating the
+                // `index`th element into two consecutive places.)
+                ptr::copy(p, p.offset(1), len - index);
+                // Write it in, overwriting the first copy of the `index`th
+                // element.
+                ptr::write(p, element);
+            }
+            self.set_len(len + 1);
+        }
+
+        Ok(())
+    }
+
+    /// Removes and returns the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*). If you don't need the order of elements
+    /// to be preserved, use [`swap_remove`] instead. If you'd like to remove
+    /// elements from the beginning of the `Vec`, consider using
+    /// [`VecDeque::pop_front`] instead.
+    ///
+    /// [`swap_remove`]: Vec::swap_remove
+    /// [`VecDeque::pop_front`]: crate::VecDeque::pop_front
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// assert_eq!(v.remove(1), 2);
+    /// assert_eq!(v, [1, 3]);
+    /// ```
+    pub fn remove(&mut self, index: usize) -> T {
+        let len = self.len();
+        if index >= len {
+            panic!("removal index (is {}) should be < len (is {})", index, len);
+        }
+        unsafe {
+            // infallible
+            let ret;
+            {
+                // the place we are taking from.
+                let ptr = self.as_mut_ptr().add(index);
+                // copy it out, unsafely having a copy of the value on
+                // the stack and in the vector at the same time.
+                ret = ptr::read(ptr);
+
+                // Shift everything down to fill in that spot.
+                ptr::copy(ptr.offset(1), ptr, len - index - 1);
+            }
+            self.set_len(len - 1);
+            ret
+        }
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
+    /// This method operates in place, visiting each element exactly once in the
+    /// original order, and preserves the order of the retained elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// vec.retain(|&x| x % 2 == 0);
+    /// assert_eq!(vec, [2, 4]);
+    /// ```
+    ///
+    /// Because the elements are visited exactly once in the original order,
+    /// external state may be used to decide which elements to keep.
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4, 5]).unwrap();
+    /// let keep = [false, true, true, false, true];
+    /// let mut iter = keep.iter();
+    /// vec.retain(|_| *iter.next().unwrap());
+    /// assert_eq!(vec, [2, 3, 5]);
+    /// ```
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.retain_mut(|elem| f(elem));
+    }
+
+    /// Retains only the elements specified by the predicate, passing a mutable reference to it.
+    ///
+    /// In other words, remove all elements `e` such that `f(&mut e)` returns `false`.
+    /// This method operates in place, visiting each element exactly once in the
+    /// original order, and preserves the order of the retained elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// vec.retain_mut(|x| if *x <= 3 {
+    ///     *x += 1;
+    ///     true
+    /// } else {
+    ///     false
+    /// });
+    /// assert_eq!(vec, [2, 3, 4]);
+    /// ```
+    pub fn retain_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        let original_len = self.len();
+        // Avoid double drop if the drop guard is not executed,
+        // since we may make some holes during the process.
+        unsafe { self.set_len(0) };
+
+        // Vec: [Kept, Kept, Hole, Hole, Hole, Hole, Unchecked, Unchecked]
+        //      |<-              processed len   ->| ^- next to check
+        //                  |<-  deleted cnt     ->|
+        //      |<-              original_len                          ->|
+        // Kept: Elements which predicate returns true on.
+        // Hole: Moved or dropped element slot.
+        // Unchecked: Unchecked valid elements.
+        //
+        // This drop guard will be invoked when predicate or `drop` of element panicked.
+        // It shifts unchecked elements to cover holes and `set_len` to the correct length.
+        // In cases when predicate and `drop` never panick, it will be optimized out.
+        struct BackshiftOnDrop<'a, T, const N: usize> {
+            v: &'a mut Vec<T, N>,
+            processed_len: usize,
+            deleted_cnt: usize,
+            original_len: usize,
+        }
+
+        impl<T, const N: usize> Drop for BackshiftOnDrop<'_, T, N> {
+            fn drop(&mut self) {
+                if self.deleted_cnt > 0 {
+                    // SAFETY: Trailing unchecked items must be valid since we never touch them.
+                    unsafe {
+                        ptr::copy(
+                            self.v.as_ptr().add(self.processed_len),
+                            self.v
+                                .as_mut_ptr()
+                                .add(self.processed_len - self.deleted_cnt),
+                            self.original_len - self.processed_len,
+                        );
+                    }
+                }
+                // SAFETY: After filling holes, all items are in contiguous memory.
+                unsafe {
+                    self.v.set_len(self.original_len - self.deleted_cnt);
+                }
+            }
+        }
+
+        let mut g = BackshiftOnDrop {
+            v: self,
+            processed_len: 0,
+            deleted_cnt: 0,
+            original_len,
+        };
+
+        fn process_loop<F, T, const N: usize, const DELETED: bool>(
+            original_len: usize,
+            f: &mut F,
+            g: &mut BackshiftOnDrop<'_, T, N>,
+        ) where
+            F: FnMut(&mut T) -> bool,
+        {
+            while g.processed_len != original_len {
+                let p = g.v.as_mut_ptr();
+                // SAFETY: Unchecked element must be valid.
+                let cur = unsafe { &mut *p.add(g.processed_len) };
+                if !f(cur) {
+                    // Advance early to avoid double drop if `drop_in_place` panicked.
+                    g.processed_len += 1;
+                    g.deleted_cnt += 1;
+                    // SAFETY: We never touch this element again after dropped.
+                    unsafe { ptr::drop_in_place(cur) };
+                    // We already advanced the counter.
+                    if DELETED {
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+                if DELETED {
+                    // SAFETY: `deleted_cnt` > 0, so the hole slot must not overlap with current element.
+                    // We use copy for move, and never touch this element again.
+                    unsafe {
+                        let hole_slot = p.add(g.processed_len - g.deleted_cnt);
+                        ptr::copy_nonoverlapping(cur, hole_slot, 1);
+                    }
+                }
+                g.processed_len += 1;
+            }
+        }
+
+        // Stage 1: Nothing was deleted.
+        process_loop::<F, T, N, false>(original_len, &mut f, &mut g);
+
+        // Stage 2: Some elements were deleted.
+        process_loop::<F, T, N, true>(original_len, &mut f, &mut g);
+
+        // All item are processed. This can be optimized to `set_len` by LLVM.
+        drop(g);
+    }
 }
 
 // Trait implementations
