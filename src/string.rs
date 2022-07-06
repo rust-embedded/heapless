@@ -10,7 +10,7 @@ pub struct String<const N: usize> {
 }
 
 impl<const N: usize> String<N> {
-    /// Constructs a new, empty `String` with a fixed capacity of `N`
+    /// Constructs a new, empty `String` with a fixed capacity of `N` bytes
     ///
     /// # Examples
     ///
