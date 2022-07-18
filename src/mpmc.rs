@@ -1,7 +1,8 @@
 //! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue
 //!
 //! NOTE: This module is not available on targets that do *not* support CAS operations and are not
-//! emulated by the [`atomic_polyfill`] crate (e.g., MSP430).
+//! emulated by the [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill) crate (e.g.,
+//! MSP430).
 //!
 //! # Example
 //!
@@ -75,9 +76,11 @@
 //! # Portability
 //!
 //! This module requires CAS atomic instructions which are not available on all architectures
-//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be emulated
-//! however with [`atomic_polyfill`], which is enabled with the `cas` feature and is enabled by default
-//! for `thumbv6m-none-eabi` and `riscv32` targets. MSP430 is currently not supported by [`atomic_polyfill`].
+//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
+//! emulated however with [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill), which is
+//! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
+//! targets. MSP430 is currently not supported by
+//! [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill).
 //!
 //! # References
 //!
