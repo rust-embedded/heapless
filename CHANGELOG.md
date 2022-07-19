@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fixed some broken links in the documentation.
+
 ## [v0.7.15] - 2022-07-05
 
 ### Added
