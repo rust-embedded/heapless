@@ -1,6 +1,7 @@
 //! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
 
 use core::{
+    char::DecodeUtf16Error,
     cmp::Ordering,
     fmt,
     fmt::{Arguments, Write},
@@ -10,7 +11,29 @@ use core::{
 
 use crate::Vec;
 
-/// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+/// A possible error value when converting a [`String`] from a UTF-16 byte slice.
+///
+/// This type is the error type for the [`from_utf16`] method on [`String`].
+///
+/// [`from_utf16`]: String::from_utf16
+#[derive(Debug)]
+pub enum FromUtf16Error {
+    /// The capacity of the `String` is too small for the given operation.
+    Capacity,
+    /// Error decoding UTF-16.
+    DecodeUtf16Error(DecodeUtf16Error),
+}
+
+impl fmt::Display for FromUtf16Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Capacity => "insufficient capacity".fmt(f),
+            Self::DecodeUtf16Error(e) => write!(f, "invalid UTF-16: {}", e),
+        }
+    }
+}
+
+/// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
 pub struct String<const N: usize> {
     vec: Vec<u8, N>,
 }
@@ -34,6 +57,43 @@ impl<const N: usize> String<N> {
     #[inline]
     pub const fn new() -> Self {
         Self { vec: Vec::new() }
+    }
+
+    /// Decodes a UTF-16–encoded slice `v` into a `String`, returning [`Err`]
+    /// if `v` contains any invalid data.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// // 𝄞music
+    /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0x0073, 0x0069, 0x0063];
+    /// let s: String<10> = String::from_utf16(v).unwrap();
+    /// assert_eq!(s, "𝄞music");
+    ///
+    /// // 𝄞mu<invalid>ic
+    /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0xD800, 0x0069, 0x0063];
+    /// assert!(String::<10>::from_utf16(v).is_err());
+    /// ```
+    #[inline]
+    pub fn from_utf16(v: &[u16]) -> Result<Self, FromUtf16Error> {
+        let mut s = Self::new();
+
+        for c in char::decode_utf16(v.iter().cloned()) {
+            match c {
+                Ok(c) => {
+                    s.push(c).map_err(|_| FromUtf16Error::Capacity)?;
+                }
+                Err(err) => {
+                    return Err(FromUtf16Error::DecodeUtf16Error(err));
+                }
+            }
+        }
+
+        Ok(s)
     }
 
     /// Convert UTF-8 bytes into a `String`.
