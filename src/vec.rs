@@ -1300,10 +1300,10 @@ mod tests {
 
         assert_eq!(xs, array);
         assert_eq!(array, xs);
-        
+
         assert_eq!(xs, array.as_slice());
         assert_eq!(array.as_slice(), xs);
-        
+
         assert_eq!(xs, &array);
         assert_eq!(&array, xs);
 
