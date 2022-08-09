@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- add more `PartialEq` implementations to `Vec` where `Vec` is the RHS
+
 ### Changed
 
 ### Fixed
