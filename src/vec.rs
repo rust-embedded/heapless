@@ -1024,6 +1024,16 @@ where
     }
 }
 
+// [B] == Vec<A, N>
+impl<A, B, const N: usize> PartialEq<Vec<A, N>> for [B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<A, N>) -> bool {
+        <[A]>::eq(other, &self[..])
+    }
+}
+
 // Vec<A, N> == &[B]
 impl<A, B, const N: usize> PartialEq<&[B]> for Vec<A, N>
 where
@@ -1034,6 +1044,16 @@ where
     }
 }
 
+// &[B] == Vec<A, N>
+impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &[B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<A, N>) -> bool {
+        <[A]>::eq(other, &self[..])
+    }
+}
+
 // Vec<A, N> == &mut [B]
 impl<A, B, const N: usize> PartialEq<&mut [B]> for Vec<A, N>
 where
@@ -1041,6 +1061,16 @@ where
 {
     fn eq(&self, other: &&mut [B]) -> bool {
         <[A]>::eq(self, &other[..])
+    }
+}
+
+// &mut [B] == Vec<A, N>
+impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &mut [B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<A, N>) -> bool {
+        <[A]>::eq(other, &self[..])
     }
 }
 
@@ -1055,6 +1085,17 @@ where
     }
 }
 
+// [B; M] == Vec<A, N>
+// Equality does not require equal capacity
+impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for [B; M]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<A, N>) -> bool {
+        <[A]>::eq(other, &self[..])
+    }
+}
+
 // Vec<A, N> == &[B; M]
 // Equality does not require equal capacity
 impl<A, B, const N: usize, const M: usize> PartialEq<&[B; M]> for Vec<A, N>
@@ -1063,6 +1104,17 @@ where
 {
     fn eq(&self, other: &&[B; M]) -> bool {
         <[A]>::eq(self, &other[..])
+    }
+}
+
+// &[B; M] == Vec<A, N>
+// Equality does not require equal capacity
+impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for &[B; M]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<A, N>) -> bool {
+        <[A]>::eq(other, &self[..])
     }
 }
 
@@ -1237,6 +1289,28 @@ mod tests {
         ys.push(2).unwrap();
 
         assert!(xs < ys);
+    }
+
+    #[test]
+    fn cmp_with_arrays_and_slices() {
+        let mut xs: Vec<i32, 12> = Vec::new();
+        xs.push(1).unwrap();
+
+        let array = [1];
+
+        assert_eq!(xs, array);
+        assert_eq!(array, xs);
+
+        assert_eq!(xs, array.as_slice());
+        assert_eq!(array.as_slice(), xs);
+
+        assert_eq!(xs, &array);
+        assert_eq!(&array, xs);
+
+        let longer_array = [1; 20];
+
+        assert_ne!(xs, longer_array);
+        assert_ne!(longer_array, xs);
     }
 
     #[test]
