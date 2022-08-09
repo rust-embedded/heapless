@@ -9,12 +9,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.7.16] - 2022-08-09
+
+### Added
+
 - add more `PartialEq` implementations to `Vec` where `Vec` is the RHS
 
 ### Changed
 
 ### Fixed
 
+- clarify in the docs that the capacity `heapless::String` is in bytes, not characters
 - Fixed some broken links in the documentation.
 
 ## [v0.7.15] - 2022-07-05
@@ -509,7 +518,8 @@ architecture.
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.15...HEAD
+[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.16...HEAD
+[v0.7.16]: https://github.com/japaric/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/japaric/heapless/compare/v0.7.14...v0.7.15
 [v0.7.14]: https://github.com/japaric/heapless/compare/v0.7.13...v0.7.14
 [v0.7.13]: https://github.com/japaric/heapless/compare/v0.7.12...v0.7.13
