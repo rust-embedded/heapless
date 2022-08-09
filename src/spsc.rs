@@ -3,7 +3,7 @@
 //! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!
 //! NOTE: This module is not available on targets that do *not* support atomic loads and are not
-//! supported by [`atomic_polyfill`]. (e.g., MSP430).
+//! supported by [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill). (e.g., MSP430).
 //!
 //! # Examples
 //!
