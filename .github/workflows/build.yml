@@ -93,6 +93,58 @@ jobs:
           command: check
           args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
 
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - thumbv7m-none-eabi
+        features:
+          - ""
+          - "cas"
+          - "serde"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.OS }}-build-
+
+      - name: Install stable Rust with target (${{ matrix.target }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: false
+          command: doc
+          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+
   # Run cpass tests
   testcpass:
     name: testcpass
@@ -299,6 +351,7 @@ jobs:
     needs:
       - style
       - check
+      - doc
       - testcpass
       - testtsan
       - testcfail
