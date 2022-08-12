@@ -9,6 +9,46 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Run MIRI tests on nightly
+  # NOTE first because it takes the longest to complete
+  testmiri:
+    name: testmiri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: x86_64-unknown-linux-gnu
+          components: miri
+          override: true
+
+      - name: Run miri
+        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
+
   # Run cargo fmt --check
   style:
     name: style
@@ -301,44 +341,6 @@ jobs:
         run: cargo run
 
 
-  # Run MIRI tests on nightly
-  testmiri:
-    name: testmiri
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: x86_64-unknown-linux-gnu
-          components: miri
-          override: true
-
-      - name: Run miri
-        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
 
   # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
   #
@@ -354,6 +356,7 @@ jobs:
       - testcpass
       - testtsan
       - testcfail
+      - testmiri
     runs-on: ubuntu-latest
     steps:
       - name: Mark the job as a success
