@@ -18,8 +18,6 @@ version = "0.8.0"
 default = ["cas"]
 cas = ["atomic-polyfill"]
 ufmt-impl = ["ufmt-write"]
-# read the docs before enabling: makes `Pool` Sync on x86_64
-x86-sync-pool = []
 # only for tests
 __trybuild = []
 # Enable larger MPMC sizes.

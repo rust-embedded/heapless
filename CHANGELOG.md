@@ -10,11 +10,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
+- Added an object pool API. see the `pool::object` module level doc for details
 
 ### Changed
 
 - [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
   trait instead of the `hash32::Hash` (v0.2.0) trait
+- move `pool::singleton::Box` to the `pool::box` module
+- renamed `pool::singleton::Pool` to `BoxPool` and moved it into the `pool::box` module
+- move `pool::singleton::arc::Arc` to the `pool::arc` module
+- renamed `pool::singleton::arc::Pool` to `ArcPool` and moved it into the `pool::arc` module
+- [breaking-change] changed the target support of memory pool API to only support 32-bit x86 and a
+  subset of ARM targets. See the module level documentation of the `pool` module for details
 
 - [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
   require a polyfill need a `critical-section` **v1.x.x** implementation.
@@ -25,6 +32,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - [breaking-change] this crate no longer has a Minimum Supported Rust Version (MSRV) guarantee and
   should be used with the latest stable version of the Rust toolchain.
+
+- [breaking-change] removed the `Init` and `Uninint` type states from `pool::singleton::Box`
+- [breaking-change] removed the following `pool::singleton::Box` methods: `freeze`, `forget` and `init`
+- [breaking-change] removed the `pool::singleton::arc::ArcInner` type
+- [breaking-change] removed support for attributes from `pool!` and `arc_pool!`
 
 ## [v0.7.16] - 2022-08-09
 
