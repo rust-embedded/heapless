@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+### Removed
+
+- [breaking-change] this crate no longer has a Minimum Supported Rust Version (MSRV) guarantee and
+  should be used with the latest stable version of the Rust toolchain.
+
 ## [v0.7.16] - 2022-08-09
 
 ### Added
