@@ -157,7 +157,6 @@ jobs:
         toolchain:
           - stable
           - nightly
-          - 1.51.0
         features:
           - serde
         buildtype:
