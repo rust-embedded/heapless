@@ -1,8 +1,12 @@
 use crate::{
     binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
-use core::{fmt, marker::PhantomData};
-use hash32::{BuildHasherDefault, Hash, Hasher};
+use core::{
+    fmt,
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+};
+use hash32::BuildHasherDefault;
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 // Sequential containers

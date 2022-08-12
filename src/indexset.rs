@@ -1,6 +1,11 @@
 use crate::indexmap::{self, IndexMap};
-use core::{borrow::Borrow, fmt, iter::FromIterator};
-use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash};
+use core::{
+    borrow::Borrow,
+    fmt,
+    hash::{BuildHasher, Hash},
+    iter::FromIterator,
+};
+use hash32::{BuildHasherDefault, FnvHasher};
 
 /// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
 /// default FNV hasher.

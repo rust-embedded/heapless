@@ -2,7 +2,6 @@ use core::{
     cmp::Ordering, convert::TryFrom, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr,
     slice,
 };
-use hash32;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
@@ -895,15 +894,6 @@ where
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         <[T] as hash::Hash>::hash(self, state)
-    }
-}
-
-impl<T, const N: usize> hash32::Hash for Vec<T, N>
-where
-    T: hash32::Hash,
-{
-    fn hash<H: hash32::Hasher>(&self, state: &mut H) {
-        <[T] as hash32::Hash>::hash(self, state)
     }
 }
 
