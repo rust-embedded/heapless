@@ -1,7 +1,8 @@
+use core::hash::{BuildHasher, Hash};
+
 use crate::{
     binary_heap::Kind as BinaryHeapKind, BinaryHeap, IndexMap, IndexSet, LinearMap, String, Vec,
 };
-use hash32::{BuildHasher, Hash};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 // Sequential containers

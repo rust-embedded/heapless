@@ -11,7 +11,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
+  trait instead of the `hash32::Hash` (v0.2.0) trait
+
 ### Fixed
+
+### Removed
+
+- [breaking-change] this crate no longer has a Minimum Supported Rust Version (MSRV) guarantee and
+  should be used with the latest stable version of the Rust toolchain.
 
 ## [v0.7.16] - 2022-08-09
 

@@ -1,7 +1,5 @@
 use core::{cmp::Ordering, fmt, fmt::Write, hash, iter, ops, str};
 
-use hash32;
-
 use crate::Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
@@ -361,13 +359,6 @@ impl<const N: usize> hash::Hash for String<N> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher)
-    }
-}
-
-impl<const N: usize> hash32::Hash for String<N> {
-    #[inline]
-    fn hash<H: hash32::Hasher>(&self, hasher: &mut H) {
-        <str as hash32::Hash>::hash(self, hasher)
     }
 }
 

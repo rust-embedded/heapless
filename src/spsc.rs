@@ -451,18 +451,6 @@ where
     }
 }
 
-impl<T, const N: usize> hash32::Hash for Queue<T, N>
-where
-    T: hash32::Hash,
-{
-    fn hash<H: hash32::Hasher>(&self, state: &mut H) {
-        // iterate over self in order
-        for t in self.iter() {
-            hash32::Hash::hash(t, state);
-        }
-    }
-}
-
 impl<'a, T, const N: usize> IntoIterator for &'a Queue<T, N> {
     type Item = &'a T;
     type IntoIter = Iter<'a, T, N>;
@@ -590,8 +578,9 @@ impl<'a, T, const N: usize> Producer<'a, T, N> {
 
 #[cfg(test)]
 mod tests {
+    use std::hash::{Hash, Hasher};
+
     use crate::spsc::Queue;
-    use hash32::Hasher;
 
     #[test]
     fn full() {
@@ -892,13 +881,13 @@ mod tests {
         };
         let hash1 = {
             let mut hasher1 = hash32::FnvHasher::default();
-            hash32::Hash::hash(&rb1, &mut hasher1);
+            rb1.hash(&mut hasher1);
             let hash1 = hasher1.finish();
             hash1
         };
         let hash2 = {
             let mut hasher2 = hash32::FnvHasher::default();
-            hash32::Hash::hash(&rb2, &mut hasher2);
+            rb2.hash(&mut hasher2);
             let hash2 = hasher2.finish();
             hash2
         };

@@ -1,6 +1,14 @@
-use core::{borrow::Borrow, fmt, iter::FromIterator, mem, num::NonZeroU32, ops, slice};
+use core::{
+    borrow::Borrow,
+    fmt,
+    hash::{BuildHasher, Hash, Hasher as _},
+    iter::FromIterator,
+    mem,
+    num::NonZeroU32,
+    ops, slice,
+};
 
-use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
+use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::Vec;
 

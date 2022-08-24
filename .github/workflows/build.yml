@@ -1,20 +1,58 @@
 name: Build
 on:
   pull_request:
+    branches: [main]
   push:
-    branches:
-      - master
-      - staging
-      - trying
+    branches: [staging, trying]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Run MIRI tests on nightly
+  # NOTE first because it takes the longest to complete
+  testmiri:
+    name: testmiri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: x86_64-unknown-linux-gnu
+          components: miri
+          override: true
+
+      - name: Run miri
+        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
+
   # Run cargo fmt --check
   style:
     name: style
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -36,7 +74,7 @@ jobs:
   # Compilation check
   check:
     name: check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
@@ -95,10 +133,62 @@ jobs:
           command: check
           args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
 
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - thumbv7m-none-eabi
+        features:
+          - ""
+          - "cas"
+          - "serde"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.OS }}-build-
+
+      - name: Install stable Rust with target (${{ matrix.target }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: false
+          command: doc
+          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+
   # Run cpass tests
   testcpass:
     name: testcpass
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
@@ -107,7 +197,6 @@ jobs:
         toolchain:
           - stable
           - nightly
-          - 1.51.0
         features:
           - serde
         buildtype:
@@ -154,7 +243,7 @@ jobs:
   # Run test suite for UI
   testtsan:
     name: testtsan
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         target:
@@ -212,7 +301,7 @@ jobs:
   # Run cfail tests on MSRV
   testcfail:
     name: testcfail
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: cfail
@@ -244,7 +333,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: stable
           target: x86_64-unknown-linux-gnu
           override: true
 
@@ -252,44 +341,6 @@ jobs:
         run: cargo run
 
 
-  # Run MIRI tests on nightly
-  testmiri:
-    name: testmiri
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: x86_64-unknown-linux-gnu
-          components: miri
-          override: true
-
-      - name: Run miri
-        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
 
   # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
   #
@@ -301,10 +352,12 @@ jobs:
     needs:
       - style
       - check
+      - doc
       - testcpass
       - testtsan
       - testcfail
-    runs-on: ubuntu-20.04
+      - testmiri
+    runs-on: ubuntu-latest
     steps:
       - name: Mark the job as a success
         run: exit 0
