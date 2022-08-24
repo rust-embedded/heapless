@@ -37,7 +37,7 @@ atomic-polyfill = { version = "0.1.4" }
 atomic-polyfill = { version = "0.1.4" }
 
 [target.'cfg(target_arch = "avr")'.dependencies]
-atomic-polyfill = { version = "0.1.8", optional = true }
+atomic-polyfill = { version = "1.0.1", optional = true }
 
 [dependencies]
 hash32 = "0.2.1"
