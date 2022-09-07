@@ -39,6 +39,29 @@
 //!
 //! assert!(res.is_some());
 //! ```
+//!
+//! # Array block initialization
+//!
+//! You can create a static variable that contains an array of memory blocks and give all the blocks
+//! to the `ObjectPool`. This requires an intermediate `const` value as shown below:
+//!
+//! ```
+//! use heapless::{object_pool, pool::object::ObjectBlock};
+//!
+//! object_pool!(P: [u8; 128]);
+//!
+//! const POOL_CAPACITY: usize = 8;
+//!
+//! let blocks: &'static mut [ObjectBlock<[u8; 128]>] = {
+//!     const BLOCK: ObjectBlock<[u8; 128]> = ObjectBlock::new([0; 128]); // <=
+//!     static mut BLOCKS: [ObjectBlock<[u8; 128]>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
+//!     unsafe { &mut BLOCKS }
+//! };
+//!
+//! for block in blocks {
+//!     P.manage(block);
+//! }
+//! ```
 
 use core::{
     cmp::Ordering,

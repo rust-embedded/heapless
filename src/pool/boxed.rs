@@ -53,6 +53,29 @@
 //!
 //! assert!(res.is_ok());
 //! ```
+//!
+//! # Array block initialization
+//!
+//! You can create a static variable that contains an array of memory blocks and give all the blocks
+//! to the `BoxPool`. This requires an intermediate `const` value as shown below:
+//!
+//! ```
+//! use heapless::{box_pool, pool::boxed::BoxBlock};
+//!
+//! box_pool!(P: u128);
+//!
+//! const POOL_CAPACITY: usize = 8;
+//!
+//! let blocks: &'static mut [BoxBlock<u128>] = {
+//!     const BLOCK: BoxBlock<u128> = BoxBlock::new(); // <=
+//!     static mut BLOCKS: [BoxBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
+//!     unsafe { &mut BLOCKS }
+//! };
+//!
+//! for block in blocks {
+//!     P.manage(block);
+//! }
+//! ```
 
 use core::{
     fmt,
