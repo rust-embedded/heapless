@@ -1208,7 +1208,12 @@ mod tests {
         assert_eq!(a.get("k1"), a.get("k2"));
     }
 
+    // tests that use this constant take too long to run under miri, specially on CI, with a map of
+    // this size so make the map smaller when using miri
+    #[cfg(not(miri))]
     const MAP_SLOTS: usize = 4096;
+    #[cfg(miri)]
+    const MAP_SLOTS: usize = 64;
     fn almost_filled_map() -> FnvIndexMap<usize, usize, MAP_SLOTS> {
         let mut almost_filled = FnvIndexMap::new();
         for i in 1..MAP_SLOTS {
