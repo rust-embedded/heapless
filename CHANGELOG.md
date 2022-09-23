@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
+
 ### Changed
 
 - [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
