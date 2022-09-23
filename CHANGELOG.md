@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
   trait instead of the `hash32::Hash` (v0.2.0) trait
 
+- [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
+  require a polyfill need a `critical-section` **v1.x.x** implementation.
+
 ### Fixed
 
 ### Removed
