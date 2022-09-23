@@ -6,7 +6,7 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    |
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because of the requirements on the impl of `Send` for `Consumer<'_, PhantomData<*const ()>, 4_usize>`
+   = note: required because of the requirements on the impl of `Send` for `Consumer<'_, PhantomData<*const ()>, 4>`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
    |
@@ -24,7 +24,7 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    |
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
-   = note: required because of the requirements on the impl of `Send` for `Producer<'_, PhantomData<*const ()>, 4_usize>`
+   = note: required because of the requirements on the impl of `Send` for `Producer<'_, PhantomData<*const ()>, 4>`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
    |
@@ -40,13 +40,13 @@ error[E0277]: `*const ()` cannot be sent between threads safely
 21 |     is_send::<Queue<NotSend, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
-   = help: within `Queue<PhantomData<*const ()>, 4_usize>`, the trait `Send` is not implemented for `*const ()`
+   = help: within `Queue<PhantomData<*const ()>, 4>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
    = note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
    = note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
    = note: required because it appears within the type `UnsafeCell<MaybeUninit<PhantomData<*const ()>>>`
    = note: required because it appears within the type `[UnsafeCell<MaybeUninit<PhantomData<*const ()>>>; 4]`
-   = note: required because it appears within the type `Queue<PhantomData<*const ()>, 4_usize>`
+   = note: required because it appears within the type `Queue<PhantomData<*const ()>, 4>`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
    |
@@ -62,12 +62,12 @@ error[E0277]: `*const ()` cannot be sent between threads safely
 22 |     is_send::<Vec<NotSend, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
-   = help: within `heapless::Vec<PhantomData<*const ()>, 4_usize>`, the trait `Send` is not implemented for `*const ()`
+   = help: within `heapless::Vec<PhantomData<*const ()>, 4>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
    = note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
    = note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
-   = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, 4_usize>`
+   = note: required because it appears within the type `heapless::Vec<PhantomData<*const ()>, 4>`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
    |
@@ -83,12 +83,12 @@ error[E0277]: `*const ()` cannot be sent between threads safely
 23 |     is_send::<HistoryBuffer<NotSend, 4>>();
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
    |
-   = help: within `HistoryBuffer<PhantomData<*const ()>, 4_usize>`, the trait `Send` is not implemented for `*const ()`
+   = help: within `HistoryBuffer<PhantomData<*const ()>, 4>`, the trait `Send` is not implemented for `*const ()`
    = note: required because it appears within the type `PhantomData<*const ()>`
    = note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
    = note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
-   = note: required because it appears within the type `HistoryBuffer<PhantomData<*const ()>, 4_usize>`
+   = note: required because it appears within the type `HistoryBuffer<PhantomData<*const ()>, 4>`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
    |
