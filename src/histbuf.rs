@@ -238,6 +238,17 @@ where
     }
 }
 
+impl<T, const N: usize> Clone for HistoryBuffer<T, N>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        let mut ret = Self::new();
+        ret.extend(self.iter().cloned());
+        ret
+    }
+}
+
 impl<T, const N: usize> Drop for HistoryBuffer<T, N> {
     fn drop(&mut self) {
         unsafe {
@@ -279,6 +290,15 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
+impl<T, const N: usize> PartialEq for HistoryBuffer<T, N>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.oldest_ordered().eq(other.oldest_ordered())
+    }
+}
+
 /// An iterator on the underlying buffer ordered from oldest data to newest
 #[derive(Clone)]
 pub struct OldestOrdered<'a, T, const N: usize> {
@@ -311,6 +331,7 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
 mod tests {
     use crate::HistoryBuffer;
     use core::fmt::Debug;
+    use core::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn new() {
@@ -348,6 +369,47 @@ mod tests {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         x.clear_with(1);
         assert_eq!(x.as_slice(), [1; 4]);
+    }
+
+    #[test]
+    fn clone() {
+        let mut x: HistoryBuffer<u8, 3> = HistoryBuffer::new();
+        for i in 0..10 {
+            assert_eq!(x.as_slice(), x.clone().as_slice());
+            x.write(i);
+        }
+
+        // Records number of clones locally and globally.
+        static GLOBAL: AtomicUsize = AtomicUsize::new(0);
+        #[derive(Default, PartialEq, Debug)]
+        struct InstrumentedClone(usize);
+
+        impl Clone for InstrumentedClone {
+            fn clone(&self) -> Self {
+                GLOBAL.fetch_add(1, Ordering::Relaxed);
+                Self(self.0 + 1)
+            }
+        }
+
+        let mut y: HistoryBuffer<InstrumentedClone, 2> = HistoryBuffer::new();
+        let _ = y.clone();
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
+        y.write(InstrumentedClone(0));
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
+        assert_eq!(y.clone().as_slice(), [InstrumentedClone(1)]);
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
+        y.write(InstrumentedClone(0));
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            y.clone().as_slice(),
+            [InstrumentedClone(1), InstrumentedClone(1)]
+        );
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 3);
+        assert_eq!(
+            y.clone().clone().clone().as_slice(),
+            [InstrumentedClone(3), InstrumentedClone(3)]
+        );
+        assert_eq!(GLOBAL.load(Ordering::Relaxed), 9);
     }
 
     #[test]
@@ -428,6 +490,32 @@ mod tests {
             if b_item.is_none() {
                 break;
             }
+        }
+    }
+
+    #[test]
+    fn partial_eq() {
+        let mut x: HistoryBuffer<u8, 3> = HistoryBuffer::new();
+        let mut y: HistoryBuffer<u8, 3> = HistoryBuffer::new();
+        assert_eq!(x, y);
+        x.write(1);
+        assert_ne!(x, y);
+        y.write(1);
+        assert_eq!(x, y);
+        for _ in 0..4 {
+            x.write(2);
+            assert_ne!(x, y);
+            for i in 0..5 {
+                x.write(i);
+                y.write(i);
+            }
+            assert_eq!(
+                x,
+                y,
+                "{:?} {:?}",
+                x.iter().collect::<Vec<_>>(),
+                y.iter().collect::<Vec<_>>()
+            );
         }
     }
 }
