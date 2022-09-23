@@ -244,7 +244,11 @@ where
 {
     fn clone(&self) -> Self {
         let mut ret = Self::new();
-        ret.extend(self.iter().cloned());
+        for (new, old) in ret.data.iter_mut().zip(self.as_slice()) {
+            new.write(old.clone());
+        }
+        ret.filled = self.filled;
+        ret.write_at = self.write_at;
         ret
     }
 }
