@@ -95,6 +95,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - The `MpMcQueue` type has been renamed to `Queue`. 
 - The `MpMcQueueView` type has been renamed to `QueueView`. 
 - The `MpMcQueueInner` type has been renamed to `QueueInner`. 
+- Changed `Queue::split` to be `const`.
 
 ### Fixed
 
