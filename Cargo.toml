@@ -39,6 +39,7 @@ defmt-03 = ["dep:defmt"]
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Enable nightly features.
 nightly = []
 
 [dependencies]
@@ -53,6 +54,7 @@ defmt = { version = ">=0.2.0,<0.4", optional = true }
 stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
+critical-section = { version = "1.1", features = ["std"] }
 ufmt = "0.2"
 static_assertions = "1.1.0"
 
