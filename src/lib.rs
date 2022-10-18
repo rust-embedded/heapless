@@ -43,12 +43,15 @@
 //!
 //! List of currently implemented data structures:
 //!
-//! - [`Arc`](pool/singleton/arc/struct.Arc.html) -- Thread-safe reference-counting pointer backed by a memory pool
+//! - [`Arc`](pool/arc/index.html) -- like `std::sync::Arc` but backed by a lock-free memory pool
+//! rather than `#[global_allocator]`
+//! - [`Box`](pool/boxed/index.html) -- like `std::boxed::Box` but backed by a lock-free memory pool
+//! rather than `#[global_allocator]`
 //! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
 //! - [`IndexMap`](struct.IndexMap.html) -- hash table
 //! - [`IndexSet`](struct.IndexSet.html) -- hash set
 //! - [`LinearMap`](struct.LinearMap.html)
-//! - [`Pool`](pool/struct.Pool.html) -- lock-free memory pool
+//! - [`Object`](pool/object/index.html) -- objects managed by an object pool
 //! - [`String`](struct.String.html)
 //! - [`Vec`](struct.Vec.html)
 //! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
@@ -75,7 +78,6 @@
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
-#![deny(const_err)]
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
@@ -83,8 +85,6 @@ pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use indexmap::{Bucket, Entry, FnvIndexMap, IndexMap, OccupiedEntry, Pos, VacantEntry};
 pub use indexset::{FnvIndexSet, IndexSet};
 pub use linear_map::LinearMap;
-#[cfg(all(has_cas, feature = "cas"))]
-pub use pool::singleton::arc::Arc;
 pub use string::String;
 pub use vec::Vec;
 
@@ -110,7 +110,7 @@ pub mod binary_heap;
 mod defmt;
 #[cfg(all(has_cas, feature = "cas"))]
 pub mod mpmc;
-#[cfg(all(has_cas, feature = "cas"))]
+#[cfg(any(arm_llsc, target_arch = "x86"))]
 pub mod pool;
 pub mod sorted_linked_list;
 #[cfg(has_atomics)]
