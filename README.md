@@ -11,11 +11,12 @@
 
 ## Tests
 
-```bash
-# run all
-cargo test --features 'serde','x86-sync-pool'
-# run only for example histbuf tests
-cargo test histbuf --features 'serde','x86-sync-pool'
+``` console
+$ # run all
+$ cargo test --features serde
+
+$ # run only for example histbuf tests
+$ cargo test histbuf --features serde
 ```
 
 ## License
