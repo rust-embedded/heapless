@@ -510,7 +510,7 @@ where
         N
     }
 
-    /// Return an iterator over the keys of the map, in their order
+    /// Return an iterator over the keys of the map, in insertion order
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -528,7 +528,7 @@ where
         self.core.entries.iter().map(|bucket| &bucket.key)
     }
 
-    /// Return an iterator over the values of the map, in their order
+    /// Return an iterator over the values of the map, in insertion order
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -546,7 +546,7 @@ where
         self.core.entries.iter().map(|bucket| &bucket.value)
     }
 
-    /// Return an iterator over mutable references to the the values of the map, in their order
+    /// Return an iterator over mutable references to the the values of the map, in insertion order
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -568,7 +568,7 @@ where
         self.core.entries.iter_mut().map(|bucket| &mut bucket.value)
     }
 
-    /// Return an iterator over the key-value pairs of the map, in their order
+    /// Return an iterator over the key-value pairs of the map, in insertion order
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -588,7 +588,7 @@ where
         }
     }
 
-    /// Return an iterator over the key-value pairs of the map, in their order
+    /// Return an iterator over the key-value pairs of the map, in insertion order
     ///
     /// ```
     /// use heapless::FnvIndexMap;
