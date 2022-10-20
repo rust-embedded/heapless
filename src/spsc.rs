@@ -22,23 +22,30 @@
 //! assert_eq!(rb.dequeue(), Some(0));
 //! ```
 //!
-//! - `Queue` can be `split` and then be used in Single Producer Single Consumer mode
+//! - `Queue` can be `split` and then be used in Single Producer Single Consumer mode.
+//!
+//! "no alloc" applications can create a `&'static mut` reference to a `Queue` -- using a static
+//! variable -- and then `split` it: this consumes the static reference. The resulting `Consumer`
+//! and `Producer` can then be moved into different execution contexts (threads, interrupt handlers,
+//! etc.)
 //!
 //! ```
-//! use heapless::spsc::Queue;
-//!
-//! // Notice, type signature needs to be explicit for now.
-//! // (min_const_eval, does not allow for default type assignments)
-//! static mut Q: Queue<Event, 4> = Queue::new();
+//! use heapless::spsc::{Producer, Queue};
 //!
 //! enum Event { A, B }
 //!
 //! fn main() {
-//!     // NOTE(unsafe) beware of aliasing the `consumer` end point
-//!     let mut consumer = unsafe { Q.split().1 };
+//!     let queue: &'static mut Queue<Event, 4> = {
+//!         static mut Q: Queue<Event, 4> = Queue::new();
+//!         unsafe { &mut Q }
+//!     };
+//!
+//!     let (producer, mut consumer) = queue.split();
+//!
+//!     // `producer` can be moved into `interrupt_handler` using a static mutex or the mechanism
+//!     // provided by the concurrency framework you are using (e.g. a resource in RTIC)
 //!
 //!     loop {
-//!         // `dequeue` is a lockless operation
 //!         match consumer.dequeue() {
 //!             Some(Event::A) => { /* .. */ },
 //!             Some(Event::B) => { /* .. */ },
@@ -49,9 +56,7 @@
 //! }
 //!
 //! // this is a different execution context that can preempt `main`
-//! fn interrupt_handler() {
-//!     // NOTE(unsafe) beware of aliasing the `producer` end point
-//!     let mut producer = unsafe { Q.split().0 };
+//! fn interrupt_handler(producer: &mut Producer<'static, Event, 4>) {
 //! #   let condition = true;
 //!
 //!     // ..
