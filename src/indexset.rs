@@ -111,7 +111,7 @@ where
         self.map.capacity()
     }
 
-    /// Return an iterator over the values of the set, in their order
+    /// Return an iterator over the values of the set, in insertion order
     ///
     /// # Examples
     ///
@@ -122,7 +122,7 @@ where
     /// set.insert("a").unwrap();
     /// set.insert("b").unwrap();
     ///
-    /// // Will print in an arbitrary order.
+    /// // Will print in insertion order: a, b
     /// for x in set.iter() {
     ///     println!("{}", x);
     /// }
@@ -195,7 +195,7 @@ where
     /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
     ///
-    /// // Print 1, 4 in that order order.
+    /// // Print 1, 4 in that order.
     /// for x in a.symmetric_difference(&b) {
     ///     println!("{}", x);
     /// }
