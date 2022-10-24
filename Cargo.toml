@@ -59,6 +59,11 @@ optional = true
 [dev-dependencies.ufmt]
 version = "0.1"
 
+[dev-dependencies.tokio]
+version = "1"
+default-features = false
+features = [ "macros", "rt", "time" ]
+
 [dependencies.defmt]
 version = ">=0.2.0,<0.4"
 optional = true
