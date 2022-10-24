@@ -76,10 +76,10 @@ where
     }
 
     /// Register `waker` as the waker for this [`Producer`]
-    fn register_waker<'v>(&mut self, waker: Waker) {
+    fn register_waker<'v>(&mut self, waker: Waker) -> bool {
         // We can safely overwrite the old waker, as we can only ever have 1 instance
         // of `self` waiting to be awoken.
-        self.producer_waker.enqueue(waker);
+        self.producer_waker.enqueue(waker).is_none()
     }
 }
 
@@ -126,8 +126,11 @@ where
 
         me.value_to_enqueue = Some(failed_enqueue_value);
 
-        me.producer.register_waker(cx.waker().clone());
-
+        if !me.producer.register_waker(cx.waker().clone()) {
+            // We failed to enqueue the waker for some reason,
+            // re-wake immediately.
+            cx.waker().wake_by_ref();
+        }
         Poll::Pending
     }
 }

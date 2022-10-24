@@ -76,10 +76,8 @@ where
     }
 
     /// Register `waker` as the waker for this [`Consumer`]
-    fn register_waker<'v>(&mut self, waker: Waker) {
-        // We can safely overwrite the old waker, as we can only ever have 1 instance
-        // of `self` waiting to be awoken.
-        self.consumer_waker.enqueue(waker);
+    fn register_waker<'v>(&mut self, waker: Waker) -> bool {
+        self.consumer_waker.enqueue(waker).is_none()
     }
 }
 
@@ -121,7 +119,11 @@ where
             // dequeue a value
             try_wake_producer(me, value)
         } else {
-            me.consumer.register_waker(cx.waker().clone());
+            if !me.consumer.register_waker(cx.waker().clone()) {
+                // We failed to register the waker for some reason,
+                // wake immediately.
+                cx.waker().wake_by_ref();
+            }
 
             Poll::Pending
         }
