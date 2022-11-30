@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added an object pool API. see the `pool::object` module level doc for details
 - Add `HistoryBuffer::as_slices()`
 - Implemented `retain` for `IndexMap` and `IndexSet`.
+- Recover `StableDeref` trait for `pool::object::Object` and `pool::boxed::Box`.
 
 ### Changed
 

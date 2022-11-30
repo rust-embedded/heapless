@@ -71,6 +71,8 @@ use core::{
     ops, ptr,
 };
 
+use stable_deref_trait::StableDeref;
+
 use super::treiber::{AtomicPtr, NonNullPtr, Stack, StructNode};
 
 /// Creates a new `ObjectPool` singleton with the given `$name` that manages the specified
@@ -219,6 +221,8 @@ where
         unsafe { &mut *ptr::addr_of_mut!((*self.node_ptr.as_ptr()).data) }
     }
 }
+
+unsafe impl<A> StableDeref for Object<A> where A: ObjectPool {}
 
 impl<A> fmt::Display for Object<A>
 where

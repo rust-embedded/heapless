@@ -84,6 +84,8 @@ use core::{
     ops, ptr,
 };
 
+use stable_deref_trait::StableDeref;
+
 use super::treiber::{NonNullPtr, Stack, UnionNode};
 
 /// Creates a new `BoxPool` singleton with the given `$name` that manages the specified `$data_type`
@@ -211,6 +213,8 @@ where
         unsafe { &mut *self.node_ptr.as_ptr().cast::<P::Data>() }
     }
 }
+
+unsafe impl<P> StableDeref for Box<P> where P: BoxPool {}
 
 impl<A> fmt::Display for Box<A>
 where
