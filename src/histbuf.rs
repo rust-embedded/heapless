@@ -182,6 +182,28 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
     }
 
+    /// Returns a pair of slices which contain, in order, the contents of the buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+    /// buffer.extend([0, 0, 0]);
+    /// buffer.extend([1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(buffer.as_slices(), (&[1, 2, 3][..], &[4, 5, 6][..]));
+    /// ```
+    pub fn as_slices(&self) -> (&[T], &[T]) {
+        let buffer = self.as_slice();
+
+        if !self.filled {
+            (buffer, &[])
+        } else {
+            (&buffer[self.write_at..], &buffer[..self.write_at])
+        }
+    }
+
     /// Returns an iterator for iterating over the buffer from oldest to newest.
     ///
     /// # Examples
@@ -440,6 +462,37 @@ mod tests {
         x.extend([1, 2, 3, 4, 5].iter());
 
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
+    }
+
+    /// Test whether .as_slices() behaves as expected.
+    #[test]
+    fn as_slices() {
+        let mut buffer: HistoryBuffer<u8, 4> = HistoryBuffer::new();
+        let mut extend_then_assert = |extend: &[u8], assert: (&[u8], &[u8])| {
+            buffer.extend(extend);
+            assert_eq!(buffer.as_slices(), assert);
+        };
+
+        extend_then_assert(b"a", (b"a", b""));
+        extend_then_assert(b"bcd", (b"abcd", b""));
+        extend_then_assert(b"efg", (b"d", b"efg"));
+        extend_then_assert(b"h", (b"efgh", b""));
+        extend_then_assert(b"123456", (b"34", b"56"));
+    }
+
+    /// Test whether .as_slices() and .oldest_ordered() produce elements in the same order.
+    #[test]
+    fn as_slices_equals_ordered() {
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+
+        for n in 0..20 {
+            buffer.write(n);
+            let (head, tail) = buffer.as_slices();
+            assert_eq_iter(
+                [head, tail].iter().copied().flatten(),
+                buffer.oldest_ordered(),
+            )
+        }
     }
 
     #[test]
