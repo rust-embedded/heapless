@@ -92,11 +92,7 @@ impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N> {
     }
 }
 
-impl<T, S, const N: usize> IndexSet<T, S, N>
-where
-    T: Eq + Hash,
-    S: BuildHasher,
-{
+impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// Returns the number of elements the set can hold
     ///
     /// # Examples
@@ -147,6 +143,60 @@ where
         self.map.last().map(|(k, _v)| k)
     }
 
+    /// Returns the number of elements in the set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexSet;
+    ///
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
+    /// assert_eq!(v.len(), 0);
+    /// v.insert(1).unwrap();
+    /// assert_eq!(v.len(), 1);
+    /// ```
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Returns `true` if the set contains no elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexSet;
+    ///
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
+    /// assert!(v.is_empty());
+    /// v.insert(1).unwrap();
+    /// assert!(!v.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
+    /// Clears the set, removing all values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexSet;
+    ///
+    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
+    /// v.insert(1).unwrap();
+    /// v.clear();
+    /// assert!(v.is_empty());
+    /// ```
+    pub fn clear(&mut self) {
+        self.map.clear()
+    }
+}
+
+impl<T, S, const N: usize> IndexSet<T, S, N>
+where
+    T: Eq + Hash,
+    S: BuildHasher,
+{
     /// Visits the values representing the difference, i.e. the values that are in `self` but not in
     /// `other`.
     ///
@@ -275,54 +325,6 @@ where
         S2: BuildHasher,
     {
         self.iter().chain(other.difference(self))
-    }
-
-    /// Returns the number of elements in the set.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::FnvIndexSet;
-    ///
-    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
-    /// assert_eq!(v.len(), 0);
-    /// v.insert(1).unwrap();
-    /// assert_eq!(v.len(), 1);
-    /// ```
-    pub fn len(&self) -> usize {
-        self.map.len()
-    }
-
-    /// Returns `true` if the set contains no elements.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::FnvIndexSet;
-    ///
-    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
-    /// assert!(v.is_empty());
-    /// v.insert(1).unwrap();
-    /// assert!(!v.is_empty());
-    /// ```
-    pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
-    }
-
-    /// Clears the set, removing all values.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::FnvIndexSet;
-    ///
-    /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
-    /// v.insert(1).unwrap();
-    /// v.clear();
-    /// assert!(v.is_empty());
-    /// ```
-    pub fn clear(&mut self) {
-        self.map.clear()
     }
 
     /// Returns `true` if the set contains a value.
@@ -473,7 +475,7 @@ where
 
 impl<T, S, const N: usize> Clone for IndexSet<T, S, N>
 where
-    T: Eq + Hash + Clone,
+    T: Clone,
     S: Clone,
 {
     fn clone(&self) -> Self {
@@ -485,8 +487,7 @@ where
 
 impl<T, S, const N: usize> fmt::Debug for IndexSet<T, S, N>
 where
-    T: Eq + Hash + fmt::Debug,
-    S: BuildHasher,
+    T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_set().entries(self.iter()).finish()
@@ -495,8 +496,7 @@ where
 
 impl<T, S, const N: usize> Default for IndexSet<T, S, N>
 where
-    T: Eq + Hash,
-    S: BuildHasher + Default,
+    S: Default,
 {
     fn default() -> Self {
         IndexSet {
