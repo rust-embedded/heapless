@@ -1,5 +1,5 @@
 error[E0499]: cannot borrow `q` as mutable more than once at a time
- --> ui/freeze.rs:7:5
+ --> $DIR/freeze.rs:7:5
   |
 6 |     let (_p, mut _c) = q.split();
   |                        --------- first mutable borrow occurs here
