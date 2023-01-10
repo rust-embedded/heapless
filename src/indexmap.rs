@@ -313,7 +313,7 @@ where
 
 impl<K, V, const N: usize> Clone for CoreMap<K, V, N>
 where
-    K: Eq + Hash + Clone,
+    K: Clone,
     V: Clone,
 {
     fn clone(&self) -> Self {
@@ -499,12 +499,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
     }
 }
 
-impl<K, V, S, const N: usize> IndexMap<K, V, S, N>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
-    /* Public API */
+impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Returns the number of elements the map can hold
     pub fn capacity(&self) -> usize {
         N
@@ -652,39 +647,6 @@ where
             .map(|bucket| (&bucket.key, &mut bucket.value))
     }
 
-    /// Returns an entry for the corresponding key
-    /// ```
-    /// use heapless::FnvIndexMap;
-    /// use heapless::Entry;
-    /// let mut map = FnvIndexMap::<_, _, 16>::new();
-    /// if let Entry::Vacant(v) = map.entry("a") {
-    ///     v.insert(1).unwrap();
-    /// }
-    /// if let Entry::Occupied(mut o) = map.entry("a") {
-    ///     println!("found {}", *o.get()); // Prints 1
-    ///     o.insert(2);
-    /// }
-    /// // Prints 2
-    /// println!("val: {}", *map.get("a").unwrap());
-    /// ```
-    pub fn entry(&mut self, key: K) -> Entry<'_, K, V, N> {
-        let hash_val = hash_with(&key, &self.build_hasher);
-        if let Some((probe, pos)) = self.core.find(hash_val, &key) {
-            Entry::Occupied(OccupiedEntry {
-                key,
-                probe,
-                pos,
-                core: &mut self.core,
-            })
-        } else {
-            Entry::Vacant(VacantEntry {
-                key,
-                hash_val,
-                core: &mut self.core,
-            })
-        }
-    }
-
     /// Return the number of key-value pairs in the map.
     ///
     /// Computes in **O(1)** time.
@@ -733,6 +695,46 @@ where
         self.core.entries.clear();
         for pos in self.core.indices.iter_mut() {
             *pos = None;
+        }
+    }
+}
+
+impl<K, V, S, const N: usize> IndexMap<K, V, S, N>
+where
+    K: Eq + Hash,
+    S: BuildHasher,
+{
+    /* Public API */
+    /// Returns an entry for the corresponding key
+    /// ```
+    /// use heapless::FnvIndexMap;
+    /// use heapless::Entry;
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
+    /// if let Entry::Vacant(v) = map.entry("a") {
+    ///     v.insert(1).unwrap();
+    /// }
+    /// if let Entry::Occupied(mut o) = map.entry("a") {
+    ///     println!("found {}", *o.get()); // Prints 1
+    ///     o.insert(2);
+    /// }
+    /// // Prints 2
+    /// println!("val: {}", *map.get("a").unwrap());
+    /// ```
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V, N> {
+        let hash_val = hash_with(&key, &self.build_hasher);
+        if let Some((probe, pos)) = self.core.find(hash_val, &key) {
+            Entry::Occupied(OccupiedEntry {
+                key,
+                probe,
+                pos,
+                core: &mut self.core,
+            })
+        } else {
+            Entry::Vacant(VacantEntry {
+                key,
+                hash_val,
+                core: &mut self.core,
+            })
         }
     }
 
@@ -931,7 +933,7 @@ where
 
 impl<K, V, S, const N: usize> Clone for IndexMap<K, V, S, N>
 where
-    K: Eq + Hash + Clone,
+    K: Clone,
     V: Clone,
     S: Clone,
 {
@@ -945,9 +947,8 @@ where
 
 impl<K, V, S, const N: usize> fmt::Debug for IndexMap<K, V, S, N>
 where
-    K: Eq + Hash + fmt::Debug,
+    K: fmt::Debug,
     V: fmt::Debug,
-    S: BuildHasher,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -956,8 +957,7 @@ where
 
 impl<K, V, S, const N: usize> Default for IndexMap<K, V, S, N>
 where
-    K: Eq + Hash,
-    S: BuildHasher + Default,
+    S: Default,
 {
     fn default() -> Self {
         // Const assert
@@ -1052,11 +1052,7 @@ impl<K, V, const N: usize> Iterator for IntoIter<K, V, N> {
     }
 }
 
-impl<K, V, S, const N: usize> IntoIterator for IndexMap<K, V, S, N>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
+impl<K, V, S, const N: usize> IntoIterator for IndexMap<K, V, S, N> {
     type Item = (K, V);
     type IntoIter = IntoIter<K, V, N>;
 
@@ -1067,11 +1063,7 @@ where
     }
 }
 
-impl<'a, K, V, S, const N: usize> IntoIterator for &'a IndexMap<K, V, S, N>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
+impl<'a, K, V, S, const N: usize> IntoIterator for &'a IndexMap<K, V, S, N> {
     type Item = (&'a K, &'a V);
     type IntoIter = Iter<'a, K, V>;
 
@@ -1080,11 +1072,7 @@ where
     }
 }
 
-impl<'a, K, V, S, const N: usize> IntoIterator for &'a mut IndexMap<K, V, S, N>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
+impl<'a, K, V, S, const N: usize> IntoIterator for &'a mut IndexMap<K, V, S, N> {
     type Item = (&'a K, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
 
