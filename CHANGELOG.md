@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] changed the target support of memory pool API to only support 32-bit x86 and a
   subset of ARM targets. See the module level documentation of the `pool` module for details
 - relax trait requirements on `IndexMap` and `IndexSet`.
+- export `IndexSet` and `IndexMap` iterator types.
 
 - [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
   require a polyfill need a `critical-section` **v1.x.x** implementation.

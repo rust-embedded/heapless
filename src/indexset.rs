@@ -571,6 +571,10 @@ where
     }
 }
 
+/// An iterator over the items of a [`IndexSet`].
+///
+/// This `struct` is created by the [`iter`](IndexSet::iter) method on [`IndexSet`]. See its
+/// documentation for more.
 pub struct Iter<'a, T> {
     iter: indexmap::Iter<'a, T, ()>,
 }

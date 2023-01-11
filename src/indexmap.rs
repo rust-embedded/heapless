@@ -1081,6 +1081,10 @@ impl<'a, K, V, S, const N: usize> IntoIterator for &'a mut IndexMap<K, V, S, N> 
     }
 }
 
+/// An iterator over the items of a [`IndexMap`].
+///
+/// This `struct` is created by the [`iter`](IndexMap::iter) method on [`IndexMap`]. See its
+/// documentation for more.
 pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, Bucket<K, V>>,
 }
