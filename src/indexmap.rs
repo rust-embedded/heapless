@@ -210,7 +210,11 @@ where
                     let index = self.entries.len();
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
                     return Insert::Success(Inserted {
-                        index: self.insert_phase_2(probe, Pos::new(index, hash)),
+                        index: Self::insert_phase_2(
+                            &mut self.indices,
+                            probe,
+                            Pos::new(index, hash),
+                        ),
                         old_value: None,
                     });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
@@ -241,9 +245,9 @@ where
     }
 
     // phase 2 is post-insert where we forward-shift `Pos` in the indices.
-    fn insert_phase_2(&mut self, mut probe: usize, mut old_pos: Pos) -> usize {
-        probe_loop!(probe < self.indices.len(), {
-            let pos = unsafe { self.indices.get_unchecked_mut(probe) };
+    fn insert_phase_2(indices: &mut [Option<Pos>; N], mut probe: usize, mut old_pos: Pos) -> usize {
+        probe_loop!(probe < indices.len(), {
+            let pos = unsafe { indices.get_unchecked_mut(probe) };
 
             let mut is_none = true; // work around lack of NLL
             if let Some(pos) = pos.as_mut() {
@@ -285,6 +289,50 @@ where
         self.backward_shift_after_removal(probe);
 
         (entry.key, entry.value)
+    }
+
+    fn retain_in_order<F>(&mut self, mut keep: F)
+    where
+        F: FnMut(&mut K, &mut V) -> bool,
+    {
+        const INIT: Option<Pos> = None;
+
+        self.entries
+            .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
+
+        if self.entries.len() < self.indices.len() {
+            for index in self.indices.iter_mut() {
+                *index = INIT;
+            }
+
+            for (index, entry) in self.entries.iter().enumerate() {
+                let mut probe = entry.hash.desired_pos(Self::mask());
+                let mut dist = 0;
+
+                probe_loop!(probe < self.indices.len(), {
+                    let pos = &mut self.indices[probe];
+
+                    if let Some(pos) = *pos {
+                        let entry_hash = pos.hash();
+
+                        // robin hood: steal the spot if it's better for us
+                        let their_dist = entry_hash.probe_distance(Self::mask(), probe);
+                        if their_dist < dist {
+                            Self::insert_phase_2(
+                                &mut self.indices,
+                                probe,
+                                Pos::new(index, entry.hash),
+                            );
+                            break;
+                        }
+                    } else {
+                        *pos = Some(Pos::new(index, entry.hash));
+                        break;
+                    }
+                    dist += 1;
+                });
+            }
+        }
     }
 
     fn backward_shift_after_removal(&mut self, probe_at_remove: usize) {
@@ -892,6 +940,16 @@ where
             .map(|(probe, found)| self.core.remove_found(probe, found).1)
     }
 
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)` returns `false`.
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&K, &mut V) -> bool,
+    {
+        self.core.retain_in_order(move |k, v| f(k, v));
+    }
+
     /* Private API */
     /// Return probe (indices) and position (entries)
     fn find<Q>(&self, key: &Q) -> Option<(usize, usize)>
@@ -1318,6 +1376,33 @@ mod tests {
             }
         };
         assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn retain() {
+        let mut none = almost_filled_map();
+        none.retain(|_, _| false);
+        assert!(none.is_empty());
+
+        let mut all = almost_filled_map();
+        all.retain(|_, _| true);
+        assert_eq!(all.len(), MAP_SLOTS - 1);
+
+        let mut even = almost_filled_map();
+        even.retain(|_, &mut v| v % 2 == 0);
+        assert_eq!(even.len(), (MAP_SLOTS - 1) / 2);
+        for &v in even.values() {
+            assert_eq!(v % 2, 0);
+        }
+
+        let mut odd = almost_filled_map();
+        odd.retain(|_, &mut v| v % 2 != 0);
+        assert_eq!(odd.len(), MAP_SLOTS / 2);
+        for &v in odd.values() {
+            assert_ne!(v % 2, 0);
+        }
+        assert_eq!(odd.insert(2, 2), Ok(None));
+        assert_eq!(odd.len(), (MAP_SLOTS / 2) + 1);
     }
 
     #[test]

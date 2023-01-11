@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
 - Added an object pool API. see the `pool::object` module level doc for details
+- Implemented `retain` for `IndexMap` and `IndexSet`.
 
 ### Changed
 

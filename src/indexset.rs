@@ -471,6 +471,16 @@ where
     {
         self.map.remove(value).is_some()
     }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.map.retain(move |k, _| f(k));
+    }
 }
 
 impl<T, S, const N: usize> Clone for IndexSet<T, S, N>
