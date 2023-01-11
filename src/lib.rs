@@ -82,8 +82,10 @@
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
-pub use indexmap::{Bucket, Entry, FnvIndexMap, IndexMap, OccupiedEntry, Pos, VacantEntry};
-pub use indexset::{FnvIndexSet, IndexSet};
+pub use indexmap::{
+    Bucket, Entry, FnvIndexMap, IndexMap, Iter as IndexMapIter, OccupiedEntry, Pos, VacantEntry,
+};
+pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
 pub use linear_map::LinearMap;
 pub use string::String;
 pub use vec::Vec;

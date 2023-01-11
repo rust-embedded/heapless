@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
 - Added an object pool API. see the `pool::object` module level doc for details
 - Add `HistoryBuffer::as_slices()`
+- Implemented `retain` for `IndexMap` and `IndexSet`.
 
 ### Changed
 
@@ -23,6 +24,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - renamed `pool::singleton::arc::Pool` to `ArcPool` and moved it into the `pool::arc` module
 - [breaking-change] changed the target support of memory pool API to only support 32-bit x86 and a
   subset of ARM targets. See the module level documentation of the `pool` module for details
+- relax trait requirements on `IndexMap` and `IndexSet`.
+- export `IndexSet` and `IndexMap` iterator types.
 
 - [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
   require a polyfill need a `critical-section` **v1.x.x** implementation.
