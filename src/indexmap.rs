@@ -567,8 +567,10 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     ///     println!("{}", key);
     /// }
     /// ```
-    pub fn keys(&self) -> impl Iterator<Item = &K> {
-        self.core.entries.iter().map(|bucket| &bucket.key)
+    pub fn keys(&self) -> Keys<'_, K, V> {
+        Keys {
+            iter: self.core.entries.iter(),
+        }
     }
 
     /// Return an iterator over the values of the map, in insertion order
@@ -585,8 +587,10 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     ///     println!("{}", val);
     /// }
     /// ```
-    pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.core.entries.iter().map(|bucket| &bucket.value)
+    pub fn values(&self) -> Values<'_, K, V> {
+        Values {
+            iter: self.core.entries.iter(),
+        }
     }
 
     /// Return an iterator over mutable references to the the values of the map, in insertion order
@@ -607,8 +611,10 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     ///     println!("{}", val);
     /// }
     /// ```
-    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
-        self.core.entries.iter_mut().map(|bucket| &mut bucket.value)
+    pub fn values_mut(&mut self) -> ValuesMut<'_, K, V> {
+        ValuesMut {
+            iter: self.core.entries.iter_mut(),
+        }
     }
 
     /// Return an iterator over the key-value pairs of the map, in insertion order
@@ -1163,6 +1169,10 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
+/// A mutable iterator over the items of a [`IndexMap`].
+///
+/// This `struct` is created by the [`iter_mut`](IndexMap::iter_mut) method on [`IndexMap`]. See its
+/// documentation for more.
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, Bucket<K, V>>,
 }
@@ -1174,6 +1184,54 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
         self.iter
             .next()
             .map(|bucket| (&bucket.key, &mut bucket.value))
+    }
+}
+
+/// An iterator over the keys of a [`IndexMap`].
+///
+/// This `struct` is created by the [`keys`](IndexMap::keys) method on [`IndexMap`]. See its
+/// documentation for more.
+pub struct Keys<'a, K, V> {
+    iter: slice::Iter<'a, Bucket<K, V>>,
+}
+
+impl<'a, K, V> Iterator for Keys<'a, K, V> {
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|bucket| &bucket.key)
+    }
+}
+
+/// An iterator over the values of a [`IndexMap`].
+///
+/// This `struct` is created by the [`values`](IndexMap::values) method on [`IndexMap`]. See its
+/// documentation for more.
+pub struct Values<'a, K, V> {
+    iter: slice::Iter<'a, Bucket<K, V>>,
+}
+
+impl<'a, K, V> Iterator for Values<'a, K, V> {
+    type Item = &'a V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|bucket| &bucket.value)
+    }
+}
+
+/// A mutable iterator over the values of a [`IndexMap`].
+///
+/// This `struct` is created by the [`values_mut`](IndexMap::values_mut) method on [`IndexMap`]. See its
+/// documentation for more.
+pub struct ValuesMut<'a, K, V> {
+    iter: slice::IterMut<'a, Bucket<K, V>>,
+}
+
+impl<'a, K, V> Iterator for ValuesMut<'a, K, V> {
+    type Item = &'a mut V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|bucket| &mut bucket.value)
     }
 }
 
@@ -1467,5 +1525,33 @@ mod tests {
 
         assert_eq!(Some((&0, &1)), map.first());
         assert_eq!(Some((&1, &2)), map.last());
+    }
+
+    #[test]
+    fn keys_iter() {
+        let map = almost_filled_map();
+        for (&key, i) in map.keys().zip(1..MAP_SLOTS) {
+            assert_eq!(key, i);
+        }
+    }
+
+    #[test]
+    fn values_iter() {
+        let map = almost_filled_map();
+        for (&value, i) in map.values().zip(1..MAP_SLOTS) {
+            assert_eq!(value, i);
+        }
+    }
+
+    #[test]
+    fn values_mut_iter() {
+        let mut map = almost_filled_map();
+        for value in map.values_mut() {
+            *value += 1;
+        }
+
+        for (&value, i) in map.values().zip(1..MAP_SLOTS) {
+            assert_eq!(value, i + 1);
+        }
     }
 }
