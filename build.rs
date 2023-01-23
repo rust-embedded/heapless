@@ -76,7 +76,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=cas_atomic_polyfill");
     } else {
         match &target[..] {
-            "riscv32i-unknown-none-elf" | "riscv32imc-unknown-none-elf" => {
+            "riscv32i-unknown-none-elf"
+            | "riscv32imc-unknown-none-elf"
+            | "xtensa-esp32s2-none-elf" => {
                 println!("cargo:rustc-cfg=full_atomic_polyfill");
                 println!("cargo:rustc-cfg=cas_atomic_polyfill");
             }
