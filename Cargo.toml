@@ -42,6 +42,7 @@ mpmc_large = []
 nightly = []
 
 [dependencies]
+bytes = { version = "1", default-features = false, optional = true }
 portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
 serde = { version = "1", optional = true, default-features = false }
@@ -58,6 +59,7 @@ static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]
 features = [
+  "bytes",
   "ufmt",
   "serde",
   "defmt",
