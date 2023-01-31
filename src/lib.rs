@@ -80,6 +80,7 @@
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
+pub use cstring::CString;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use indexmap::{
@@ -94,6 +95,7 @@ pub use vec::Vec;
 #[cfg(test)]
 mod test_helpers;
 
+mod cstring;
 mod deque;
 mod histbuf;
 mod indexmap;
