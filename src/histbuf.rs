@@ -124,6 +124,12 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         N
     }
 
+    /// Returns whether the buffer is filled
+    #[inline]
+    pub fn is_filled(&self) -> bool {
+        self.filled
+    }
+
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
         if self.filled {
@@ -165,14 +171,72 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
     pub fn recent(&self) -> Option<&T> {
+        self.recent_index()
+            .map(|i| unsafe { &*self.data[i].as_ptr() })
+    }
+
+    /// Returns index of the most recently written value in the underlying slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.recent_index(), Some(1));
+    /// ```
+    pub fn recent_index(&self) -> Option<usize> {
         if self.write_at == 0 {
             if self.filled {
-                Some(unsafe { &*self.data[self.capacity() - 1].as_ptr() })
+                Some(self.capacity() - 1)
             } else {
                 None
             }
         } else {
-            Some(unsafe { &*self.data[self.write_at - 1].as_ptr() })
+            Some(self.write_at - 1)
+        }
+    }
+
+    /// Returns a reference to the oldest value in the buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.oldest(), Some(&4));
+    /// ```
+    pub fn oldest(&self) -> Option<&T> {
+        self.oldest_index()
+            .map(|i| unsafe { &*self.data[i].as_ptr() })
+    }
+
+    /// Returns index of the oldest value in the underlying slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// x.write(4);
+    /// x.write(10);
+    /// assert_eq!(x.oldest_index(), Some(0));
+    /// ```
+    pub fn oldest_index(&self) -> Option<usize> {
+        if self.filled {
+            Some(self.write_at)
+        } else {
+            if self.write_at == 0 {
+                None
+            } else {
+                Some(0)
+            }
         }
     }
 
@@ -365,9 +429,11 @@ mod tests {
         assert_eq!(x.len(), 4);
         assert_eq!(x.as_slice(), [1; 4]);
         assert_eq!(*x, [1; 4]);
+        assert!(x.is_filled());
 
         let x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.as_slice(), []);
+        assert!(!x.is_filled());
     }
 
     #[test]
@@ -441,16 +507,37 @@ mod tests {
     #[test]
     fn recent() {
         let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
+        assert_eq!(x.recent_index(), None);
         assert_eq!(x.recent(), None);
 
         x.write(1);
         x.write(4);
+        assert_eq!(x.recent_index(), Some(1));
         assert_eq!(x.recent(), Some(&4));
 
         x.write(5);
         x.write(6);
         x.write(10);
+        assert_eq!(x.recent_index(), Some(0));
         assert_eq!(x.recent(), Some(&10));
+    }
+
+    #[test]
+    fn oldest() {
+        let mut x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
+        assert_eq!(x.oldest_index(), None);
+        assert_eq!(x.oldest(), None);
+
+        x.write(1);
+        x.write(4);
+        assert_eq!(x.oldest_index(), Some(0));
+        assert_eq!(x.oldest(), Some(&1));
+
+        x.write(5);
+        x.write(6);
+        x.write(10);
+        assert_eq!(x.oldest_index(), Some(1));
+        assert_eq!(x.oldest(), Some(&4));
     }
 
     #[test]
