@@ -158,7 +158,7 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Extracts a mutable slice containing the entire vector.
     ///
-    /// Equivalent to `&s[..]`.
+    /// Equivalent to `&mut s[..]`.
     ///
     /// # Examples
     ///
@@ -168,7 +168,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// buffer[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
-    pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
