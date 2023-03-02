@@ -1,4 +1,11 @@
-use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{
+    cmp::Ordering,
+    fmt, hash,
+    iter::FromIterator,
+    mem,
+    mem::{ManuallyDrop, MaybeUninit},
+    ops, ptr, slice,
+};
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 ///
@@ -83,6 +90,45 @@ impl<T, const N: usize> Vec<T, N> {
         let mut v = Vec::new();
         v.extend_from_slice(other)?;
         Ok(v)
+    }
+
+    /// Constructs a new vector with a fixed capacity of `N`, initializing
+    /// it with the provided array.
+    ///
+    /// The length of the provided array, `M` may be equal to _or_ less than
+    /// the capacity of the vector, `N`.
+    ///
+    /// If the length of the provided array is greater than the capacity of the
+    /// vector a compile-time error will be produced.
+    pub fn from_array<const M: usize>(src: [T; M]) -> Self {
+        // Const assert M >= 0
+        crate::sealed::greater_than_eq_0::<M>();
+        // Const assert N >= M
+        crate::sealed::greater_than_eq::<N, M>();
+
+        // We've got to copy `src`, but we're functionally moving it. Don't run
+        // any Drop code for T.
+        let src = ManuallyDrop::new(src);
+
+        if N == M {
+            Self {
+                len: N,
+                // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
+                // have the same layout when N == M.
+                buffer: unsafe { mem::transmute_copy(&src) },
+            }
+        } else {
+            let mut v = Vec::<T, N>::new();
+
+            for (src_elem, dst_elem) in src.iter().zip(v.buffer.iter_mut()) {
+                // NOTE(unsafe) src element is not going to drop as src itself
+                // is wrapped in a ManuallyDrop.
+                dst_elem.write(unsafe { ptr::read(src_elem) });
+            }
+
+            v.len = M;
+            v
+        }
     }
 
     /// Clones a vec into a new vec
@@ -858,6 +904,12 @@ impl<T, const N: usize> Drop for Vec<T, N> {
     }
 }
 
+impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
+    fn from(array: [T; M]) -> Self {
+        Self::from_array(array)
+    }
+}
+
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 
@@ -1531,6 +1583,21 @@ mod tests {
 
         // Slice too large
         assert!(Vec::<u8, 2>::from_slice(&[1, 2, 3]).is_err());
+    }
+
+    #[test]
+    fn from_array() {
+        // Successful construction, N == M
+        let v: Vec<u8, 3> = Vec::from_array([1, 2, 3]);
+        assert_eq!(v, Vec::<u8, 3>::from([1, 2, 3]));
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+
+        // Successful construction, N > M
+        let v: Vec<u8, 4> = Vec::from_array([1, 2, 3]);
+        assert_eq!(v, Vec::<u8, 4>::from([1, 2, 3]));
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
     }
 
     #[test]
