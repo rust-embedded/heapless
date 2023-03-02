@@ -1601,6 +1601,23 @@ mod tests {
     }
 
     #[test]
+    fn from_array_no_drop() {
+        struct Drops(Option<u8>);
+
+        impl Drop for Drops {
+            fn drop(&mut self) {
+                self.0 = None;
+            }
+        }
+
+        let v: Vec<Drops, 3> = Vec::from([Drops(Some(1)), Drops(Some(2)), Drops(Some(3))]);
+
+        assert_eq!(v[0].0, Some(1));
+        assert_eq!(v[1].0, Some(2));
+        assert_eq!(v[2].0, Some(3));
+    }
+
+    #[test]
     fn starts_with() {
         let v: Vec<_, 8> = Vec::from_slice(b"ab").unwrap();
         assert!(v.starts_with(&[]));
