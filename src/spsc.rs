@@ -2,8 +2,13 @@
 //!
 //! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!
-//! NOTE: This module is not available on targets that do *not* support atomic loads and are not
-//! supported by [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill). (e.g., MSP430).
+//! # Portability
+//!
+//! This module requires CAS atomic instructions which are not available on all architectures
+//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
+//! emulated however with [`portable-atomic`](https://crates.io/crates/portable-atomic), which is
+//! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
+//! targets.
 //!
 //! # Examples
 //!
@@ -91,10 +96,12 @@
 
 use core::{cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
 
-#[cfg(full_atomic_polyfill)]
-use atomic_polyfill::{AtomicUsize, Ordering};
-#[cfg(not(full_atomic_polyfill))]
-use core::sync::atomic::{AtomicUsize, Ordering};
+#[cfg(not(use_portable_atomic))]
+use core::sync::atomic;
+#[cfg(use_portable_atomic)]
+use portable_atomic as atomic;
+
+use atomic::{AtomicUsize, Ordering};
 
 /// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements
 ///

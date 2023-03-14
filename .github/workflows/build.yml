@@ -84,7 +84,7 @@ jobs:
           - nightly
         features:
           - ""
-          - "cas"
+          - "cas,portable-atomic/critical-section"
           - "serde"
     steps:
       - name: Checkout

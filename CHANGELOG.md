@@ -31,8 +31,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] export `IndexMapKeys`, `IndexMapValues` and
   `IndexMapValuesMut` iterator types.
 
-- [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
-  require a polyfill need a `critical-section` **v1.x.x** implementation.
+- [breaking-change] this crate now uses `portable-atomic` v1.0 instead of `atomic-polyfill` for emulating
+  CAS instructions on targets where they're not natively available.
 
 ### Fixed
 

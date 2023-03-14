@@ -29,8 +29,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let is_avr = env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("avr");
 
+    // Set some cfg's depending on the target.
+    // - has_atomics: atomic load/store is available (either natively or through portable-atomic)
+    // - has_cas: atomic CAS is available (either natively or through portable-atomic)
+    // - use_portable_atomic: Use portable-atomic for all atomics (load/store and CAS).
+    // - use_portable_atomic_cas: Use portable-atomic for CAS atomic operations. Load/store can keep using core::sync:atomic.
+
     // built-in targets with no atomic / CAS support as of nightly-2022-01-13
-    // AND not supported by the atomic-polyfill crate
+    // AND not supported by the portable-atomic crate
     // see the `no-atomics.sh` / `no-cas.sh` script sitting next to this file
     if is_avr {
         // lacks cas
@@ -39,11 +45,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             "avr-unknown-gnu-atmega328"
                 | "bpfeb-unknown-none"
                 | "bpfel-unknown-none"
-                | "msp430-none-elf"
-                // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
-                // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
-                | "thumbv4t-none-eabi"
-                // | "thumbv6m-none-eabi"           // supported by atomic-polyfill
+                // | "msp430-none-elf"              // supported by portable-atomic
+                // | "riscv32i-unknown-none-elf"    // supported by portable-atomic
+                // | "riscv32imc-unknown-none-elf"  // supported by portable-atomic
+                // | "thumbv4t-none-eabi"           // supported by portable-atomic
+                // | "thumbv6m-none-eabi"           // supported by portable-atomic
                 => {}
 
             _ => {
@@ -55,34 +61,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     if is_avr {
         // lacks atomics
     } else {
-        match &target[..] {
-        "msp430-none-elf"
-        // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
-        // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
-        => {}
-
-        _ => {
-            println!("cargo:rustc-cfg=has_atomics");
-        }
+        println!("cargo:rustc-cfg=has_atomics");
     }
-    };
 
-    // Let the code know if it should use atomic-polyfill or not, and what aspects
-    // of polyfill it requires
+    // Let the code know if it should use portable-atomic or not, for either
+    // only CAS, or for all atomics.
     if is_avr {
-        println!("cargo:rustc-cfg=full_atomic_polyfill");
-        println!("cargo:rustc-cfg=cas_atomic_polyfill");
+        println!("cargo:rustc-cfg=use_portable_atomic");
+        println!("cargo:rustc-cfg=use_portable_atomic_cas");
     } else {
         match &target[..] {
             "riscv32i-unknown-none-elf"
             | "riscv32imc-unknown-none-elf"
-            | "xtensa-esp32s2-none-elf" => {
-                println!("cargo:rustc-cfg=full_atomic_polyfill");
-                println!("cargo:rustc-cfg=cas_atomic_polyfill");
+            | "xtensa-esp32s2-none-elf"
+            | "thumbv4t-none-eabi"
+            | "msp430-none-elf" => {
+                println!("cargo:rustc-cfg=use_portable_atomic");
+                println!("cargo:rustc-cfg=use_portable_atomic_cas");
             }
 
             "thumbv6m-none-eabi" => {
-                println!("cargo:rustc-cfg=cas_atomic_polyfill");
+                println!("cargo:rustc-cfg=use_portable_atomic_cas");
             }
             _ => {}
         }
