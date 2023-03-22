@@ -255,6 +255,34 @@ impl<const N: usize> String<N> {
         Some(ch)
     }
 
+    /// Removes a [`u8`] from this `String` at a byte position and returns it.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than or equal to the `String`'s length,
+    /// or if it does not lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::from("foo");
+    ///
+    /// assert_eq!(s.remove(0), b'f');
+    /// assert_eq!(s.remove(1), b'o');
+    /// assert_eq!(s.remove(0), b'o');
+    /// ```
+    #[inline]
+    pub fn remove(&mut self, index: usize) -> u8 {
+        self.vec.remove(index)
+    }
+
     /// Truncates this `String`, removing all contents.
     ///
     /// While this means the `String` will have a length of zero, it does not
@@ -707,5 +735,12 @@ mod tests {
         assert!(s.is_empty());
         assert_eq!(0, s.len());
         assert_eq!(8, s.capacity());
+    }
+
+    #[test]
+    fn remove() {
+        let mut s: String<8> = String::from("foo");
+        assert_eq!(b'f', s.remove(0));
+        assert_eq!("oo", s.as_str());
     }
 }
