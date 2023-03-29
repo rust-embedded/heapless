@@ -504,6 +504,41 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
         }
     }
 
+    /// Returns a reference to the element in the order from oldest to newest
+    ///
+    /// `buf.ordered_get(0)` will always return the oldest element in the buffer
+    ///
+    /// `buf.ordered_get(buf.len() - 1)` will always return the newest element
+    /// in the buffer
+    ///
+    /// Returns None if `index >= self.len()`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+    /// buffer.extend([0, 0, 0]);
+    /// buffer.extend([1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(buffer.ordered_get(0), Some(&1u8));
+    /// assert_eq!(buffer.ordered_get(1), Some(&2u8));
+    /// assert_eq!(buffer.ordered_get(2), Some(&3u8));
+    /// assert_eq!(buffer.ordered_get(6), None);
+    /// ```
+    pub fn ordered_get(&self, idx: usize) -> Option<&T> {
+        if self.len() <= idx {
+            None
+        } else {
+            let (front, back) = self.as_slices();
+            if idx < front.len() {
+                Some(&front[idx])
+            } else {
+                Some(&back[idx - front.len()])
+            }
+        }
+    }
+
     /// Returns double ended iterator for iterating over the buffer from
     /// the oldest to the newest and back.
     ///
@@ -853,6 +888,24 @@ mod tests {
                 buffer.oldest_ordered(),
             );
         }
+    }
+
+    #[test]
+    fn ordered_get() {
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        assert_eq!(buffer.ordered_get(0), None);
+
+        buffer.write(1u8);
+        assert_eq!(buffer.ordered_get(0), Some(&1u8));
+
+        buffer.write(2u8);
+        assert_eq!(buffer.ordered_get(0), Some(&1u8));
+        assert_eq!(buffer.ordered_get(1), Some(&2u8));
+
+        buffer.extend([3, 4, 5, 6, 7, 8]);
+        assert_eq!(buffer.ordered_get(0), Some(&3u8));
+        assert_eq!(buffer.ordered_get(5), Some(&8u8));
+        assert_eq!(buffer.ordered_get(6), None);
     }
 
     #[test]
