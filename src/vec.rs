@@ -822,6 +822,35 @@ impl<T, const N: usize> Vec<T, N> {
         // All item are processed. This can be optimized to `set_len` by LLVM.
         drop(g);
     }
+
+    /// Removes `len` elements in front of the vector
+    ///
+    /// # Example
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec = Vec::<u8, 10>::from_slice(b"123").unwrap();
+    /// vec.drain(1).unwrap();
+    /// assert_eq!(vec.drain(3), Err(()));
+    /// assert_eq!(&vec, b"23");
+    /// ```
+    pub fn drain(&mut self, len: usize) -> Result<(), ()> {
+        if len > self.len() {
+            Err(())
+        } else if len == self.len() {
+            self.clear();
+            Ok(())
+        } else {
+            let new_len = self.len() - len;
+            unsafe {
+                let src = self.as_ptr().add(len);
+                let dst = self.as_mut_ptr();
+                core::ptr::copy(src, dst, new_len);
+            }
+            self.truncate(new_len);
+            Ok(())
+        }
+    }
 }
 
 // Trait implementations
