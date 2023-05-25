@@ -44,7 +44,7 @@ atomic-polyfill = { version = "1.0.1", optional = true }
 hash32 = "0.3.0"
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-spin = "0.9.4"
+spin = "0.9.8"
 
 [dependencies.serde]
 version = "1"
