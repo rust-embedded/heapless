@@ -1,7 +1,9 @@
+//! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+
 use core::{
     cmp::Ordering,
     fmt,
-    fmt::Write,
+    fmt::{Arguments, Write},
     hash, iter, ops,
     str::{self, Utf8Error},
 };
@@ -570,6 +572,53 @@ impl<const N: usize> Ord for String<N> {
     }
 }
 
+/// Equivalent to [`format`](https://doc.rust-lang.org/std/fmt/fn.format.html).
+///
+/// Please note that using [`format!`] might be preferable.
+///
+/// [`format!`]: crate::format!
+pub fn format<const N: usize>(args: Arguments<'_>) -> String<N> {
+    fn format_inner<const N: usize>(args: Arguments<'_>) -> String<N> {
+        let mut output = String::new();
+        output
+            .write_fmt(args)
+            // cannot differentiate between these error cases because fmt::Error is empty
+            .expect("capacity exceeded or a formatting trait implementation returned an error");
+        output
+    }
+
+    args.as_str()
+        .map_or_else(|| format_inner(args), |s| s.try_into().expect("capacity exceeded"))
+}
+
+/// Macro that creates a fixed capacity [`String`]. Equivalent to [`format!`](https://doc.rust-lang.org/std/macro.format.html).
+///
+/// The first argument is the capacity of the `String`. The following arguments work in the same way as the regular macro.
+///
+/// # Panics
+///
+/// `format!` panics if the formatted `String` would exceeded its capacity.
+/// `format!` also panics if a formatting trait implementation returns an error (same as the regular macro).
+///
+/// # Examples
+///
+/// ```
+/// use heapless::format;
+///
+/// format!(4, "test");
+/// format!(15, "hello {}", "world!");
+/// format!(20, "x = {}, y = {y}", 10, y = 30);
+/// let (x, y) = (1, 2);
+/// format!(12, "{x} + {y} = 3");
+/// ```
+#[macro_export]
+macro_rules! format {
+    ($max:literal, $($arg:tt)*) => {{
+        let res = $crate::string::format::<$max>(core::format_args!($($arg)*));
+        res
+    }}
+}
+
 macro_rules! impl_try_from_num {
     ($num:ty, $size:expr) => {
         impl<const N: usize> core::convert::TryFrom<$num> for String<N> {
@@ -830,5 +879,26 @@ mod tests {
         let mut s: String<8> = String::try_from("héy").unwrap();
         assert_eq!(s.remove(2), '\u{0301}');
         assert_eq!(s.as_str(), "hey");
+    }
+
+    #[test]
+    fn format() {
+        let number = 5;
+        let float = 3.12;
+        let formatted = format!(15, "{:0>3} plus {float}", number);
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+
+    #[test]
+    #[should_panic]
+    fn format_overflow() {
+        let i = 1234567;
+        format!(4, "13{}", i);
+    }
+
+    #[test]
+    #[should_panic]
+    fn format_plain_string_overflow() {
+        format!(2, "123");
     }
 }
