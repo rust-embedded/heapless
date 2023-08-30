@@ -148,12 +148,11 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             return None;
         }
 
-        let popped = if self.write_at >= self.len() {
-            unsafe { Some(self.data[self.write_at - self.len].assume_init_read()) }
-        } else {
-            unsafe {
-                Some(self.data[self.write_at + self.capacity() - self.len()].assume_init_read())
-            }
+        let popped = unsafe {
+            Some(
+                self.data[(self.write_at + self.capacity() - self.len()) % self.capacity()]
+                    .assume_init_read(),
+            )
         };
 
         self.len -= 1;
@@ -201,7 +200,15 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
+        unsafe {
+            slice::from_raw_parts(
+                self.data
+                    .as_ptr()
+                    .add((self.write_at + self.capacity() - self.len()) % self.capacity())
+                    as *const _,
+                self.len(),
+            )
+        }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -249,11 +256,18 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
                 wrapped: false,
             }
         } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
-                buf: self,
-                cur: 0,
-                wrapped: true,
+            if self.write_at >= self.len() {
+                OldestOrdered {
+                    buf: self,
+                    cur: self.write_at - self.len(),
+                    wrapped: true,
+                }
+            } else {
+                OldestOrdered {
+                    buf: self,
+                    cur: self.write_at + self.capacity() - self.len(),
+                    wrapped: true,
+                }
             }
         }
     }
@@ -359,7 +373,7 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled() {
+        if self.cur == self.buf.capacity() {
             // roll-over
             self.cur = 0;
             self.wrapped = true;
