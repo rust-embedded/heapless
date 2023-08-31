@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   require a polyfill need a `critical-section` **v1.x.x** implementation.
 
 ### Fixed
+- Linear Map `Drop` impl
 
 ### Removed
 
