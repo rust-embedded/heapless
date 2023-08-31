@@ -202,11 +202,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn as_slice(&self) -> &[T] {
         unsafe {
             slice::from_raw_parts(
-                self.data
-                    .as_ptr()
-                    .add((self.write_at + self.capacity() - self.len()) % self.capacity())
-                    as *const _,
-                self.len(),
+                self.data.as_ptr() as *const _, self.len(),
             )
         }
     }
@@ -383,7 +379,7 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
             return None;
         }
 
-        let item = &self.buf[self.cur];
+        let item = unsafe { self.buf.data[self.cur].assume_init_ref() };
         self.cur += 1;
         Some(item)
     }
