@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implemented `retain` for `IndexMap` and `IndexSet`.
 - Recover `StableDeref` trait for `pool::object::Object` and `pool::boxed::Box`.
 - Add polyfills for ESP32S2
-- - `HistoryBuffer.pop_oldest()`
+- `HistoryBuffer.pop_oldest()`
 - `HistoryBuffer.filled()` getter to replace filled member variable
 - `HistoryBuffer` unit tests for `HistoryBuffer.pop_oldest`.
 
