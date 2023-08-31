@@ -97,9 +97,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-cfg=unstable_channel");
     }
 
-    match compile_probe(ARM_LLSC_PROBE) {
-        Some(status) if status.success() => println!("cargo:rustc-cfg=arm_llsc"),
-        _ => {}
+    // AArch64 instruction set contains `clrex` but not `ldrex` or `strex`; the
+    // probe will succeed when we already know to deny this target from LLSC.
+    if !target.starts_with("aarch64") {
+        match compile_probe(ARM_LLSC_PROBE) {
+            Some(status) if status.success() => println!("cargo:rustc-cfg=arm_llsc"),
+            _ => {}
+        }
     }
 
     Ok(())
