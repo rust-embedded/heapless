@@ -267,6 +267,11 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             }
         }
     }
+
+    /// Returns an iterator from oldest to youngest, popping values as it iterates.
+    pub fn oldest_ordered_mut<'a>(&'a mut self) -> OldestOrderedMut<'a, T, N> {
+        OldestOrderedMut { buf: self }
+    }
 }
 
 impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
@@ -382,6 +387,18 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
         let item = unsafe { self.buf.data[self.cur].assume_init_ref() };
         self.cur += 1;
         Some(item)
+    }
+}
+
+pub struct OldestOrderedMut<'a, T, const N: usize> {
+    buf: &'a mut HistoryBuffer<T, N>,
+}
+
+impl<'a, T, const N: usize> Iterator for OldestOrderedMut<'a, T, N> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        self.buf.pop_oldest()
     }
 }
 
@@ -643,5 +660,37 @@ mod tests {
         }
 
         assert_eq!(x.pop_oldest(), None);
+    }
+
+    #[test]
+    fn ordered_mut() {
+        let mut x: HistoryBuffer<u8, 5> = HistoryBuffer::new();
+        
+        // simple
+        x.extend(&[1, 2, 3]);
+
+        assert_eq_iter(x.oldest_ordered_mut(), [1, 2, 3]);
+        assert_eq!(x.len(), 0);
+
+        // after wrap-around
+        x.extend(&[1, 2, 3, 4, 5, 6]);
+
+        assert_eq_iter(x.oldest_ordered_mut(), [2, 3, 4, 5, 6]);
+        assert_eq!(x.len(), 0);
+
+        // from empty
+        {
+            let mut ordered = x.oldest_ordered_mut();
+            assert_eq!(ordered.next(), None);
+        }
+
+        // partial iteration
+        x.extend(&[1, 2, 3, 4, 5, 6]);
+        {
+            let mut ordered = x.oldest_ordered_mut();
+            assert_eq!(ordered.next(), Some(2));
+        }
+
+        assert_eq!(x.len(), 4 as usize);
     }
 }

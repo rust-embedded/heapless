@@ -1,5 +1,5 @@
 use crate::Vec;
-use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
+use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice, ptr};
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
@@ -463,10 +463,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
 
 impl<K, V, const N: usize> Drop for LinearMap<K, V, N> {
     fn drop(&mut self) {
-        // heapless::Vec implements drop right?
-        drop(&self.buffer);
-        // original code below
-        // unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }
+        unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }
     }
 }
 
