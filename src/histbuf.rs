@@ -629,7 +629,7 @@ mod tests {
         assert_eq_iter(x.oldest_ordered(), &[3, 4, 5, 6]);
 
         // clear via pop
-        for i in 3..6 {
+        for i in 3..=6 {
             assert_eq!(x.pop_oldest(), Some(i));
         }
 
@@ -638,7 +638,7 @@ mod tests {
         // clear again from empty
         x.extend(&[1, 2, 3, 4, 5, 6, 7, 8]);
 
-        for i in 4..8 {
+        for i in 4..=8 {
             assert_eq!(x.pop_oldest(), Some(i));
         }
 
