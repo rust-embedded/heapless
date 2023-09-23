@@ -37,7 +37,7 @@ use core::slice;
 pub struct HistoryBuffer<T, const N: usize> {
     data: [MaybeUninit<T>; N],
     write_at: usize,
-    filled: bool,
+    len: usize, // filled: bool,
 }
 
 impl<T, const N: usize> HistoryBuffer<T, N> {
@@ -64,7 +64,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         Self {
             data: [Self::INIT; N],
             write_at: 0,
-            filled: false,
+            len: 0,
         }
     }
 
@@ -96,7 +96,7 @@ where
         Self {
             data: [MaybeUninit::new(t); N],
             write_at: 0,
-            filled: true,
+            len: N,
         }
     }
 
@@ -110,11 +110,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the current fill level of the buffer.
     #[inline]
     pub fn len(&self) -> usize {
-        if self.filled {
-            N
-        } else {
-            self.write_at
-        }
+        self.len
     }
 
     /// Returns the capacity of the buffer, which is the length of the
@@ -124,19 +120,44 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         N
     }
 
+    #[inline]
+    fn filled(&self) -> bool {
+        self.len() == self.capacity()
+    }
+
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
-        if self.filled {
+        if self.filled() {
             // Drop the old before we overwrite it.
             unsafe { ptr::drop_in_place(self.data[self.write_at].as_mut_ptr()) }
+        } else {
+            self.len += 1;
         }
+
         self.data[self.write_at] = MaybeUninit::new(t);
 
         self.write_at += 1;
         if self.write_at == self.capacity() {
             self.write_at = 0;
-            self.filled = true;
         }
+    }
+
+    /// Gets the oldest element from the buffer and removes it.
+    pub fn pop_oldest(&mut self) -> Option<T> {
+        if self.len == 0 {
+            return None;
+        }
+
+        let popped = unsafe {
+            Some(
+                self.data[(self.write_at + self.capacity() - self.len()) % self.capacity()]
+                    .assume_init_read(),
+            )
+        };
+
+        self.len -= 1;
+
+        popped
     }
 
     /// Clones and writes all elements in a slice to the buffer.
@@ -166,7 +187,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     pub fn recent(&self) -> Option<&T> {
         if self.write_at == 0 {
-            if self.filled {
+            if self.filled() {
                 Some(unsafe { &*self.data[self.capacity() - 1].as_ptr() })
             } else {
                 None
@@ -179,7 +200,11 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
+        unsafe {
+            slice::from_raw_parts(
+                self.data.as_ptr() as *const _, self.len(),
+            )
+        }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -197,7 +222,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let buffer = self.as_slice();
 
-        if !self.filled {
+        if !self.filled() {
             (buffer, &[])
         } else {
             (&buffer[self.write_at..], &buffer[..self.write_at])
@@ -220,20 +245,32 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     ///
     /// ```
     pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
-        if self.filled {
+        if self.filled() {
             OldestOrdered {
                 buf: self,
                 cur: self.write_at,
                 wrapped: false,
             }
         } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
-                buf: self,
-                cur: 0,
-                wrapped: true,
+            if self.write_at >= self.len() {
+                OldestOrdered {
+                    buf: self,
+                    cur: self.write_at - self.len(),
+                    wrapped: true,
+                }
+            } else {
+                OldestOrdered {
+                    buf: self,
+                    cur: self.write_at + self.capacity() - self.len(),
+                    wrapped: true,
+                }
             }
         }
+    }
+
+    /// Returns an iterator from oldest to youngest, popping values as it iterates.
+    pub fn oldest_ordered_mut<'a>(&'a mut self) -> OldestOrderedMut<'a, T, N> {
+        OldestOrderedMut { buf: self }
     }
 }
 
@@ -269,8 +306,8 @@ where
         for (new, old) in ret.data.iter_mut().zip(self.as_slice()) {
             new.write(old.clone());
         }
-        ret.filled = self.filled;
         ret.write_at = self.write_at;
+        ret.len = self.len;
         ret
     }
 }
@@ -337,7 +374,7 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled {
+        if self.cur == self.buf.capacity() {
             // roll-over
             self.cur = 0;
             self.wrapped = true;
@@ -347,9 +384,21 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
             return None;
         }
 
-        let item = &self.buf[self.cur];
+        let item = unsafe { self.buf.data[self.cur].assume_init_ref() };
         self.cur += 1;
         Some(item)
+    }
+}
+
+pub struct OldestOrderedMut<'a, T, const N: usize> {
+    buf: &'a mut HistoryBuffer<T, N>,
+}
+
+impl<'a, T, const N: usize> Iterator for OldestOrderedMut<'a, T, N> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        self.buf.pop_oldest()
     }
 }
 
@@ -574,5 +623,74 @@ mod tests {
                 y.iter().collect::<Vec<_>>()
             );
         }
+    }
+
+    #[test]
+    fn pop_oldest() {
+        let mut x: HistoryBuffer<u8, 5> = HistoryBuffer::new();
+
+        // simple pop
+        x.extend(&[1, 2, 3]);
+
+        assert_eq!(x.pop_oldest(), Some(1));
+
+        // pop after wrap-around
+        x.extend(&[4, 5, 6]);
+
+        assert_eq!(x.pop_oldest(), Some(2));
+
+        // recent
+        assert_eq!(x.recent(), Some(&6));
+
+        // ordered iterator
+        assert_eq_iter(x.oldest_ordered(), &[3, 4, 5, 6]);
+
+        // clear via pop
+        for i in 3..=6 {
+            assert_eq!(x.pop_oldest(), Some(i));
+        }
+
+        assert_eq!(x.pop_oldest(), None);
+
+        // clear again from empty
+        x.extend(&[1, 2, 3, 4, 5, 6, 7, 8]);
+
+        for i in 4..=8 {
+            assert_eq!(x.pop_oldest(), Some(i));
+        }
+
+        assert_eq!(x.pop_oldest(), None);
+    }
+
+    #[test]
+    fn ordered_mut() {
+        let mut x: HistoryBuffer<u8, 5> = HistoryBuffer::new();
+        
+        // simple
+        x.extend(&[1, 2, 3]);
+
+        assert_eq_iter(x.oldest_ordered_mut(), [1, 2, 3]);
+        assert_eq!(x.len(), 0);
+
+        // after wrap-around
+        x.extend(&[1, 2, 3, 4, 5, 6]);
+
+        assert_eq_iter(x.oldest_ordered_mut(), [2, 3, 4, 5, 6]);
+        assert_eq!(x.len(), 0);
+
+        // from empty
+        {
+            let mut ordered = x.oldest_ordered_mut();
+            assert_eq!(ordered.next(), None);
+        }
+
+        // partial iteration
+        x.extend(&[1, 2, 3, 4, 5, 6]);
+        {
+            let mut ordered = x.oldest_ordered_mut();
+            assert_eq!(ordered.next(), Some(2));
+        }
+
+        assert_eq!(x.len(), 4 as usize);
     }
 }
