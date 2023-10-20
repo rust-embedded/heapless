@@ -42,26 +42,13 @@ atomic-polyfill = { version = "1.0.1", optional = true }
 
 [dependencies]
 hash32 = "0.3.0"
+serde = { version = "1", optional = true, default-features = false }
+stable_deref_trait = { version = "1", default-features = false }
+ufmt-write = { version = "0.1", optional = true }
+defmt = { version = ">=0.2.0,<0.4", optional = true }
 
-[dependencies.serde]
-version = "1"
-optional = true
-default-features = false
-
-[dependencies.stable_deref_trait]
-version = "1"
-default-features = false
-
-[dependencies.ufmt-write]
-version = "0.1"
-optional = true
-
-[dev-dependencies.ufmt]
-version = "0.1"
-
-[dependencies.defmt]
-version = ">=0.2.0,<0.4"
-optional = true
+[dev-dependencies]
+ufmt = { version = "0.1" }
 
 [package.metadata.docs.rs]
 all-features = true
