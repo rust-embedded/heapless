@@ -462,6 +462,7 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
 }
 
 impl<K, V, const N: usize> Drop for LinearMap<K, V, N> {
+    #[allow(dropping_references)]
     fn drop(&mut self) {
         // heapless::Vec implements drop right?
         drop(&self.buffer);
