@@ -8,8 +8,6 @@ use std::{
     process::{Command, ExitStatus, Stdio},
 };
 
-use rustc_version::Channel;
-
 fn main() -> Result<(), Box<dyn Error>> {
     let target = env::var("TARGET")?;
 
@@ -88,13 +86,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             _ => {}
         }
-    }
-
-    if !matches!(
-        rustc_version::version_meta().unwrap().channel,
-        Channel::Stable | Channel::Beta
-    ) {
-        println!("cargo:rustc-cfg=unstable_channel");
     }
 
     match compile_probe(ARM_LLSC_PROBE) {
