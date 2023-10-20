@@ -104,6 +104,9 @@ mod linear_map;
 mod string;
 mod vec;
 
+#[cfg(all(has_cas, feature = "cas"))]
+pub mod async_impl;
+
 #[cfg(feature = "serde")]
 mod de;
 #[cfg(feature = "serde")]
