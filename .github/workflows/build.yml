@@ -19,26 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -98,28 +78,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-build-
-
       - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
         uses: actions-rs/toolchain@v1
         with:
@@ -149,28 +107,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-build-
 
       - name: Install stable Rust with target (${{ matrix.target }})
         uses: actions-rs/toolchain@v1
@@ -207,28 +143,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-            ${{ runner.OS }}-build-
-
       - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
         uses: actions-rs/toolchain@v1
         with:
@@ -257,26 +171,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
 
       - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
         uses: actions-rs/toolchain@v1
@@ -309,26 +203,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
