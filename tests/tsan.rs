@@ -50,7 +50,6 @@ fn twice() {
 }
 
 #[test]
-#[cfg(unstable_channel)]
 fn scoped() {
     let mut rb: spsc::Queue<i32, 5> = spsc::Queue::new();
 
@@ -75,7 +74,6 @@ fn scoped() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn contention() {
     const N: usize = 1024;
 
@@ -121,7 +119,6 @@ fn contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn mpmc_contention() {
     use std::sync::mpsc;
 
@@ -172,7 +169,6 @@ fn mpmc_contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn unchecked() {
     const N: usize = 1024;
 
