@@ -11,7 +11,7 @@ edition = "2018"
 keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
-repository = "https://github.com/japaric/heapless"
+repository = "https://github.com/rust-embedded/heapless"
 version = "0.8.0"
 
 [features]
