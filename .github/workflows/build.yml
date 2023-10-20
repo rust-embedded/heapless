@@ -283,6 +283,7 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
+          components: rust-src
           override: true
 
       - name: Export variables
@@ -295,7 +296,7 @@ jobs:
         with:
           use-cross: false
           command: test
-          args: --test tsan --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }} -- --test-threads=1
+          args: -Zbuild-std --test tsan --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }} -- --test-threads=1
 
   # Run cfail tests on MSRV
   testcfail:
