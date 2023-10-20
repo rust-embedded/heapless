@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fixed a `dropping_references` warning in `LinearMap`.
+
 ### Removed
 
 - [breaking-change] this crate no longer has a Minimum Supported Rust Version (MSRV) guarantee and
