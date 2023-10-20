@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -32,7 +32,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -96,10 +96,10 @@ jobs:
           - "serde"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -112,7 +112,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -148,10 +148,10 @@ jobs:
           - "serde"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -164,7 +164,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -205,10 +205,10 @@ jobs:
           - "--release"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -221,7 +221,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -256,10 +256,10 @@ jobs:
           - "--release"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -271,7 +271,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -308,10 +308,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -323,7 +323,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
