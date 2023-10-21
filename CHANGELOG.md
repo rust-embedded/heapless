@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
   require a polyfill need a `critical-section` **v1.x.x** implementation.
+- [breaking-change] `From<&str>` for `String` was replaced with `TryFrom<&str>` because the `From` trait must not fail.
 
 ### Fixed
 

@@ -37,13 +37,15 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let s: String<4> = String::from("ab");
+    /// let s: String<4> = String::try_from("ab")?;
     /// let b = s.into_bytes();
     /// assert!(b.len() == 2);
     ///
     /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn into_bytes(self) -> Vec<u8, N> {
@@ -57,13 +59,15 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<4> = String::from("ab");
+    /// let mut s: String<4> = String::try_from("ab")?;
     /// assert!(s.as_str() == "ab");
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
@@ -77,11 +81,13 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<4> = String::from("ab");
+    /// let mut s: String<4> = String::try_from("ab")?;
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
@@ -102,7 +108,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// let mut s = String::from("hello");
+    /// # use core::convert::TryFrom;
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
@@ -111,6 +120,7 @@ impl<const N: usize> String<N> {
     ///     vec.reverse();
     /// }
     /// assert_eq!(s, "olleh");
+    /// # Ok::<(), ()>(())
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
         &mut self.vec
@@ -123,15 +133,17 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
     /// assert_eq!("foobar", s);
     ///
     /// assert!(s.push_str("tender").is_err());
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
@@ -164,9 +176,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("abc");
+    /// let mut s: String<8> = String::try_from("abc")?;
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -175,6 +188,7 @@ impl<const N: usize> String<N> {
     /// assert!("abc123" == s.as_str());
     ///
     /// assert_eq!("abc123", s);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn push(&mut self, c: char) -> Result<(), ()> {
@@ -205,13 +219,15 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("hello");
+    /// let mut s: String<8> = String::try_from("hello")?;
     ///
     /// s.truncate(2);
     ///
     /// assert_eq!("he", s);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
@@ -232,15 +248,17 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('f'));
     ///
     /// assert_eq!(s.pop(), None);
+    /// Ok::<(), ()>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
         let ch = self.chars().rev().next()?;
@@ -265,15 +283,17 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
+    /// # use core::convert::TryFrom;
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// s.clear();
     ///
     /// assert!(s.is_empty());
     /// assert_eq!(0, s.len());
     /// assert_eq!(8, s.capacity());
+    /// Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn clear(&mut self) {
@@ -287,11 +307,12 @@ impl<const N: usize> Default for String<N> {
     }
 }
 
-impl<'a, const N: usize> From<&'a str> for String<N> {
-    fn from(s: &'a str) -> Self {
+impl<'a, const N: usize> core::convert::TryFrom<&'a str> for String<N> {
+    type Error = ();
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         let mut new = String::new();
-        new.push_str(s).unwrap();
-        new
+        new.push_str(s)?;
+        Ok(new)
     }
 }
 
@@ -474,31 +495,33 @@ impl<const N: usize> Ord for String<N> {
     }
 }
 
-macro_rules! impl_from_num {
+macro_rules! impl_try_from_num {
     ($num:ty, $size:expr) => {
-        impl<const N: usize> From<$num> for String<N> {
-            fn from(s: $num) -> Self {
+        impl<const N: usize> core::convert::TryFrom<$num> for String<N> {
+            type Error = ();
+            fn try_from(s: $num) -> Result<Self, Self::Error> {
                 let mut new = String::new();
-                write!(&mut new, "{}", s).unwrap();
-                new
+                write!(&mut new, "{}", s).map_err(|_| ())?;
+                Ok(new)
             }
         }
     };
 }
 
-impl_from_num!(i8, 4);
-impl_from_num!(i16, 6);
-impl_from_num!(i32, 11);
-impl_from_num!(i64, 20);
+impl_try_from_num!(i8, 4);
+impl_try_from_num!(i16, 6);
+impl_try_from_num!(i32, 11);
+impl_try_from_num!(i64, 20);
 
-impl_from_num!(u8, 3);
-impl_from_num!(u16, 5);
-impl_from_num!(u32, 10);
-impl_from_num!(u64, 20);
+impl_try_from_num!(u8, 3);
+impl_try_from_num!(u16, 5);
+impl_try_from_num!(u32, 10);
+impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
     use crate::{String, Vec};
+    use core::convert::TryFrom;
 
     #[test]
     fn static_new() {
@@ -507,7 +530,7 @@ mod tests {
 
     #[test]
     fn clone() {
-        let s1: String<20> = String::from("abcd");
+        let s1: String<20> = String::try_from("abcd").unwrap();
         let mut s2 = s1.clone();
         s2.push_str(" efgh").unwrap();
 
@@ -517,16 +540,16 @@ mod tests {
 
     #[test]
     fn cmp() {
-        let s1: String<4> = String::from("abcd");
-        let s2: String<4> = String::from("zzzz");
+        let s1: String<4> = String::try_from("abcd").unwrap();
+        let s2: String<4> = String::try_from("zzzz").unwrap();
 
         assert!(s1 < s2);
     }
 
     #[test]
     fn cmp_heterogenous_size() {
-        let s1: String<4> = String::from("abcd");
-        let s2: String<8> = String::from("zzzz");
+        let s1: String<4> = String::try_from("abcd").unwrap();
+        let s2: String<8> = String::try_from("zzzz").unwrap();
 
         assert!(s1 < s2);
     }
@@ -535,7 +558,7 @@ mod tests {
     fn debug() {
         use core::fmt::Write;
 
-        let s: String<8> = String::from("abcd");
+        let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
@@ -545,7 +568,7 @@ mod tests {
     fn display() {
         use core::fmt::Write;
 
-        let s: String<8> = String::from("abcd");
+        let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
         write!(std_s, "{}", s).unwrap();
         assert_eq!("abcd", std_s);
@@ -561,10 +584,13 @@ mod tests {
     }
 
     #[test]
-    fn from() {
-        let s: String<4> = String::from("123");
+    fn try_from() {
+        let s: String<4> = String::try_from("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
+
+        let e: () = String::<2>::try_from("123").unwrap_err();
+        assert_eq!(e, ());
     }
 
     #[test]
@@ -596,18 +622,21 @@ mod tests {
     #[test]
     #[should_panic]
     fn from_panic() {
-        let _: String<4> = String::from("12345");
+        let _: String<4> = String::try_from("12345").unwrap();
     }
 
     #[test]
-    fn from_num() {
-        let v: String<20> = String::from(18446744073709551615 as u64);
+    fn try_from_num() {
+        let v: String<20> = String::try_from(18446744073709551615 as u64).unwrap();
         assert_eq!(v, "18446744073709551615");
+
+        let e: () = String::<2>::try_from(18446744073709551615 as u64).unwrap_err();
+        assert_eq!(e, ());
     }
 
     #[test]
     fn into_bytes() {
-        let s: String<4> = String::from("ab");
+        let s: String<4> = String::try_from("ab").unwrap();
         let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
@@ -615,7 +644,7 @@ mod tests {
 
     #[test]
     fn as_str() {
-        let s: String<4> = String::from("ab");
+        let s: String<4> = String::try_from("ab").unwrap();
 
         assert_eq!(s.as_str(), "ab");
         // should be moved to fail test
@@ -625,7 +654,7 @@ mod tests {
 
     #[test]
     fn as_mut_str() {
-        let mut s: String<4> = String::from("ab");
+        let mut s: String<4> = String::try_from("ab").unwrap();
         let s = s.as_mut_str();
         s.make_ascii_uppercase();
         assert_eq!(s, "AB");
@@ -633,7 +662,7 @@ mod tests {
 
     #[test]
     fn push_str() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         assert!(s.push_str("bar").is_ok());
         assert_eq!("foobar", s);
         assert_eq!(s, "foobar");
@@ -644,7 +673,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let mut s: String<6> = String::from("abc");
+        let mut s: String<6> = String::try_from("abc").unwrap();
         assert!(s.push('1').is_ok());
         assert!(s.push('2').is_ok());
         assert!(s.push('3').is_ok());
@@ -654,13 +683,13 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let s: String<8> = String::from("hello");
+        let s: String<8> = String::try_from("hello").unwrap();
         assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     }
 
     #[test]
     fn truncate() {
-        let mut s: String<8> = String::from("hello");
+        let mut s: String<8> = String::try_from("hello").unwrap();
         s.truncate(6);
         assert_eq!(s.len(), 5);
         s.truncate(2);
@@ -671,7 +700,7 @@ mod tests {
 
     #[test]
     fn pop() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('f'));
@@ -680,7 +709,7 @@ mod tests {
 
     #[test]
     fn pop_uenc() {
-        let mut s: String<8> = String::from("é");
+        let mut s: String<8> = String::try_from("é").unwrap();
         assert_eq!(s.len(), 3);
         match s.pop() {
             Some(c) => {
@@ -702,7 +731,7 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         s.clear();
         assert!(s.is_empty());
         assert_eq!(0, s.len());
