@@ -110,6 +110,8 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
+#[cfg(feature = "bytes")]
+mod bytes;
 #[cfg(feature = "defmt-impl")]
 mod defmt;
 #[cfg(all(has_cas, feature = "cas"))]

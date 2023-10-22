@@ -52,3 +52,8 @@ ufmt = "0.2"
 
 [package.metadata.docs.rs]
 all-features = true
+
+[dependencies.bytes]
+version = "1"
+optional = true
+default-features = false
