@@ -31,9 +31,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - export `IndexSet` and `IndexMap` iterator types.
 - [breaking-change] export `IndexMapKeys`, `IndexMapValues` and
   `IndexMapValuesMut` iterator types.
-
 - [breaking-change] this crate now uses `portable-atomic` v1.0 instead of `atomic-polyfill` for emulating
   CAS instructions on targets where they're not natively available.
+- [breaking-change] `From<&str>` for `String` was replaced with `TryFrom<&str>` because the `From` trait must not fail.
 
 ### Fixed
 
