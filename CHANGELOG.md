@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- updated from edition 2018 to edition 2021
 - [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
   trait instead of the `hash32::Hash` (v0.2.0) trait
 - move `pool::singleton::Box` to the `pool::box` module

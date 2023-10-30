@@ -75,8 +75,6 @@
 
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
-#![deny(rust_2018_compatibility)]
-#![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
