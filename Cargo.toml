@@ -15,35 +15,32 @@ repository = "https://github.com/rust-embedded/heapless"
 version = "0.8.0"
 
 [features]
-default = ["cas"]
-cas = ["portable-atomic"]
-ufmt-impl = ["ufmt-write"]
-# only for tests
-__trybuild = []
+# Enable polyfilling of atomics via `portable-atomic`.
+# `portable-atomic` polyfills some functionality by default, but to get full atomics you must
+# enable one of its features to tell it how to do it. See `portable-atomic` documentation for details.
+portable-atomic = ["dep:portable-atomic"]
+
+# Enable polyfilling of atomics via portable-atomic, using critical section for locking
+portable-atomic-critical-section = ["dep:portable-atomic", "portable-atomic?/critical-section"]
+
+# Enable polyfilling of atomics via portable-atomic, using disabling interrupts for locking.
+# WARNING: this is only sound for single-core bare-metal privileged-mode targets!
+portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-atomic?/unsafe-assume-single-core"]
+
+# implement serde traits.
+serde = ["dep:serde"]
+
+# implement ufmt traits.
+ufmt = ["dep:ufmt-write"]
+
+# Implement defmt::Format from defmt v0.3
+defmt-03 = ["dep:defmt"]
+
 # Enable larger MPMC sizes.
 mpmc_large = []
-# This flag has no version guarantee, the `defmt` dependency can be updated in a patch release
-defmt-impl = ["defmt"]
-
-[target.thumbv6m-none-eabi.dependencies]
-portable-atomic = { version = "1.0", optional = true }
-
-[target.riscv32i-unknown-none-elf.dependencies]
-portable-atomic = { version = "1.0" }
-
-[target.riscv32imc-unknown-none-elf.dependencies]
-portable-atomic = { version = "1.0" }
-
-[target.msp430-none-elf.dependencies]
-portable-atomic = { version = "1.0" }
-
-[target.xtensa-esp32s2-none-elf.dependencies]
-portable-atomic = { version = "1.0", optional = true }
-
-[target.'cfg(target_arch = "avr")'.dependencies]
-portable-atomic = { version = "1.0", optional = true }
 
 [dependencies]
+portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
 serde = { version = "1", optional = true, default-features = false }
 stable_deref_trait = { version = "1", default-features = false }

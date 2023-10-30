@@ -61,7 +61,7 @@
 //!
 //! The `heapless` crate provides the following optional Cargo features:
 //!
-//! - `ufmt-impl`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
+//! - `ufmt`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
 //!
 //! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
 //!
@@ -108,17 +108,31 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-#[cfg(feature = "defmt-impl")]
+#[cfg(feature = "defmt-03")]
 mod defmt;
-#[cfg(all(has_cas, feature = "cas"))]
+#[cfg(any(
+    // assume we have all atomics available if we're using portable-atomic
+    feature = "portable-atomic",
+    // target has native atomic CAS (mpmc_large requires usize, otherwise just u8)
+    all(feature = "mpmc_large", target_has_atomic = "ptr"),
+    all(not(feature = "mpmc_large"), target_has_atomic = "8")
+))]
 pub mod mpmc;
 #[cfg(any(arm_llsc, target_arch = "x86"))]
 pub mod pool;
 pub mod sorted_linked_list;
-#[cfg(has_atomics)]
+#[cfg(any(
+    // assume we have all atomics available if we're using portable-atomic
+    feature = "portable-atomic",
+    // target has native atomic CAS. Note this is too restrictive, spsc requires load/store only, not CAS.
+    // This should be `cfg(target_has_atomic_load_store)`, but that's not stable yet.
+    target_has_atomic = "ptr",
+    // or the current target is in a list in build.rs of targets known to have load/store but no CAS.
+    has_atomic_load_store
+))]
 pub mod spsc;
 
-#[cfg(feature = "ufmt-impl")]
+#[cfg(feature = "ufmt")]
 mod ufmt;
 
 mod sealed;

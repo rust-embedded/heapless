@@ -80,13 +80,6 @@ jobs:
           - thumbv7m-none-eabi
           - thumbv8m.base-none-eabi
           - thumbv8m.main-none-eabi
-        toolchain:
-          - stable
-          - nightly
-        features:
-          - ""
-          - "cas,portable-atomic/critical-section"
-          - "serde"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,14 +106,17 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
+      - name: Install Rust with target (${{ matrix.target }})
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: cargo check
-        run: cargo check --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+        run: |
+          cargo check --target=${{ matrix.target }}
+          cargo check --target=${{ matrix.target }} --features="portable-atomic-critical-section"
+          cargo check --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large"
 
   doc:
     name: doc
@@ -130,10 +126,6 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - thumbv7m-none-eabi
-        features:
-          - ""
-          - "cas"
-          - "serde"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -166,7 +158,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: cargo doc
-        run: cargo doc --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+        run: cargo doc --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large portable-atomic-critical-section"
 
   # Run cpass tests
   testcpass:
