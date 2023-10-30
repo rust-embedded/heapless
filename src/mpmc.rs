@@ -1,8 +1,7 @@
 //! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue
 //!
-//! NOTE: This module is not available on targets that do *not* support CAS operations and are not
-//! emulated by the [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill) crate (e.g.,
-//! MSP430).
+//! NOTE: This module requires atomic CAS operations. On targets where they're not natively available,
+//! they are emulated by the [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
 //!
 //! # Example
 //!
@@ -77,10 +76,9 @@
 //!
 //! This module requires CAS atomic instructions which are not available on all architectures
 //! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
-//! emulated however with [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill), which is
+//! emulated however with [`portable-atomic`](https://crates.io/crates/portable-atomic), which is
 //! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
-//! targets. MSP430 is currently not supported by
-//! [`atomic_polyfill`](https://crates.io/crates/atomic-polyfill).
+//! targets.
 //!
 //! # References
 //!
@@ -90,19 +88,17 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(all(feature = "mpmc_large", not(cas_atomic_polyfill)))]
-type AtomicTargetSize = core::sync::atomic::AtomicUsize;
-#[cfg(all(feature = "mpmc_large", cas_atomic_polyfill))]
-type AtomicTargetSize = atomic_polyfill::AtomicUsize;
-#[cfg(all(not(feature = "mpmc_large"), not(cas_atomic_polyfill)))]
-type AtomicTargetSize = core::sync::atomic::AtomicU8;
-#[cfg(all(not(feature = "mpmc_large"), cas_atomic_polyfill))]
-type AtomicTargetSize = atomic_polyfill::AtomicU8;
+#[cfg(not(use_portable_atomic_cas))]
+use core::sync::atomic;
+#[cfg(use_portable_atomic_cas)]
+use portable_atomic as atomic;
 
-#[cfg(not(cas_atomic_polyfill))]
-type Ordering = core::sync::atomic::Ordering;
-#[cfg(cas_atomic_polyfill)]
-type Ordering = atomic_polyfill::Ordering;
+use atomic::Ordering;
+
+#[cfg(feature = "mpmc_large")]
+type AtomicTargetSize = atomic::AtomicUsize;
+#[cfg(not(feature = "mpmc_large"))]
+type AtomicTargetSize = atomic::AtomicU8;
 
 #[cfg(feature = "mpmc_large")]
 type IntSize = usize;

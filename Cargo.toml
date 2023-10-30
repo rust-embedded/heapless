@@ -16,7 +16,7 @@ version = "0.8.0"
 
 [features]
 default = ["cas"]
-cas = ["atomic-polyfill"]
+cas = ["portable-atomic"]
 ufmt-impl = ["ufmt-write"]
 # only for tests
 __trybuild = []
@@ -26,19 +26,22 @@ mpmc_large = []
 defmt-impl = ["defmt"]
 
 [target.thumbv6m-none-eabi.dependencies]
-atomic-polyfill = { version = "1.0.1", optional = true }
+portable-atomic = { version = "1.0", optional = true }
 
 [target.riscv32i-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
+portable-atomic = { version = "1.0" }
 
 [target.riscv32imc-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
+portable-atomic = { version = "1.0" }
+
+[target.msp430-none-elf.dependencies]
+portable-atomic = { version = "1.0" }
 
 [target.xtensa-esp32s2-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
+portable-atomic = { version = "1.0", optional = true }
 
 [target.'cfg(target_arch = "avr")'.dependencies]
-atomic-polyfill = { version = "1.0.1", optional = true }
+portable-atomic = { version = "1.0", optional = true }
 
 [dependencies]
 hash32 = "0.3.0"
