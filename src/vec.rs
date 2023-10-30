@@ -1,7 +1,4 @@
-use core::{
-    cmp::Ordering, convert::TryFrom, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr,
-    slice,
-};
+use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
