@@ -1,4 +1,10 @@
-use core::{cmp::Ordering, fmt, fmt::Write, hash, iter, ops, str};
+use core::{
+    cmp::Ordering,
+    fmt,
+    fmt::Write,
+    hash, iter, ops,
+    str::{self, Utf8Error},
+};
 
 use crate::Vec;
 
@@ -26,6 +32,68 @@ impl<const N: usize> String<N> {
     #[inline]
     pub const fn new() -> Self {
         Self { vec: Vec::new() }
+    }
+
+    /// Convert UTF-8 bytes into a `String`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut sparkle_heart = Vec::<u8, 4>::new();
+    /// sparkle_heart.extend_from_slice(&[240, 159, 146, 150]);
+    ///
+    /// let sparkle_heart: String<4> = String::from_utf8(sparkle_heart)?;
+    /// assert_eq!("💖", sparkle_heart);
+    /// # Ok::<(), core::str::Utf8Error>(())
+    /// ```
+    ///
+    /// Invalid UTF-8:
+    ///
+    /// ```
+    /// use core::str::Utf8Error;
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut vec = Vec::<u8, 4>::new();
+    /// vec.extend_from_slice(&[0, 159, 146, 150]);
+    ///
+    /// let e: Utf8Error = String::from_utf8(vec).unwrap_err();
+    /// assert_eq!(e.valid_up_to(), 1);
+    /// # Ok::<(), core::str::Utf8Error>(())
+    /// ```
+    #[inline]
+    pub fn from_utf8(vec: Vec<u8, N>) -> Result<Self, Utf8Error> {
+        core::str::from_utf8(&vec)?;
+        Ok(Self { vec })
+    }
+
+    /// Convert UTF-8 bytes into a `String`, without checking that the string
+    /// contains valid UTF-8.
+    ///
+    /// # Safety
+    ///
+    /// The bytes passed in must be valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut sparkle_heart = Vec::<u8, 4>::new();
+    /// sparkle_heart.extend_from_slice(&[240, 159, 146, 150]);
+    ///
+    /// // Safety: `sparkle_heart` Vec is known to contain valid UTF-8
+    /// let sparkle_heart: String<4> = unsafe { String::from_utf8_unchecked(sparkle_heart) };
+    /// assert_eq!("💖", sparkle_heart);
+    /// ```
+    #[inline]
+    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> Self {
+        Self { vec }
     }
 
     /// Converts a `String` into a byte vector.

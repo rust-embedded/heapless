@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implemented `retain` for `IndexMap` and `IndexSet`.
 - Recover `StableDeref` trait for `pool::object::Object` and `pool::boxed::Box`.
 - Add polyfills for ESP32S2
+- Added `String::from_utf8` and `String::from_utf8_unchecked`.
 
 ### Changed
 
