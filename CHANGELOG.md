@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implemented `retain` for `IndexMap` and `IndexSet`.
 - Recover `StableDeref` trait for `pool::object::Object` and `pool::boxed::Box`.
 - Add polyfills for ESP32S2
+- `HistoryBuffer.pop_oldest()`
+- `HistoryBuffer.filled()` getter to replace filled member variable
+- `HistoryBuffer` unit tests for `HistoryBuffer.pop_oldest`.
 
 ### Changed
 
@@ -34,6 +37,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] this crate now uses `portable-atomic` v1.0 instead of `atomic-polyfill` for emulating
   CAS instructions on targets where they're not natively available.
 - [breaking-change] `From<&str>` for `String` was replaced with `TryFrom<&str>` because the `From` trait must not fail.
+
+- `HistoryBuffer.len()` to be a getter rather than computed on call.
+- `HistoryBuffer.write()`
+- `HistoryBuffer.recent()`
+- `HistoryBuffer.oldest_ordered()`
+- `OldestOrdered.next()`
 
 ### Fixed
 
