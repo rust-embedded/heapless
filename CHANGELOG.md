@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [breaking-change] this crate now uses `portable-atomic` v1.0 instead of `atomic-polyfill` for emulating
   CAS instructions on targets where they're not natively available.
 - [breaking-change] `From<&str>` for `String` was replaced with `TryFrom<&str>` because the `From` trait must not fail.
+- [breaking-change] Renamed Cargo features
+  - `defmt-impl` is now `defmt-03`
+  - `ufmt-impl` is now `ufmt`
+  - `cas` is removed, atomic polyfilling is now opt-in via the `portable-atomic` feature.
 
 ### Fixed
 
@@ -92,31 +96,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-* Added support for AVR architecture.
-* Add `entry` API to `IndexMap`
-* Implement `IntoIterator` trait for `Indexmap`
-* Implement `FromIterator` for `String`
-* Add `first` and `last` methods to `IndexMap` and `IndexSet`
-* Add `pop_{front_back}_unchecked` methods to `Deque`
+- Added support for AVR architecture.
+- Add `entry` API to `IndexMap`
+- Implement `IntoIterator` trait for `Indexmap`
+- Implement `FromIterator` for `String`
+- Add `first` and `last` methods to `IndexMap` and `IndexSet`
+- Add `pop_{front_back}_unchecked` methods to `Deque`
 
 ### Changed
 
-* Optimize the codegen of `Vec::clone`
-* `riscv32i` and `riscv32imc` targets unconditionally (e.g. `build --no-default-features`) depends on `atomic-polyfill`
+- Optimize the codegen of `Vec::clone`
+- `riscv32i` and `riscv32imc` targets unconditionally (e.g. `build --no-default-features`) depends on `atomic-polyfill`
 
 ### Fixed
 
-* Inserting an item that replaces an already present item will no longer
-fail with an error
+- Inserting an item that replaces an already present item will no longer
+  fail with an error
 
 ## [v0.7.11] - 2022-05-09
 
 ### Fixed
 
-* Fixed `pool` example in docstring.
-* Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
+- Fixed `pool` example in docstring.
+- Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
   and `Hole::move_to()` (internal to the binary heap implementation).
-* Fixed `BinaryHeap` elements are being dropped twice
+- Fixed `BinaryHeap` elements are being dropped twice
 
 ## [v0.7.10] - 2022-01-21
 
@@ -296,8 +300,8 @@ fail with an error
 ### Added
 
 - opt-out `cas` feature to disable parts of the API that use CAS instructions.
-Useful if using a custom (i.e. not built-in) rustc target that does not have CAS
-instructions.
+  Useful if using a custom (i.e. not built-in) rustc target that does not have CAS
+  instructions.
 
 - singleton `Pool` support on ARMv7-A devices
 
@@ -316,7 +320,7 @@ instructions.
 - `Pool` now implements the `Sync` trait when targeting ARMv7-R.
 
 - Most data structures can now be constructed in "const context" (e.g. `static
-  [mut]` variables) using a newtype in `heapless::i`.
+[mut]` variables) using a newtype in `heapless::i`.
 
 - `Pool` has gained a `grow_exact` method to more efficiently use statically
   allocated memory.
@@ -361,7 +365,7 @@ instructions.
 ### Added
 
 - Added a memory pool that's lock-free and interrupt-safe on the ARMv7-M
-architecture.
+  architecture.
 
 - `IndexMap` have gained `Eq` and `PartialEq` implementations.
 
@@ -549,7 +553,7 @@ architecture.
 - [breaking-change] The error type of all operations that may fail has changed from `()` to
   `BufferFullError`.
 
-- Both `RingBuffer` and `Vec` now support arrays of *any* size for their backup storage.
+- Both `RingBuffer` and `Vec` now support arrays of _any_ size for their backup storage.
 
 ## [v0.1.0] - 2017-04-27
 

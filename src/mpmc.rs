@@ -88,9 +88,9 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(not(use_portable_atomic_cas))]
+#[cfg(not(feature = "portable-atomic"))]
 use core::sync::atomic;
-#[cfg(use_portable_atomic_cas)]
+#[cfg(feature = "portable-atomic")]
 use portable_atomic as atomic;
 
 use atomic::Ordering;
