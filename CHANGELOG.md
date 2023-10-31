@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `defmt-impl` is now `defmt-03`
   - `ufmt-impl` is now `ufmt`
   - `cas` is removed, atomic polyfilling is now opt-in via the `portable-atomic` feature.
+- `Vec::as_mut_slice` is now a public method.
 
 ### Fixed
 
