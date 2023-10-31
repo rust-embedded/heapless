@@ -1469,7 +1469,7 @@ mod tests {
                     panic!("Entry found before insert");
                 }
                 Entry::Vacant(v) => {
-                    v.insert(i).unwrap();
+                    assert_eq!(i, *v.insert(i).unwrap());
                 }
             }
         }
