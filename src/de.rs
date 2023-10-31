@@ -1,5 +1,6 @@
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String, Vec,
+    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
+    Vec,
 };
 use core::{
     fmt,

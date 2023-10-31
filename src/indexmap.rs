@@ -209,12 +209,9 @@ where
                     // robin hood: steal the spot if it's better for us
                     let index = self.entries.len();
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
+                    Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, hash));
                     return Insert::Success(Inserted {
-                        index: Self::insert_phase_2(
-                            &mut self.indices,
-                            probe,
-                            Pos::new(index, hash),
-                        ),
+                        index,
                         old_value: None,
                     });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
@@ -1372,7 +1369,7 @@ mod tests {
                 panic!("Entry found when empty");
             }
             Entry::Vacant(v) => {
-                v.insert(value).unwrap();
+                assert_eq!(value, *v.insert(value).unwrap());
             }
         };
         assert_eq!(value, *src.get(&key).unwrap())
@@ -1472,7 +1469,7 @@ mod tests {
                     panic!("Entry found before insert");
                 }
                 Entry::Vacant(v) => {
-                    v.insert(i).unwrap();
+                    assert_eq!(i, *v.insert(i).unwrap());
                 }
             }
         }

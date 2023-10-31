@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fixed a `dropping_references` warning in `LinearMap`.
+- Fixed IndexMap entry API returning wrong slot after an insert on vacant entry. (#360)
 
 ### Removed
 

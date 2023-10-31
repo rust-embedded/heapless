@@ -49,6 +49,42 @@ jobs:
       - name: Run miri
         run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
 
+  # Run cargo test
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Run cargo test
+        run: cargo test
+
   # Run cargo fmt --check
   style:
     name: style
@@ -169,11 +205,6 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - i686-unknown-linux-musl
-        toolchain:
-          - stable
-          - nightly
-        features:
-          - serde
         buildtype:
           - ""
           - "--release"
@@ -203,14 +234,14 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
+      - name: Install Rust with target (${{ matrix.target }})
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: cargo test
-        run: cargo test --test cpass --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }}
+        run: cargo test --test cpass --target=${{ matrix.target }} --features=serde ${{ matrix.buildtype }}
 
   # Run test suite for UI
   testtsan:
@@ -220,8 +251,6 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-        toolchain:
-          - nightly
         buildtype:
           - ""
           - "--release"
@@ -249,10 +278,10 @@ jobs:
           restore-keys: |
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
+      - name: Install Rust nightly with target (${{ matrix.target }})
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: nightly
           target: ${{ matrix.target }}
           components: rust-src
 
@@ -302,23 +331,3 @@ jobs:
 
       - name: Run cargo
         run: cargo run
-
-  # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
-  #
-  # ALL THE PREVIOUS JOBS NEEDS TO BE ADDED TO THE `needs` SECTION OF THIS JOB!
-
-  ci-success:
-    name: ci
-    if: github.event_name == 'push' && success()
-    needs:
-      - style
-      - check
-      - doc
-      - testcpass
-      - testtsan
-      - testcfail
-      - testmiri
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mark the job as a success
-        run: exit 0

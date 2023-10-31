@@ -350,7 +350,7 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo").unwrap();
     ///
     /// assert_eq!(s.remove(0), 'f');
     /// assert_eq!(s.remove(1), 'o');
@@ -365,12 +365,9 @@ impl<const N: usize> String<N> {
 
         let next = index + ch.len_utf8();
         let len = self.len();
+        let ptr = self.vec.as_mut_ptr();
         unsafe {
-            core::ptr::copy(
-                self.vec.as_ptr().add(next),
-                self.vec.as_mut_ptr().add(index),
-                len - next,
-            );
+            core::ptr::copy(ptr.add(next), ptr.add(index), len - next);
             self.vec.set_len(len - (next - index));
         }
         ch
@@ -842,14 +839,14 @@ mod tests {
 
     #[test]
     fn remove() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         assert_eq!(s.remove(0), 'f');
         assert_eq!(s.as_str(), "oo");
     }
 
     #[test]
     fn remove_uenc() {
-        let mut s: String<8> = String::from("ĝėēƶ");
+        let mut s: String<8> = String::try_from("ĝėēƶ").unwrap();
         assert_eq!(s.remove(2), 'ė');
         assert_eq!(s.remove(2), 'ē');
         assert_eq!(s.remove(2), 'ƶ');
@@ -858,7 +855,7 @@ mod tests {
 
     #[test]
     fn remove_uenc_combo_characters() {
-        let mut s: String<8> = String::from("héy");
+        let mut s: String<8> = String::try_from("héy").unwrap();
         assert_eq!(s.remove(2), '\u{0301}');
         assert_eq!(s.as_str(), "hey");
     }
