@@ -333,6 +333,49 @@ impl<const N: usize> String<N> {
         Some(ch)
     }
 
+    /// Removes a [`char`] from this `String` at a byte position and returns it.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than or equal to the `String`'s length,
+    /// or if it does not lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::from("foo");
+    ///
+    /// assert_eq!(s.remove(0), 'f');
+    /// assert_eq!(s.remove(1), 'o');
+    /// assert_eq!(s.remove(0), 'o');
+    /// ```
+    #[inline]
+    pub fn remove(&mut self, index: usize) -> char {
+        let ch = match self[index..].chars().next() {
+            Some(ch) => ch,
+            None => panic!("cannot remove a char from the end of a string"),
+        };
+
+        let next = index + ch.len_utf8();
+        let len = self.len();
+        unsafe {
+            core::ptr::copy(
+                self.vec.as_ptr().add(next),
+                self.vec.as_mut_ptr().add(index),
+                len - next,
+            );
+            self.vec.set_len(len - (next - index));
+        }
+        ch
+    }
+
     /// Truncates this `String`, removing all contents.
     ///
     /// While this means the `String` will have a length of zero, it does not
@@ -795,5 +838,28 @@ mod tests {
         assert!(s.is_empty());
         assert_eq!(0, s.len());
         assert_eq!(8, s.capacity());
+    }
+
+    #[test]
+    fn remove() {
+        let mut s: String<8> = String::from("foo");
+        assert_eq!(s.remove(0), 'f');
+        assert_eq!(s.as_str(), "oo");
+    }
+
+    #[test]
+    fn remove_uenc() {
+        let mut s: String<8> = String::from("ĝėēƶ");
+        assert_eq!(s.remove(2), 'ė');
+        assert_eq!(s.remove(2), 'ē');
+        assert_eq!(s.remove(2), 'ƶ');
+        assert_eq!(s.as_str(), "ĝ");
+    }
+
+    #[test]
+    fn remove_uenc_combo_characters() {
+        let mut s: String<8> = String::from("héy");
+        assert_eq!(s.remove(2), '\u{0301}');
+        assert_eq!(s.as_str(), "hey");
     }
 }
