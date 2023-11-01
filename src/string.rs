@@ -601,7 +601,10 @@ pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Err
 
 /// Macro that creates a fixed capacity [`String`]. Equivalent to [`format!`](https://doc.rust-lang.org/std/macro.format.html).
 ///
-/// The first argument is the capacity of the `String`. The following arguments work in the same way as the regular macro.
+/// The macro's arguments work in the same way as the regular macro.
+///
+/// It is possible to explicitly specify the capacity of the returned string as the first argument.
+/// In this case it is necessary to disambiguate by separating the capacity with a semicolon.
 ///
 /// # Errors
 ///
@@ -616,22 +619,31 @@ pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Err
 ///
 /// ```
 /// # fn main() -> Result<(), core::fmt::Error> {
-/// use heapless::format;
+/// use heapless::{format, String};
 ///
-/// format!(4, "test")?;
-/// format!(15, "hello {}", "world!")?;
-/// format!(20, "x = {}, y = {y}", 10, y = 30)?;
+/// // Notice semicolon instead of comma!
+/// format!(4; "test")?;
+/// format!(15; "hello {}", "world!")?;
+/// format!(20; "x = {}, y = {y}", 10, y = 30)?;
 /// let (x, y) = (1, 2);
-/// format!(12, "{x} + {y} = 3")?;
+/// format!(12; "{x} + {y} = 3")?;
+///
+/// let implicit: String<10> = format!("speed = {}", 7)?;
 /// # Ok(())
 /// # }
 /// ```
 #[macro_export]
 macro_rules! format {
-    ($max:literal, $($arg:tt)*) => {{
+    // Without semicolon as separator to disambiguate between arms, Rust just
+    // chooses the first so that the format string would land in $max.
+    ($max:expr; $($arg:tt)*) => {{
         let res = $crate::string::format::<$max>(core::format_args!($($arg)*));
         res
-    }}
+    }};
+    ($($arg:tt)*) => {{
+        let res = $crate::string::format(core::format_args!($($arg)*));
+        res
+    }};
 }
 
 macro_rules! impl_try_from_num {
@@ -900,20 +912,27 @@ mod tests {
     fn format() {
         let number = 5;
         let float = 3.12;
-        let formatted = format!(15, "{:0>3} plus {float}", number).unwrap();
+        let formatted = format!(15; "{:0>3} plus {float}", number).unwrap();
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+    #[test]
+    fn format_inferred_capacity() {
+        let number = 5;
+        let float = 3.12;
+        let formatted: String<15> = format!("{:0>3} plus {float}", number).unwrap();
         assert_eq!(formatted, "005 plus 3.12")
     }
 
     #[test]
     fn format_overflow() {
         let i = 1234567;
-        let formatted = format!(4, "13{}", i);
+        let formatted = format!(4; "13{}", i);
         assert_eq!(formatted, Err(core::fmt::Error))
     }
 
     #[test]
     fn format_plain_string_overflow() {
-        let formatted = format!(2, "123");
+        let formatted = format!(2; "123");
         assert_eq!(formatted, Err(core::fmt::Error))
     }
 }
