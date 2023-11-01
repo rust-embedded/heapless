@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `format` macro.
+
 ### Changed
 
 - Changed `stable_deref_trait` to a platform-dependent dependency.
