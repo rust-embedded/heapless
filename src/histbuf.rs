@@ -42,6 +42,11 @@ pub struct HistoryBuffer<T, const N: usize> {
 
 impl<T, const N: usize> HistoryBuffer<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+    /// ```compile_failure
+    /// use heapless::HistoryBuffer;
+    /// let _: HistoryBuffer<u8, 0> = HistoryBuffer::new();
+    /// ```
+    const _ASSERT: () = assert!(N > 0);
 
     /// Constructs a new history buffer.
     ///
@@ -57,10 +62,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.len(), 0);
     /// ```
     #[inline]
+    #[allow(path_statements)]
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_0::<N>();
-
+        Self::_ASSERT;
         Self {
             data: [Self::INIT; N],
             write_at: 0,

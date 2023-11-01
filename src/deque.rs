@@ -54,6 +54,13 @@ pub struct Deque<T, const N: usize> {
 impl<T, const N: usize> Deque<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
 
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::Deque;
+    /// let _: Deque<u8, 0> = Deque::new();
+    /// ```
+    const _ASSERT: () = assert!(N > 0);
+
     /// Constructs a new, empty deque with a fixed capacity of `N`
     ///
     /// # Examples
@@ -67,10 +74,9 @@ impl<T, const N: usize> Deque<T, N> {
     /// // allocate the deque in a static variable
     /// static mut X: Deque<u8, 16> = Deque::new();
     /// ```
+    #[allow(path_statements)]
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
-
+        Self::_ASSERT;
         Self {
             buffer: [Self::INIT; N],
             front: 0,

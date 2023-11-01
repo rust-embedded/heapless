@@ -125,10 +125,17 @@ impl<T, const N: usize> Queue<T, N> {
         (val + 1) % N
     }
 
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::spsc::Queue;
+    /// let q: Queue<i32, 0> = Queue::new();
+    /// ```
+    const _ASSERT: () = assert!(N > 1);
+
     /// Creates an empty queue with a fixed capacity of `N - 1`
+    #[allow(path_statements)]
     pub const fn new() -> Self {
-        // Const assert N > 1
-        crate::sealed::greater_than_1::<N>();
+        Self::_ASSERT;
 
         Queue {
             head: AtomicUsize::new(0),

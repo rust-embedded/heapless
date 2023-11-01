@@ -134,5 +134,3 @@ pub mod spsc;
 
 #[cfg(feature = "ufmt")]
 mod ufmt;
-
-mod sealed;

@@ -147,11 +147,12 @@ macro_rules! impl_index_and_const_new {
                 next: $name::none(),
             };
 
-            /// Create a new linked list.
-            pub const fn $new_name() -> Self {
-                // Const assert N < MAX
-                crate::sealed::smaller_than::<N, $max_val>();
+            const _ASSERT: () = assert!(N < $max_val);
 
+            /// Create a new linked list.
+            #[allow(path_statements)]
+            pub const fn $new_name() -> Self {
+                Self::_ASSERT;
                 let mut list = SortedLinkedList {
                     list: [Self::UNINIT; N],
                     head: $name::none(),

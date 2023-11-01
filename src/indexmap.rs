@@ -532,11 +532,10 @@ pub struct IndexMap<K, V, S, const N: usize> {
 
 impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexMap`.
+    #[allow(path_statements)]
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
-
+        Self::_ASSERT1;
+        Self::_ASSERT2;
         IndexMap {
             build_hasher: BuildHasherDefault::new(),
             core: CoreMap::new(),
@@ -545,6 +544,31 @@ impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
 }
 
 impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::FnvIndexMap;
+    /// let _: FnvIndexMap<u8, u8, 0> = FnvIndexMap::new();
+    /// ```
+    ///
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::FnvIndexMap;
+    /// let _: FnvIndexMap<u8, u8, 0> = FnvIndexMap::default();
+    /// ```
+    const _ASSERT1: () = assert!(N > 1);
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::FnvIndexMap;
+    /// let _: FnvIndexMap<u8, u8, 3> = FnvIndexMap::new();
+    /// ```
+    ///
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::FnvIndexMap;
+    /// let _: FnvIndexMap<u8, u8, 3> = FnvIndexMap::default();
+    /// ```
+    const _ASSERT2: () = assert!(N.is_power_of_two());
+
     /// Returns the number of elements the map can hold
     pub fn capacity(&self) -> usize {
         N
@@ -1020,11 +1044,10 @@ impl<K, V, S, const N: usize> Default for IndexMap<K, V, S, N>
 where
     S: Default,
 {
+    #[allow(path_statements)]
     fn default() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
-
+        Self::_ASSERT1;
+        Self::_ASSERT2;
         IndexMap {
             build_hasher: <_>::default(),
             core: CoreMap::new(),

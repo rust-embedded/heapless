@@ -138,14 +138,26 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
     const ASSERT: [(); 1] = [()];
 
-    /// Creates an empty queue
-    pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::mpmc::MpMcQueue;
+    /// let _: MpMcQueue<i32, 1> = MpMcQueue::new();
+    /// ```
+    const _ASSERT1: () = assert!(N > 1);
+    #[cfg_attr(miri, doc = "```ignore")]
+    #[cfg_attr(not(miri), doc = "```compile_fail")]
+    /// use heapless::mpmc::MpMcQueue;
+    /// let _: MpMcQueue<i32, 3> = MpMcQueue::new();
+    /// ```
+    const _ASSERT2: () = assert!(N.is_power_of_two());
 
+    /// Creates an empty queue
+    #[allow(path_statements)]
+    pub const fn new() -> Self {
         // Const assert on size.
         Self::ASSERT[!(N < (IntSize::MAX as usize)) as usize];
+        Self::_ASSERT1;
+        Self::_ASSERT2;
 
         let mut cell_count = 0;
 

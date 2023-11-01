@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Fixed a `dropping_references` warning in `LinearMap`.
 - Fixed IndexMap entry API returning wrong slot after an insert on vacant entry. (#360)
+- Fixed constant asserts not asserting at compile time.
 
 ### Removed
 
