@@ -232,8 +232,6 @@ impl<const N: usize> String<N> {
 
     /// Appends the given [`char`] to the end of this `String`.
     ///
-    /// [`char`]: ../../std/primitive.char.html
-    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -274,8 +272,6 @@ impl<const N: usize> String<N> {
     ///
     /// Panics if `new_len` does not lie on a [`char`] boundary.
     ///
-    /// [`char`]: ../../std/primitive.char.html
-    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -301,8 +297,6 @@ impl<const N: usize> String<N> {
     /// Removes the last character from the string buffer and returns it.
     ///
     /// Returns [`None`] if this `String` is empty.
-    ///
-    /// [`None`]: ../../std/option/enum.Option.html#variant.None
     ///
     /// # Examples
     ///

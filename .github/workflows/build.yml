@@ -188,13 +188,14 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install stable Rust with target (${{ matrix.target }})
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install nightly Rust with target (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
 
-      - name: cargo doc
-        run: cargo doc --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large portable-atomic-critical-section"
+      - name: cargo rustdoc
+        env: {"RUSTDOCFLAGS": "-D warnings --cfg docsrs"}
+        run: cargo rustdoc --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large portable-atomic-critical-section"
 
   # Run cpass tests
   testcpass:

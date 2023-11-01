@@ -56,7 +56,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// // allocate the vector in a static variable
     /// static mut X: Vec<u8, 16> = Vec::new();
     /// ```
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+    /// `Vec` `const` constructor; wrap the returned value in [`Vec`].
     pub const fn new() -> Self {
         // Const assert N >= 0
         crate::sealed::greater_than_eq_0::<N>();
@@ -307,7 +307,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// difference, with each additional slot filled with value. If
     /// new_len is less than len, the Vec is simply truncated.
     ///
-    /// See also [`resize_default`](struct.Vec.html#method.resize_default).
+    /// See also [`resize_default`](Self::resize_default).
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
     where
         T: Clone,
@@ -333,7 +333,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// difference, with each additional slot filled with `Default::default()`.
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
-    /// See also [`resize`](struct.Vec.html#method.resize).
+    /// See also [`resize`](Self::resize).
     pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
     where
         T: Clone + Default,
@@ -348,17 +348,17 @@ impl<T, const N: usize> Vec<T, N> {
     /// is done using one of the safe operations instead, such as
     /// [`truncate`], [`resize`], [`extend`], or [`clear`].
     ///
-    /// [`truncate`]: #method.truncate
-    /// [`resize`]: #method.resize
-    /// [`extend`]: https://doc.rust-lang.org/stable/core/iter/trait.Extend.html#tymethod.extend
-    /// [`clear`]: #method.clear
+    /// [`truncate`]: Self::truncate
+    /// [`resize`]: Self::resize
+    /// [`extend`]: core::iter::Extend
+    /// [`clear`]: Self::clear
     ///
     /// # Safety
     ///
     /// - `new_len` must be less than or equal to [`capacity()`].
     /// - The elements at `old_len..new_len` must be initialized.
     ///
-    /// [`capacity()`]: #method.capacity
+    /// [`capacity()`]: Self::capacity
     ///
     /// # Examples
     ///
@@ -928,9 +928,6 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
 /// An iterator that moves out of an [`Vec`][`Vec`].
 ///
 /// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
-///
-/// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
-///
 pub struct IntoIter<T, const N: usize> {
     vec: Vec<T, N>,
     next: usize,

@@ -12,10 +12,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::Vec;
 
-/// A [`heapless::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
+/// A [`IndexMap`] using the default FNV hasher
 ///
 /// A list of all Methods and Traits available for `FnvIndexMap` can be found in
-/// the [`heapless::IndexMap`](./struct.IndexMap.html) documentation.
+/// the [`IndexMap`] documentation.
 ///
 /// # Examples
 /// ```
@@ -478,15 +478,16 @@ where
     }
 }
 
-/// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/1/indexmap/map/struct.IndexMap.html)
+/// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/2/indexmap/map/struct.IndexMap.html)
 ///
 /// Note that you cannot use `IndexMap` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexMap`](./type.FnvIndexMap.html) instead
+/// in use. Pick a concrete instantiation like [`FnvIndexMap`] instead
 /// or create your own.
 ///
 /// Note that the capacity of the `IndexMap` must be a power of 2.
 ///
 /// # Examples
+///
 /// Since `IndexMap` cannot be used directly, we're using its `FnvIndexMap` instantiation
 /// for this example.
 ///
@@ -904,7 +905,7 @@ where
         }
     }
 
-    /// Same as [`swap_remove`](struct.IndexMap.html#method.swap_remove)
+    /// Same as [`swap_remove`](Self::swap_remove)
     ///
     /// Computes in **O(1)** time (average).
     ///
