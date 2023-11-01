@@ -576,40 +576,55 @@ impl<const N: usize> Ord for String<N> {
 ///
 /// Please note that using [`format!`] might be preferable.
 ///
+/// # Errors
+///
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
+///
 /// [`format!`]: crate::format!
-pub fn format<const N: usize>(args: Arguments<'_>) -> String<N> {
-    fn format_inner<const N: usize>(args: Arguments<'_>) -> String<N> {
+pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+    fn format_inner<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
         let mut output = String::new();
-        output
-            .write_fmt(args)
-            // cannot differentiate between these error cases because fmt::Error is empty
-            .expect("capacity exceeded or a formatting trait implementation returned an error");
-        output
+        output.write_fmt(args)?;
+        Ok(output)
     }
 
-    args.as_str()
-        .map_or_else(|| format_inner(args), |s| s.try_into().expect("capacity exceeded"))
+    args.as_str().map_or_else(
+        || format_inner(args),
+        |s| s.try_into().map_err(|_| fmt::Error),
+    )
 }
 
 /// Macro that creates a fixed capacity [`String`]. Equivalent to [`format!`](https://doc.rust-lang.org/std/macro.format.html).
 ///
 /// The first argument is the capacity of the `String`. The following arguments work in the same way as the regular macro.
 ///
-/// # Panics
+/// # Errors
 ///
-/// `format!` panics if the formatted `String` would exceeded its capacity.
-/// `format!` also panics if a formatting trait implementation returns an error (same as the regular macro).
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
 ///
 /// # Examples
 ///
 /// ```
+/// # fn main() -> Result<(), core::fmt::Error> {
 /// use heapless::format;
 ///
-/// format!(4, "test");
-/// format!(15, "hello {}", "world!");
-/// format!(20, "x = {}, y = {y}", 10, y = 30);
+/// format!(4, "test")?;
+/// format!(15, "hello {}", "world!")?;
+/// format!(20, "x = {}, y = {y}", 10, y = 30)?;
 /// let (x, y) = (1, 2);
-/// format!(12, "{x} + {y} = 3");
+/// format!(12, "{x} + {y} = 3")?;
+/// # Ok(())
+/// # }
 /// ```
 #[macro_export]
 macro_rules! format {
@@ -885,20 +900,20 @@ mod tests {
     fn format() {
         let number = 5;
         let float = 3.12;
-        let formatted = format!(15, "{:0>3} plus {float}", number);
+        let formatted = format!(15, "{:0>3} plus {float}", number).unwrap();
         assert_eq!(formatted, "005 plus 3.12")
     }
 
     #[test]
-    #[should_panic]
     fn format_overflow() {
         let i = 1234567;
-        format!(4, "13{}", i);
+        let formatted = format!(4, "13{}", i);
+        assert_eq!(formatted, Err(core::fmt::Error))
     }
 
     #[test]
-    #[should_panic]
     fn format_plain_string_overflow() {
-        format!(2, "123");
+        let formatted = format!(2, "123");
+        assert_eq!(formatted, Err(core::fmt::Error))
     }
 }
