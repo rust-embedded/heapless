@@ -58,9 +58,6 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
     pub const fn new() -> Self {
-        // Const assert N >= 0
-        crate::sealed::greater_than_eq_0::<N>();
-
         Self {
             len: 0,
             buffer: Self::INIT,
