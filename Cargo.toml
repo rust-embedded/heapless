@@ -21,11 +21,11 @@ version = "0.8.0"
 portable-atomic = ["dep:portable-atomic"]
 
 # Enable polyfilling of atomics via portable-atomic, using critical section for locking
-portable-atomic-critical-section = ["dep:portable-atomic", "portable-atomic?/critical-section"]
+portable-atomic-critical-section = ["dep:portable-atomic", "portable-atomic", "portable-atomic?/critical-section"]
 
 # Enable polyfilling of atomics via portable-atomic, using disabling interrupts for locking.
 # WARNING: this is only sound for single-core bare-metal privileged-mode targets!
-portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-atomic?/unsafe-assume-single-core"]
+portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-atomic", "portable-atomic?/unsafe-assume-single-core"]
 
 # implement serde traits.
 serde = ["dep:serde"]
