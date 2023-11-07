@@ -43,19 +43,26 @@
 //!
 //! List of currently implemented data structures:
 //!
-//! - [`Arc`](pool/arc/index.html) -- like `std::sync::Arc` but backed by a lock-free memory pool
-//! rather than `#[global_allocator]`
-//! - [`Box`](pool/boxed/index.html) -- like `std::boxed::Box` but backed by a lock-free memory pool
-//! rather than `#[global_allocator]`
-//! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
-//! - [`IndexMap`](struct.IndexMap.html) -- hash table
-//! - [`IndexSet`](struct.IndexSet.html) -- hash set
-//! - [`LinearMap`](struct.LinearMap.html)
-//! - [`Object`](pool/object/index.html) -- objects managed by an object pool
-//! - [`String`](struct.String.html)
-//! - [`Vec`](struct.Vec.html)
-//! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
-//! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Arc`](pool::arc::Arc) -- like `std::sync::Arc` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+)]
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Box`](pool::boxed::Box) -- like `std::boxed::Box` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+)]
+//! - [`BinaryHeap`] -- priority queue
+//! - [`IndexMap`] -- hash table
+//! - [`IndexSet`] -- hash set
+//! - [`LinearMap`]
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Object`](pool::object::Object) -- objects managed by an object pool"
+)]
+//! - [`String`]
+//! - [`Vec`]
+//! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
+//! - [`spsc::Queue`] -- single producer single consumer lock-free queue
 //!
 //! # Optional Features
 //!
@@ -72,7 +79,7 @@
 //!
 //! In other words, changes in the Rust version requirement of this crate are not considered semver
 //! breaking change and may occur in patch version releases.
-
+#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![deny(warnings)]

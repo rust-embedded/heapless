@@ -90,7 +90,7 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 
 /// Creates a new `BoxPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
-/// For more extensive documentation see the [module level documentation](pool/boxed/index.html)
+/// For more extensive documentation see the [module level documentation](crate::pool::boxed)
 #[macro_export]
 macro_rules! box_pool {
     ($name:ident: $data_type:ty) => {

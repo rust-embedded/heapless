@@ -51,4 +51,7 @@ defmt = { version = ">=0.2.0,<0.4", optional = true }
 ufmt = "0.2"
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
+# for the pool module
+targets = ["i686-unknown-linux-gnu"]
+rustdoc-args = ["--cfg", "docsrs"]

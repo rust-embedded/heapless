@@ -78,7 +78,7 @@ use super::treiber::{AtomicPtr, NonNullPtr, Stack, StructNode};
 /// Creates a new `ObjectPool` singleton with the given `$name` that manages the specified
 /// `$data_type`
 ///
-/// For more extensive documentation see the [module level documentation](pool/object/index.html)
+/// For more extensive documentation see the [module level documentation](crate::pool::object)
 #[macro_export]
 macro_rules! object_pool {
     ($name:ident: $data_type:ty) => {

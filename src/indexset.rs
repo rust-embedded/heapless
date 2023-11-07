@@ -7,10 +7,10 @@ use core::{
 };
 use hash32::{BuildHasherDefault, FnvHasher};
 
-/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
+/// A [`IndexSet`] using the
 /// default FNV hasher.
 /// A list of all Methods and Traits available for `FnvIndexSet` can be found in
-/// the [`heapless::IndexSet`](./struct.IndexSet.html) documentation.
+/// the [`IndexSet`] documentation.
 ///
 /// # Examples
 /// ```
@@ -41,10 +41,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 /// ```
 pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, N>;
 
-/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
+/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/2/indexmap/set/struct.IndexSet.html).
 ///
 /// Note that you cannot use `IndexSet` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexSet`](./type.FnvIndexSet.html) instead
+/// in use. Pick a concrete instantiation like [`FnvIndexSet`] instead
 /// or create your own.
 ///
 /// Note that the capacity of the `IndexSet` must be a power of 2.
