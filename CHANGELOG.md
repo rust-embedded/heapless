@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.8.0] - 2023-11-07
+
 ### Added
 
 - Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
@@ -561,7 +563,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.7.16...HEAD
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.8.0...HEAD
+[v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
 [v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/rust-embedded/heapless/compare/v0.7.14...v0.7.15
 [v0.7.14]: https://github.com/rust-embedded/heapless/compare/v0.7.13...v0.7.14
