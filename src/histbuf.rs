@@ -204,6 +204,41 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
+    /// Returns a reference to the element in the order from oldest to newest
+    ///
+    /// `buf.ordered_get(0)` will always return the oldest element in the buffer
+    ///
+    /// `buf.ordered_get(buf.len() - 1)` will always return the newest element
+    /// in the buffer
+    ///
+    /// Returns None if `index >= self.len()`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+    /// buffer.extend([0, 0, 0]);
+    /// buffer.extend([1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(buffer.ordered_get(0), Some(&1u8));
+    /// assert_eq!(buffer.ordered_get(1), Some(&2u8));
+    /// assert_eq!(buffer.ordered_get(2), Some(&3u8));
+    /// assert_eq!(buffer.ordered_get(6), None);
+    /// ```
+    pub fn ordered_get(&self, idx: usize) -> Option<&T> {
+        if self.len() <= idx {
+            None
+        } else {
+            let (front, back) = self.as_slices();
+            if idx < front.len() {
+                Some(&front[idx])
+            } else {
+                Some(&back[idx - front.len()])
+            }
+        }
+    }
+
     /// Returns an iterator for iterating over the buffer from oldest to newest.
     ///
     /// # Examples
@@ -220,20 +255,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     ///
     /// ```
     pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
-        if self.filled {
-            OldestOrdered {
-                buf: self,
-                cur: self.write_at,
-                wrapped: false,
-            }
-        } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
-                buf: self,
-                cur: 0,
-                wrapped: true,
-            }
-        }
+        OldestOrdered { buf: self, cur: 0 }
     }
 }
 
@@ -330,26 +352,17 @@ where
 pub struct OldestOrdered<'a, T, const N: usize> {
     buf: &'a HistoryBuffer<T, N>,
     cur: usize,
-    wrapped: bool,
 }
 
 impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled {
-            // roll-over
-            self.cur = 0;
-            self.wrapped = true;
+        let ret = self.buf.ordered_get(self.cur);
+        if ret.is_some() {
+            self.cur += 1;
         }
-
-        if self.cur == self.buf.write_at && self.wrapped {
-            return None;
-        }
-
-        let item = &self.buf[self.cur];
-        self.cur += 1;
-        Some(item)
+        ret
     }
 }
 
@@ -493,6 +506,24 @@ mod tests {
                 buffer.oldest_ordered(),
             )
         }
+    }
+
+    #[test]
+    fn ordered_get() {
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        assert_eq!(buffer.ordered_get(0), None);
+
+        buffer.write(1u8);
+        assert_eq!(buffer.ordered_get(0), Some(&1u8));
+
+        buffer.write(2u8);
+        assert_eq!(buffer.ordered_get(0), Some(&1u8));
+        assert_eq!(buffer.ordered_get(1), Some(&2u8));
+
+        buffer.extend([3, 4, 5, 6, 7, 8]);
+        assert_eq!(buffer.ordered_get(0), Some(&3u8));
+        assert_eq!(buffer.ordered_get(5), Some(&8u8));
+        assert_eq!(buffer.ordered_get(6), None);
     }
 
     #[test]
