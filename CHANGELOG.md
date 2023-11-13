@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- configure `stable_deref_trait` as a platform-dependent dependency
+
 ## [v0.8.0] - 2023-11-07
 
 ### Added
