@@ -448,6 +448,7 @@ pub struct Iter<'a, K, V> {
 impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
+    #[allow(clippy::needless_borrowed_reference)]
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|&(ref k, ref v)| (k, v))
     }

@@ -117,6 +117,21 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
+    /// Returns true if the buffer is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// assert!(x.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the capacity of the buffer, which is the length of the
     /// underlying backing array.
     #[inline]
@@ -219,7 +234,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// }
     ///
     /// ```
-    pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
+    pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
         if self.filled {
             OldestOrdered {
                 buf: self,

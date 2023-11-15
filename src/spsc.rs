@@ -251,7 +251,7 @@ impl<T, const N: usize> Queue<T, N> {
 
     /// Adds an `item` to the end of the queue, without checking if it's full
     ///
-    /// # Unsafety
+    /// # Safety
     ///
     /// If the queue is full this operation will leak a value (T's destructor won't run on
     /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
@@ -295,7 +295,7 @@ impl<T, const N: usize> Queue<T, N> {
     /// Returns the item in the front of the queue, without checking if there is something in the
     /// queue
     ///
-    /// # Unsafety
+    /// # Safety
     ///
     /// If the queue is empty this operation will return uninitialized memory.
     pub unsafe fn dequeue_unchecked(&mut self) -> T {
@@ -507,7 +507,9 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
     /// Returns the item in the front of the queue, without checking if there are elements in the
     /// queue
     ///
-    /// See [`Queue::dequeue_unchecked`] for safety
+    /// # Safety
+    ///
+    /// See [`Queue::dequeue_unchecked`]
     #[inline]
     pub unsafe fn dequeue_unchecked(&mut self) -> T {
         self.rb.inner_dequeue_unchecked()
@@ -526,6 +528,22 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
         self.rb.len()
     }
 
+    /// Returns true if the queue is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert!(consumer.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the maximum number of elements the queue can hold
     #[inline]
     pub fn capacity(&self) -> usize {
@@ -536,6 +554,7 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
     /// empty
     ///
     /// # Examples
+    ///
     /// ```
     /// use heapless::spsc::Queue;
     ///
@@ -562,7 +581,9 @@ impl<'a, T, const N: usize> Producer<'a, T, N> {
 
     /// Adds an `item` to the end of the queue, without checking if the queue is full
     ///
-    /// See [`Queue::enqueue_unchecked`] for safety
+    /// # Safety
+    ///
+    /// See [`Queue::enqueue_unchecked`]
     #[inline]
     pub unsafe fn enqueue_unchecked(&mut self, val: T) {
         self.rb.inner_enqueue_unchecked(val)
@@ -579,6 +600,22 @@ impl<'a, T, const N: usize> Producer<'a, T, N> {
     #[inline]
     pub fn len(&self) -> usize {
         self.rb.len()
+    }
+
+    /// Returns true if the queue is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert!(producer.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns the maximum number of elements the queue can hold
@@ -894,14 +931,12 @@ mod tests {
         let hash1 = {
             let mut hasher1 = hash32::FnvHasher::default();
             rb1.hash(&mut hasher1);
-            let hash1 = hasher1.finish();
-            hash1
+            hasher1.finish()
         };
         let hash2 = {
             let mut hasher2 = hash32::FnvHasher::default();
             rb2.hash(&mut hasher2);
-            let hash2 = hasher2.finish();
-            hash2
+            hasher2.finish()
         };
         assert_eq!(hash1, hash2);
     }

@@ -233,7 +233,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        self.data.as_slice().get(0)
+        self.data.as_slice().first()
     }
 
     /// Returns a mutable reference to the greatest item in the binary heap, or
@@ -297,6 +297,7 @@ where
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
+    #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let mut item = self.data.pop_unchecked();
 
@@ -330,6 +331,7 @@ where
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.
+    #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
         self.data.push_unchecked(item);

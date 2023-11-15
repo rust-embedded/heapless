@@ -310,7 +310,8 @@ where
     /// ```
     pub fn push(&mut self, value: T) -> Result<(), T> {
         if !self.is_full() {
-            Ok(unsafe { self.push_unchecked(value) })
+            unsafe { self.push_unchecked(value) }
+            Ok(())
         } else {
             Err(value)
         }
@@ -462,6 +463,7 @@ where
     /// assert_eq!(ll.pop(), Ok(1));
     /// assert_eq!(ll.pop(), Err(()));
     /// ```
+    #[allow(clippy::result_unit_err)]
     pub fn pop(&mut self) -> Result<T, ()> {
         if !self.is_empty() {
             Ok(unsafe { self.pop_unchecked() })

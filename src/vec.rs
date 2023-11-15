@@ -76,6 +76,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn from_slice(other: &[T]) -> Result<Self, ()>
     where
         T: Clone,
@@ -210,6 +211,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
+    #[allow(clippy::result_unit_err)]
     pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
     where
         T: Clone,
@@ -257,7 +259,7 @@ impl<T, const N: usize> Vec<T, N> {
         debug_assert!(!self.is_empty());
 
         self.len -= 1;
-        (self.buffer.get_unchecked_mut(self.len).as_ptr() as *const T).read()
+        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -305,6 +307,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
+    #[allow(clippy::result_unit_err)]
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
     where
         T: Clone,
@@ -331,6 +334,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](Self::resize).
+    #[allow(clippy::result_unit_err)]
     pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
     where
         T: Clone + Default,
@@ -934,9 +938,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe {
-                (self.vec.buffer.get_unchecked_mut(self.next).as_ptr() as *const T).read()
-            };
+            let item = unsafe { self.vec.buffer.get_unchecked_mut(self.next).as_ptr().read() };
             self.next += 1;
             Some(item)
         } else {
@@ -1001,7 +1003,7 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &[B]) -> bool {
-        <[A]>::eq(self, &other[..])
+        <[A]>::eq(self, other)
     }
 }
 
@@ -1011,7 +1013,7 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+        <[A]>::eq(other, self)
     }
 }
 

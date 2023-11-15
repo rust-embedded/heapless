@@ -145,7 +145,8 @@ impl<T, const N: usize> MpMcQueue<T, N> {
         crate::sealed::power_of_two::<N>();
 
         // Const assert on size.
-        Self::ASSERT[!(N < (IntSize::MAX as usize)) as usize];
+        #[allow(clippy::no_effect)]
+        Self::ASSERT[(N >= (IntSize::MAX as usize)) as usize];
 
         let mut cell_count = 0;
 
@@ -204,6 +205,7 @@ impl<T> Cell<T> {
     }
 }
 
+#[allow(clippy::comparison_chain)]
 unsafe fn dequeue<T>(
     buffer: *mut Cell<T>,
     dequeue_pos: &AtomicTargetSize,
@@ -243,6 +245,7 @@ unsafe fn dequeue<T>(
     Some(data)
 }
 
+#[allow(clippy::comparison_chain)]
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
     enqueue_pos: &AtomicTargetSize,

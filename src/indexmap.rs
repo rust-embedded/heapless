@@ -1,7 +1,7 @@
 use core::{
     borrow::Borrow,
     fmt,
-    hash::{BuildHasher, Hash, Hasher as _},
+    hash::{BuildHasher, Hash},
     iter::FromIterator,
     mem,
     num::NonZeroU32,
@@ -64,7 +64,7 @@ impl HashValue {
     }
 
     fn probe_distance(&self, mask: usize, current: usize) -> usize {
-        current.wrapping_sub(self.desired_pos(mask) as usize) & mask
+        current.wrapping_sub(self.desired_pos(mask)) & mask
     }
 }
 
@@ -364,7 +364,7 @@ where
     fn clone(&self) -> Self {
         Self {
             entries: self.entries.clone(),
-            indices: self.indices.clone(),
+            indices: self.indices,
         }
     }
 }
@@ -961,7 +961,7 @@ where
         K: Borrow<Q>,
         Q: ?Sized + Hash + Eq,
     {
-        if self.len() == 0 {
+        if self.is_empty() {
             return None;
         }
         let h = hash_with(key, &self.build_hasher);
@@ -1238,9 +1238,7 @@ where
     K: ?Sized + Hash,
     S: BuildHasher,
 {
-    let mut h = build_hasher.build_hasher();
-    key.hash(&mut h);
-    HashValue(h.finish() as u16)
+    HashValue(build_hasher.hash_one(key) as u16)
 }
 
 #[cfg(test)]
