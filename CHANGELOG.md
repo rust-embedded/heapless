@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- configure `stable_deref_trait` as a platform-dependent dependency
+### Changed
+
+- Changed `stable_deref_trait` to a platform-dependent dependency.
+
+### Fixed
+
+- Fixed clippy lints.
 
 ## [v0.8.0] - 2023-11-07
 

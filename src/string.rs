@@ -209,6 +209,7 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
         self.vec.extend_from_slice(string.as_bytes())
     }
@@ -251,6 +252,7 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn push(&mut self, c: char) -> Result<(), ()> {
         match c.len_utf8() {
             1 => self.vec.push(c as u8).map_err(|_| {}),
@@ -315,7 +317,7 @@ impl<const N: usize> String<N> {
     /// Ok::<(), ()>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
-        let ch = self.chars().rev().next()?;
+        let ch = self.chars().next_back()?;
 
         // pop bytes that correspond to `ch`
         for _ in 0..ch.len_utf8() {
@@ -518,21 +520,13 @@ impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
     fn eq(&self, rhs: &String<N2>) -> bool {
         str::eq(&**self, &**rhs)
     }
-
-    fn ne(&self, rhs: &String<N2>) -> bool {
-        str::ne(&**self, &**rhs)
-    }
 }
 
 // String<N> == str
 impl<const N: usize> PartialEq<str> for String<N> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &str) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, other)
     }
 }
 
@@ -540,11 +534,7 @@ impl<const N: usize> PartialEq<str> for String<N> {
 impl<const N: usize> PartialEq<&str> for String<N> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &&str) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 
@@ -552,11 +542,7 @@ impl<const N: usize> PartialEq<&str> for String<N> {
 impl<const N: usize> PartialEq<String<N>> for str {
     #[inline]
     fn eq(&self, other: &String<N>) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 
@@ -564,11 +550,7 @@ impl<const N: usize> PartialEq<String<N>> for str {
 impl<const N: usize> PartialEq<String<N>> for &str {
     #[inline]
     fn eq(&self, other: &String<N>) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 

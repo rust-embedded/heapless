@@ -221,7 +221,7 @@ where
     P: ArcPool,
 {
     fn as_ref(&self) -> &P::Data {
-        &**self
+        self
     }
 }
 

@@ -88,7 +88,7 @@ fn contention() {
 
                 for i in 0..(2 * N) {
                     sum = sum.wrapping_add(i as u32);
-                    while let Err(_) = p.enqueue(i as u8) {}
+                    while p.enqueue(i as u8).is_err() {}
                 }
 
                 println!("producer: {}", sum);
@@ -137,7 +137,7 @@ fn mpmc_contention() {
             for i in 0..(16 * N) {
                 sum = sum.wrapping_add(i);
                 println!("enqueue {}", i);
-                while let Err(_) = Q.enqueue(i) {}
+                while Q.enqueue(i).is_err() {}
             }
 
             s1.send(sum).unwrap();
