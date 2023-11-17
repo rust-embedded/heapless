@@ -42,7 +42,6 @@
 //! structure.
 //!
 //! List of currently implemented data structures:
-//!
 #![cfg_attr(
     any(arm_llsc, target_arch = "x86"),
     doc = "- [`Arc`](pool::arc::Arc) -- like `std::sync::Arc` but backed by a lock-free memory pool rather than `#[global_allocator]`"

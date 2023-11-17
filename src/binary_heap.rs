@@ -203,7 +203,6 @@ where
     /// // Print 1, 2, 3, 4 in arbitrary order
     /// for x in heap.iter() {
     ///     println!("{}", x);
-    ///
     /// }
     /// ```
     pub fn iter(&self) -> slice::Iter<'_, T> {

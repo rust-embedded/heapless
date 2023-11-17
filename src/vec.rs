@@ -7,7 +7,6 @@ use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, 
 /// ```
 /// use heapless::Vec;
 ///
-///
 /// // A vector with a fixed capacity of 8 elements allocated on the stack
 /// let mut vec = Vec::<_, 8>::new();
 /// vec.push(1);
@@ -419,7 +418,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///         Vec::from_iter([0, 0, 1].iter().cloned()),
     ///     ]
     ///     .iter()
-    ///     .cloned()
+    ///     .cloned(),
     /// );
     /// // SAFETY:
     /// // 1. `old_len..0` is empty so no elements need to be initialized.
@@ -712,11 +711,13 @@ impl<T, const N: usize> Vec<T, N> {
     /// use heapless::Vec;
     ///
     /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// vec.retain_mut(|x| if *x <= 3 {
-    ///     *x += 1;
-    ///     true
-    /// } else {
-    ///     false
+    /// vec.retain_mut(|x| {
+    ///     if *x <= 3 {
+    ///         *x += 1;
+    ///         true
+    ///     } else {
+    ///         false
+    ///     }
     /// });
     /// assert_eq!(vec, [2, 3, 4]);
     /// ```

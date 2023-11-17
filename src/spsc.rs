@@ -37,7 +37,10 @@
 //! ```
 //! use heapless::spsc::{Producer, Queue};
 //!
-//! enum Event { A, B }
+//! enum Event {
+//!     A,
+//!     B,
+//! }
 //!
 //! fn main() {
 //!     let queue: &'static mut Queue<Event, 4> = {
@@ -52,9 +55,9 @@
 //!
 //!     loop {
 //!         match consumer.dequeue() {
-//!             Some(Event::A) => { /* .. */ },
-//!             Some(Event::B) => { /* .. */ },
-//!             None => { /* sleep */ },
+//!             Some(Event::A) => { /* .. */ }
+//!             Some(Event::B) => { /* .. */ }
+//!             None => { /* sleep */ }
 //!         }
 //! #       break
 //!     }
