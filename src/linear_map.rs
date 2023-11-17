@@ -441,6 +441,7 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, (K, V)>,
 }
@@ -448,20 +449,12 @@ pub struct Iter<'a, K, V> {
 impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
-    #[allow(clippy::needless_borrowed_reference)]
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|&(ref k, ref v)| (k, v))
+        self.iter.next().map(|(k, v)| (k, v))
     }
 }
 
-impl<'a, K, V> Clone for Iter<'a, K, V> {
-    fn clone(&self) -> Self {
-        Self {
-            iter: self.iter.clone(),
-        }
-    }
-}
-
+#[derive(Debug)]
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
 }
@@ -470,7 +463,7 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|&mut (ref k, ref mut v)| (k, v))
+        self.iter.next().map(|(k, v)| (k as &K, v))
     }
 }
 

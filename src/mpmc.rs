@@ -205,7 +205,6 @@ impl<T> Cell<T> {
     }
 }
 
-#[allow(clippy::comparison_chain)]
 unsafe fn dequeue<T>(
     buffer: *mut Cell<T>,
     dequeue_pos: &AtomicTargetSize,
@@ -219,22 +218,26 @@ unsafe fn dequeue<T>(
         let seq = (*cell).sequence.load(Ordering::Acquire);
         let dif = (seq as i8).wrapping_sub((pos.wrapping_add(1)) as i8);
 
-        if dif == 0 {
-            if dequeue_pos
-                .compare_exchange_weak(
-                    pos,
-                    pos.wrapping_add(1),
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                )
-                .is_ok()
-            {
-                break;
+        match dif.cmp(&0) {
+            core::cmp::Ordering::Equal => {
+                if dequeue_pos
+                    .compare_exchange_weak(
+                        pos,
+                        pos.wrapping_add(1),
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    )
+                    .is_ok()
+                {
+                    break;
+                }
             }
-        } else if dif < 0 {
-            return None;
-        } else {
-            pos = dequeue_pos.load(Ordering::Relaxed);
+            core::cmp::Ordering::Less => {
+                return None;
+            }
+            core::cmp::Ordering::Greater => {
+                pos = dequeue_pos.load(Ordering::Relaxed);
+            }
         }
     }
 
@@ -245,7 +248,6 @@ unsafe fn dequeue<T>(
     Some(data)
 }
 
-#[allow(clippy::comparison_chain)]
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
     enqueue_pos: &AtomicTargetSize,
@@ -260,22 +262,26 @@ unsafe fn enqueue<T>(
         let seq = (*cell).sequence.load(Ordering::Acquire);
         let dif = (seq as i8).wrapping_sub(pos as i8);
 
-        if dif == 0 {
-            if enqueue_pos
-                .compare_exchange_weak(
-                    pos,
-                    pos.wrapping_add(1),
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                )
-                .is_ok()
-            {
-                break;
+        match dif.cmp(&0) {
+            core::cmp::Ordering::Equal => {
+                if enqueue_pos
+                    .compare_exchange_weak(
+                        pos,
+                        pos.wrapping_add(1),
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    )
+                    .is_ok()
+                {
+                    break;
+                }
             }
-        } else if dif < 0 {
-            return Err(item);
-        } else {
-            pos = enqueue_pos.load(Ordering::Relaxed);
+            core::cmp::Ordering::Less => {
+                return Err(item);
+            }
+            core::cmp::Ordering::Greater => {
+                pos = enqueue_pos.load(Ordering::Relaxed);
+            }
         }
     }
 
