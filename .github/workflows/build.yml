@@ -110,8 +110,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          targets: i686-unknown-linux-gnu
-      - run: cargo clippy --all --target i686-unknown-linux-gnu -- --deny warnings
+          targets: i686-unknown-linux-musl
+      - run: cargo clippy --all --target i686-unknown-linux-musl --all-targets -- --deny warnings
 
   # Compilation check
   check:
