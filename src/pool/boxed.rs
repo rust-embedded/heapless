@@ -446,7 +446,6 @@ mod tests {
         assert_eq!(0, raw as usize % 4096);
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn can_clone_if_pool_is_not_exhausted() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);
@@ -480,7 +479,6 @@ mod tests {
         assert!(is_oom);
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn clone_panics_if_pool_exhausted() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);
@@ -515,7 +513,6 @@ mod tests {
         // assert!(!STRUCT_CLONE_WAS_CALLED.load(Ordering::Relaxed));
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn panicking_clone_does_not_leak_memory() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);

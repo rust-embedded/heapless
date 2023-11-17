@@ -99,12 +99,9 @@ fn contention() {
 
                 for _ in 0..(2 * N) {
                     loop {
-                        match c.dequeue() {
-                            Some(v) => {
-                                sum = sum.wrapping_add(v as u32);
-                                break;
-                            }
-                            _ => {}
+                        if let Some(v) = c.dequeue() {
+                            sum = sum.wrapping_add(v as u32);
+                            break;
                         }
                     }
                 }
@@ -149,13 +146,10 @@ fn mpmc_contention() {
 
             for _ in 0..(16 * N) {
                 loop {
-                    match Q.dequeue() {
-                        Some(v) => {
-                            sum = sum.wrapping_add(v);
-                            println!("dequeue {}", v);
-                            break;
-                        }
-                        _ => {}
+                    if let Some(v) = Q.dequeue() {
+                        sum = sum.wrapping_add(v);
+                        println!("dequeue {}", v);
+                        break;
                     }
                 }
             }

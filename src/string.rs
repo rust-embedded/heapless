@@ -664,8 +664,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<2>::try_from("123").unwrap_err();
-        assert_eq!(e, ());
+        let _: () = String::<2>::try_from("123").unwrap_err();
     }
 
     #[test]
@@ -676,8 +675,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<2>::from_str("123").unwrap_err();
-        assert_eq!(e, ());
+        let _: () = String::<2>::from_str("123").unwrap_err();
     }
 
     #[test]
@@ -702,11 +700,10 @@ mod tests {
 
     #[test]
     fn try_from_num() {
-        let v: String<20> = String::try_from(18446744073709551615 as u64).unwrap();
+        let v: String<20> = String::try_from(18446744073709551615_u64).unwrap();
         assert_eq!(v, "18446744073709551615");
 
-        let e: () = String::<2>::try_from(18446744073709551615 as u64).unwrap_err();
-        assert_eq!(e, ());
+        let _: () = String::<2>::try_from(18446744073709551615_u64).unwrap_err();
     }
 
     #[test]
@@ -714,7 +711,7 @@ mod tests {
         let s: String<4> = String::try_from("ab").unwrap();
         let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
-        assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
+        assert_eq!(&[b'a', b'b'], &b[..]);
     }
 
     #[test]
@@ -790,9 +787,8 @@ mod tests {
             Some(c) => {
                 assert_eq!(s.len(), 1);
                 assert_eq!(c, '\u{0301}'); // accute accent of e
-                ()
             }
-            None => assert!(false),
+            None => panic!(),
         };
     }
 

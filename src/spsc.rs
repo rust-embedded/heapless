@@ -635,26 +635,26 @@ mod tests {
     fn full() {
         let mut rb: Queue<i32, 3> = Queue::new();
 
-        assert_eq!(rb.is_full(), false);
+        assert!(!rb.is_full());
 
         rb.enqueue(1).unwrap();
-        assert_eq!(rb.is_full(), false);
+        assert!(!rb.is_full());
 
         rb.enqueue(2).unwrap();
-        assert_eq!(rb.is_full(), true);
+        assert!(rb.is_full());
     }
 
     #[test]
     fn empty() {
         let mut rb: Queue<i32, 3> = Queue::new();
 
-        assert_eq!(rb.is_empty(), true);
+        assert!(rb.is_empty());
 
         rb.enqueue(1).unwrap();
-        assert_eq!(rb.is_empty(), false);
+        assert!(!rb.is_empty());
 
         rb.enqueue(2).unwrap();
-        assert_eq!(rb.is_empty(), false);
+        assert!(!rb.is_empty());
     }
 
     #[test]
@@ -703,9 +703,9 @@ mod tests {
 
         let (mut p, mut c) = rb.split();
 
-        assert_eq!(p.ready(), true);
+        assert!(p.ready());
 
-        assert_eq!(c.ready(), false);
+        assert!(!c.ready());
 
         assert_eq!(c.dequeue(), None);
 
@@ -848,28 +848,28 @@ mod tests {
     fn ready_flag() {
         let mut rb: Queue<i32, 3> = Queue::new();
         let (mut p, mut c) = rb.split();
-        assert_eq!(c.ready(), false);
-        assert_eq!(p.ready(), true);
+        assert!(!c.ready());
+        assert!(p.ready());
 
         p.enqueue(0).unwrap();
 
-        assert_eq!(c.ready(), true);
-        assert_eq!(p.ready(), true);
+        assert!(c.ready());
+        assert!(p.ready());
 
         p.enqueue(1).unwrap();
 
-        assert_eq!(c.ready(), true);
-        assert_eq!(p.ready(), false);
+        assert!(c.ready());
+        assert!(!p.ready());
 
         c.dequeue().unwrap();
 
-        assert_eq!(c.ready(), true);
-        assert_eq!(p.ready(), true);
+        assert!(c.ready());
+        assert!(p.ready());
 
         c.dequeue().unwrap();
 
-        assert_eq!(c.ready(), false);
-        assert_eq!(p.ready(), true);
+        assert!(!c.ready());
+        assert!(p.ready());
     }
 
     #[test]
