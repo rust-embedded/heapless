@@ -1,5 +1,4 @@
 //! Defmt implementations for heapless types
-//!
 
 use crate::Vec;
 use defmt::Formatter;

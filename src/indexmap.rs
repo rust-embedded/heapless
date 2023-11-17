@@ -25,15 +25,25 @@ use crate::Vec;
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
-/// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
-/// book_reviews.insert("Grimms' Fairy Tales",               "Masterpiece.").unwrap();
-/// book_reviews.insert("Pride and Prejudice",               "Very enjoyable.").unwrap();
-/// book_reviews.insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.").unwrap();
+/// book_reviews
+///     .insert("Adventures of Huckleberry Finn", "My favorite book.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Grimms' Fairy Tales", "Masterpiece.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Pride and Prejudice", "Very enjoyable.")
+///     .unwrap();
+/// book_reviews
+///     .insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.")
+///     .unwrap();
 ///
 /// // check for a specific one.
 /// if !book_reviews.contains_key("Les Misérables") {
-///     println!("We've got {} reviews, but Les Misérables ain't one.",
-///              book_reviews.len());
+///     println!(
+///         "We've got {} reviews, but Les Misérables ain't one.",
+///         book_reviews.len()
+///     );
 /// }
 ///
 /// // oops, this review has a lot of spelling mistakes, let's delete it.
@@ -44,7 +54,7 @@ use crate::Vec;
 /// for book in &to_find {
 ///     match book_reviews.get(book) {
 ///         Some(review) => println!("{}: {}", book, review),
-///         None => println!("{} is unreviewed.", book)
+///         None => println!("{} is unreviewed.", book),
 ///     }
 /// }
 ///
@@ -498,15 +508,25 @@ where
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
-/// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
-/// book_reviews.insert("Grimms' Fairy Tales",               "Masterpiece.").unwrap();
-/// book_reviews.insert("Pride and Prejudice",               "Very enjoyable.").unwrap();
-/// book_reviews.insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.").unwrap();
+/// book_reviews
+///     .insert("Adventures of Huckleberry Finn", "My favorite book.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Grimms' Fairy Tales", "Masterpiece.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Pride and Prejudice", "Very enjoyable.")
+///     .unwrap();
+/// book_reviews
+///     .insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.")
+///     .unwrap();
 ///
 /// // check for a specific one.
 /// if !book_reviews.contains_key("Les Misérables") {
-///     println!("We've got {} reviews, but Les Misérables ain't one.",
-///              book_reviews.len());
+///     println!(
+///         "We've got {} reviews, but Les Misérables ain't one.",
+///         book_reviews.len()
+///     );
 /// }
 ///
 /// // oops, this review has a lot of spelling mistakes, let's delete it.
@@ -517,7 +537,7 @@ where
 /// for book in &to_find {
 ///     match book_reviews.get(book) {
 ///         Some(review) => println!("{}: {}", book, review),
-///         None => println!("{} is unreviewed.", book)
+///         None => println!("{} is unreviewed.", book),
 ///     }
 /// }
 ///
@@ -759,8 +779,8 @@ where
     /* Public API */
     /// Returns an entry for the corresponding key
     /// ```
-    /// use heapless::FnvIndexMap;
     /// use heapless::Entry;
+    /// use heapless::FnvIndexMap;
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// if let Entry::Vacant(v) = map.entry("a") {
     ///     v.insert(1).unwrap();

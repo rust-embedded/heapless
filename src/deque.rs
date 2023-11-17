@@ -385,7 +385,6 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
-///
 #[derive(Clone)]
 pub struct IntoIter<T, const N: usize> {
     deque: Deque<T, N>,

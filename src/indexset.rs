@@ -27,8 +27,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 ///
 /// // Check for a specific one.
 /// if !books.contains("The Winds of Winter") {
-///     println!("We have {} books, but The Winds of Winter ain't one.",
-///              books.len());
+///     println!(
+///         "We have {} books, but The Winds of Winter ain't one.",
+///         books.len()
+///     );
 /// }
 ///
 /// // Remove a book.
@@ -67,8 +69,10 @@ pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHash
 ///
 /// // Check for a specific one.
 /// if !books.contains("The Winds of Winter") {
-///     println!("We have {} books, but The Winds of Winter ain't one.",
-///              books.len());
+///     println!(
+///         "We have {} books, but The Winds of Winter ain't one.",
+///         books.len()
+///     );
 /// }
 ///
 /// // Remove a book.

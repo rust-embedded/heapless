@@ -28,7 +28,9 @@ use core::slice;
 /// assert_eq!(buf.recent(), Some(&4));
 ///
 /// // To access all elements in an unspecified order, use `as_slice()`.
-/// for el in buf.as_slice() { println!("{:?}", el); }
+/// for el in buf.as_slice() {
+///     println!("{:?}", el);
+/// }
 ///
 /// // Now we can prepare an average of all values, which comes out to 4.
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
@@ -232,7 +234,6 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {
     ///     assert_eq!(x, y)
     /// }
-    ///
     /// ```
     pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
         if self.filled {
