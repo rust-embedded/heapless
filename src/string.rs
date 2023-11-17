@@ -111,7 +111,7 @@ impl<const N: usize> String<N> {
     /// let b = s.into_bytes();
     /// assert!(b.len() == 2);
     ///
-    /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
+    /// assert_eq!(&[b'a', b'b'], &b[..]);
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
