@@ -63,14 +63,6 @@
 //! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
 //! - [`spsc::Queue`] -- single producer single consumer lock-free queue
 //!
-//! # Optional Features
-//!
-//! The `heapless` crate provides the following optional Cargo features:
-//!
-//! - `ufmt`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
-//!
-//! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
-//!
 //! # Minimum Supported Rust Version (MSRV)
 //!
 //! This crate does *not* have a Minimum Supported Rust Version (MSRV) and may make use of language
