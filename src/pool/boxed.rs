@@ -67,6 +67,7 @@
 //! const POOL_CAPACITY: usize = 8;
 //!
 //! let blocks: &'static mut [BoxBlock<u128>] = {
+//!     #[allow(clippy::declare_interior_mutable_const)]
 //!     const BLOCK: BoxBlock<u128> = BoxBlock::new(); // <=
 //!     static mut BLOCKS: [BoxBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
 //!     unsafe { &mut BLOCKS }
