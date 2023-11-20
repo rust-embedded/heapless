@@ -1,7 +1,9 @@
+//! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+
 use core::{
     cmp::Ordering,
     fmt,
-    fmt::Write,
+    fmt::{Arguments, Write},
     hash, iter, ops,
     str::{self, Utf8Error},
 };
@@ -570,6 +572,80 @@ impl<const N: usize> Ord for String<N> {
     }
 }
 
+/// Equivalent to [`format`](https://doc.rust-lang.org/std/fmt/fn.format.html).
+///
+/// Please note that using [`format!`] might be preferable.
+///
+/// # Errors
+///
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
+///
+/// [`format!`]: crate::format!
+pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+    fn format_inner<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+        let mut output = String::new();
+        output.write_fmt(args)?;
+        Ok(output)
+    }
+
+    args.as_str().map_or_else(
+        || format_inner(args),
+        |s| s.try_into().map_err(|_| fmt::Error),
+    )
+}
+
+/// Macro that creates a fixed capacity [`String`]. Equivalent to [`format!`](https://doc.rust-lang.org/std/macro.format.html).
+///
+/// The macro's arguments work in the same way as the regular macro.
+///
+/// It is possible to explicitly specify the capacity of the returned string as the first argument.
+/// In this case it is necessary to disambiguate by separating the capacity with a semicolon.
+///
+/// # Errors
+///
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), core::fmt::Error> {
+/// use heapless::{format, String};
+///
+/// // Notice semicolon instead of comma!
+/// format!(4; "test")?;
+/// format!(15; "hello {}", "world!")?;
+/// format!(20; "x = {}, y = {y}", 10, y = 30)?;
+/// let (x, y) = (1, 2);
+/// format!(12; "{x} + {y} = 3")?;
+///
+/// let implicit: String<10> = format!("speed = {}", 7)?;
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
+macro_rules! format {
+    // Without semicolon as separator to disambiguate between arms, Rust just
+    // chooses the first so that the format string would land in $max.
+    ($max:expr; $($arg:tt)*) => {{
+        let res = $crate::_export::format::<$max>(core::format_args!($($arg)*));
+        res
+    }};
+    ($($arg:tt)*) => {{
+        let res = $crate::_export::format(core::format_args!($($arg)*));
+        res
+    }};
+}
+
 macro_rules! impl_try_from_num {
     ($num:ty, $size:expr) => {
         impl<const N: usize> core::convert::TryFrom<$num> for String<N> {
@@ -830,5 +906,33 @@ mod tests {
         let mut s: String<8> = String::try_from("héy").unwrap();
         assert_eq!(s.remove(2), '\u{0301}');
         assert_eq!(s.as_str(), "hey");
+    }
+
+    #[test]
+    fn format() {
+        let number = 5;
+        let float = 3.12;
+        let formatted = format!(15; "{:0>3} plus {float}", number).unwrap();
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+    #[test]
+    fn format_inferred_capacity() {
+        let number = 5;
+        let float = 3.12;
+        let formatted: String<15> = format!("{:0>3} plus {float}", number).unwrap();
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+
+    #[test]
+    fn format_overflow() {
+        let i = 1234567;
+        let formatted = format!(4; "13{}", i);
+        assert_eq!(formatted, Err(core::fmt::Error))
+    }
+
+    #[test]
+    fn format_plain_string_overflow() {
+        let formatted = format!(2; "123");
+        assert_eq!(formatted, Err(core::fmt::Error))
     }
 }

@@ -134,3 +134,10 @@ pub mod spsc;
 mod ufmt;
 
 mod sealed;
+
+/// Implementation details for macros.
+/// Do not use. Used for macros only. Not covered by semver guarantees.
+#[doc(hidden)]
+pub mod _export {
+    pub use crate::string::format;
+}
