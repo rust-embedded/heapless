@@ -637,11 +637,11 @@ macro_rules! format {
     // Without semicolon as separator to disambiguate between arms, Rust just
     // chooses the first so that the format string would land in $max.
     ($max:expr; $($arg:tt)*) => {{
-        let res = $crate::string::format::<$max>(core::format_args!($($arg)*));
+        let res = $crate::_export::format::<$max>(core::format_args!($($arg)*));
         res
     }};
     ($($arg:tt)*) => {{
-        let res = $crate::string::format(core::format_args!($($arg)*));
+        let res = $crate::_export::format(core::format_args!($($arg)*));
         res
     }};
 }
