@@ -95,12 +95,14 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 #[macro_export]
 macro_rules! box_pool {
     ($name:ident: $data_type:ty) => {
+        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::boxed::BoxPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::boxed::BoxPoolImpl<$data_type> {
+                #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::boxed::BoxPoolImpl<$data_type> =
                     $crate::pool::boxed::BoxPoolImpl::new();
 
@@ -554,5 +556,12 @@ mod tests {
 
         assert!(once.is_ok());
         assert!(twice.is_ok());
+    }
+
+    #[test]
+    fn box_pool_case() {
+        // https://github.com/rust-embedded/heapless/issues/411
+        box_pool!(CamelCaseType: u128);
+        box_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }
