@@ -1,4 +1,4 @@
-//! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+//! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
 
 use core::{
     char::DecodeUtf16Error,
@@ -39,7 +39,7 @@ pub struct String<const N: usize> {
 }
 
 impl<const N: usize> String<N> {
-    /// Constructs a new, empty `String` with a fixed capacity of `N` bytes
+    /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
     ///
     /// # Examples
     ///
@@ -276,7 +276,7 @@ impl<const N: usize> String<N> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
-    /// Returns the maximum number of elements the String can hold
+    /// Returns the maximum number of elements the String can hold.
     ///
     /// # Examples
     ///
@@ -394,7 +394,7 @@ impl<const N: usize> String<N> {
     /// Removes a [`char`] from this `String` at a byte position and returns it.
     ///
     /// Note: Because this shifts over the remaining elements, it has a
-    /// worst-case performance of *O*(*n*).
+    /// worst-case performance of *O*(n).
     ///
     /// # Panics
     ///

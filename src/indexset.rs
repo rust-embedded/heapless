@@ -7,8 +7,8 @@ use core::{
 };
 use hash32::{BuildHasherDefault, FnvHasher};
 
-/// A [`IndexSet`] using the
-/// default FNV hasher.
+/// An [`IndexSet`] using the default FNV hasher.
+///
 /// A list of all Methods and Traits available for `FnvIndexSet` can be found in
 /// the [`IndexSet`] documentation.
 ///
@@ -135,14 +135,14 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
 
     /// Get the first value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn first(&self) -> Option<&T> {
         self.map.first().map(|(k, _v)| k)
     }
 
     /// Get the last value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn last(&self) -> Option<&T> {
         self.map.last().map(|(k, _v)| k)
     }

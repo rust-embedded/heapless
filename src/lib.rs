@@ -33,7 +33,7 @@
 //! Because they have fixed capacity `heapless` data structures don't implicitly reallocate. This
 //! means that operations like `heapless::Vec.push` are *truly* constant time rather than amortized
 //! constant time with potentially unbounded (depends on the allocator) worst case execution time
-//! (which is bad / unacceptable for hard real time applications).
+//! (which is bad/unacceptable for hard real time applications).
 //!
 //! `heapless` data structures don't use a memory allocator which means no risk of an uncatchable
 //! Out Of Memory (OOM) condition while performing operations on them. It's certainly possible to

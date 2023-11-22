@@ -2,7 +2,7 @@
 //!
 //! # Target support
 //!
-//! This module / API is only available on these compilation targets:
+//! This module/API is only available on these compilation targets:
 //!
 //! - ARM architectures which instruction set include the LDREX, CLREX and STREX instructions, e.g.
 //! `thumbv7m-none-eabi` but not `thumbv6m-none-eabi`

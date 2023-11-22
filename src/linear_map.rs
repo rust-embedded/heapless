@@ -1,16 +1,16 @@
 use crate::Vec;
 use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
 
-/// A fixed capacity map / dictionary that performs lookups via linear search
+/// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
-/// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
+/// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
 
 pub struct LinearMap<K, V, const N: usize> {
     pub(crate) buffer: Vec<(K, V), N>,
 }
 
 impl<K, V, const N: usize> LinearMap<K, V, N> {
-    /// Creates an empty `LinearMap`
+    /// Creates an empty `LinearMap`.
     ///
     /// # Examples
     ///
@@ -32,9 +32,9 @@ impl<K, V, const N: usize> LinearMap<K, V, N>
 where
     K: Eq,
 {
-    /// Returns the number of elements that the map can hold
+    /// Returns the number of elements that the map can hold.
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time.
     ///
     /// # Examples
     ///
@@ -48,9 +48,9 @@ where
         N
     }
 
-    /// Clears the map, removing all key-value pairs
+    /// Clears the map, removing all key-value pairs.
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time.
     ///
     /// # Examples
     ///
@@ -68,7 +68,7 @@ where
 
     /// Returns true if the map contains a value for the specified key.
     ///
-    /// Computes in **O(N)** time
+    /// Computes in *O*(n) time.
     ///
     /// # Examples
     ///
@@ -84,9 +84,9 @@ where
         self.get(key).is_some()
     }
 
-    /// Returns a reference to the value corresponding to the key
+    /// Returns a reference to the value corresponding to the key.
     ///
-    /// Computes in **O(N)** time
+    /// Computes in *O*(n) time.
     ///
     /// # Examples
     ///
@@ -108,9 +108,9 @@ where
             .map(|(_, v)| v)
     }
 
-    /// Returns a mutable reference to the value corresponding to the key
+    /// Returns a mutable reference to the value corresponding to the key.
     ///
-    /// Computes in **O(N)** time
+    /// Computes in *O*(n) time.
     ///
     /// # Examples
     ///
@@ -134,9 +134,9 @@ where
             .map(|(_, v)| v)
     }
 
-    /// Returns the number of elements in this map
+    /// Returns the number of elements in this map.
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time.
     ///
     /// # Examples
     ///
@@ -158,7 +158,7 @@ where
     ///
     /// If the map did have this key present, the value is updated, and the old value is returned.
     ///
-    /// Computes in **O(N)** time
+    /// Computes in *O*(n) time
     ///
     /// # Examples
     ///
@@ -183,9 +183,9 @@ where
         Ok(None)
     }
 
-    /// Returns true if the map contains no elements
+    /// Returns true if the map contains no elements.
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time.
     ///
     /// # Examples
     ///
@@ -223,8 +223,8 @@ where
         }
     }
 
-    /// An iterator visiting all key-value pairs in arbitrary order, with mutable references to the
-    /// values
+    /// An iterator visiting all key-value pairs in arbitrary order,
+    /// with mutable references to the values.
     ///
     /// # Examples
     ///
@@ -251,7 +251,7 @@ where
         }
     }
 
-    /// An iterator visiting all keys in arbitrary order
+    /// An iterator visiting all keys in arbitrary order.
     ///
     /// # Examples
     ///
@@ -271,10 +271,10 @@ where
         self.iter().map(|(k, _)| k)
     }
 
-    /// Removes a key from the map, returning the value at the key if the key was previously in the
-    /// map
+    /// Removes a key from the map, returning the value at
+    /// the key if the key was previously in the map.
     ///
-    /// Computes in **O(N)** time
+    /// Computes in *O*(n) time
     ///
     /// # Examples
     ///
@@ -300,7 +300,7 @@ where
         idx.map(|idx| self.buffer.swap_remove(idx).1)
     }
 
-    /// An iterator visiting all values in arbitrary order
+    /// An iterator visiting all values in arbitrary order.
     ///
     /// # Examples
     ///
@@ -320,7 +320,7 @@ where
         self.iter().map(|(_, v)| v)
     }
 
-    /// An iterator visiting all values mutably in arbitrary order
+    /// An iterator visiting all values mutably in arbitrary order.
     ///
     /// # Examples
     ///

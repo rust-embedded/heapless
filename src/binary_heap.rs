@@ -1,12 +1,12 @@
 //! A priority queue implemented with a binary heap.
 //!
-//! Insertion and popping the largest element have `O(log n)` time complexity. Checking the largest
-//! / smallest element is `O(1)`.
+//! Insertion and popping the largest element have *O*(log n) time complexity.
+//! Checking the smallest/largest element is *O*(1).
 
 // TODO not yet implemented
-// Converting a vector to a binary heap can be done in-place, and has `O(n)` complexity. A binary
-// heap can also be converted to a sorted vector in-place, allowing it to be used for an `O(n log
-// n)` in-place heapsort.
+// Converting a vector to a binary heap can be done in-place, and has *O*(n) complexity. A binary
+// heap can also be converted to a sorted vector in-place, allowing it to be used for an
+// *O*(n log n) in-place heapsort.
 
 use core::{
     cmp::Ordering,
@@ -97,7 +97,6 @@ impl private::Sealed for Min {}
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-
 pub struct BinaryHeap<T, K, const N: usize> {
     pub(crate) _kind: PhantomData<K>,
     pub(crate) data: Vec<T, N>,
@@ -337,7 +336,7 @@ where
         self.sift_up(0, old_len);
     }
 
-    /// Returns the underlying ```Vec<T,N>```. Order is arbitrary and time is O(1).
+    /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
     pub fn into_vec(self) -> Vec<T, N> {
         self.data
     }
