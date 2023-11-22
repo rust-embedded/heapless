@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Added `format` macro.
+- Added `String::from_utf16`.
 
 ### Changed
 
