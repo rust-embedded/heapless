@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fixed clippy lints.
-- Fixed `box_pool!` emitting clippy lints for `CamelCase` and `SNAKE_CASE`.
+- Fixed `{arc,box,object}_pool!` emitting clippy lints for `CamelCase` and `SNAKE_CASE`.
 
 ## [v0.8.0] - 2023-11-07
 
