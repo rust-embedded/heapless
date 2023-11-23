@@ -83,12 +83,14 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 #[macro_export]
 macro_rules! arc_pool {
     ($name:ident: $data_type:ty) => {
+        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::arc::ArcPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::arc::ArcPoolImpl<$data_type> {
+                #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::arc::ArcPoolImpl<$data_type> =
                     $crate::pool::arc::ArcPoolImpl::new();
 
@@ -522,5 +524,12 @@ mod tests {
 
         let raw = &*arc as *const Zst4096;
         assert_eq!(0, raw as usize % 4096);
+    }
+
+    #[test]
+    fn arc_pool_case() {
+        // https://github.com/rust-embedded/heapless/issues/411
+        arc_pool!(CamelCaseType: u128);
+        arc_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }
