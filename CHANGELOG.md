@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Added `format` macro.
+- Added `is_filled`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
 
 ### Changed
 
