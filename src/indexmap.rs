@@ -1,7 +1,7 @@
 use core::{
     borrow::Borrow,
     fmt,
-    hash::{BuildHasher, Hash, Hasher as _},
+    hash::{BuildHasher, Hash},
     iter::FromIterator,
     mem,
     num::NonZeroU32,
@@ -12,10 +12,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::Vec;
 
-/// A [`heapless::IndexMap`](./struct.IndexMap.html) using the default FNV hasher
+/// A [`IndexMap`] using the default FNV hasher
 ///
 /// A list of all Methods and Traits available for `FnvIndexMap` can be found in
-/// the [`heapless::IndexMap`](./struct.IndexMap.html) documentation.
+/// the [`IndexMap`] documentation.
 ///
 /// # Examples
 /// ```
@@ -25,15 +25,25 @@ use crate::Vec;
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
-/// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
-/// book_reviews.insert("Grimms' Fairy Tales",               "Masterpiece.").unwrap();
-/// book_reviews.insert("Pride and Prejudice",               "Very enjoyable.").unwrap();
-/// book_reviews.insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.").unwrap();
+/// book_reviews
+///     .insert("Adventures of Huckleberry Finn", "My favorite book.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Grimms' Fairy Tales", "Masterpiece.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Pride and Prejudice", "Very enjoyable.")
+///     .unwrap();
+/// book_reviews
+///     .insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.")
+///     .unwrap();
 ///
 /// // check for a specific one.
 /// if !book_reviews.contains_key("Les Misérables") {
-///     println!("We've got {} reviews, but Les Misérables ain't one.",
-///              book_reviews.len());
+///     println!(
+///         "We've got {} reviews, but Les Misérables ain't one.",
+///         book_reviews.len()
+///     );
 /// }
 ///
 /// // oops, this review has a lot of spelling mistakes, let's delete it.
@@ -44,7 +54,7 @@ use crate::Vec;
 /// for book in &to_find {
 ///     match book_reviews.get(book) {
 ///         Some(review) => println!("{}: {}", book, review),
-///         None => println!("{} is unreviewed.", book)
+///         None => println!("{} is unreviewed.", book),
 ///     }
 /// }
 ///
@@ -64,7 +74,7 @@ impl HashValue {
     }
 
     fn probe_distance(&self, mask: usize, current: usize) -> usize {
-        current.wrapping_sub(self.desired_pos(mask) as usize) & mask
+        current.wrapping_sub(self.desired_pos(mask)) & mask
     }
 }
 
@@ -209,12 +219,9 @@ where
                     // robin hood: steal the spot if it's better for us
                     let index = self.entries.len();
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
+                    Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, hash));
                     return Insert::Success(Inserted {
-                        index: Self::insert_phase_2(
-                            &mut self.indices,
-                            probe,
-                            Pos::new(index, hash),
-                        ),
+                        index,
                         old_value: None,
                     });
                 } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
@@ -367,7 +374,7 @@ where
     fn clone(&self) -> Self {
         Self {
             entries: self.entries.clone(),
-            indices: self.indices.clone(),
+            indices: self.indices,
         }
     }
 }
@@ -481,15 +488,16 @@ where
     }
 }
 
-/// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/1/indexmap/map/struct.IndexMap.html)
+/// Fixed capacity [`IndexMap`](https://docs.rs/indexmap/2/indexmap/map/struct.IndexMap.html)
 ///
 /// Note that you cannot use `IndexMap` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexMap`](./type.FnvIndexMap.html) instead
+/// in use. Pick a concrete instantiation like [`FnvIndexMap`] instead
 /// or create your own.
 ///
 /// Note that the capacity of the `IndexMap` must be a power of 2.
 ///
 /// # Examples
+///
 /// Since `IndexMap` cannot be used directly, we're using its `FnvIndexMap` instantiation
 /// for this example.
 ///
@@ -500,15 +508,25 @@ where
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
 ///
 /// // review some books.
-/// book_reviews.insert("Adventures of Huckleberry Finn",    "My favorite book.").unwrap();
-/// book_reviews.insert("Grimms' Fairy Tales",               "Masterpiece.").unwrap();
-/// book_reviews.insert("Pride and Prejudice",               "Very enjoyable.").unwrap();
-/// book_reviews.insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.").unwrap();
+/// book_reviews
+///     .insert("Adventures of Huckleberry Finn", "My favorite book.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Grimms' Fairy Tales", "Masterpiece.")
+///     .unwrap();
+/// book_reviews
+///     .insert("Pride and Prejudice", "Very enjoyable.")
+///     .unwrap();
+/// book_reviews
+///     .insert("The Adventures of Sherlock Holmes", "Eye lyked it alot.")
+///     .unwrap();
 ///
 /// // check for a specific one.
 /// if !book_reviews.contains_key("Les Misérables") {
-///     println!("We've got {} reviews, but Les Misérables ain't one.",
-///              book_reviews.len());
+///     println!(
+///         "We've got {} reviews, but Les Misérables ain't one.",
+///         book_reviews.len()
+///     );
 /// }
 ///
 /// // oops, this review has a lot of spelling mistakes, let's delete it.
@@ -519,7 +537,7 @@ where
 /// for book in &to_find {
 ///     match book_reviews.get(book) {
 ///         Some(review) => println!("{}: {}", book, review),
-///         None => println!("{} is unreviewed.", book)
+///         None => println!("{} is unreviewed.", book),
 ///     }
 /// }
 ///
@@ -761,8 +779,8 @@ where
     /* Public API */
     /// Returns an entry for the corresponding key
     /// ```
-    /// use heapless::FnvIndexMap;
     /// use heapless::Entry;
+    /// use heapless::FnvIndexMap;
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// if let Entry::Vacant(v) = map.entry("a") {
     ///     v.insert(1).unwrap();
@@ -907,7 +925,7 @@ where
         }
     }
 
-    /// Same as [`swap_remove`](struct.IndexMap.html#method.swap_remove)
+    /// Same as [`swap_remove`](Self::swap_remove)
     ///
     /// Computes in **O(1)** time (average).
     ///
@@ -963,7 +981,7 @@ where
         K: Borrow<Q>,
         Q: ?Sized + Hash + Eq,
     {
-        if self.len() == 0 {
+        if self.is_empty() {
             return None;
         }
         let h = hash_with(key, &self.build_hasher);
@@ -1240,9 +1258,7 @@ where
     K: ?Sized + Hash,
     S: BuildHasher,
 {
-    let mut h = build_hasher.build_hasher();
-    key.hash(&mut h);
-    HashValue(h.finish() as u16)
+    HashValue(build_hasher.hash_one(key) as u16)
 }
 
 #[cfg(test)]
@@ -1372,7 +1388,7 @@ mod tests {
                 panic!("Entry found when empty");
             }
             Entry::Vacant(v) => {
-                v.insert(value).unwrap();
+                assert_eq!(value, *v.insert(value).unwrap());
             }
         };
         assert_eq!(value, *src.get(&key).unwrap())
@@ -1472,7 +1488,7 @@ mod tests {
                     panic!("Entry found before insert");
                 }
                 Entry::Vacant(v) => {
-                    v.insert(i).unwrap();
+                    assert_eq!(i, *v.insert(i).unwrap());
                 }
             }
         }

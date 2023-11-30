@@ -203,7 +203,6 @@ where
     /// // Print 1, 2, 3, 4 in arbitrary order
     /// for x in heap.iter() {
     ///     println!("{}", x);
-    ///
     /// }
     /// ```
     pub fn iter(&self) -> slice::Iter<'_, T> {
@@ -233,7 +232,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        self.data.as_slice().get(0)
+        self.data.as_slice().first()
     }
 
     /// Returns a mutable reference to the greatest item in the binary heap, or
@@ -297,6 +296,7 @@ where
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
+    #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let mut item = self.data.pop_unchecked();
 
@@ -330,6 +330,7 @@ where
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.
+    #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
         self.data.push_unchecked(item);
@@ -444,11 +445,8 @@ impl<'a, T> Hole<'a, T> {
 /// Structure wrapping a mutable reference to the greatest item on a
 /// `BinaryHeap`.
 ///
-/// This `struct` is created by the [`peek_mut`] method on [`BinaryHeap`]. See
-/// its documentation for more.
-///
-/// [`peek_mut`]: struct.BinaryHeap.html#method.peek_mut
-/// [`BinaryHeap`]: struct.BinaryHeap.html
+/// This `struct` is created by [`BinaryHeap::peek_mut`].
+/// See its documentation for more.
 pub struct PeekMut<'a, T, K, const N: usize>
 where
     T: Ord,

@@ -283,7 +283,7 @@ impl<T, const N: usize> Deque<T, N> {
         let index = self.front;
         self.full = false;
         self.front = Self::increment(self.front);
-        (self.buffer.get_unchecked_mut(index).as_ptr() as *const T).read()
+        self.buffer.get_unchecked_mut(index).as_ptr().read()
     }
 
     /// Removes an item from the back of the deque and returns it, without checking that the deque
@@ -297,7 +297,7 @@ impl<T, const N: usize> Deque<T, N> {
 
         self.full = false;
         self.back = Self::decrement(self.back);
-        (self.buffer.get_unchecked_mut(self.back).as_ptr() as *const T).read()
+        self.buffer.get_unchecked_mut(self.back).as_ptr().read()
     }
 
     /// Appends an `item` to the front of the deque
@@ -385,7 +385,6 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
-///
 #[derive(Clone)]
 pub struct IntoIter<T, const N: usize> {
     deque: Deque<T, N>,

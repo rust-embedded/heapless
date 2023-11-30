@@ -7,67 +7,54 @@ authors = [
 categories = ["data-structures", "no-std"]
 description = "`static` friendly data structures that don't require dynamic memory allocation"
 documentation = "https://docs.rs/heapless"
-edition = "2018"
+edition = "2021"
 keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
-repository = "https://github.com/japaric/heapless"
+repository = "https://github.com/rust-embedded/heapless"
 version = "0.8.0"
 
 [features]
-default = ["cas"]
-cas = ["atomic-polyfill"]
-ufmt-impl = ["ufmt-write"]
-# only for tests
-__trybuild = []
+# Enable polyfilling of atomics via `portable-atomic`.
+# `portable-atomic` polyfills some functionality by default, but to get full atomics you must
+# enable one of its features to tell it how to do it. See `portable-atomic` documentation for details.
+portable-atomic = ["dep:portable-atomic"]
+
+# Enable polyfilling of atomics via portable-atomic, using critical section for locking
+portable-atomic-critical-section = ["dep:portable-atomic", "portable-atomic", "portable-atomic?/critical-section"]
+
+# Enable polyfilling of atomics via portable-atomic, using disabling interrupts for locking.
+# WARNING: this is only sound for single-core bare-metal privileged-mode targets!
+portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-atomic", "portable-atomic?/unsafe-assume-single-core"]
+
+# implement serde traits.
+serde = ["dep:serde"]
+
+# implement ufmt traits.
+ufmt = ["dep:ufmt-write"]
+
+# Implement defmt::Format from defmt v0.3
+defmt-03 = ["dep:defmt"]
+
 # Enable larger MPMC sizes.
 mpmc_large = []
-# This flag has no version guarantee, the `defmt` dependency can be updated in a patch release
-defmt-impl = ["defmt"]
-
-[target.thumbv6m-none-eabi.dependencies]
-atomic-polyfill = { version = "1.0.1", optional = true }
-
-[target.riscv32i-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
-
-[target.riscv32imc-unknown-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
-
-[target.xtensa-esp32s2-none-elf.dependencies]
-atomic-polyfill = { version = "1.0.1" }
-
-[target.'cfg(target_arch = "avr")'.dependencies]
-atomic-polyfill = { version = "1.0.1", optional = true }
 
 [dependencies]
+portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
+serde = { version = "1", optional = true, default-features = false }
+ufmt-write = { version = "0.1", optional = true }
+defmt = { version = ">=0.2.0,<0.4", optional = true }
 
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-spin = "0.9.4"
+# for the pool module
+[target.'cfg(any(target_arch = "arm", target_arch = "x86"))'.dependencies]
+stable_deref_trait = { version = "1", default-features = false }
 
-[dependencies.serde]
-version = "1"
-optional = true
-default-features = false
-
-[dependencies.stable_deref_trait]
-version = "1"
-default-features = false
-
-[dependencies.ufmt-write]
-version = "0.1"
-optional = true
-
-[dev-dependencies.ufmt]
-version = "0.1"
-
-[dependencies.defmt]
-version = ">=0.2.0,<0.4"
-optional = true
-
-[build-dependencies]
-rustc_version = "0.4.0"
+[dev-dependencies]
+ufmt = "0.2"
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
+# for the pool module
+targets = ["i686-unknown-linux-gnu"]
+rustdoc-args = ["--cfg", "docsrs"]

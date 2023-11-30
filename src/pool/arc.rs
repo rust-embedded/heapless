@@ -79,16 +79,18 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 
 /// Creates a new `ArcPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
-/// For more extensive documentation see the [module level documentation](pool/arc/index.html)
+/// For more extensive documentation see the [module level documentation](crate::pool::arc)
 #[macro_export]
 macro_rules! arc_pool {
     ($name:ident: $data_type:ty) => {
+        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::arc::ArcPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::arc::ArcPoolImpl<$data_type> {
+                #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::arc::ArcPoolImpl<$data_type> =
                     $crate::pool::arc::ArcPoolImpl::new();
 
@@ -221,7 +223,7 @@ where
     P: ArcPool,
 {
     fn as_ref(&self) -> &P::Data {
-        &**self
+        self
     }
 }
 
@@ -522,5 +524,12 @@ mod tests {
 
         let raw = &*arc as *const Zst4096;
         assert_eq!(0, raw as usize % 4096);
+    }
+
+    #[test]
+    fn arc_pool_case() {
+        // https://github.com/rust-embedded/heapless/issues/411
+        arc_pool!(CamelCaseType: u128);
+        arc_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }

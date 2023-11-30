@@ -67,6 +67,7 @@
 //! const POOL_CAPACITY: usize = 8;
 //!
 //! let blocks: &'static mut [BoxBlock<u128>] = {
+//!     #[allow(clippy::declare_interior_mutable_const)]
 //!     const BLOCK: BoxBlock<u128> = BoxBlock::new(); // <=
 //!     static mut BLOCKS: [BoxBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
 //!     unsafe { &mut BLOCKS }
@@ -90,16 +91,18 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 
 /// Creates a new `BoxPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
-/// For more extensive documentation see the [module level documentation](pool/boxed/index.html)
+/// For more extensive documentation see the [module level documentation](crate::pool::boxed)
 #[macro_export]
 macro_rules! box_pool {
     ($name:ident: $data_type:ty) => {
+        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::boxed::BoxPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::boxed::BoxPoolImpl<$data_type> {
+                #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::boxed::BoxPoolImpl<$data_type> =
                     $crate::pool::boxed::BoxPoolImpl::new();
 
@@ -446,7 +449,6 @@ mod tests {
         assert_eq!(0, raw as usize % 4096);
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn can_clone_if_pool_is_not_exhausted() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);
@@ -480,7 +482,6 @@ mod tests {
         assert!(is_oom);
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn clone_panics_if_pool_exhausted() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);
@@ -515,7 +516,6 @@ mod tests {
         // assert!(!STRUCT_CLONE_WAS_CALLED.load(Ordering::Relaxed));
     }
 
-    #[allow(clippy::redundant_clone)]
     #[test]
     fn panicking_clone_does_not_leak_memory() {
         static STRUCT_CLONE_WAS_CALLED: AtomicBool = AtomicBool::new(false);
@@ -556,5 +556,12 @@ mod tests {
 
         assert!(once.is_ok());
         assert!(twice.is_ok());
+    }
+
+    #[test]
+    fn box_pool_case() {
+        // https://github.com/rust-embedded/heapless/issues/411
+        box_pool!(CamelCaseType: u128);
+        box_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }

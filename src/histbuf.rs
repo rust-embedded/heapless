@@ -28,7 +28,9 @@ use core::slice;
 /// assert_eq!(buf.recent(), Some(&4));
 ///
 /// // To access all elements in an unspecified order, use `as_slice()`.
-/// for el in buf.as_slice() { println!("{:?}", el); }
+/// for el in buf.as_slice() {
+///     println!("{:?}", el);
+/// }
 ///
 /// // Now we can prepare an average of all values, which comes out to 4.
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
@@ -115,6 +117,21 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         } else {
             self.write_at
         }
+    }
+
+    /// Returns true if the buffer is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    /// assert!(x.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns the capacity of the buffer, which is the length of the
@@ -281,9 +298,8 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {
     ///     assert_eq!(x, y)
     /// }
-    ///
     /// ```
-    pub fn oldest_ordered<'a>(&'a self) -> OldestOrdered<'a, T, N> {
+    pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
         if self.filled {
             OldestOrdered {
                 buf: self,

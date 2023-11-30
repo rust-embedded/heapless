@@ -1,4 +1,12 @@
-use core::{cmp::Ordering, fmt, fmt::Write, hash, iter, ops, str};
+//! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+
+use core::{
+    cmp::Ordering,
+    fmt,
+    fmt::{Arguments, Write},
+    hash, iter, ops,
+    str::{self, Utf8Error},
+};
 
 use crate::Vec;
 
@@ -28,6 +36,68 @@ impl<const N: usize> String<N> {
         Self { vec: Vec::new() }
     }
 
+    /// Convert UTF-8 bytes into a `String`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut sparkle_heart = Vec::<u8, 4>::new();
+    /// sparkle_heart.extend_from_slice(&[240, 159, 146, 150]);
+    ///
+    /// let sparkle_heart: String<4> = String::from_utf8(sparkle_heart)?;
+    /// assert_eq!("💖", sparkle_heart);
+    /// # Ok::<(), core::str::Utf8Error>(())
+    /// ```
+    ///
+    /// Invalid UTF-8:
+    ///
+    /// ```
+    /// use core::str::Utf8Error;
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut vec = Vec::<u8, 4>::new();
+    /// vec.extend_from_slice(&[0, 159, 146, 150]);
+    ///
+    /// let e: Utf8Error = String::from_utf8(vec).unwrap_err();
+    /// assert_eq!(e.valid_up_to(), 1);
+    /// # Ok::<(), core::str::Utf8Error>(())
+    /// ```
+    #[inline]
+    pub fn from_utf8(vec: Vec<u8, N>) -> Result<Self, Utf8Error> {
+        core::str::from_utf8(&vec)?;
+        Ok(Self { vec })
+    }
+
+    /// Convert UTF-8 bytes into a `String`, without checking that the string
+    /// contains valid UTF-8.
+    ///
+    /// # Safety
+    ///
+    /// The bytes passed in must be valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::{String, Vec};
+    ///
+    /// let mut sparkle_heart = Vec::<u8, 4>::new();
+    /// sparkle_heart.extend_from_slice(&[240, 159, 146, 150]);
+    ///
+    /// // Safety: `sparkle_heart` Vec is known to contain valid UTF-8
+    /// let sparkle_heart: String<4> = unsafe { String::from_utf8_unchecked(sparkle_heart) };
+    /// assert_eq!("💖", sparkle_heart);
+    /// ```
+    #[inline]
+    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> Self {
+        Self { vec }
+    }
+
     /// Converts a `String` into a byte vector.
     ///
     /// This consumes the `String`, so we do not need to copy its contents.
@@ -39,11 +109,12 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let s: String<4> = String::from("ab");
+    /// let s: String<4> = String::try_from("ab")?;
     /// let b = s.into_bytes();
     /// assert!(b.len() == 2);
     ///
-    /// assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
+    /// assert_eq!(&[b'a', b'b'], &b[..]);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn into_bytes(self) -> Vec<u8, N> {
@@ -59,11 +130,12 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<4> = String::from("ab");
+    /// let mut s: String<4> = String::try_from("ab")?;
     /// assert!(s.as_str() == "ab");
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
@@ -79,9 +151,10 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<4> = String::from("ab");
+    /// let mut s: String<4> = String::try_from("ab")?;
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
@@ -102,7 +175,9 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// let mut s = String::from("hello");
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
@@ -111,6 +186,7 @@ impl<const N: usize> String<N> {
     ///     vec.reverse();
     /// }
     /// assert_eq!(s, "olleh");
+    /// # Ok::<(), ()>(())
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
         &mut self.vec
@@ -125,15 +201,17 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
     /// assert_eq!("foobar", s);
     ///
     /// assert!(s.push_str("tender").is_err());
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
         self.vec.extend_from_slice(string.as_bytes())
     }
@@ -157,8 +235,6 @@ impl<const N: usize> String<N> {
 
     /// Appends the given [`char`] to the end of this `String`.
     ///
-    /// [`char`]: ../../std/primitive.char.html
-    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -166,7 +242,7 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("abc");
+    /// let mut s: String<8> = String::try_from("abc")?;
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -175,8 +251,10 @@ impl<const N: usize> String<N> {
     /// assert!("abc123" == s.as_str());
     ///
     /// assert_eq!("abc123", s);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn push(&mut self, c: char) -> Result<(), ()> {
         match c.len_utf8() {
             1 => self.vec.push(c as u8).map_err(|_| {}),
@@ -198,8 +276,6 @@ impl<const N: usize> String<N> {
     ///
     /// Panics if `new_len` does not lie on a [`char`] boundary.
     ///
-    /// [`char`]: ../../std/primitive.char.html
-    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -207,11 +283,12 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("hello");
+    /// let mut s: String<8> = String::try_from("hello")?;
     ///
     /// s.truncate(2);
     ///
     /// assert_eq!("he", s);
+    /// # Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
@@ -225,8 +302,6 @@ impl<const N: usize> String<N> {
     ///
     /// Returns [`None`] if this `String` is empty.
     ///
-    /// [`None`]: ../../std/option/enum.Option.html#variant.None
-    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -234,16 +309,17 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('f'));
     ///
     /// assert_eq!(s.pop(), None);
+    /// Ok::<(), ()>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
-        let ch = self.chars().rev().next()?;
+        let ch = self.chars().next_back()?;
 
         // pop bytes that correspond to `ch`
         for _ in 0..ch.len_utf8() {
@@ -253,6 +329,46 @@ impl<const N: usize> String<N> {
         }
 
         Some(ch)
+    }
+
+    /// Removes a [`char`] from this `String` at a byte position and returns it.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than or equal to the `String`'s length,
+    /// or if it does not lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("foo").unwrap();
+    ///
+    /// assert_eq!(s.remove(0), 'f');
+    /// assert_eq!(s.remove(1), 'o');
+    /// assert_eq!(s.remove(0), 'o');
+    /// ```
+    #[inline]
+    pub fn remove(&mut self, index: usize) -> char {
+        let ch = match self[index..].chars().next() {
+            Some(ch) => ch,
+            None => panic!("cannot remove a char from the end of a string"),
+        };
+
+        let next = index + ch.len_utf8();
+        let len = self.len();
+        let ptr = self.vec.as_mut_ptr();
+        unsafe {
+            core::ptr::copy(ptr.add(next), ptr.add(index), len - next);
+            self.vec.set_len(len - (next - index));
+        }
+        ch
     }
 
     /// Truncates this `String`, removing all contents.
@@ -267,13 +383,14 @@ impl<const N: usize> String<N> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::from("foo");
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// s.clear();
     ///
     /// assert!(s.is_empty());
     /// assert_eq!(0, s.len());
     /// assert_eq!(8, s.capacity());
+    /// Ok::<(), ()>(())
     /// ```
     #[inline]
     pub fn clear(&mut self) {
@@ -287,11 +404,12 @@ impl<const N: usize> Default for String<N> {
     }
 }
 
-impl<'a, const N: usize> From<&'a str> for String<N> {
-    fn from(s: &'a str) -> Self {
+impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
+    type Error = ();
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         let mut new = String::new();
-        new.push_str(s).unwrap();
-        new
+        new.push_str(s)?;
+        Ok(new)
     }
 }
 
@@ -404,21 +522,13 @@ impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
     fn eq(&self, rhs: &String<N2>) -> bool {
         str::eq(&**self, &**rhs)
     }
-
-    fn ne(&self, rhs: &String<N2>) -> bool {
-        str::ne(&**self, &**rhs)
-    }
 }
 
 // String<N> == str
 impl<const N: usize> PartialEq<str> for String<N> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &str) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, other)
     }
 }
 
@@ -426,11 +536,7 @@ impl<const N: usize> PartialEq<str> for String<N> {
 impl<const N: usize> PartialEq<&str> for String<N> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &&str) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 
@@ -438,11 +544,7 @@ impl<const N: usize> PartialEq<&str> for String<N> {
 impl<const N: usize> PartialEq<String<N>> for str {
     #[inline]
     fn eq(&self, other: &String<N>) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 
@@ -450,11 +552,7 @@ impl<const N: usize> PartialEq<String<N>> for str {
 impl<const N: usize> PartialEq<String<N>> for &str {
     #[inline]
     fn eq(&self, other: &String<N>) -> bool {
-        str::eq(&self[..], &other[..])
-    }
-    #[inline]
-    fn ne(&self, other: &String<N>) -> bool {
-        str::ne(&self[..], &other[..])
+        str::eq(self, &other[..])
     }
 }
 
@@ -474,31 +572,107 @@ impl<const N: usize> Ord for String<N> {
     }
 }
 
-macro_rules! impl_from_num {
+/// Equivalent to [`format`](https://doc.rust-lang.org/std/fmt/fn.format.html).
+///
+/// Please note that using [`format!`] might be preferable.
+///
+/// # Errors
+///
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
+///
+/// [`format!`]: crate::format!
+pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+    fn format_inner<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+        let mut output = String::new();
+        output.write_fmt(args)?;
+        Ok(output)
+    }
+
+    args.as_str().map_or_else(
+        || format_inner(args),
+        |s| s.try_into().map_err(|_| fmt::Error),
+    )
+}
+
+/// Macro that creates a fixed capacity [`String`]. Equivalent to [`format!`](https://doc.rust-lang.org/std/macro.format.html).
+///
+/// The macro's arguments work in the same way as the regular macro.
+///
+/// It is possible to explicitly specify the capacity of the returned string as the first argument.
+/// In this case it is necessary to disambiguate by separating the capacity with a semicolon.
+///
+/// # Errors
+///
+/// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
+///
+/// - In case the formatting exceeds the string's capacity. This error does not exist in
+/// the standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics
+/// in this case.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), core::fmt::Error> {
+/// use heapless::{format, String};
+///
+/// // Notice semicolon instead of comma!
+/// format!(4; "test")?;
+/// format!(15; "hello {}", "world!")?;
+/// format!(20; "x = {}, y = {y}", 10, y = 30)?;
+/// let (x, y) = (1, 2);
+/// format!(12; "{x} + {y} = 3")?;
+///
+/// let implicit: String<10> = format!("speed = {}", 7)?;
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
+macro_rules! format {
+    // Without semicolon as separator to disambiguate between arms, Rust just
+    // chooses the first so that the format string would land in $max.
+    ($max:expr; $($arg:tt)*) => {{
+        let res = $crate::_export::format::<$max>(core::format_args!($($arg)*));
+        res
+    }};
+    ($($arg:tt)*) => {{
+        let res = $crate::_export::format(core::format_args!($($arg)*));
+        res
+    }};
+}
+
+macro_rules! impl_try_from_num {
     ($num:ty, $size:expr) => {
-        impl<const N: usize> From<$num> for String<N> {
-            fn from(s: $num) -> Self {
+        impl<const N: usize> core::convert::TryFrom<$num> for String<N> {
+            type Error = ();
+            fn try_from(s: $num) -> Result<Self, Self::Error> {
                 let mut new = String::new();
-                write!(&mut new, "{}", s).unwrap();
-                new
+                write!(&mut new, "{}", s).map_err(|_| ())?;
+                Ok(new)
             }
         }
     };
 }
 
-impl_from_num!(i8, 4);
-impl_from_num!(i16, 6);
-impl_from_num!(i32, 11);
-impl_from_num!(i64, 20);
+impl_try_from_num!(i8, 4);
+impl_try_from_num!(i16, 6);
+impl_try_from_num!(i32, 11);
+impl_try_from_num!(i64, 20);
 
-impl_from_num!(u8, 3);
-impl_from_num!(u16, 5);
-impl_from_num!(u32, 10);
-impl_from_num!(u64, 20);
+impl_try_from_num!(u8, 3);
+impl_try_from_num!(u16, 5);
+impl_try_from_num!(u32, 10);
+impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
     use crate::{String, Vec};
+    use core::convert::TryFrom;
 
     #[test]
     fn static_new() {
@@ -507,7 +681,7 @@ mod tests {
 
     #[test]
     fn clone() {
-        let s1: String<20> = String::from("abcd");
+        let s1: String<20> = String::try_from("abcd").unwrap();
         let mut s2 = s1.clone();
         s2.push_str(" efgh").unwrap();
 
@@ -517,16 +691,16 @@ mod tests {
 
     #[test]
     fn cmp() {
-        let s1: String<4> = String::from("abcd");
-        let s2: String<4> = String::from("zzzz");
+        let s1: String<4> = String::try_from("abcd").unwrap();
+        let s2: String<4> = String::try_from("zzzz").unwrap();
 
         assert!(s1 < s2);
     }
 
     #[test]
     fn cmp_heterogenous_size() {
-        let s1: String<4> = String::from("abcd");
-        let s2: String<8> = String::from("zzzz");
+        let s1: String<4> = String::try_from("abcd").unwrap();
+        let s2: String<8> = String::try_from("zzzz").unwrap();
 
         assert!(s1 < s2);
     }
@@ -535,7 +709,7 @@ mod tests {
     fn debug() {
         use core::fmt::Write;
 
-        let s: String<8> = String::from("abcd");
+        let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
         write!(std_s, "{:?}", s).unwrap();
         assert_eq!("\"abcd\"", std_s);
@@ -545,7 +719,7 @@ mod tests {
     fn display() {
         use core::fmt::Write;
 
-        let s: String<8> = String::from("abcd");
+        let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
         write!(std_s, "{}", s).unwrap();
         assert_eq!("abcd", std_s);
@@ -561,10 +735,12 @@ mod tests {
     }
 
     #[test]
-    fn from() {
-        let s: String<4> = String::from("123");
+    fn try_from() {
+        let s: String<4> = String::try_from("123").unwrap();
         assert!(s.len() == 3);
         assert_eq!(s, "123");
+
+        let _: () = String::<2>::try_from("123").unwrap_err();
     }
 
     #[test]
@@ -575,8 +751,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let e: () = String::<2>::from_str("123").unwrap_err();
-        assert_eq!(e, ());
+        let _: () = String::<2>::from_str("123").unwrap_err();
     }
 
     #[test]
@@ -596,26 +771,28 @@ mod tests {
     #[test]
     #[should_panic]
     fn from_panic() {
-        let _: String<4> = String::from("12345");
+        let _: String<4> = String::try_from("12345").unwrap();
     }
 
     #[test]
-    fn from_num() {
-        let v: String<20> = String::from(18446744073709551615 as u64);
+    fn try_from_num() {
+        let v: String<20> = String::try_from(18446744073709551615_u64).unwrap();
         assert_eq!(v, "18446744073709551615");
+
+        let _: () = String::<2>::try_from(18446744073709551615_u64).unwrap_err();
     }
 
     #[test]
     fn into_bytes() {
-        let s: String<4> = String::from("ab");
+        let s: String<4> = String::try_from("ab").unwrap();
         let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
-        assert_eq!(&['a' as u8, 'b' as u8], &b[..]);
+        assert_eq!(&[b'a', b'b'], &b[..]);
     }
 
     #[test]
     fn as_str() {
-        let s: String<4> = String::from("ab");
+        let s: String<4> = String::try_from("ab").unwrap();
 
         assert_eq!(s.as_str(), "ab");
         // should be moved to fail test
@@ -625,7 +802,7 @@ mod tests {
 
     #[test]
     fn as_mut_str() {
-        let mut s: String<4> = String::from("ab");
+        let mut s: String<4> = String::try_from("ab").unwrap();
         let s = s.as_mut_str();
         s.make_ascii_uppercase();
         assert_eq!(s, "AB");
@@ -633,7 +810,7 @@ mod tests {
 
     #[test]
     fn push_str() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         assert!(s.push_str("bar").is_ok());
         assert_eq!("foobar", s);
         assert_eq!(s, "foobar");
@@ -644,7 +821,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let mut s: String<6> = String::from("abc");
+        let mut s: String<6> = String::try_from("abc").unwrap();
         assert!(s.push('1').is_ok());
         assert!(s.push('2').is_ok());
         assert!(s.push('3').is_ok());
@@ -654,13 +831,13 @@ mod tests {
 
     #[test]
     fn as_bytes() {
-        let s: String<8> = String::from("hello");
+        let s: String<8> = String::try_from("hello").unwrap();
         assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
     }
 
     #[test]
     fn truncate() {
-        let mut s: String<8> = String::from("hello");
+        let mut s: String<8> = String::try_from("hello").unwrap();
         s.truncate(6);
         assert_eq!(s.len(), 5);
         s.truncate(2);
@@ -671,7 +848,7 @@ mod tests {
 
     #[test]
     fn pop() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('o'));
         assert_eq!(s.pop(), Some('f'));
@@ -680,15 +857,14 @@ mod tests {
 
     #[test]
     fn pop_uenc() {
-        let mut s: String<8> = String::from("é");
+        let mut s: String<8> = String::try_from("é").unwrap();
         assert_eq!(s.len(), 3);
         match s.pop() {
             Some(c) => {
                 assert_eq!(s.len(), 1);
                 assert_eq!(c, '\u{0301}'); // accute accent of e
-                ()
             }
-            None => assert!(false),
+            None => panic!(),
         };
     }
 
@@ -702,10 +878,61 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut s: String<8> = String::from("foo");
+        let mut s: String<8> = String::try_from("foo").unwrap();
         s.clear();
         assert!(s.is_empty());
         assert_eq!(0, s.len());
         assert_eq!(8, s.capacity());
+    }
+
+    #[test]
+    fn remove() {
+        let mut s: String<8> = String::try_from("foo").unwrap();
+        assert_eq!(s.remove(0), 'f');
+        assert_eq!(s.as_str(), "oo");
+    }
+
+    #[test]
+    fn remove_uenc() {
+        let mut s: String<8> = String::try_from("ĝėēƶ").unwrap();
+        assert_eq!(s.remove(2), 'ė');
+        assert_eq!(s.remove(2), 'ē');
+        assert_eq!(s.remove(2), 'ƶ');
+        assert_eq!(s.as_str(), "ĝ");
+    }
+
+    #[test]
+    fn remove_uenc_combo_characters() {
+        let mut s: String<8> = String::try_from("héy").unwrap();
+        assert_eq!(s.remove(2), '\u{0301}');
+        assert_eq!(s.as_str(), "hey");
+    }
+
+    #[test]
+    fn format() {
+        let number = 5;
+        let float = 3.12;
+        let formatted = format!(15; "{:0>3} plus {float}", number).unwrap();
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+    #[test]
+    fn format_inferred_capacity() {
+        let number = 5;
+        let float = 3.12;
+        let formatted: String<15> = format!("{:0>3} plus {float}", number).unwrap();
+        assert_eq!(formatted, "005 plus 3.12")
+    }
+
+    #[test]
+    fn format_overflow() {
+        let i = 1234567;
+        let formatted = format!(4; "13{}", i);
+        assert_eq!(formatted, Err(core::fmt::Error))
+    }
+
+    #[test]
+    fn format_plain_string_overflow() {
+        let formatted = format!(2; "123");
+        assert_eq!(formatted, Err(core::fmt::Error))
     }
 }

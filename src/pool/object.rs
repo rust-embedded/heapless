@@ -78,16 +78,18 @@ use super::treiber::{AtomicPtr, NonNullPtr, Stack, StructNode};
 /// Creates a new `ObjectPool` singleton with the given `$name` that manages the specified
 /// `$data_type`
 ///
-/// For more extensive documentation see the [module level documentation](pool/object/index.html)
+/// For more extensive documentation see the [module level documentation](crate::pool::object)
 #[macro_export]
 macro_rules! object_pool {
     ($name:ident: $data_type:ty) => {
+        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::object::ObjectPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::object::ObjectPoolImpl<$data_type> {
+                #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::object::ObjectPoolImpl<$data_type> =
                     $crate::pool::object::ObjectPoolImpl::new();
 
@@ -416,5 +418,12 @@ mod tests {
 
         let raw = &*object as *const Zst4096;
         assert_eq!(0, raw as usize % 4096);
+    }
+
+    #[test]
+    fn object_pool_case() {
+        // https://github.com/rust-embedded/heapless/issues/411
+        object_pool!(CamelCaseType: u128);
+        object_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }

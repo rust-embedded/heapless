@@ -441,6 +441,7 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, (K, V)>,
 }
@@ -449,27 +450,11 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|&(ref k, ref v)| (k, v))
+        self.iter.next().map(|(k, v)| (k, v))
     }
 }
 
-impl<'a, K, V> Clone for Iter<'a, K, V> {
-    fn clone(&self) -> Self {
-        Self {
-            iter: self.iter.clone(),
-        }
-    }
-}
-
-impl<K, V, const N: usize> Drop for LinearMap<K, V, N> {
-    fn drop(&mut self) {
-        // heapless::Vec implements drop right?
-        drop(&self.buffer);
-        // original code below
-        // unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }
-    }
-}
-
+#[derive(Debug)]
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
 }
@@ -478,7 +463,7 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|&mut (ref k, ref mut v)| (k, v))
+        self.iter.next().map(|(k, v)| (k as &K, v))
     }
 }
 
@@ -540,5 +525,25 @@ mod test {
         }
     }
 
-    // TODO: drop test
+    #[test]
+    fn drop() {
+        droppable!();
+
+        {
+            let mut v: LinearMap<i32, Droppable, 2> = LinearMap::new();
+            v.insert(0, Droppable::new()).ok().unwrap();
+            v.insert(1, Droppable::new()).ok().unwrap();
+            v.remove(&1).unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let mut v: LinearMap<i32, Droppable, 2> = LinearMap::new();
+            v.insert(0, Droppable::new()).ok().unwrap();
+            v.insert(1, Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+    }
 }

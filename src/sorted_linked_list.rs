@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```
-//! use heapless::sorted_linked_list::{SortedLinkedList, Max};
+//! use heapless::sorted_linked_list::{Max, SortedLinkedList};
 //! let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
 //!
 //! // The largest value will always be first
@@ -292,7 +292,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// // The largest value will always be first
@@ -310,7 +310,8 @@ where
     /// ```
     pub fn push(&mut self, value: T) -> Result<(), T> {
         if !self.is_full() {
-            Ok(unsafe { self.push_unchecked(value) })
+            unsafe { self.push_unchecked(value) }
+            Ok(())
         } else {
             Err(value)
         }
@@ -321,7 +322,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -345,7 +346,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -403,7 +404,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max, Min};
+    /// use heapless::sorted_linked_list::{Max, Min, SortedLinkedList};
     /// let mut ll_max: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// // The largest value will always be first
@@ -452,7 +453,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -462,6 +463,7 @@ where
     /// assert_eq!(ll.pop(), Ok(1));
     /// assert_eq!(ll.pop(), Err(()));
     /// ```
+    #[allow(clippy::result_unit_err)]
     pub fn pop(&mut self) -> Result<T, ()> {
         if !self.is_empty() {
             Ok(unsafe { self.pop_unchecked() })
@@ -475,7 +477,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// assert_eq!(ll.is_full(), false);
@@ -497,7 +499,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// assert_eq!(ll.is_empty(), true);
@@ -587,7 +589,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -617,7 +619,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();

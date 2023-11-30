@@ -1,7 +1,4 @@
-use core::{
-    cmp::Ordering, convert::TryFrom, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr,
-    slice,
-};
+use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
 ///
@@ -9,7 +6,6 @@ use core::{
 ///
 /// ```
 /// use heapless::Vec;
-///
 ///
 /// // A vector with a fixed capacity of 8 elements allocated on the stack
 /// let mut vec = Vec::<_, 8>::new();
@@ -59,11 +55,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// // allocate the vector in a static variable
     /// static mut X: Vec<u8, 16> = Vec::new();
     /// ```
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`](../struct.Vec.html)
+    /// `Vec` `const` constructor; wrap the returned value in [`Vec`].
     pub const fn new() -> Self {
-        // Const assert N >= 0
-        crate::sealed::greater_than_eq_0::<N>();
-
         Self {
             len: 0,
             buffer: Self::INIT,
@@ -82,6 +75,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
     #[inline]
+    #[allow(clippy::result_unit_err)]
     pub fn from_slice(other: &[T]) -> Result<Self, ()>
     where
         T: Clone,
@@ -161,7 +155,7 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Extracts a mutable slice containing the entire vector.
     ///
-    /// Equivalent to `&s[..]`.
+    /// Equivalent to `&mut s[..]`.
     ///
     /// # Examples
     ///
@@ -171,7 +165,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// buffer[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
-    pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
@@ -216,6 +210,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
+    #[allow(clippy::result_unit_err)]
     pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
     where
         T: Clone,
@@ -263,7 +258,7 @@ impl<T, const N: usize> Vec<T, N> {
         debug_assert!(!self.is_empty());
 
         self.len -= 1;
-        (self.buffer.get_unchecked_mut(self.len).as_ptr() as *const T).read()
+        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -310,7 +305,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// difference, with each additional slot filled with value. If
     /// new_len is less than len, the Vec is simply truncated.
     ///
-    /// See also [`resize_default`](struct.Vec.html#method.resize_default).
+    /// See also [`resize_default`](Self::resize_default).
+    #[allow(clippy::result_unit_err)]
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
     where
         T: Clone,
@@ -336,7 +332,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// difference, with each additional slot filled with `Default::default()`.
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
-    /// See also [`resize`](struct.Vec.html#method.resize).
+    /// See also [`resize`](Self::resize).
+    #[allow(clippy::result_unit_err)]
     pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
     where
         T: Clone + Default,
@@ -351,17 +348,17 @@ impl<T, const N: usize> Vec<T, N> {
     /// is done using one of the safe operations instead, such as
     /// [`truncate`], [`resize`], [`extend`], or [`clear`].
     ///
-    /// [`truncate`]: #method.truncate
-    /// [`resize`]: #method.resize
-    /// [`extend`]: https://doc.rust-lang.org/stable/core/iter/trait.Extend.html#tymethod.extend
-    /// [`clear`]: #method.clear
+    /// [`truncate`]: Self::truncate
+    /// [`resize`]: Self::resize
+    /// [`extend`]: core::iter::Extend
+    /// [`clear`]: Self::clear
     ///
     /// # Safety
     ///
     /// - `new_len` must be less than or equal to [`capacity()`].
     /// - The elements at `old_len..new_len` must be initialized.
     ///
-    /// [`capacity()`]: #method.capacity
+    /// [`capacity()`]: Self::capacity
     ///
     /// # Examples
     ///
@@ -421,7 +418,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///         Vec::from_iter([0, 0, 1].iter().cloned()),
     ///     ]
     ///     .iter()
-    ///     .cloned()
+    ///     .cloned(),
     /// );
     /// // SAFETY:
     /// // 1. `old_len..0` is empty so no elements need to be initialized.
@@ -714,11 +711,13 @@ impl<T, const N: usize> Vec<T, N> {
     /// use heapless::Vec;
     ///
     /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// vec.retain_mut(|x| if *x <= 3 {
-    ///     *x += 1;
-    ///     true
-    /// } else {
-    ///     false
+    /// vec.retain_mut(|x| {
+    ///     if *x <= 3 {
+    ///         *x += 1;
+    ///         true
+    ///     } else {
+    ///         false
+    ///     }
     /// });
     /// assert_eq!(vec, [2, 3, 4]);
     /// ```
@@ -931,9 +930,6 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
 /// An iterator that moves out of an [`Vec`][`Vec`].
 ///
 /// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
-///
-/// [`Vec`]: (https://doc.rust-lang.org/std/vec/struct.Vec.html)
-///
 pub struct IntoIter<T, const N: usize> {
     vec: Vec<T, N>,
     next: usize,
@@ -943,9 +939,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe {
-                (self.vec.buffer.get_unchecked_mut(self.next).as_ptr() as *const T).read()
-            };
+            let item = unsafe { self.vec.buffer.get_unchecked_mut(self.next).as_ptr().read() };
             self.next += 1;
             Some(item)
         } else {
@@ -1010,7 +1004,7 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &[B]) -> bool {
-        <[A]>::eq(self, &other[..])
+        <[A]>::eq(self, other)
     }
 }
 
@@ -1020,7 +1014,7 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+        <[A]>::eq(other, self)
     }
 }
 
@@ -1443,7 +1437,7 @@ mod tests {
 
         v.resize(0, 0).unwrap();
         v.resize(4, 0).unwrap();
-        v.resize(5, 0).err().expect("full");
+        v.resize(5, 0).expect_err("full");
     }
 
     #[test]

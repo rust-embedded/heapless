@@ -50,7 +50,6 @@ fn twice() {
 }
 
 #[test]
-#[cfg(unstable_channel)]
 fn scoped() {
     let mut rb: spsc::Queue<i32, 5> = spsc::Queue::new();
 
@@ -75,7 +74,6 @@ fn scoped() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn contention() {
     const N: usize = 1024;
 
@@ -90,7 +88,7 @@ fn contention() {
 
                 for i in 0..(2 * N) {
                     sum = sum.wrapping_add(i as u32);
-                    while let Err(_) = p.enqueue(i as u8) {}
+                    while p.enqueue(i as u8).is_err() {}
                 }
 
                 println!("producer: {}", sum);
@@ -101,12 +99,9 @@ fn contention() {
 
                 for _ in 0..(2 * N) {
                     loop {
-                        match c.dequeue() {
-                            Some(v) => {
-                                sum = sum.wrapping_add(v as u32);
-                                break;
-                            }
-                            _ => {}
+                        if let Some(v) = c.dequeue() {
+                            sum = sum.wrapping_add(v as u32);
+                            break;
                         }
                     }
                 }
@@ -121,7 +116,6 @@ fn contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn mpmc_contention() {
     use std::sync::mpsc;
 
@@ -140,7 +134,7 @@ fn mpmc_contention() {
             for i in 0..(16 * N) {
                 sum = sum.wrapping_add(i);
                 println!("enqueue {}", i);
-                while let Err(_) = Q.enqueue(i) {}
+                while Q.enqueue(i).is_err() {}
             }
 
             s1.send(sum).unwrap();
@@ -152,13 +146,10 @@ fn mpmc_contention() {
 
             for _ in 0..(16 * N) {
                 loop {
-                    match Q.dequeue() {
-                        Some(v) => {
-                            sum = sum.wrapping_add(v);
-                            println!("dequeue {}", v);
-                            break;
-                        }
-                        _ => {}
+                    if let Some(v) = Q.dequeue() {
+                        sum = sum.wrapping_add(v);
+                        println!("dequeue {}", v);
+                        break;
                     }
                 }
             }
@@ -172,7 +163,6 @@ fn mpmc_contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
-#[cfg(unstable_channel)]
 fn unchecked() {
     const N: usize = 1024;
 

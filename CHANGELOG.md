@@ -9,15 +9,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Added `format` macro.
+
+### Changed
+
+- Changed `stable_deref_trait` to a platform-dependent dependency.
+
+### Fixed
+
+- Fixed clippy lints.
+- Fixed `{arc,box,object}_pool!` emitting clippy lints for `CamelCase` and `SNAKE_CASE`.
+
+## [v0.8.0] - 2023-11-07
+
+### Added
+
 - Add `Clone` and `PartialEq` implementations to `HistoryBuffer`.
 - Added an object pool API. see the `pool::object` module level doc for details
 - Add `HistoryBuffer::as_slices()`
 - Implemented `retain` for `IndexMap` and `IndexSet`.
 - Recover `StableDeref` trait for `pool::object::Object` and `pool::boxed::Box`.
 - Add polyfills for ESP32S2
+- Added `String::from_utf8` and `String::from_utf8_unchecked`.
 
 ### Changed
 
+- updated from edition 2018 to edition 2021
 - [breaking-change] `IndexMap` and `IndexSet` now require that keys implement the `core::hash::Hash`
   trait instead of the `hash32::Hash` (v0.2.0) trait
 - move `pool::singleton::Box` to the `pool::box` module
@@ -30,11 +47,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - export `IndexSet` and `IndexMap` iterator types.
 - [breaking-change] export `IndexMapKeys`, `IndexMapValues` and
   `IndexMapValuesMut` iterator types.
-
-- [breaking-change] this crate now depends on `atomic-polyfill` v1.0.1, meaning that targets that
-  require a polyfill need a `critical-section` **v1.x.x** implementation.
+- [breaking-change] this crate now uses `portable-atomic` v1.0 instead of `atomic-polyfill` for emulating
+  CAS instructions on targets where they're not natively available.
+- [breaking-change] `From<&str>` for `String` was replaced with `TryFrom<&str>` because the `From` trait must not fail.
+- [breaking-change] Renamed Cargo features
+  - `defmt-impl` is now `defmt-03`
+  - `ufmt-impl` is now `ufmt`
+  - `cas` is removed, atomic polyfilling is now opt-in via the `portable-atomic` feature.
+- `Vec::as_mut_slice` is now a public method.
 
 ### Fixed
+
+- Fixed a `dropping_references` warning in `LinearMap`.
+- Fixed IndexMap entry API returning wrong slot after an insert on vacant entry. (#360)
 
 ### Removed
 
@@ -88,31 +113,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-* Added support for AVR architecture.
-* Add `entry` API to `IndexMap`
-* Implement `IntoIterator` trait for `Indexmap`
-* Implement `FromIterator` for `String`
-* Add `first` and `last` methods to `IndexMap` and `IndexSet`
-* Add `pop_{front_back}_unchecked` methods to `Deque`
+- Added support for AVR architecture.
+- Add `entry` API to `IndexMap`
+- Implement `IntoIterator` trait for `Indexmap`
+- Implement `FromIterator` for `String`
+- Add `first` and `last` methods to `IndexMap` and `IndexSet`
+- Add `pop_{front_back}_unchecked` methods to `Deque`
 
 ### Changed
 
-* Optimize the codegen of `Vec::clone`
-* `riscv32i` and `riscv32imc` targets unconditionally (e.g. `build --no-default-features`) depends on `atomic-polyfill`
+- Optimize the codegen of `Vec::clone`
+- `riscv32i` and `riscv32imc` targets unconditionally (e.g. `build --no-default-features`) depends on `atomic-polyfill`
 
 ### Fixed
 
-* Inserting an item that replaces an already present item will no longer
-fail with an error
+- Inserting an item that replaces an already present item will no longer
+  fail with an error
 
 ## [v0.7.11] - 2022-05-09
 
 ### Fixed
 
-* Fixed `pool` example in docstring.
-* Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
+- Fixed `pool` example in docstring.
+- Fixed undefined behavior in `Vec::truncate()`, `Vec::swap_remove_unchecked()`,
   and `Hole::move_to()` (internal to the binary heap implementation).
-* Fixed `BinaryHeap` elements are being dropped twice
+- Fixed `BinaryHeap` elements are being dropped twice
 
 ## [v0.7.10] - 2022-01-21
 
@@ -292,8 +317,8 @@ fail with an error
 ### Added
 
 - opt-out `cas` feature to disable parts of the API that use CAS instructions.
-Useful if using a custom (i.e. not built-in) rustc target that does not have CAS
-instructions.
+  Useful if using a custom (i.e. not built-in) rustc target that does not have CAS
+  instructions.
 
 - singleton `Pool` support on ARMv7-A devices
 
@@ -312,7 +337,7 @@ instructions.
 - `Pool` now implements the `Sync` trait when targeting ARMv7-R.
 
 - Most data structures can now be constructed in "const context" (e.g. `static
-  [mut]` variables) using a newtype in `heapless::i`.
+[mut]` variables) using a newtype in `heapless::i`.
 
 - `Pool` has gained a `grow_exact` method to more efficiently use statically
   allocated memory.
@@ -357,7 +382,7 @@ instructions.
 ### Added
 
 - Added a memory pool that's lock-free and interrupt-safe on the ARMv7-M
-architecture.
+  architecture.
 
 - `IndexMap` have gained `Eq` and `PartialEq` implementations.
 
@@ -545,56 +570,57 @@ architecture.
 - [breaking-change] The error type of all operations that may fail has changed from `()` to
   `BufferFullError`.
 
-- Both `RingBuffer` and `Vec` now support arrays of *any* size for their backup storage.
+- Both `RingBuffer` and `Vec` now support arrays of _any_ size for their backup storage.
 
 ## [v0.1.0] - 2017-04-27
 
 - Initial release
 
-[Unreleased]: https://github.com/japaric/heapless/compare/v0.7.16...HEAD
-[v0.7.16]: https://github.com/japaric/heapless/compare/v0.7.15...v0.7.16
-[v0.7.15]: https://github.com/japaric/heapless/compare/v0.7.14...v0.7.15
-[v0.7.14]: https://github.com/japaric/heapless/compare/v0.7.13...v0.7.14
-[v0.7.13]: https://github.com/japaric/heapless/compare/v0.7.12...v0.7.13
-[v0.7.12]: https://github.com/japaric/heapless/compare/v0.7.11...v0.7.12
-[v0.7.11]: https://github.com/japaric/heapless/compare/v0.7.10...v0.7.11
-[v0.7.10]: https://github.com/japaric/heapless/compare/v0.7.9...v0.7.10
-[v0.7.9]: https://github.com/japaric/heapless/compare/v0.7.8...v0.7.9
-[v0.7.8]: https://github.com/japaric/heapless/compare/v0.7.7...v0.7.8
-[v0.7.7]: https://github.com/japaric/heapless/compare/v0.7.6...v0.7.7
-[v0.7.6]: https://github.com/japaric/heapless/compare/v0.7.5...v0.7.6
-[v0.7.5]: https://github.com/japaric/heapless/compare/v0.7.4...v0.7.5
-[v0.7.4]: https://github.com/japaric/heapless/compare/v0.7.3...v0.7.4
-[v0.7.3]: https://github.com/japaric/heapless/compare/v0.7.2...v0.7.3
-[v0.7.2]: https://github.com/japaric/heapless/compare/v0.7.1...v0.7.2
-[v0.7.1]: https://github.com/japaric/heapless/compare/v0.7.0...v0.7.1
-[v0.7.0]: https://github.com/japaric/heapless/compare/v0.6.1...v0.7.0
-[v0.6.1]: https://github.com/japaric/heapless/compare/v0.6.0...v0.6.1
-[v0.6.0]: https://github.com/japaric/heapless/compare/v0.5.5...v0.6.0
-[v0.5.5]: https://github.com/japaric/heapless/compare/v0.5.4...v0.5.5
-[v0.5.4]: https://github.com/japaric/heapless/compare/v0.5.3...v0.5.4
-[v0.5.3]: https://github.com/japaric/heapless/compare/v0.5.2...v0.5.3
-[v0.5.2]: https://github.com/japaric/heapless/compare/v0.5.1...v0.5.2
-[v0.5.1]: https://github.com/japaric/heapless/compare/v0.5.0...v0.5.1
-[v0.5.0]: https://github.com/japaric/heapless/compare/v0.4.4...v0.5.0
-[v0.4.4]: https://github.com/japaric/heapless/compare/v0.4.3...v0.4.4
-[v0.4.3]: https://github.com/japaric/heapless/compare/v0.4.2...v0.4.3
-[v0.4.2]: https://github.com/japaric/heapless/compare/v0.4.1...v0.4.2
-[v0.4.1]: https://github.com/japaric/heapless/compare/v0.4.0...v0.4.1
-[v0.4.0]: https://github.com/japaric/heapless/compare/v0.3.7...v0.4.0
-[v0.3.7]: https://github.com/japaric/heapless/compare/v0.3.6...v0.3.7
-[v0.3.6]: https://github.com/japaric/heapless/compare/v0.3.5...v0.3.6
-[v0.3.5]: https://github.com/japaric/heapless/compare/v0.3.4...v0.3.5
-[v0.3.4]: https://github.com/japaric/heapless/compare/v0.3.3...v0.3.4
-[v0.3.3]: https://github.com/japaric/heapless/compare/v0.3.2...v0.3.3
-[v0.3.2]: https://github.com/japaric/heapless/compare/v0.3.1...v0.3.2
-[v0.3.1]: https://github.com/japaric/heapless/compare/v0.3.0...v0.3.1
-[v0.3.0]: https://github.com/japaric/heapless/compare/v0.2.7...v0.3.0
-[v0.2.7]: https://github.com/japaric/heapless/compare/v0.2.6...v0.2.7
-[v0.2.6]: https://github.com/japaric/heapless/compare/v0.2.5...v0.2.6
-[v0.2.5]: https://github.com/japaric/heapless/compare/v0.2.4...v0.2.5
-[v0.2.4]: https://github.com/japaric/heapless/compare/v0.2.3...v0.2.4
-[v0.2.3]: https://github.com/japaric/heapless/compare/v0.2.2...v0.2.3
-[v0.2.2]: https://github.com/japaric/heapless/compare/v0.2.1...v0.2.2
-[v0.2.1]: https://github.com/japaric/heapless/compare/v0.2.0...v0.2.1
-[v0.2.0]: https://github.com/japaric/heapless/compare/v0.1.0...v0.2.0
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.8.0...HEAD
+[v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
+[v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
+[v0.7.15]: https://github.com/rust-embedded/heapless/compare/v0.7.14...v0.7.15
+[v0.7.14]: https://github.com/rust-embedded/heapless/compare/v0.7.13...v0.7.14
+[v0.7.13]: https://github.com/rust-embedded/heapless/compare/v0.7.12...v0.7.13
+[v0.7.12]: https://github.com/rust-embedded/heapless/compare/v0.7.11...v0.7.12
+[v0.7.11]: https://github.com/rust-embedded/heapless/compare/v0.7.10...v0.7.11
+[v0.7.10]: https://github.com/rust-embedded/heapless/compare/v0.7.9...v0.7.10
+[v0.7.9]: https://github.com/rust-embedded/heapless/compare/v0.7.8...v0.7.9
+[v0.7.8]: https://github.com/rust-embedded/heapless/compare/v0.7.7...v0.7.8
+[v0.7.7]: https://github.com/rust-embedded/heapless/compare/v0.7.6...v0.7.7
+[v0.7.6]: https://github.com/rust-embedded/heapless/compare/v0.7.5...v0.7.6
+[v0.7.5]: https://github.com/rust-embedded/heapless/compare/v0.7.4...v0.7.5
+[v0.7.4]: https://github.com/rust-embedded/heapless/compare/v0.7.3...v0.7.4
+[v0.7.3]: https://github.com/rust-embedded/heapless/compare/v0.7.2...v0.7.3
+[v0.7.2]: https://github.com/rust-embedded/heapless/compare/v0.7.1...v0.7.2
+[v0.7.1]: https://github.com/rust-embedded/heapless/compare/v0.7.0...v0.7.1
+[v0.7.0]: https://github.com/rust-embedded/heapless/compare/v0.6.1...v0.7.0
+[v0.6.1]: https://github.com/rust-embedded/heapless/compare/v0.6.0...v0.6.1
+[v0.6.0]: https://github.com/rust-embedded/heapless/compare/v0.5.5...v0.6.0
+[v0.5.5]: https://github.com/rust-embedded/heapless/compare/v0.5.4...v0.5.5
+[v0.5.4]: https://github.com/rust-embedded/heapless/compare/v0.5.3...v0.5.4
+[v0.5.3]: https://github.com/rust-embedded/heapless/compare/v0.5.2...v0.5.3
+[v0.5.2]: https://github.com/rust-embedded/heapless/compare/v0.5.1...v0.5.2
+[v0.5.1]: https://github.com/rust-embedded/heapless/compare/v0.5.0...v0.5.1
+[v0.5.0]: https://github.com/rust-embedded/heapless/compare/v0.4.4...v0.5.0
+[v0.4.4]: https://github.com/rust-embedded/heapless/compare/v0.4.3...v0.4.4
+[v0.4.3]: https://github.com/rust-embedded/heapless/compare/v0.4.2...v0.4.3
+[v0.4.2]: https://github.com/rust-embedded/heapless/compare/v0.4.1...v0.4.2
+[v0.4.1]: https://github.com/rust-embedded/heapless/compare/v0.4.0...v0.4.1
+[v0.4.0]: https://github.com/rust-embedded/heapless/compare/v0.3.7...v0.4.0
+[v0.3.7]: https://github.com/rust-embedded/heapless/compare/v0.3.6...v0.3.7
+[v0.3.6]: https://github.com/rust-embedded/heapless/compare/v0.3.5...v0.3.6
+[v0.3.5]: https://github.com/rust-embedded/heapless/compare/v0.3.4...v0.3.5
+[v0.3.4]: https://github.com/rust-embedded/heapless/compare/v0.3.3...v0.3.4
+[v0.3.3]: https://github.com/rust-embedded/heapless/compare/v0.3.2...v0.3.3
+[v0.3.2]: https://github.com/rust-embedded/heapless/compare/v0.3.1...v0.3.2
+[v0.3.1]: https://github.com/rust-embedded/heapless/compare/v0.3.0...v0.3.1
+[v0.3.0]: https://github.com/rust-embedded/heapless/compare/v0.2.7...v0.3.0
+[v0.2.7]: https://github.com/rust-embedded/heapless/compare/v0.2.6...v0.2.7
+[v0.2.6]: https://github.com/rust-embedded/heapless/compare/v0.2.5...v0.2.6
+[v0.2.5]: https://github.com/rust-embedded/heapless/compare/v0.2.4...v0.2.5
+[v0.2.4]: https://github.com/rust-embedded/heapless/compare/v0.2.3...v0.2.4
+[v0.2.3]: https://github.com/rust-embedded/heapless/compare/v0.2.2...v0.2.3
+[v0.2.2]: https://github.com/rust-embedded/heapless/compare/v0.2.1...v0.2.2
+[v0.2.1]: https://github.com/rust-embedded/heapless/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/rust-embedded/heapless/compare/v0.1.0...v0.2.0

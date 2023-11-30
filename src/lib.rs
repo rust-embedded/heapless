@@ -42,28 +42,26 @@
 //! structure.
 //!
 //! List of currently implemented data structures:
-//!
-//! - [`Arc`](pool/arc/index.html) -- like `std::sync::Arc` but backed by a lock-free memory pool
-//! rather than `#[global_allocator]`
-//! - [`Box`](pool/boxed/index.html) -- like `std::boxed::Box` but backed by a lock-free memory pool
-//! rather than `#[global_allocator]`
-//! - [`BinaryHeap`](binary_heap/struct.BinaryHeap.html) -- priority queue
-//! - [`IndexMap`](struct.IndexMap.html) -- hash table
-//! - [`IndexSet`](struct.IndexSet.html) -- hash set
-//! - [`LinearMap`](struct.LinearMap.html)
-//! - [`Object`](pool/object/index.html) -- objects managed by an object pool
-//! - [`String`](struct.String.html)
-//! - [`Vec`](struct.Vec.html)
-//! - [`mpmc::Q*`](mpmc/index.html) -- multiple producer multiple consumer lock-free queue
-//! - [`spsc::Queue`](spsc/struct.Queue.html) -- single producer single consumer lock-free queue
-//!
-//! # Optional Features
-//!
-//! The `heapless` crate provides the following optional Cargo features:
-//!
-//! - `ufmt-impl`: Implement [`ufmt_write::uWrite`] for `String<N>` and `Vec<u8, N>`
-//!
-//! [`ufmt_write::uWrite`]: https://docs.rs/ufmt-write/
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Arc`](pool::arc::Arc) -- like `std::sync::Arc` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+)]
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Box`](pool::boxed::Box) -- like `std::boxed::Box` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+)]
+//! - [`BinaryHeap`] -- priority queue
+//! - [`IndexMap`] -- hash table
+//! - [`IndexSet`] -- hash set
+//! - [`LinearMap`]
+#![cfg_attr(
+    any(arm_llsc, target_arch = "x86"),
+    doc = "- [`Object`](pool::object::Object) -- objects managed by an object pool"
+)]
+//! - [`String`]
+//! - [`Vec`]
+//! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
+//! - [`spsc::Queue`] -- single producer single consumer lock-free queue
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
@@ -72,11 +70,9 @@
 //!
 //! In other words, changes in the Rust version requirement of this crate are not considered semver
 //! breaking change and may occur in patch version releases.
-
+#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
-#![deny(rust_2018_compatibility)]
-#![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
@@ -110,17 +106,38 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-#[cfg(feature = "defmt-impl")]
+#[cfg(feature = "defmt-03")]
 mod defmt;
-#[cfg(all(has_cas, feature = "cas"))]
+#[cfg(any(
+    // assume we have all atomics available if we're using portable-atomic
+    feature = "portable-atomic",
+    // target has native atomic CAS (mpmc_large requires usize, otherwise just u8)
+    all(feature = "mpmc_large", target_has_atomic = "ptr"),
+    all(not(feature = "mpmc_large"), target_has_atomic = "8")
+))]
 pub mod mpmc;
 #[cfg(any(arm_llsc, target_arch = "x86"))]
 pub mod pool;
 pub mod sorted_linked_list;
-#[cfg(has_atomics)]
+#[cfg(any(
+    // assume we have all atomics available if we're using portable-atomic
+    feature = "portable-atomic",
+    // target has native atomic CAS. Note this is too restrictive, spsc requires load/store only, not CAS.
+    // This should be `cfg(target_has_atomic_load_store)`, but that's not stable yet.
+    target_has_atomic = "ptr",
+    // or the current target is in a list in build.rs of targets known to have load/store but no CAS.
+    has_atomic_load_store
+))]
 pub mod spsc;
 
-#[cfg(feature = "ufmt-impl")]
+#[cfg(feature = "ufmt")]
 mod ufmt;
 
 mod sealed;
+
+/// Implementation details for macros.
+/// Do not use. Used for macros only. Not covered by semver guarantees.
+#[doc(hidden)]
+pub mod _export {
+    pub use crate::string::format;
+}
