@@ -248,12 +248,10 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn oldest_index(&self) -> Option<usize> {
         if self.filled {
             Some(self.write_at)
+        } else if self.write_at == 0 {
+            None
         } else {
-            if self.write_at == 0 {
-                None
-            } else {
-                Some(0)
-            }
+            Some(0)
         }
     }
 
