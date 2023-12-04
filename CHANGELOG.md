@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+## [v0.7.17] - 2023-12-04
+
+### Added
+
+- Backported cas polyfil for the `xtensa-esp32s2-none-elf` target.
+
 ## [v0.7.16] - 2022-08-09
 
 ### Added
