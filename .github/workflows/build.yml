@@ -1,35 +1,104 @@
 name: Build
 on:
+  merge_group:
   pull_request:
-    branches: [main]
   push:
-    branches: [main, staging, trying]
+    branches: [v0.7.x]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Run MIRI tests on nightly
+  # NOTE first because it takes the longest to complete
+  testmiri:
+    name: testmiri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: miri
+
+      - name: Run miri
+        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
+
+  # Run cargo test
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-cargo-
+
+      - name: Cache build output dependencies
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Run cargo test
+        run: cargo test
+
   # Run cargo fmt --check
   style:
     name: style
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: rustfmt
 
       - name: cargo fmt --check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
   # Compilation check
   check:
@@ -46,19 +115,12 @@ jobs:
           - thumbv7m-none-eabi
           - thumbv8m.base-none-eabi
           - thumbv8m.main-none-eabi
-        toolchain:
-          - stable
-          - nightly
-        features:
-          - ""
-          - "cas"
-          - "serde"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -71,7 +133,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -79,19 +141,16 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust with target (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
-          target: ${{ matrix.target }}
-          override: true
+          toolchain: stable
+          targets: ${{ matrix.target }}
 
       - name: cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: false
-          command: check
-          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+        run: |
+          cargo check --target=${{ matrix.target }}
+          cargo check --target=${{ matrix.target }} --features="ufmt-impl serde defmt-impl mpmc_large"
 
   doc:
     name: doc
@@ -101,16 +160,12 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - thumbv7m-none-eabi
-        features:
-          - ""
-          - "cas"
-          - "serde"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -123,7 +178,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -131,19 +186,14 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install stable Rust with target (${{ matrix.target }})
-        uses: actions-rs/toolchain@v1
+      - name: Install nightly Rust with target (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
 
-      - name: cargo doc
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: false
-          command: doc
-          args: --target=${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
+      - name: cargo rustdoc
+        env: {"RUSTDOCFLAGS": "-D warnings --cfg docsrs"}
+        run: cargo rustdoc --target=${{ matrix.target }} --features="ufmt-impl serde defmt-impl mpmc_large"
 
   # Run cpass tests
   testcpass:
@@ -154,21 +204,15 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - i686-unknown-linux-musl
-        toolchain:
-          - stable
-          - nightly
-          - 1.51.0
-        features:
-          - serde
         buildtype:
           - ""
           - "--release"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -181,7 +225,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -189,17 +233,14 @@ jobs:
             ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust with target (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
-          target: ${{ matrix.target }}
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: false
-          command: test
-          args: --test cpass --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }}
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: cargo test
+        run: cargo test --test cpass --target=${{ matrix.target }} --features=serde ${{ matrix.buildtype }}
 
   # Run test suite for UI
   testtsan:
@@ -209,19 +250,15 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-        toolchain:
-          - nightly
-        features:
-          - x86-sync-pool
         buildtype:
           - ""
           - "--release"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -233,19 +270,19 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.OS }}-build-
 
-      - name: Install Rust ${{ matrix.toolchain }} with target (${{ matrix.target }})
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust nightly with target (${{ matrix.target }})
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: nightly
           target: ${{ matrix.target }}
-          override: true
+          components: rust-src
 
       - name: Export variables
         run: |
@@ -253,11 +290,8 @@ jobs:
           echo TSAN_OPTIONS="suppressions=$(pwd)/suppressions.txt" >> $GITHUB_ENV
           echo $GITHUB_ENV
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: false
-          command: test
-          args: --test tsan --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }} -- --test-threads=1
+      - name: cargo test
+        run: cargo test -Zbuild-std --test tsan --target=${{ matrix.target }} --features=${{ matrix.features }} ${{ matrix.buildtype }} -- --test-threads=1
 
   # Run cfail tests on MSRV
   testcfail:
@@ -269,10 +303,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             - ~/.cargo/bin/
@@ -284,7 +318,7 @@ jobs:
             ${{ runner.OS }}-cargo-
 
       - name: Cache build output dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
@@ -292,70 +326,7 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.51.0
-          target: x86_64-unknown-linux-gnu
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Run cargo
         run: cargo run
-
-
-  # Run MIRI tests on nightly
-  testmiri:
-    name: testmiri
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            - ~/.cargo/bin/
-            - ~/.cargo/registry/index/
-            - ~/.cargo/registry/cache/
-            - ~/.cargo/git/db/
-          key: ${{ runner.OS }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-cargo-
-
-      - name: Cache build output dependencies
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: x86_64-unknown-linux-gnu
-          components: miri
-          override: true
-
-      - name: Run miri
-        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test
-
-  # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
-  #
-  # ALL THE PREVIOUS JOBS NEEDS TO BE ADDED TO THE `needs` SECTION OF THIS JOB!
-
-  ci-success:
-    name: ci
-    if: github.event_name == 'push' && success()
-    needs:
-      - style
-      - check
-      - doc
-      - testcpass
-      - testtsan
-      - testcfail
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mark the job as a success
-        run: exit 0

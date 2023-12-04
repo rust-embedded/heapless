@@ -461,15 +461,6 @@ impl<'a, K, V> Clone for Iter<'a, K, V> {
     }
 }
 
-impl<K, V, const N: usize> Drop for LinearMap<K, V, N> {
-    fn drop(&mut self) {
-        // heapless::Vec implements drop right?
-        drop(&self.buffer);
-        // original code below
-        // unsafe { ptr::drop_in_place(self.buffer.as_mut_slice()) }
-    }
-}
-
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
 }
