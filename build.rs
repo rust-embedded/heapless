@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
                 | "thumbv4t-none-eabi"
                 // | "thumbv6m-none-eabi"           // supported by atomic-polyfill
+                // | "xtensa-esp32s2-none-elf"      // supported by atomic-polyfill
                 => {}
 
             _ => {
@@ -55,6 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "msp430-none-elf"
         // | "riscv32i-unknown-none-elf"    // supported by atomic-polyfill
         // | "riscv32imc-unknown-none-elf"  // supported by atomic-polyfill
+        // | "xtensa-esp32s2-none-elf"  // supported by atomic-polyfill
         => {}
 
         _ => {
@@ -75,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("cargo:rustc-cfg=cas_atomic_polyfill");
             }
 
-            "thumbv6m-none-eabi" => {
+            "thumbv6m-none-eabi" | "xtensa-esp32s2-none-elf" => {
                 println!("cargo:rustc-cfg=cas_atomic_polyfill");
             }
             _ => {}
