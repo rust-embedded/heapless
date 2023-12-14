@@ -1,4 +1,4 @@
-//! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue
+//! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue.
 //!
 //! NOTE: This module requires atomic CAS operations. On targets where they're not natively available,
 //! they are emulated by the [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! This queue can be constructed in "const context". Placing it in a `static` variable lets *all*
-//! contexts (interrupts / threads / `main`) safely enqueue and dequeue items from it.
+//! contexts (interrupts/threads/`main`) safely enqueue and dequeue items from it.
 //!
 //! ``` ignore
 //! #![no_main]
@@ -62,7 +62,7 @@
 //! 2|69                                |71                           |
 //!
 //! - `N` denotes the number of *interruptions*. On Cortex-M, an interruption consists of an
-//!   interrupt handler preempting the would-be atomic section of the `enqueue` / `dequeue`
+//!   interrupt handler preempting the would-be atomic section of the `enqueue`/`dequeue`
 //!   operation. Note that it does *not* matter if the higher priority handler uses the queue or
 //!   not.
 //! - All execution times are in clock cycles. 1 clock cycle = 125 ns.

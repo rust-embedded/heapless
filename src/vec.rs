@@ -1,6 +1,6 @@
 use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
-/// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html)
+/// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 ///
 /// # Examples
 ///
@@ -91,7 +91,7 @@ impl<T, const N: usize> Vec<T, N> {
         T: Clone,
     {
         let mut new = Self::new();
-        // avoid `extend_from_slice` as that introduces a runtime check / panicking branch
+        // avoid `extend_from_slice` as that introduces a runtime check/panicking branch
         for elem in self {
             unsafe {
                 new.push_unchecked(elem.clone());
@@ -440,7 +440,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// The removed element is replaced by the last element of the vector.
     ///
-    /// This does not preserve ordering, but is O(1).
+    /// This does not preserve ordering, but is *O*(1).
     ///
     /// # Panics
     ///
@@ -473,7 +473,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// The removed element is replaced by the last element of the vector.
     ///
-    /// This does not preserve ordering, but is O(1).
+    /// This does not preserve ordering, but is *O*(1).
     ///
     /// # Safety
     ///
@@ -620,7 +620,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// shifting all elements after it to the left.
     ///
     /// Note: Because this shifts over the remaining elements, it has a
-    /// worst-case performance of *O*(*n*). If you don't need the order of
+    /// worst-case performance of *O*(n). If you don't need the order of
     /// elements to be preserved, use [`swap_remove`] instead. If you'd like to
     /// remove elements from the beginning of the `Vec`, consider using
     /// [`Deque::pop_front`] instead.
@@ -851,7 +851,7 @@ impl<const N: usize> fmt::Write for Vec<u8, N> {
 
 impl<T, const N: usize> Drop for Vec<T, N> {
     fn drop(&mut self) {
-        // We drop each element used in the vector by turning into a &mut[T]
+        // We drop each element used in the vector by turning into a `&mut [T]`.
         unsafe {
             ptr::drop_in_place(self.as_mut_slice());
         }
