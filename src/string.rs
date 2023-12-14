@@ -646,6 +646,7 @@ impl<const N: usize> Ord for String<N> {
 /// in this case.
 ///
 /// [`format!`]: crate::format!
+#[doc(hidden)]
 pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
     fn format_inner<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
         let mut output = String::new();
