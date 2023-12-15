@@ -1,5 +1,10 @@
 use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
+pub struct VecInner<B: ?Sized> {
+    len: usize,
+    buffer: B,
+}
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 ///
 /// # Examples
@@ -29,13 +34,7 @@ use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, 
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 pub struct Vec<T, const N: usize> {
-    // NOTE order is important for optimizations. the `len` first layout lets the compiler optimize
-    // `new` to: reserve stack space and zero the first word. With the fields in the reverse order
-    // the compiler optimizes `new` to `memclr`-ing the *entire* stack space, including the `buffer`
-    // field which should be left uninitialized. Optimizations were last checked with Rust 1.60
-    len: usize,
-
-    buffer: [MaybeUninit<T>; N],
+    inner: VecInner<[MaybeUninit<T>; N]>,
 }
 
 impl<T, const N: usize> Vec<T, N> {
@@ -58,9 +57,29 @@ impl<T, const N: usize> Vec<T, N> {
     /// `Vec` `const` constructor; wrap the returned value in [`Vec`].
     pub const fn new() -> Self {
         Self {
-            len: 0,
-            buffer: Self::INIT,
+            inner: VecInner {
+                len: 0,
+                buffer: Self::INIT,
+            },
         }
+    }
+
+    /// TODO: docs
+    #[inline]
+    pub const fn as_view(&self) -> &VecView<T> {
+        // use unsized coercion
+        let r: &VecInner<[MaybeUninit<T>]> = &self.inner;
+        // SAFETY: VecView is repr(transparent, and the lifetime doesn't change)
+        unsafe { &*(r as *const _ as *const VecView<T>) }
+    }
+
+    /// TODO: docs
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut VecView<T> {
+        // use unsized coercion
+        let r: &mut VecInner<[MaybeUninit<T>]> = &mut self.inner;
+        // SAFETY: VecView is repr(transparent, and the lifetime doesn't change)
+        unsafe { &mut *(r as *mut _ as *mut VecView<T>) }
     }
 
     /// Constructs a new vector with a fixed capacity of `N` and fills it
@@ -102,12 +121,12 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.buffer.as_ptr() as *const T
+        self.inner.buffer.as_ptr() as *const T
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.as_mut_ptr() as *mut T
+        self.inner.buffer.as_mut_ptr() as *mut T
     }
 
     /// Extracts a slice containing the entire vector.
@@ -123,8 +142,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+        // &buffer[..self.inner.len]
+        unsafe { slice::from_raw_parts(self.inner.buffer.as_ptr() as *const T, self.inner.len) }
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
@@ -141,7 +160,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
         if self.len() == M {
             // This is how the unstable `MaybeUninit::array_assume_init` method does it
-            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+            let array = unsafe { (&self.inner.buffer as *const _ as *const [T; M]).read() };
 
             // We don't want `self`'s destructor to be called because that would drop all the
             // items in the array
@@ -166,14 +185,510 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..self.len]
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
+        self.as_mut_view().as_mut_slice()
     }
 
     /// Returns the maximum number of elements the vector can hold.
     pub const fn capacity(&self) -> usize {
         N
+    }
+
+    /// Clears the vector, removing all values.
+    pub fn clear(&mut self) {
+        self.as_mut_view().clear()
+    }
+
+    /// Extends the vec from an iterator.
+    ///
+    /// # Panic
+    ///
+    /// Panics if the vec cannot hold all elements of the iterator.
+    pub fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        self.as_mut_view().extend(iter)
+    }
+
+    /// Clones and appends all elements in a slice to the `Vec`.
+    ///
+    /// Iterates over the slice `other`, clones each element, and then appends
+    /// it to this `Vec`. The `other` vector is traversed in-order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec = Vec::<u8, 8>::new();
+    /// vec.push(1).unwrap();
+    /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
+    /// assert_eq!(*vec, [1, 2, 3, 4]);
+    /// ```
+    #[allow(clippy::result_unit_err)]
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    where
+        T: Clone,
+    {
+        self.as_mut_view().extend_from_slice(other)
+    }
+
+    /// Removes the last element from a vector and returns it, or `None` if it's empty
+    pub fn pop(&mut self) -> Option<T> {
+        self.as_mut_view().pop()
+    }
+
+    /// Appends an `item` to the back of the collection
+    ///
+    /// Returns back the `item` if the vector is full
+    pub fn push(&mut self, item: T) -> Result<(), T> {
+        self.as_mut_view().push(item)
+    }
+
+    /// Removes the last element from a vector and returns it
+    ///
+    /// # Safety
+    ///
+    /// This assumes the vec to have at least one element.
+    pub unsafe fn pop_unchecked(&mut self) -> T {
+        self.as_mut_view().pop_unchecked()
+    }
+
+    /// Appends an `item` to the back of the collection
+    ///
+    /// # Safety
+    ///
+    /// This assumes the vec is not full.
+    pub unsafe fn push_unchecked(&mut self, item: T) {
+        self.as_mut_view().push_unchecked(item)
+    }
+
+    /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    pub fn truncate(&mut self, len: usize) {
+        self.as_mut_view().truncate(len)
+    }
+
+    /// Resizes the Vec in-place so that len is equal to new_len.
+    ///
+    /// If new_len is greater than len, the Vec is extended by the
+    /// difference, with each additional slot filled with value. If
+    /// new_len is less than len, the Vec is simply truncated.
+    ///
+    /// See also [`resize_default`](struct.Vec.html#method.resize_default).
+    #[allow(clippy::result_unit_err)]
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    where
+        T: Clone,
+    {
+        self.as_mut_view().resize(new_len, value)
+    }
+
+    /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
+    ///
+    /// If `new_len` is greater than `len`, the `Vec` is extended by the
+    /// difference, with each additional slot filled with `Default::default()`.
+    /// If `new_len` is less than `len`, the `Vec` is simply truncated.
+    ///
+    /// See also [`resize`](struct.Vec.html#method.resize).
+    #[allow(clippy::result_unit_err)]
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    where
+        T: Clone + Default,
+    {
+        self.as_mut_view().resize_default(new_len)
+    }
+
+    /// Forces the length of the vector to `new_len`.
+    ///
+    /// This is a low-level operation that maintains none of the normal
+    /// invariants of the type. Normally changing the length of a vector
+    /// is done using one of the safe operations instead, such as
+    /// [`truncate`], [`resize`], [`extend`], or [`clear`].
+    ///
+    /// [`truncate`]: #method.truncate
+    /// [`resize`]: #method.resize
+    /// [`extend`]: https://doc.rust-lang.org/stable/core/iter/trait.Extend.html#tymethod.extend
+    /// [`clear`]: #method.clear
+    ///
+    /// # Safety
+    ///
+    /// - `new_len` must be less than or equal to [`capacity()`].
+    /// - The elements at `old_len..new_len` must be initialized.
+    ///
+    /// [`capacity()`]: #method.capacity
+    ///
+    /// # Examples
+    ///
+    /// This method can be useful for situations in which the vector
+    /// is serving as a buffer for other code, particularly over FFI:
+    ///
+    /// ```no_run
+    /// # #![allow(dead_code)]
+    /// use heapless::Vec;
+    ///
+    /// # // This is just a minimal skeleton for the doc example;
+    /// # // don't use this as a starting point for a real library.
+    /// # pub struct StreamWrapper { strm: *mut core::ffi::c_void }
+    /// # const Z_OK: i32 = 0;
+    /// # extern "C" {
+    /// #     fn deflateGetDictionary(
+    /// #         strm: *mut core::ffi::c_void,
+    /// #         dictionary: *mut u8,
+    /// #         dictLength: *mut usize,
+    /// #     ) -> i32;
+    /// # }
+    /// # impl StreamWrapper {
+    /// pub fn get_dictionary(&self) -> Option<Vec<u8, 32768>> {
+    ///     // Per the FFI method's docs, "32768 bytes is always enough".
+    ///     let mut dict = Vec::new();
+    ///     let mut dict_length = 0;
+    ///     // SAFETY: When `deflateGetDictionary` returns `Z_OK`, it holds that:
+    ///     // 1. `dict_length` elements were initialized.
+    ///     // 2. `dict_length` <= the capacity (32_768)
+    ///     // which makes `set_len` safe to call.
+    ///     unsafe {
+    ///         // Make the FFI call...
+    ///         let r = deflateGetDictionary(self.strm, dict.as_mut_ptr(), &mut dict_length);
+    ///         if r == Z_OK {
+    ///             // ...and update the length to what was initialized.
+    ///             dict.set_len(dict_length);
+    ///             Some(dict)
+    ///         } else {
+    ///             None
+    ///         }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    ///
+    /// While the following example is sound, there is a memory leak since
+    /// the inner vectors were not freed prior to the `set_len` call:
+    ///
+    /// ```
+    /// use core::iter::FromIterator;
+    /// use heapless::Vec;
+    ///
+    /// let mut vec = Vec::<Vec<u8, 3>, 3>::from_iter(
+    ///     [
+    ///         Vec::from_iter([1, 0, 0].iter().cloned()),
+    ///         Vec::from_iter([0, 1, 0].iter().cloned()),
+    ///         Vec::from_iter([0, 0, 1].iter().cloned()),
+    ///     ]
+    ///     .iter()
+    ///     .cloned(),
+    /// );
+    /// // SAFETY:
+    /// // 1. `old_len..0` is empty so no elements need to be initialized.
+    /// // 2. `0 <= capacity` always holds whatever `capacity` is.
+    /// unsafe {
+    ///     vec.set_len(0);
+    /// }
+    /// ```
+    ///
+    /// Normally, here, one would use [`clear`] instead to correctly drop
+    /// the contents and thus not leak memory.
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= self.capacity());
+
+        self.inner.len = new_len
+    }
+
+    /// Removes an element from the vector and returns it.
+    ///
+    /// The removed element is replaced by the last element of the vector.
+    ///
+    /// This does not preserve ordering, but is O(1).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///// use heapless::consts::*;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::new();
+    /// v.push("foo").unwrap();
+    /// v.push("bar").unwrap();
+    /// v.push("baz").unwrap();
+    /// v.push("qux").unwrap();
+    ///
+    /// assert_eq!(v.swap_remove(1), "bar");
+    /// assert_eq!(&*v, ["foo", "qux", "baz"]);
+    ///
+    /// assert_eq!(v.swap_remove(0), "foo");
+    /// assert_eq!(&*v, ["baz", "qux"]);
+    /// ```
+    pub fn swap_remove(&mut self, index: usize) -> T {
+        self.as_mut_view().swap_remove(index)
+    }
+
+    /// Removes an element from the vector and returns it.
+    ///
+    /// The removed element is replaced by the last element of the vector.
+    ///
+    /// This does not preserve ordering, but is O(1).
+    ///
+    /// # Safety
+    ///
+    ///  Assumes `index` within bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::new();
+    /// v.push("foo").unwrap();
+    /// v.push("bar").unwrap();
+    /// v.push("baz").unwrap();
+    /// v.push("qux").unwrap();
+    ///
+    /// assert_eq!(unsafe { v.swap_remove_unchecked(1) }, "bar");
+    /// assert_eq!(&*v, ["foo", "qux", "baz"]);
+    ///
+    /// assert_eq!(unsafe { v.swap_remove_unchecked(0) }, "foo");
+    /// assert_eq!(&*v, ["baz", "qux"]);
+    /// ```
+    pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
+        self.as_mut_view().swap_remove_unchecked(index)
+    }
+
+    /// Returns true if the vec is full
+    #[inline]
+    pub fn is_full(&self) -> bool {
+        self.inner.len == self.capacity()
+    }
+
+    /// Returns true if the vec is empty
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.len == 0
+    }
+
+    /// Returns `true` if `needle` is a prefix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.starts_with(b""), true);
+    /// assert_eq!(v.starts_with(b"ab"), true);
+    /// assert_eq!(v.starts_with(b"bc"), false);
+    /// ```
+    #[inline]
+    pub fn starts_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let n = needle.len();
+        self.inner.len >= n && needle == &self[..n]
+    }
+
+    /// Returns `true` if `needle` is a suffix of the Vec.
+    ///
+    /// Always returns `true` if `needle` is an empty slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// assert_eq!(v.ends_with(b""), true);
+    /// assert_eq!(v.ends_with(b"ab"), false);
+    /// assert_eq!(v.ends_with(b"bc"), true);
+    /// ```
+    #[inline]
+    pub fn ends_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        let (v, n) = (self.len(), needle.len());
+        v >= n && needle == &self[v - n..]
+    }
+
+    /// Inserts an element at position `index` within the vector, shifting all
+    /// elements after it to the right.
+    ///
+    /// Returns back the `element` if the vector is full.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index > len`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// vec.insert(1, 4);
+    /// assert_eq!(vec, [1, 4, 2, 3]);
+    /// vec.insert(4, 5);
+    /// assert_eq!(vec, [1, 4, 2, 3, 5]);
+    /// ```
+    pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
+        self.as_mut_view().insert(index, element)
+    }
+
+    /// Removes and returns the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(*n*). If you don't need the order of
+    /// elements to be preserved, use [`swap_remove`] instead. If you'd like to
+    /// remove elements from the beginning of the `Vec`, consider using
+    /// [`Deque::pop_front`] instead.
+    ///
+    /// [`swap_remove`]: Vec::swap_remove
+    /// [`Deque::pop_front`]: crate::Deque::pop_front
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// assert_eq!(v.remove(1), 2);
+    /// assert_eq!(v, [1, 3]);
+    /// ```
+    pub fn remove(&mut self, index: usize) -> T {
+        self.as_mut_view().remove(index)
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
+    /// This method operates in place, visiting each element exactly once in the
+    /// original order, and preserves the order of the retained elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// vec.retain(|&x| x % 2 == 0);
+    /// assert_eq!(vec, [2, 4]);
+    /// ```
+    ///
+    /// Because the elements are visited exactly once in the original order,
+    /// external state may be used to decide which elements to keep.
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4, 5]).unwrap();
+    /// let keep = [false, true, true, false, true];
+    /// let mut iter = keep.iter();
+    /// vec.retain(|_| *iter.next().unwrap());
+    /// assert_eq!(vec, [2, 3, 5]);
+    /// ```
+    pub fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.as_mut_view().retain(f)
+    }
+
+    /// Retains only the elements specified by the predicate, passing a mutable reference to it.
+    ///
+    /// In other words, remove all elements `e` such that `f(&mut e)` returns `false`.
+    /// This method operates in place, visiting each element exactly once in the
+    /// original order, and preserves the order of the retained elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// vec.retain_mut(|x| {
+    ///     if *x <= 3 {
+    ///         *x += 1;
+    ///         true
+    ///     } else {
+    ///         false
+    ///     }
+    /// });
+    /// assert_eq!(vec, [2, 3, 4]);
+    /// ```
+    pub fn retain_mut<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        self.as_mut_view().retain_mut(f)
+    }
+}
+
+/// TODO: docs
+#[repr(transparent)]
+pub struct VecView<T> {
+    inner: VecInner<[MaybeUninit<T>]>,
+}
+
+impl<T> VecView<T> {
+    /// Returns a raw pointer to the vector’s buffer.
+    pub fn as_ptr(&self) -> *const T {
+        self.inner.buffer.as_ptr() as *const T
+    }
+
+    /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.inner.buffer.as_mut_ptr() as *mut T
+    }
+
+    /// Extracts a mutable slice containing the entire vector.
+    ///
+    /// Equivalent to `&s[..]`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// let mut buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// buffer[0] = 9;
+    /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
+    /// ```
+    pub(crate) fn as_mut_slice(&mut self) -> &mut [T] {
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &mut buffer[..self.inner.len]
+        unsafe {
+            slice::from_raw_parts_mut(self.inner.buffer.as_mut_ptr() as *mut T, self.inner.len)
+        }
+    }
+
+    /// Extracts a slice containing the entire vector.
+    ///
+    /// Equivalent to `&s[..]`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    /// let buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
+    /// ```
+    pub fn as_slice(&self) -> &[T] {
+        // NOTE(unsafe) avoid bound checks in the slicing operation
+        // &buffer[..self.inner.len]
+        unsafe { slice::from_raw_parts(self.inner.buffer.as_ptr() as *const T, self.inner.len) }
+    }
+
+    /// Returns the maximum number of elements the vector can hold.
+    pub const fn capacity(&self) -> usize {
+        self.inner.buffer.len()
     }
 
     /// Clears the vector, removing all values.
@@ -215,7 +730,7 @@ impl<T, const N: usize> Vec<T, N> {
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
+        if self.inner.len + other.len() > self.capacity() {
             // won't fit in the `Vec`; don't modify anything and return an error
             Err(())
         } else {
@@ -230,7 +745,7 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Removes the last element from a vector and returns it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        if self.len != 0 {
+        if self.inner.len != 0 {
             Some(unsafe { self.pop_unchecked() })
         } else {
             None
@@ -241,7 +756,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
+        if self.inner.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -257,8 +772,12 @@ impl<T, const N: usize> Vec<T, N> {
     pub unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
-        self.len -= 1;
-        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
+        self.inner.len -= 1;
+        self.inner
+            .buffer
+            .get_unchecked_mut(self.inner.len)
+            .as_ptr()
+            .read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -271,16 +790,16 @@ impl<T, const N: usize> Vec<T, N> {
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         debug_assert!(!self.is_full());
 
-        *self.buffer.get_unchecked_mut(self.len) = MaybeUninit::new(item);
+        *self.inner.buffer.get_unchecked_mut(self.inner.len) = MaybeUninit::new(item);
 
-        self.len += 1;
+        self.inner.len += 1;
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
     pub fn truncate(&mut self, len: usize) {
         // This is safe because:
         //
-        // * the slice passed to `drop_in_place` is valid; the `len > self.len`
+        // * the slice passed to `drop_in_place` is valid; the `len > self.inner.len`
         //   case avoids creating an invalid slice, and
         // * the `len` of the vector is shrunk before calling `drop_in_place`,
         //   such that no value will be dropped twice in case `drop_in_place`
@@ -289,12 +808,12 @@ impl<T, const N: usize> Vec<T, N> {
             // Note: It's intentional that this is `>` and not `>=`.
             //       Changing it to `>=` has negative performance
             //       implications in some cases. See rust-lang/rust#78884 for more.
-            if len > self.len {
+            if len > self.inner.len {
                 return;
             }
-            let remaining_len = self.len - len;
+            let remaining_len = self.inner.len - len;
             let s = ptr::slice_from_raw_parts_mut(self.as_mut_ptr().add(len), remaining_len);
-            self.len = len;
+            self.inner.len = len;
             ptr::drop_in_place(s);
         }
     }
@@ -315,8 +834,8 @@ impl<T, const N: usize> Vec<T, N> {
             return Err(());
         }
 
-        if new_len > self.len {
-            while self.len < new_len {
+        if new_len > self.inner.len {
+            while self.inner.len < new_len {
                 self.push(value.clone()).ok();
             }
         } else {
@@ -433,7 +952,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
 
-        self.len = new_len
+        self.inner.len = new_len
     }
 
     /// Removes an element from the vector and returns it.
@@ -465,7 +984,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
-        assert!(index < self.len);
+        assert!(index < self.inner.len);
         unsafe { self.swap_remove_unchecked(index) }
     }
 
@@ -502,20 +1021,20 @@ impl<T, const N: usize> Vec<T, N> {
         let value = ptr::read(self.as_ptr().add(index));
         let base_ptr = self.as_mut_ptr();
         ptr::copy(base_ptr.add(length - 1), base_ptr.add(index), 1);
-        self.len -= 1;
+        self.inner.len -= 1;
         value
     }
 
     /// Returns true if the vec is full
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.len == self.capacity()
+        self.inner.len == self.capacity()
     }
 
     /// Returns true if the vec is empty
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.inner.len == 0
     }
 
     /// Returns `true` if `needle` is a prefix of the Vec.
@@ -538,7 +1057,7 @@ impl<T, const N: usize> Vec<T, N> {
         T: PartialEq,
     {
         let n = needle.len();
-        self.len >= n && needle == &self[..n]
+        self.inner.len >= n && needle == &self[..n]
     }
 
     /// Returns `true` if `needle` is a suffix of the Vec.
@@ -741,14 +1260,14 @@ impl<T, const N: usize> Vec<T, N> {
         // This drop guard will be invoked when predicate or `drop` of element panicked.
         // It shifts unchecked elements to cover holes and `set_len` to the correct length.
         // In cases when predicate and `drop` never panick, it will be optimized out.
-        struct BackshiftOnDrop<'a, T, const N: usize> {
-            v: &'a mut Vec<T, N>,
+        struct BackshiftOnDrop<'a, T> {
+            v: &'a mut VecView<T>,
             processed_len: usize,
             deleted_cnt: usize,
             original_len: usize,
         }
 
-        impl<T, const N: usize> Drop for BackshiftOnDrop<'_, T, N> {
+        impl<T> Drop for BackshiftOnDrop<'_, T> {
             fn drop(&mut self) {
                 if self.deleted_cnt > 0 {
                     // SAFETY: Trailing unchecked items must be valid since we never touch them.
@@ -776,10 +1295,10 @@ impl<T, const N: usize> Vec<T, N> {
             original_len,
         };
 
-        fn process_loop<F, T, const N: usize, const DELETED: bool>(
+        fn process_loop<F, T, const DELETED: bool>(
             original_len: usize,
             f: &mut F,
-            g: &mut BackshiftOnDrop<'_, T, N>,
+            g: &mut BackshiftOnDrop<'_, T>,
         ) where
             F: FnMut(&mut T) -> bool,
         {
@@ -813,10 +1332,10 @@ impl<T, const N: usize> Vec<T, N> {
         }
 
         // Stage 1: Nothing was deleted.
-        process_loop::<F, T, N, false>(original_len, &mut f, &mut g);
+        process_loop::<F, T, false>(original_len, &mut f, &mut g);
 
         // Stage 2: Some elements were deleted.
-        process_loop::<F, T, N, true>(original_len, &mut f, &mut g);
+        process_loop::<F, T, true>(original_len, &mut f, &mut g);
 
         // All item are processed. This can be optimized to `set_len` by LLVM.
         drop(g);
@@ -939,7 +1458,14 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe { self.vec.buffer.get_unchecked_mut(self.next).as_ptr().read() };
+            let item = unsafe {
+                self.vec
+                    .inner
+                    .buffer
+                    .get_unchecked_mut(self.next)
+                    .as_ptr()
+                    .read()
+            };
             self.next += 1;
             Some(item)
         } else {
@@ -958,7 +1484,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.buffer.as_ptr() as *const T).add(self.next),
+                    (self.vec.inner.buffer.as_ptr() as *const T).add(self.next),
                     self.vec.len() - self.next,
                 )
             };
@@ -975,7 +1501,7 @@ impl<T, const N: usize> Drop for IntoIter<T, N> {
             // Drop all the elements that have not been moved out of vec
             ptr::drop_in_place(&mut self.vec.as_mut_slice()[self.next..]);
             // Prevent dropping of other elements
-            self.vec.len = 0;
+            self.vec.inner.len = 0;
         }
     }
 }
@@ -1133,6 +1659,20 @@ impl<T, const N: usize> ops::Deref for Vec<T, N> {
 }
 
 impl<T, const N: usize> ops::DerefMut for Vec<T, N> {
+    fn deref_mut(&mut self) -> &mut [T] {
+        self.as_mut_slice()
+    }
+}
+
+impl<T> ops::Deref for VecView<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<T> ops::DerefMut for VecView<T> {
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
