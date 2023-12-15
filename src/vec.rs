@@ -1350,7 +1350,7 @@ impl<T, const N: usize> Default for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> fmt::Debug for Vec<T, N>
+impl<T> fmt::Debug for VecView<T>
 where
     T: fmt::Debug,
 {
@@ -1359,7 +1359,25 @@ where
     }
 }
 
+impl<T, const N: usize> fmt::Debug for Vec<T, N>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_view().fmt(f)
+    }
+}
+
 impl<const N: usize> fmt::Write for Vec<u8, N> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        match self.extend_from_slice(s.as_bytes()) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(fmt::Error),
+        }
+    }
+}
+
+impl fmt::Write for VecView<u8> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         match self.extend_from_slice(s.as_bytes()) {
             Ok(()) => Ok(()),
@@ -1385,7 +1403,7 @@ impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> Extend<T> for Vec<T, N> {
+impl<T> Extend<T> for VecView<T> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -1394,7 +1412,28 @@ impl<T, const N: usize> Extend<T> for Vec<T, N> {
     }
 }
 
+impl<T, const N: usize> Extend<T> for Vec<T, N> {
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        self.as_mut_view().extend(iter)
+    }
+}
+
 impl<'a, T, const N: usize> Extend<&'a T> for Vec<T, N>
+where
+    T: 'a + Copy,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = &'a T>,
+    {
+        self.as_mut_view().extend(iter.into_iter().cloned())
+    }
+}
+
+impl<'a, T> Extend<&'a T> for VecView<T>
 where
     T: 'a + Copy,
 {
@@ -1411,6 +1450,15 @@ where
     T: core::hash::Hash,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.as_view().hash(state)
+    }
+}
+
+impl<T> hash::Hash for VecView<T>
+where
+    T: core::hash::Hash,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
         <[T] as hash::Hash>::hash(self, state)
     }
 }
@@ -1420,11 +1468,29 @@ impl<'a, T, const N: usize> IntoIterator for &'a Vec<T, N> {
     type IntoIter = slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
+        self.as_view().iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a VecView<T> {
+    type Item = &'a T;
+    type IntoIter = slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
 impl<'a, T, const N: usize> IntoIterator for &'a mut Vec<T, N> {
+    type Item = &'a mut T;
+    type IntoIter = slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.as_mut_view().iter_mut()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut VecView<T> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -1520,12 +1586,49 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<B, N2>) -> bool {
+        self.as_view().eq(other.as_view())
+    }
+}
+
+impl<A, B, const N: usize> PartialEq<Vec<B, N>> for VecView<A>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &Vec<B, N>) -> bool {
+        self.eq(other.as_view())
+    }
+}
+
+impl<A, B, const N: usize> PartialEq<VecView<B>> for Vec<A, N>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<B>) -> bool {
+        self.as_view().eq(other)
+    }
+}
+
+impl<A, B> PartialEq<VecView<B>> for VecView<A>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<B>) -> bool {
         <[A]>::eq(self, &**other)
     }
 }
 
 // Vec<A, N> == [B]
 impl<A, B, const N: usize> PartialEq<[B]> for Vec<A, N>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &[B]) -> bool {
+        self.as_view().eq(other)
+    }
+}
+
+// VecView<A> == [B]
+impl<A, B> PartialEq<[B]> for VecView<A>
 where
     A: PartialEq<B>,
 {
@@ -1540,6 +1643,16 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
+        other.as_view().eq(self)
+    }
+}
+
+// [B] == VecView<A>
+impl<A, B> PartialEq<VecView<A>> for [B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<A>) -> bool {
         <[A]>::eq(other, self)
     }
 }
@@ -1550,7 +1663,17 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &&[B]) -> bool {
-        <[A]>::eq(self, &other[..])
+        self.as_view().eq(other)
+    }
+}
+
+// VecView<A> == &[B]
+impl<A, B> PartialEq<&[B]> for VecView<A>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &&[B]) -> bool {
+        <[A]>::eq(self, *other)
     }
 }
 
@@ -1560,12 +1683,32 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+        other.as_view().eq(self)
+    }
+}
+
+// &[B] == VecView<A>
+impl<A, B> PartialEq<VecView<A>> for &[B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<A>) -> bool {
+        <[A]>::eq(other, *self)
     }
 }
 
 // Vec<A, N> == &mut [B]
 impl<A, B, const N: usize> PartialEq<&mut [B]> for Vec<A, N>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &&mut [B]) -> bool {
+        self.as_view().eq(other)
+    }
+}
+
+// VecView<A> == &mut [B]
+impl<A, B> PartialEq<&mut [B]> for VecView<A>
 where
     A: PartialEq<B>,
 {
@@ -1580,6 +1723,16 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
+        other.as_view().eq(self)
+    }
+}
+
+// &mut [B] == VecView<A>
+impl<A, B> PartialEq<VecView<A>> for &mut [B]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<A>) -> bool {
         <[A]>::eq(other, &self[..])
     }
 }
@@ -1591,7 +1744,18 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &[B; M]) -> bool {
-        <[A]>::eq(self, &other[..])
+        self.as_view().eq(other)
+    }
+}
+
+// VecView<A, N> == [B; M]
+// Equality does not require equal capacity
+impl<A, B, const M: usize> PartialEq<[B; M]> for VecView<A>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &[B; M]) -> bool {
+        <[A]>::eq(self, other)
     }
 }
 
@@ -1602,7 +1766,18 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+        other.as_view().eq(self)
+    }
+}
+
+// [B; M] == VecView<A>
+// Equality does not require equal capacity
+impl<A, B, const M: usize> PartialEq<VecView<A>> for [B; M]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<A>) -> bool {
+        <[A]>::eq(other, self)
     }
 }
 
@@ -1613,7 +1788,18 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &&[B; M]) -> bool {
-        <[A]>::eq(self, &other[..])
+        self.as_view().eq(other)
+    }
+}
+
+// VecView<A> == &[B; M]
+// Equality does not require equal capacity
+impl<A, B, const M: usize> PartialEq<&[B; M]> for VecView<A>
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &&[B; M]) -> bool {
+        <[A]>::eq(self, *other)
     }
 }
 
@@ -1624,18 +1810,41 @@ where
     A: PartialEq<B>,
 {
     fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+        other.as_view().eq(self)
+    }
+}
+
+// &[B; M] == VecView<A>
+// Equality does not require equal capacity
+impl<A, B, const M: usize> PartialEq<VecView<A>> for &[B; M]
+where
+    A: PartialEq<B>,
+{
+    fn eq(&self, other: &VecView<A>) -> bool {
+        <[A]>::eq(other, *self)
     }
 }
 
 // Implements Eq if underlying data is Eq
 impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
+// Not sure about this one? Should two distinct capacities really be Eq?
+// Anyways it derefs to &[u8] which implements Eq so I suppose it should
+impl<T> Eq for VecView<T> where T: Eq {}
 
 impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
 where
     T: PartialOrd,
 {
     fn partial_cmp(&self, other: &Vec<T, N2>) -> Option<Ordering> {
+        self.as_view().partial_cmp(other.as_view())
+    }
+}
+
+impl<T> PartialOrd<VecView<T>> for VecView<T>
+where
+    T: PartialOrd,
+{
+    fn partial_cmp(&self, other: &VecView<T>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
