@@ -65,7 +65,27 @@ pub struct VecInner<B: ?Sized + VecDrop> {
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
-/// TODO: doc
+/// A Vec with dynamic capacity
+///
+/// [`Vec`]() coerces to `VecView`. `VecView` is !Sized, meaning that it can only ever be used through pointer
+///
+/// Unlike [`Vec`](), `VecView` does not have an `N` const-generic parameter.
+/// This has the ergonomic advantages of making it possible to use functions without needing to know at
+/// compile-time the size of the buffers used, for example for use in `dyn` traits.
+///
+/// `VecView<T>` is to `Vec<T, N>` what `[T]` is to `[T; N]`
+///
+/// ```rust
+/// use heapless::{Vec, VecView};
+///
+/// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+/// let view: &VecView<_> = &vec;
+/// assert_eq!(view, &[1, 2, 3, 4]);
+///
+/// let mut_view: &mut VecView<_> = &mut vec;
+/// mut_view.push(5);
+/// assert_eq!(vec, [1, 2, 3, 4, 5]);
+/// ```
 pub type VecView<T> = VecInner<[MaybeUninit<T>]>;
 
 impl<T> VecView<T> {
@@ -86,8 +106,8 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
-    /// let buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// use heapless::{Vec, VecView};
+    /// let buffer: &VecView<u8> = &Vec::<u8, 5>::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
     /// ```
     pub fn as_slice(&self) -> &[T] {
@@ -103,9 +123,10 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
-    /// let mut buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
-    /// buffer[0] = 9;
+    /// use heapless::{Vec, VecView};
+    /// let mut buffer: &mut VecView<u8> = &mut Vec::<u8, 5>::from_slice(&[1, 2, 3, 5, 8]).unwrap();
+    /// let buffer_slice = buffer.as_mut_slice();
+    /// buffer_slice[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
     pub fn as_mut_slice(&mut self) -> &mut [T] {
@@ -146,9 +167,9 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut vec = Vec::<u8, 8>::new();
+    /// let vec: &mut VecView<u8> = &mut Vec::<u8, 8>::new();
     /// vec.push(1).unwrap();
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
@@ -310,7 +331,7 @@ impl<T> VecView<T> {
     ///
     /// ```no_run
     /// # #![allow(dead_code)]
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
     /// # // This is just a minimal skeleton for the doc example;
     /// # // don't use this as a starting point for a real library.
@@ -327,6 +348,7 @@ impl<T> VecView<T> {
     /// pub fn get_dictionary(&self) -> Option<Vec<u8, 32768>> {
     ///     // Per the FFI method's docs, "32768 bytes is always enough".
     ///     let mut dict = Vec::new();
+    ///     let mut dict_view: &mut VecView<_> = &mut dict;
     ///     let mut dict_length = 0;
     ///     // SAFETY: When `deflateGetDictionary` returns `Z_OK`, it holds that:
     ///     // 1. `dict_length` elements were initialized.
@@ -334,10 +356,10 @@ impl<T> VecView<T> {
     ///     // which makes `set_len` safe to call.
     ///     unsafe {
     ///         // Make the FFI call...
-    ///         let r = deflateGetDictionary(self.strm, dict.as_mut_ptr(), &mut dict_length);
+    ///         let r = deflateGetDictionary(self.strm, dict_view.as_mut_ptr(), &mut dict_length);
     ///         if r == Z_OK {
     ///             // ...and update the length to what was initialized.
-    ///             dict.set_len(dict_length);
+    ///             dict_view.set_len(dict_length);
     ///             Some(dict)
     ///         } else {
     ///             None
@@ -352,7 +374,7 @@ impl<T> VecView<T> {
     ///
     /// ```
     /// use core::iter::FromIterator;
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
     /// let mut vec = Vec::<Vec<u8, 3>, 3>::from_iter(
     ///     [
@@ -367,7 +389,7 @@ impl<T> VecView<T> {
     /// // 1. `old_len..0` is empty so no elements need to be initialized.
     /// // 2. `0 <= capacity` always holds whatever `capacity` is.
     /// unsafe {
-    ///     vec.set_len(0);
+    ///     vec.as_mut_view().set_len(0);
     /// }
     /// ```
     ///
@@ -392,20 +414,19 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
-    ///// use heapless::consts::*;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut v: Vec<_, 8> = Vec::new();
+    /// let v: &mut VecView<_> = &mut Vec::<_, 8>::new();
     /// v.push("foo").unwrap();
     /// v.push("bar").unwrap();
     /// v.push("baz").unwrap();
     /// v.push("qux").unwrap();
     ///
     /// assert_eq!(v.swap_remove(1), "bar");
-    /// assert_eq!(&*v, ["foo", "qux", "baz"]);
+    /// assert_eq!(v, &["foo", "qux", "baz"]);
     ///
     /// assert_eq!(v.swap_remove(0), "foo");
-    /// assert_eq!(&*v, ["baz", "qux"]);
+    /// assert_eq!(v, &["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
         assert!(index < self.len);
@@ -425,19 +446,19 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut v: Vec<_, 8> = Vec::new();
+    /// let mut v: &mut VecView<_> = &mut Vec::<_, 8>::new();
     /// v.push("foo").unwrap();
     /// v.push("bar").unwrap();
     /// v.push("baz").unwrap();
     /// v.push("qux").unwrap();
     ///
     /// assert_eq!(unsafe { v.swap_remove_unchecked(1) }, "bar");
-    /// assert_eq!(&*v, ["foo", "qux", "baz"]);
+    /// assert_eq!(v, &["foo", "qux", "baz"]);
     ///
     /// assert_eq!(unsafe { v.swap_remove_unchecked(0) }, "foo");
-    /// assert_eq!(&*v, ["baz", "qux"]);
+    /// assert_eq!(v, &["baz", "qux"]);
     /// ```
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         let length = self.len();
@@ -468,9 +489,9 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// let v: &VecView<_> = &Vec::<_, 8>::from_slice(b"abc").unwrap();
     /// assert_eq!(v.starts_with(b""), true);
     /// assert_eq!(v.starts_with(b"ab"), true);
     /// assert_eq!(v.starts_with(b"bc"), false);
@@ -491,9 +512,9 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let v: Vec<_, 8> = Vec::from_slice(b"abc").unwrap();
+    /// let v: &VecView<_> = &Vec::<_, 8>::from_slice(b"abc").unwrap();
     /// assert_eq!(v.ends_with(b""), true);
     /// assert_eq!(v.ends_with(b"ab"), false);
     /// assert_eq!(v.ends_with(b"bc"), true);
@@ -519,13 +540,13 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// let mut vec: &mut VecView<_> = &mut Vec::<_, 8>::from_slice(&[1, 2, 3]).unwrap();
     /// vec.insert(1, 4);
-    /// assert_eq!(vec, [1, 4, 2, 3]);
+    /// assert_eq!(vec, &[1, 4, 2, 3]);
     /// vec.insert(4, 5);
-    /// assert_eq!(vec, [1, 4, 2, 3, 5]);
+    /// assert_eq!(vec, &[1, 4, 2, 3, 5]);
     /// ```
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         let len = self.len();
@@ -578,11 +599,11 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut v: Vec<_, 8> = Vec::from_slice(&[1, 2, 3]).unwrap();
+    /// let mut v: &mut VecView<_> = &mut Vec::<_, 8>::from_slice(&[1, 2, 3]).unwrap();
     /// assert_eq!(v.remove(1), 2);
-    /// assert_eq!(v, [1, 3]);
+    /// assert_eq!(v, &[1, 3]);
     /// ```
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len();
@@ -616,24 +637,24 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let mut vec: &mut VecView<_> = &mut Vec::<_, 8>::from_slice(&[1, 2, 3, 4]).unwrap();
     /// vec.retain(|&x| x % 2 == 0);
-    /// assert_eq!(vec, [2, 4]);
+    /// assert_eq!(vec, &[2, 4]);
     /// ```
     ///
     /// Because the elements are visited exactly once in the original order,
     /// external state may be used to decide which elements to keep.
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4, 5]).unwrap();
+    /// let mut vec: &mut VecView<_> = &mut Vec::<_, 8>::from_slice(&[1, 2, 3, 4, 5]).unwrap();
     /// let keep = [false, true, true, false, true];
     /// let mut iter = keep.iter();
     /// vec.retain(|_| *iter.next().unwrap());
-    /// assert_eq!(vec, [2, 3, 5]);
+    /// assert_eq!(vec, &[2, 3, 5]);
     /// ```
     pub fn retain<F>(&mut self, mut f: F)
     where
@@ -651,9 +672,9 @@ impl<T> VecView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::Vec;
+    /// use heapless::{Vec, VecView};
     ///
-    /// let mut vec: Vec<_, 8> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let mut vec: &mut VecView<_> = &mut Vec::<_, 8>::from_slice(&[1, 2, 3, 4]).unwrap();
     /// vec.retain_mut(|x| {
     ///     if *x <= 3 {
     ///         *x += 1;
@@ -662,7 +683,7 @@ impl<T> VecView<T> {
     ///         false
     ///     }
     /// });
-    /// assert_eq!(vec, [2, 3, 4]);
+    /// assert_eq!(vec, &[2, 3, 4]);
     /// ```
     pub fn retain_mut<F>(&mut self, mut f: F)
     where
@@ -927,7 +948,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     /// use heapless::Vec;
     /// let mut buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
-    /// buffer[0] = 9;
+    /// let buffer_slice = buffer.as_mut_slice();
+    /// buffer_slice[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
     pub fn as_mut_slice(&mut self) -> &mut [T] {
