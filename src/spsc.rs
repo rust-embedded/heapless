@@ -1,4 +1,4 @@
-//! Fixed capacity Single Producer Single Consumer (SPSC) queue
+//! A fixed capacity Single Producer Single Consumer (SPSC) queue.
 //!
 //! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!

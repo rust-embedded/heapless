@@ -1,5 +1,6 @@
 //! A fixed sorted priority linked list, similar to [`BinaryHeap`] but with different properties
 //! on `push`, `pop`, etc.
+//!
 //! For example, the sorting of the list will never `memcpy` the underlying value, so having large
 //! objects in the list will not cause a performance hit.
 //!
@@ -239,7 +240,7 @@ where
 {
     /// Pushes a value onto the list without checking if the list is full.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Safety
     ///
@@ -287,7 +288,7 @@ where
 
     /// Pushes an element to the linked list and sorts it into place.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Example
     ///
@@ -448,7 +449,7 @@ where
 
     /// Pops the first element in the list.
     ///
-    /// Complexity is worst-case `O(1)`.
+    /// Complexity is worst-case *O*(1).
     ///
     /// # Example
     ///
@@ -584,7 +585,7 @@ where
 
     /// This will pop the element from the list.
     ///
-    /// Complexity is worst-case `O(1)`.
+    /// Complexity is worst-case *O*(1).
     ///
     /// # Example
     ///
@@ -614,7 +615,7 @@ where
     ///
     /// Same as calling `drop`.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Example
     ///

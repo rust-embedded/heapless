@@ -12,7 +12,7 @@ use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::Vec;
 
-/// A [`IndexMap`] using the default FNV hasher
+/// An [`IndexMap`] using the default FNV hasher.
 ///
 /// A list of all Methods and Traits available for `FnvIndexMap` can be found in
 /// the [`IndexMap`] documentation.
@@ -681,7 +681,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Get the first key-value pair
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn first(&self) -> Option<(&K, &V)> {
         self.core
             .entries
@@ -691,7 +691,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Get the first key-value pair, with mutable access to the value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn first_mut(&mut self) -> Option<(&K, &mut V)> {
         self.core
             .entries
@@ -701,7 +701,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Get the last key-value pair
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn last(&self) -> Option<(&K, &V)> {
         self.core
             .entries
@@ -711,7 +711,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Get the last key-value pair, with mutable access to the value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn last_mut(&mut self) -> Option<(&K, &mut V)> {
         self.core
             .entries
@@ -721,7 +721,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Return the number of key-value pairs in the map.
     ///
-    /// Computes in **O(1)** time.
+    /// Computes in *O*(1) time.
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -737,7 +737,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Returns true if the map contains no elements.
     ///
-    /// Computes in **O(1)** time.
+    /// Computes in *O*(1) time.
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -753,7 +753,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
 
     /// Remove all key-value pairs in the map, while preserving its capacity.
     ///
-    /// Computes in **O(n)** time.
+    /// Computes in *O*(n) time.
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -815,7 +815,7 @@ where
     /// The key may be any borrowed form of the map's key type, but `Hash` and `Eq` on the borrowed
     /// form *must* match those for the key type.
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     ///
     /// ```
     /// use heapless::FnvIndexMap;
@@ -839,7 +839,7 @@ where
     /// The key may be any borrowed form of the map's key type, but `Hash` and `Eq` on the borrowed
     /// form *must* match those for the key type.
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     ///
     /// # Examples
     ///
@@ -864,7 +864,7 @@ where
     /// The key may be any borrowed form of the map's key type, but `Hash` and `Eq` on the borrowed
     /// form *must* match those for the key type.
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     ///
     /// # Examples
     ///
@@ -899,7 +899,7 @@ where
     /// If no equivalent key existed in the map: the new key-value pair is inserted, last in order,
     /// and `None` is returned.
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     ///
     /// See also entry if you you want to insert or modify or if you need to get the index of the
     /// corresponding key-value pair.
@@ -927,7 +927,7 @@ where
 
     /// Same as [`swap_remove`](Self::swap_remove)
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     ///
     /// # Examples
     ///
@@ -954,7 +954,7 @@ where
     ///
     /// Return `None` if `key` is not in map.
     ///
-    /// Computes in **O(1)** time (average).
+    /// Computes in *O*(1) time (average).
     pub fn swap_remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
