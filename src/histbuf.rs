@@ -141,9 +141,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         N
     }
 
-    /// Returns whether the buffer is filled
+    /// Returns whether the buffer is full
     #[inline]
-    pub fn is_filled(&self) -> bool {
+    pub fn is_full(&self) -> bool {
         self.filled
     }
 
@@ -443,11 +443,11 @@ mod tests {
         assert_eq!(x.len(), 4);
         assert_eq!(x.as_slice(), [1; 4]);
         assert_eq!(*x, [1; 4]);
-        assert!(x.is_filled());
+        assert!(x.is_full());
 
         let x: HistoryBuffer<u8, 4> = HistoryBuffer::new();
         assert_eq!(x.as_slice(), []);
-        assert!(!x.is_filled());
+        assert!(!x.is_full());
     }
 
     #[test]

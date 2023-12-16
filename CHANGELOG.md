@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added `format` macro.
 - Added `String::from_utf16`.
-- Added `is_filled`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
+- Added `is_full`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
 
 ### Changed
 
