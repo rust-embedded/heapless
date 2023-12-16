@@ -88,6 +88,9 @@ pub use indexmap::{
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
 pub use linear_map::LinearMap;
 pub use string::String;
+#[cfg(doc)]
+#[doc(hidden)]
+pub use vec::VecInner as _;
 pub use vec::{Vec, VecView};
 
 #[macro_use]

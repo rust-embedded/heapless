@@ -30,6 +30,7 @@ impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
     }
 }
 
+/// <div class="warn">This is private API and should not be used</div>
 pub struct VecInner<B: ?Sized + VecDrop> {
     len: usize,
     buffer: B,
@@ -866,10 +867,12 @@ impl<T, const N: usize> Vec<T, N> {
         new
     }
 
+    /// Get a reference to the Vec, erasing the `N` const-generic
     pub const fn as_view(&self) -> &VecView<T> {
         self
     }
 
+    /// Get a `mut` reference to the Vec, erasing the `N` const-generic
     pub fn as_mut_view(&mut self) -> &mut VecView<T> {
         self
     }
