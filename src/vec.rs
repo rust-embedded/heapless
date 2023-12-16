@@ -998,38 +998,19 @@ impl<T, const N: usize> Vec<T, N> {
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
-            // won't fit in the `Vec`; don't modify anything and return an error
-            Err(())
-        } else {
-            for elem in other {
-                unsafe {
-                    self.push_unchecked(elem.clone());
-                }
-            }
-            Ok(())
-        }
+        self.as_mut_view().extend_from_slice(other)
     }
 
     /// Removes the last element from a vector and returns it, or `None` if it's empty
     pub fn pop(&mut self) -> Option<T> {
-        if self.len != 0 {
-            Some(unsafe { self.pop_unchecked() })
-        } else {
-            None
-        }
+        self.as_mut_view().pop()
     }
 
     /// Appends an `item` to the back of the collection
     ///
     /// Returns back the `item` if the vector is full
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
-            unsafe { self.push_unchecked(item) }
-            Ok(())
-        } else {
-            Err(item)
-        }
+        self.as_mut_view().push(item)
     }
 
     /// Removes the last element from a vector and returns it
@@ -1038,10 +1019,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// This assumes the vec to have at least one element.
     pub unsafe fn pop_unchecked(&mut self) -> T {
-        debug_assert!(!self.is_empty());
-
-        self.len -= 1;
-        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
+        self.as_mut_view().pop_unchecked()
     }
 
     /// Appends an `item` to the back of the collection
@@ -1050,36 +1028,12 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// This assumes the vec is not full.
     pub unsafe fn push_unchecked(&mut self, item: T) {
-        // NOTE(ptr::write) the memory slot that we are about to write to is uninitialized. We
-        // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
-        debug_assert!(!self.is_full());
-
-        *self.buffer.get_unchecked_mut(self.len) = MaybeUninit::new(item);
-
-        self.len += 1;
+        self.as_mut_view().push_unchecked(item)
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
     pub fn truncate(&mut self, len: usize) {
-        // This is safe because:
-        //
-        // * the slice passed to `drop_in_place` is valid; the `len > self.len`
-        //   case avoids creating an invalid slice, and
-        // * the `len` of the vector is shrunk before calling `drop_in_place`,
-        //   such that no value will be dropped twice in case `drop_in_place`
-        //   were to panic once (if it panics twice, the program aborts).
-        unsafe {
-            // Note: It's intentional that this is `>` and not `>=`.
-            //       Changing it to `>=` has negative performance
-            //       implications in some cases. See rust-lang/rust#78884 for more.
-            if len > self.len {
-                return;
-            }
-            let remaining_len = self.len - len;
-            let s = ptr::slice_from_raw_parts_mut(self.as_mut_ptr().add(len), remaining_len);
-            self.len = len;
-            ptr::drop_in_place(s);
-        }
+        self.as_mut_view().truncate(len)
     }
 
     /// Resizes the Vec in-place so that len is equal to new_len.
@@ -1094,19 +1048,7 @@ impl<T, const N: usize> Vec<T, N> {
     where
         T: Clone,
     {
-        if new_len > self.capacity() {
-            return Err(());
-        }
-
-        if new_len > self.len {
-            while self.len < new_len {
-                self.push(value.clone()).ok();
-            }
-        } else {
-            self.truncate(new_len);
-        }
-
-        Ok(())
+        self.as_mut_view().resize(new_len, value)
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
@@ -1121,7 +1063,7 @@ impl<T, const N: usize> Vec<T, N> {
     where
         T: Clone + Default,
     {
-        self.resize(new_len, T::default())
+        self.as_mut_view().resize_default(new_len)
     }
 
     /// Forces the length of the vector to `new_len`.
@@ -1248,8 +1190,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub fn swap_remove(&mut self, index: usize) -> T {
-        assert!(index < self.len);
-        unsafe { self.swap_remove_unchecked(index) }
+        self.as_mut_view().swap_remove(index)
     }
 
     /// Removes an element from the vector and returns it.
@@ -1280,13 +1221,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
-        let length = self.len();
-        debug_assert!(index < length);
-        let value = ptr::read(self.as_ptr().add(index));
-        let base_ptr = self.as_mut_ptr();
-        ptr::copy(base_ptr.add(length - 1), base_ptr.add(index), 1);
-        self.len -= 1;
-        value
+        self.as_mut_view().swap_remove_unchecked(index)
     }
 
     /// Returns true if the vec is full
@@ -1368,35 +1303,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(vec, [1, 4, 2, 3, 5]);
     /// ```
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
-        let len = self.len();
-        if index > len {
-            panic!(
-                "insertion index (is {}) should be <= len (is {})",
-                index, len
-            );
-        }
-
-        // check there's space for the new element
-        if self.is_full() {
-            return Err(element);
-        }
-
-        unsafe {
-            // infallible
-            // The spot to put the new value
-            {
-                let p = self.as_mut_ptr().add(index);
-                // Shift everything over to make space. (Duplicating the
-                // `index`th element into two consecutive places.)
-                ptr::copy(p, p.offset(1), len - index);
-                // Write it in, overwriting the first copy of the `index`th
-                // element.
-                ptr::write(p, element);
-            }
-            self.set_len(len + 1);
-        }
-
-        Ok(())
+        self.as_mut_view().insert(index, element)
     }
 
     /// Removes and returns the element at position `index` within the vector,
@@ -1425,26 +1332,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(v, [1, 3]);
     /// ```
     pub fn remove(&mut self, index: usize) -> T {
-        let len = self.len();
-        if index >= len {
-            panic!("removal index (is {}) should be < len (is {})", index, len);
-        }
-        unsafe {
-            // infallible
-            let ret;
-            {
-                // the place we are taking from.
-                let ptr = self.as_mut_ptr().add(index);
-                // copy it out, unsafely having a copy of the value on
-                // the stack and in the vector at the same time.
-                ret = ptr::read(ptr);
-
-                // Shift everything down to fill in that spot.
-                ptr::copy(ptr.offset(1), ptr, len - index - 1);
-            }
-            self.set_len(len - 1);
-            ret
-        }
+        self.as_mut_view().remove(index)
     }
 
     /// Retains only the elements specified by the predicate.
@@ -1475,11 +1363,11 @@ impl<T, const N: usize> Vec<T, N> {
     /// vec.retain(|_| *iter.next().unwrap());
     /// assert_eq!(vec, [2, 3, 5]);
     /// ```
-    pub fn retain<F>(&mut self, mut f: F)
+    pub fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&T) -> bool,
     {
-        self.retain_mut(|elem| f(elem));
+        self.as_mut_view().retain(f)
     }
 
     /// Retains only the elements specified by the predicate, passing a mutable reference to it.
@@ -1504,105 +1392,11 @@ impl<T, const N: usize> Vec<T, N> {
     /// });
     /// assert_eq!(vec, [2, 3, 4]);
     /// ```
-    pub fn retain_mut<F>(&mut self, mut f: F)
+    pub fn retain_mut<F>(&mut self, f: F)
     where
         F: FnMut(&mut T) -> bool,
     {
-        let original_len = self.len();
-        // Avoid double drop if the drop guard is not executed,
-        // since we may make some holes during the process.
-        unsafe { self.set_len(0) };
-
-        // Vec: [Kept, Kept, Hole, Hole, Hole, Hole, Unchecked, Unchecked]
-        //      |<-              processed len   ->| ^- next to check
-        //                  |<-  deleted cnt     ->|
-        //      |<-              original_len                          ->|
-        // Kept: Elements which predicate returns true on.
-        // Hole: Moved or dropped element slot.
-        // Unchecked: Unchecked valid elements.
-        //
-        // This drop guard will be invoked when predicate or `drop` of element panicked.
-        // It shifts unchecked elements to cover holes and `set_len` to the correct length.
-        // In cases when predicate and `drop` never panick, it will be optimized out.
-        struct BackshiftOnDrop<'a, T, const N: usize> {
-            v: &'a mut Vec<T, N>,
-            processed_len: usize,
-            deleted_cnt: usize,
-            original_len: usize,
-        }
-
-        impl<T, const N: usize> Drop for BackshiftOnDrop<'_, T, N> {
-            fn drop(&mut self) {
-                if self.deleted_cnt > 0 {
-                    // SAFETY: Trailing unchecked items must be valid since we never touch them.
-                    unsafe {
-                        ptr::copy(
-                            self.v.as_ptr().add(self.processed_len),
-                            self.v
-                                .as_mut_ptr()
-                                .add(self.processed_len - self.deleted_cnt),
-                            self.original_len - self.processed_len,
-                        );
-                    }
-                }
-                // SAFETY: After filling holes, all items are in contiguous memory.
-                unsafe {
-                    self.v.set_len(self.original_len - self.deleted_cnt);
-                }
-            }
-        }
-
-        let mut g = BackshiftOnDrop {
-            v: self,
-            processed_len: 0,
-            deleted_cnt: 0,
-            original_len,
-        };
-
-        fn process_loop<F, T, const N: usize, const DELETED: bool>(
-            original_len: usize,
-            f: &mut F,
-            g: &mut BackshiftOnDrop<'_, T, N>,
-        ) where
-            F: FnMut(&mut T) -> bool,
-        {
-            while g.processed_len != original_len {
-                let p = g.v.as_mut_ptr();
-                // SAFETY: Unchecked element must be valid.
-                let cur = unsafe { &mut *p.add(g.processed_len) };
-                if !f(cur) {
-                    // Advance early to avoid double drop if `drop_in_place` panicked.
-                    g.processed_len += 1;
-                    g.deleted_cnt += 1;
-                    // SAFETY: We never touch this element again after dropped.
-                    unsafe { ptr::drop_in_place(cur) };
-                    // We already advanced the counter.
-                    if DELETED {
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
-                if DELETED {
-                    // SAFETY: `deleted_cnt` > 0, so the hole slot must not overlap with current element.
-                    // We use copy for move, and never touch this element again.
-                    unsafe {
-                        let hole_slot = p.add(g.processed_len - g.deleted_cnt);
-                        ptr::copy_nonoverlapping(cur, hole_slot, 1);
-                    }
-                }
-                g.processed_len += 1;
-            }
-        }
-
-        // Stage 1: Nothing was deleted.
-        process_loop::<F, T, N, false>(original_len, &mut f, &mut g);
-
-        // Stage 2: Some elements were deleted.
-        process_loop::<F, T, N, true>(original_len, &mut f, &mut g);
-
-        // All item are processed. This can be optimized to `set_len` by LLVM.
-        drop(g);
+        self.as_mut_view().retain_mut(f)
     }
 
     /// Returns the remaining spare capacity of the vector as a slice of `MaybeUninit<T>`.
