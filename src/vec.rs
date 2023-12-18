@@ -64,10 +64,20 @@ pub struct VecInner<B: ?Sized + VecDrop> {
 /// }
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
+///
+/// In some cases, the const-generic might be cumbersome. `Vec` can coerce into a [`VecView`][] to remove the need for the const-generic:
+///
+/// ```rust
+/// use heapless::{Vec, VecView};
+///
+/// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+/// let view: &VecView<_> = &vec;
+/// ```
 pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
+
 /// A Vec with dynamic capacity
 ///
-/// [`Vec`]() coerces to `VecView`. `VecView` is !Sized, meaning that it can only ever be used through pointer
+/// [`Vec`]() coerces to `VecView`. `VecView` is `!Sized`, meaning that it can only ever be used through pointer
 ///
 /// Unlike [`Vec`](), `VecView` does not have an `N` const-generic parameter.
 /// This has the ergonomic advantages of making it possible to use functions without needing to know at
@@ -889,11 +899,29 @@ impl<T, const N: usize> Vec<T, N> {
     }
 
     /// Get a reference to the Vec, erasing the `N` const-generic
+    ///
+    /// This can also be used through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// use heapless::{Vec, VecView};
+    ///
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<_> = &vec;
+    /// ```
     pub const fn as_view(&self) -> &VecView<T> {
         self
     }
 
     /// Get a `mut` reference to the Vec, erasing the `N` const-generic
+    ///
+    /// This can also be used through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// use heapless::{Vec, VecView};
+    ///
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<_> = &mut vec;
+    /// ```
     pub fn as_mut_view(&mut self) -> &mut VecView<T> {
         self
     }
