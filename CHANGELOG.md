@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Vec::spare_capacity_mut`.
 - Added `Extend` impls for `Deque`.
 - Added `Deque::make_contiguous`.
+- Added `VecView`, the `!Sized` version of `Vec`
 
 ### Changed
 
