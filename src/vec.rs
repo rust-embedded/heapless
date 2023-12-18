@@ -65,7 +65,7 @@ pub struct VecInner<B: ?Sized + VecDrop> {
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 ///
-/// In some cases, the const-generic might be cumbersome. `Vec` can coerce into a [`VecView`][] to remove the need for the const-generic:
+/// In some cases, the const-generic might be cumbersome. `Vec` can coerce into a [`VecView`](VecView) to remove the need for the const-generic:
 ///
 /// ```rust
 /// use heapless::{Vec, VecView};
@@ -77,9 +77,9 @@ pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
 
 /// A Vec with dynamic capacity
 ///
-/// [`Vec`]() coerces to `VecView`. `VecView` is `!Sized`, meaning that it can only ever be used through pointer
+/// [`Vec`](Vec) coerces to `VecView`. `VecView` is `!Sized`, meaning that it can only ever be used through pointer
 ///
-/// Unlike [`Vec`](), `VecView` does not have an `N` const-generic parameter.
+/// Unlike [`Vec`](Vec), `VecView` does not have an `N` const-generic parameter.
 /// This has the ergonomic advantages of making it possible to use functions without needing to know at
 /// compile-time the size of the buffers used, for example for use in `dyn` traits.
 ///
