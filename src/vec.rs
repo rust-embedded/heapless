@@ -75,7 +75,7 @@ pub struct VecInner<B: ?Sized + VecDrop> {
 /// ```
 pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
 
-/// A Vec with dynamic capacity
+/// A [`Vec`](Vec) with dynamic capacity
 ///
 /// [`Vec`](Vec) coerces to `VecView`. `VecView` is `!Sized`, meaning that it can only ever be used through pointer
 ///
