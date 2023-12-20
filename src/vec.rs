@@ -821,6 +821,36 @@ impl<T, const N: usize> Vec<T, N> {
         // All item are processed. This can be optimized to `set_len` by LLVM.
         drop(g);
     }
+
+    /// Returns the remaining spare capacity of the vector as a slice of `MaybeUninit<T>`.
+    ///
+    /// The returned slice can be used to fill the vector with data before marking the data as
+    /// initialized using the `set_len` method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// // Allocate vector big enough for 10 elements.
+    /// let mut v: Vec<_, 10> = Vec::new();
+    ///
+    /// // Fill in the first 3 elements.
+    /// let uninit = v.spare_capacity_mut();
+    /// uninit[0].write(0);
+    /// uninit[1].write(1);
+    /// uninit[2].write(2);
+    ///
+    /// // Mark the first 3 elements of the vector as being initialized.
+    /// unsafe {
+    ///     v.set_len(3);
+    /// }
+    ///
+    /// assert_eq!(&v, &[0, 1, 2]);
+    /// ```
+    pub fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<T>] {
+        &mut self.buffer[self.len..]
+    }
 }
 
 // Trait implementations
@@ -1580,5 +1610,25 @@ mod tests {
 
         // Validate full
         assert!(v.is_full());
+    }
+
+    #[test]
+    fn spare_capacity_mut() {
+        let mut v: Vec<_, 4> = Vec::new();
+        let uninit = v.spare_capacity_mut();
+        assert_eq!(uninit.len(), 4);
+        uninit[0].write(1);
+        uninit[1].write(2);
+        uninit[2].write(3);
+        unsafe { v.set_len(3) };
+        assert_eq!(v.as_slice(), &[1, 2, 3]);
+
+        let uninit = v.spare_capacity_mut();
+        assert_eq!(uninit.len(), 1);
+        uninit[0].write(4);
+        unsafe { v.set_len(4) };
+        assert_eq!(v.as_slice(), &[1, 2, 3, 4]);
+
+        assert!(v.spare_capacity_mut().is_empty());
     }
 }
