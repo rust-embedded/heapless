@@ -888,6 +888,17 @@ impl<T, const N: usize> Drop for Vec<T, N> {
     }
 }
 
+impl<T, const N: usize> From<[T; N]> for Vec<T, N> {
+    /// Converts array to `Vec` of same size and capacity without copying
+    fn from(buffer: [T; N]) -> Self {
+        Self {
+            // cast [T; N] into [MaybeUninit<T>; N]
+            buffer: unsafe { buffer.as_ptr().cast::<[MaybeUninit<T>; N]>().read() },
+            len: N,
+        }
+    }
+}
+
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 
