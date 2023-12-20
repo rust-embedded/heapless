@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added `format` macro.
 - Added `String::from_utf16`.
+- Added `Vec::spare_capacity_mut`
 
 ### Changed
 
