@@ -1,4 +1,12 @@
-use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
+use core::{
+    cmp::Ordering,
+    fmt, hash,
+    iter::FromIterator,
+    mem::{ManuallyDrop, MaybeUninit},
+    ops, ptr, slice,
+};
+
+use crate::sealed;
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 ///
@@ -888,14 +896,31 @@ impl<T, const N: usize> Drop for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> From<[T; N]> for Vec<T, N> {
-    /// Converts array to `Vec` of same size and capacity without copying
-    fn from(buffer: [T; N]) -> Self {
-        Self {
-            // cast [T; N] into [MaybeUninit<T>; N]
-            buffer: unsafe { buffer.as_ptr().cast::<[MaybeUninit<T>; N]>().read() },
-            len: N,
-        }
+impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
+    /// Constructs a vector of capacity `N` by copying in an array of size `M`, where `M` is less
+    /// or equal to `N`.
+    ///
+    /// If `M` is greater than `N` or if `M` is 0, a compile-time error will be raised.
+    fn from(src: [T; M]) -> Self {
+        // Statically assert that N >= M and M > 0
+        sealed::greater_than_eq::<N, M>();
+        sealed::greater_than_0::<M>();
+
+        let mut vec = Self::new();
+        // Don't run drop code for src, since we're essentially moving it
+        let src = ManuallyDrop::new(src);
+        unsafe {
+            // Unsafe: Cast ManuallyDrop<[T; M]> to [MaybeUninit<T>; M], which have the same layout
+            let src_mu: [MaybeUninit<T>; M] = core::mem::transmute_copy(&src);
+            // Unsafe: Reinterpret vec.buffer ([MaybeUninit<T>; N]) as [MaybeUninit<T>; M], which
+            // is safe as long as N >= M, then write src into the buffer
+            vec.buffer
+                .as_mut_ptr()
+                .cast::<[MaybeUninit<T>; M]>()
+                .write(src_mu)
+        };
+        vec.len = M;
+        vec
     }
 }
 
@@ -1642,4 +1667,19 @@ mod tests {
 
         assert!(v.spare_capacity_mut().is_empty());
     }
+
+    #[test]
+    fn from() {
+        let v: Vec<_, 4> = Vec::from([1, 2]);
+        assert_eq!(v.as_slice(), &[1, 2]);
+        let v: Vec<_, 4> = Vec::from([1, 2, 3, 4]);
+        assert_eq!(v.as_slice(), &[1, 2, 3, 4]);
+    }
 }
+
+/// ```compile_fail
+/// use heapless::Vec;
+///
+/// let v: Vec<_, 4> = Vec::from([1, 2, 3, 4, 5]);
+/// ```
+fn _doc_test() {}
