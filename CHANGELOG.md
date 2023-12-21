@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `String::from_utf16`.
 - Added `Vec::spare_capacity_mut`
 - Implemented `From<[T; N]>` for Vec
+- Added `vec` macro for Vec
 
 ### Changed
 

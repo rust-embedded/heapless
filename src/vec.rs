@@ -1241,6 +1241,39 @@ where
     }
 }
 
+#[macro_export]
+/// Shorthand for defining vectors using array syntax.
+///
+/// Create `Vec` with a list of elements and capacity:
+/// ```
+/// let v = heapless::vec![1, 2, 3; 7];
+/// assert_eq!(v.as_slice(), &[1, 2, 3]);
+/// assert_eq!(v.capacity(), 7);
+/// ```
+///
+/// Create `Vec` with a repeated element, length, and capacity:
+/// ```
+/// let v = heapless::vec!['a'; 3; 4];
+/// assert_eq!(v.as_slice(), &['a', 'a', 'a']);
+/// assert_eq!(v.capacity(), 4);
+/// ```
+///
+/// Unlike the `std` version of this macro, the repeat element must be `Copy` or a constant, like
+/// with repeat elements in array expressions.
+macro_rules! vec {
+    (; $cap:expr) => {
+        heapless::Vec::<_, $cap>::new()
+    };
+
+    ($($elem:expr),+ ; $cap:expr) => {
+        heapless::Vec::<_, $cap>::from([$($elem),+])
+    };
+
+    ($elem:expr ; $len:expr ; $cap:expr) => {
+        heapless::Vec::<_, $cap>::from([$elem; $len])
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::Vec;
