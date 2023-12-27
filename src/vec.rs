@@ -1,5 +1,11 @@
 use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, ptr, slice};
 
+#[repr(C)]
+struct VecBuf<T, const N: usize, A> {
+    alignment_field: [A; 0],
+    buffer: [MaybeUninit<T>; N],
+}
+
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 ///
 /// # Examples
@@ -28,20 +34,41 @@ use core::{cmp::Ordering, fmt, hash, iter::FromIterator, mem::MaybeUninit, ops, 
 /// }
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
-pub struct Vec<T, const N: usize> {
+pub struct Vec<T, const N: usize, A = u8> {
     // NOTE order is important for optimizations. the `len` first layout lets the compiler optimize
     // `new` to: reserve stack space and zero the first word. With the fields in the reverse order
     // the compiler optimizes `new` to `memclr`-ing the *entire* stack space, including the `buffer`
     // field which should be left uninitialized. Optimizations were last checked with Rust 1.60
     len: usize,
 
-    buffer: [MaybeUninit<T>; N],
+    storage: VecBuf<T, N, A>,
 }
 
-impl<T, const N: usize> Vec<T, N> {
+impl<T, const N: usize, A> VecBuf<T, N, A> {
     const ELEM: MaybeUninit<T> = MaybeUninit::uninit();
     const INIT: [MaybeUninit<T>; N] = [Self::ELEM; N]; // important for optimization of `new`
 
+    const fn new() -> Self {
+        Self {
+            alignment_field: [],
+            buffer: Self::INIT,
+        }
+    }
+
+    const fn as_ptr(&self) -> *const T {
+        self.buffer.as_ptr() as *const T
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut T {
+        self.buffer.as_mut_ptr() as *mut T
+    }
+
+    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut MaybeUninit<T> {
+        self.buffer.get_unchecked_mut(index)
+    }
+}
+
+impl<T, const N: usize, A> Vec<T, N, A> {
     /// Constructs a new, empty vector with a fixed capacity of `N`
     ///
     /// # Examples
@@ -59,7 +86,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub const fn new() -> Self {
         Self {
             len: 0,
-            buffer: Self::INIT,
+            storage: VecBuf::new(),
         }
     }
 
@@ -102,12 +129,12 @@ impl<T, const N: usize> Vec<T, N> {
 
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.buffer.as_ptr() as *const T
+        self.storage.as_ptr()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.as_mut_ptr() as *mut T
+        self.storage.as_mut_ptr()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -124,7 +151,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.storage.as_ptr(), self.len) }
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
@@ -141,7 +168,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
         if self.len() == M {
             // This is how the unstable `MaybeUninit::array_assume_init` method does it
-            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+            let array = unsafe { (self.as_ptr() as *const [T; M]).read() };
 
             // We don't want `self`'s destructor to be called because that would drop all the
             // items in the array
@@ -168,7 +195,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr() as *mut T, self.len) }
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
     }
 
     /// Returns the maximum number of elements the vector can hold.
@@ -258,7 +285,7 @@ impl<T, const N: usize> Vec<T, N> {
         debug_assert!(!self.is_empty());
 
         self.len -= 1;
-        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
+        self.storage.get_unchecked_mut(self.len).as_ptr().read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -271,7 +298,7 @@ impl<T, const N: usize> Vec<T, N> {
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         debug_assert!(!self.is_full());
 
-        *self.buffer.get_unchecked_mut(self.len) = MaybeUninit::new(item);
+        *self.storage.get_unchecked_mut(self.len) = MaybeUninit::new(item);
 
         self.len += 1;
     }
@@ -741,14 +768,14 @@ impl<T, const N: usize> Vec<T, N> {
         // This drop guard will be invoked when predicate or `drop` of element panicked.
         // It shifts unchecked elements to cover holes and `set_len` to the correct length.
         // In cases when predicate and `drop` never panick, it will be optimized out.
-        struct BackshiftOnDrop<'a, T, const N: usize> {
-            v: &'a mut Vec<T, N>,
+        struct BackshiftOnDrop<'a, T, const N: usize, A> {
+            v: &'a mut Vec<T, N, A>,
             processed_len: usize,
             deleted_cnt: usize,
             original_len: usize,
         }
 
-        impl<T, const N: usize> Drop for BackshiftOnDrop<'_, T, N> {
+        impl<T, const N: usize, A> Drop for BackshiftOnDrop<'_, T, N, A> {
             fn drop(&mut self) {
                 if self.deleted_cnt > 0 {
                     // SAFETY: Trailing unchecked items must be valid since we never touch them.
@@ -776,10 +803,10 @@ impl<T, const N: usize> Vec<T, N> {
             original_len,
         };
 
-        fn process_loop<F, T, const N: usize, const DELETED: bool>(
+        fn process_loop<F, T, const N: usize, A, const DELETED: bool>(
             original_len: usize,
             f: &mut F,
-            g: &mut BackshiftOnDrop<'_, T, N>,
+            g: &mut BackshiftOnDrop<'_, T, N, A>,
         ) where
             F: FnMut(&mut T) -> bool,
         {
@@ -813,10 +840,10 @@ impl<T, const N: usize> Vec<T, N> {
         }
 
         // Stage 1: Nothing was deleted.
-        process_loop::<F, T, N, false>(original_len, &mut f, &mut g);
+        process_loop::<F, T, N, A, false>(original_len, &mut f, &mut g);
 
         // Stage 2: Some elements were deleted.
-        process_loop::<F, T, N, true>(original_len, &mut f, &mut g);
+        process_loop::<F, T, N, A, true>(original_len, &mut f, &mut g);
 
         // All item are processed. This can be optimized to `set_len` by LLVM.
         drop(g);
@@ -825,13 +852,13 @@ impl<T, const N: usize> Vec<T, N> {
 
 // Trait implementations
 
-impl<T, const N: usize> Default for Vec<T, N> {
+impl<T, const N: usize, A> Default for Vec<T, N, A> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const N: usize> fmt::Debug for Vec<T, N>
+impl<T, const N: usize, A> fmt::Debug for Vec<T, N, A>
 where
     T: fmt::Debug,
 {
@@ -849,7 +876,7 @@ impl<const N: usize> fmt::Write for Vec<u8, N> {
     }
 }
 
-impl<T, const N: usize> Drop for Vec<T, N> {
+impl<T, const N: usize, A> Drop for Vec<T, N, A> {
     fn drop(&mut self) {
         // We drop each element used in the vector by turning into a `&mut [T]`.
         unsafe {
@@ -858,7 +885,7 @@ impl<T, const N: usize> Drop for Vec<T, N> {
     }
 }
 
-impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
+impl<'a, T: Clone, const N: usize, A> TryFrom<&'a [T]> for Vec<T, N, A> {
     type Error = ();
 
     fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
@@ -866,7 +893,7 @@ impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> Extend<T> for Vec<T, N> {
+impl<T, const N: usize, A> Extend<T> for Vec<T, N, A> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -875,7 +902,7 @@ impl<T, const N: usize> Extend<T> for Vec<T, N> {
     }
 }
 
-impl<'a, T, const N: usize> Extend<&'a T> for Vec<T, N>
+impl<'a, T, const N: usize, A> Extend<&'a T> for Vec<T, N, A>
 where
     T: 'a + Copy,
 {
@@ -887,7 +914,7 @@ where
     }
 }
 
-impl<T, const N: usize> hash::Hash for Vec<T, N>
+impl<T, const N: usize, A> hash::Hash for Vec<T, N, A>
 where
     T: core::hash::Hash,
 {
@@ -896,7 +923,7 @@ where
     }
 }
 
-impl<'a, T, const N: usize> IntoIterator for &'a Vec<T, N> {
+impl<'a, T, const N: usize, A> IntoIterator for &'a Vec<T, N, A> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
@@ -905,7 +932,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a Vec<T, N> {
     }
 }
 
-impl<'a, T, const N: usize> IntoIterator for &'a mut Vec<T, N> {
+impl<'a, T, const N: usize, A> IntoIterator for &'a mut Vec<T, N, A> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -914,7 +941,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a mut Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
+impl<T, const N: usize, A> FromIterator<T> for Vec<T, N, A> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = T>,
@@ -930,16 +957,22 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
 /// An iterator that moves out of an [`Vec`][`Vec`].
 ///
 /// This struct is created by calling the `into_iter` method on [`Vec`][`Vec`].
-pub struct IntoIter<T, const N: usize> {
-    vec: Vec<T, N>,
+pub struct IntoIter<T, const N: usize, A> {
+    vec: Vec<T, N, A>,
     next: usize,
 }
 
-impl<T, const N: usize> Iterator for IntoIter<T, N> {
+impl<T, const N: usize, A> Iterator for IntoIter<T, N, A> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe { self.vec.buffer.get_unchecked_mut(self.next).as_ptr().read() };
+            let item = unsafe {
+                self.vec
+                    .storage
+                    .get_unchecked_mut(self.next)
+                    .as_ptr()
+                    .read()
+            };
             self.next += 1;
             Some(item)
         } else {
@@ -948,7 +981,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     }
 }
 
-impl<T, const N: usize> Clone for IntoIter<T, N>
+impl<T, const N: usize, A> Clone for IntoIter<T, N, A>
 where
     T: Clone,
 {
@@ -958,7 +991,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.buffer.as_ptr() as *const T).add(self.next),
+                    (self.vec.storage.as_ptr()).add(self.next),
                     self.vec.len() - self.next,
                 )
             };
@@ -969,7 +1002,7 @@ where
     }
 }
 
-impl<T, const N: usize> Drop for IntoIter<T, N> {
+impl<T, const N: usize, A> Drop for IntoIter<T, N, A> {
     fn drop(&mut self) {
         unsafe {
             // Drop all the elements that have not been moved out of vec
@@ -980,141 +1013,142 @@ impl<T, const N: usize> Drop for IntoIter<T, N> {
     }
 }
 
-impl<T, const N: usize> IntoIterator for Vec<T, N> {
+impl<T, const N: usize, A> IntoIterator for Vec<T, N, A> {
     type Item = T;
-    type IntoIter = IntoIter<T, N>;
+    type IntoIter = IntoIter<T, N, A>;
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter { vec: self, next: 0 }
     }
 }
 
-impl<A, B, const N1: usize, const N2: usize> PartialEq<Vec<B, N2>> for Vec<A, N1>
+impl<T1, T2, const N1: usize, const N2: usize, A1, A2> PartialEq<Vec<T2, N2, A2>>
+    for Vec<T1, N1, A1>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<B, N2>) -> bool {
-        <[A]>::eq(self, &**other)
+    fn eq(&self, other: &Vec<T2, N2, A2>) -> bool {
+        <[T1]>::eq(self, &**other)
     }
 }
 
 // Vec<A, N> == [B]
-impl<A, B, const N: usize> PartialEq<[B]> for Vec<A, N>
+impl<T1, T2, const N: usize, A> PartialEq<[T2]> for Vec<T1, N, A>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &[B]) -> bool {
-        <[A]>::eq(self, other)
+    fn eq(&self, other: &[T2]) -> bool {
+        <[T1]>::eq(self, other)
     }
 }
 
 // [B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for [B]
+impl<T1, T2, const N: usize, A> PartialEq<Vec<T1, N, A>> for [T2]
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, self)
+    fn eq(&self, other: &Vec<T1, N, A>) -> bool {
+        <[T1]>::eq(other, self)
     }
 }
 
 // Vec<A, N> == &[B]
-impl<A, B, const N: usize> PartialEq<&[B]> for Vec<A, N>
+impl<T1, T2, const N: usize, A> PartialEq<&[T2]> for Vec<T1, N, A>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &&[B]) -> bool {
-        <[A]>::eq(self, &other[..])
+    fn eq(&self, other: &&[T2]) -> bool {
+        <[T1]>::eq(self, &other[..])
     }
 }
 
 // &[B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &[B]
+impl<T1, T2, const N: usize, A> PartialEq<Vec<T1, N, A>> for &[T2]
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+    fn eq(&self, other: &Vec<T1, N, A>) -> bool {
+        <[T1]>::eq(other, &self[..])
     }
 }
 
 // Vec<A, N> == &mut [B]
-impl<A, B, const N: usize> PartialEq<&mut [B]> for Vec<A, N>
+impl<T1, T2, const N: usize, A> PartialEq<&mut [T2]> for Vec<T1, N, A>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &&mut [B]) -> bool {
-        <[A]>::eq(self, &other[..])
+    fn eq(&self, other: &&mut [T2]) -> bool {
+        <[T1]>::eq(self, &other[..])
     }
 }
 
 // &mut [B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &mut [B]
+impl<T1, T2, const N: usize, A> PartialEq<Vec<T1, N, A>> for &mut [T2]
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+    fn eq(&self, other: &Vec<T1, N, A>) -> bool {
+        <[T1]>::eq(other, &self[..])
     }
 }
 
 // Vec<A, N> == [B; M]
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<[B; M]> for Vec<A, N>
+impl<T1, T2, const N: usize, const M: usize, A> PartialEq<[T2; M]> for Vec<T1, N, A>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &[B; M]) -> bool {
-        <[A]>::eq(self, &other[..])
+    fn eq(&self, other: &[T2; M]) -> bool {
+        <[T1]>::eq(self, &other[..])
     }
 }
 
 // [B; M] == Vec<A, N>
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for [B; M]
+impl<T1, T2, const N: usize, const M: usize, A> PartialEq<Vec<T1, N, A>> for [T2; M]
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+    fn eq(&self, other: &Vec<T1, N, A>) -> bool {
+        <[T1]>::eq(other, &self[..])
     }
 }
 
 // Vec<A, N> == &[B; M]
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<&[B; M]> for Vec<A, N>
+impl<T1, T2, const N: usize, const M: usize, A> PartialEq<&[T2; M]> for Vec<T1, N, A>
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &&[B; M]) -> bool {
-        <[A]>::eq(self, &other[..])
+    fn eq(&self, other: &&[T2; M]) -> bool {
+        <[T1]>::eq(self, &other[..])
     }
 }
 
 // &[B; M] == Vec<A, N>
 // Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for &[B; M]
+impl<T1, T2, const N: usize, const M: usize, A> PartialEq<Vec<T1, N, A>> for &[T2; M]
 where
-    A: PartialEq<B>,
+    T1: PartialEq<T2>,
 {
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        <[A]>::eq(other, &self[..])
+    fn eq(&self, other: &Vec<T1, N, A>) -> bool {
+        <[T1]>::eq(other, &self[..])
     }
 }
 
 // Implements Eq if underlying data is Eq
-impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
+impl<T, const N: usize, A> Eq for Vec<T, N, A> where T: Eq {}
 
-impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
+impl<T, const N1: usize, const N2: usize, A1, A2> PartialOrd<Vec<T, N2, A2>> for Vec<T, N1, A1>
 where
     T: PartialOrd,
 {
-    fn partial_cmp(&self, other: &Vec<T, N2>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Vec<T, N2, A2>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<T, const N: usize> Ord for Vec<T, N>
+impl<T, const N: usize, A> Ord for Vec<T, N, A>
 where
     T: Ord,
 {
@@ -1124,7 +1158,7 @@ where
     }
 }
 
-impl<T, const N: usize> ops::Deref for Vec<T, N> {
+impl<T, const N: usize, A> ops::Deref for Vec<T, N, A> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -1132,41 +1166,41 @@ impl<T, const N: usize> ops::Deref for Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> ops::DerefMut for Vec<T, N> {
+impl<T, const N: usize, A> ops::DerefMut for Vec<T, N, A> {
     fn deref_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
 }
 
-impl<T, const N: usize> AsRef<Vec<T, N>> for Vec<T, N> {
+impl<T, const N: usize, A> AsRef<Vec<T, N, A>> for Vec<T, N, A> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T, const N: usize> AsMut<Vec<T, N>> for Vec<T, N> {
+impl<T, const N: usize, A> AsMut<Vec<T, N, A>> for Vec<T, N, A> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
-impl<T, const N: usize> AsRef<[T]> for Vec<T, N> {
+impl<T, const N: usize, A> AsRef<[T]> for Vec<T, N, A> {
     #[inline]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T, const N: usize> AsMut<[T]> for Vec<T, N> {
+impl<T, const N: usize, A> AsMut<[T]> for Vec<T, N, A> {
     #[inline]
     fn as_mut(&mut self) -> &mut [T] {
         self
     }
 }
 
-impl<T, const N: usize> Clone for Vec<T, N>
+impl<T, const N: usize, A> Clone for Vec<T, N, A>
 where
     T: Clone,
 {
