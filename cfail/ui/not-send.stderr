@@ -126,4 +126,3 @@ note: required by a bound in `is_send`
 13 | where
 14 |     T: Send,
    |        ^^^^ required by this bound in `is_send`
-   
