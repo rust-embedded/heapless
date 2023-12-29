@@ -676,4 +676,26 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn clear_drops_values() {
+        static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        struct DropCheck {}
+
+        impl Drop for DropCheck {
+            fn drop(&mut self) {
+                DROP_COUNT.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        let mut x: HistoryBuffer<DropCheck, 3> = HistoryBuffer::new();
+        x.write(DropCheck {});
+        x.write(DropCheck {});
+        x.write(DropCheck {});
+
+        assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 0);
+        x.clear();
+        assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 3);
+    }
 }
