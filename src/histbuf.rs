@@ -72,8 +72,63 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
 
     /// Clears the buffer, replacing every element with the default value of
     /// type `T`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// let mut buf: HistoryBuffer<u8, 16> = HistoryBuffer::new();
+    ///
+    /// buf.write(3);
+    /// buf.write(5);
+    /// buf.extend(&[4, 4]);
+    /// assert!(!buf.is_empty());
+    ///
+    /// buf.clear();
+    /// assert!(buf.is_empty());
+    /// ```
     pub fn clear(&mut self) {
         *self = Self::new();
+    }
+
+    /// Clears the buffer **without running the destructor on values**.
+    ///
+    /// Normally, one would use [`clear`] instead to correctly drop the contents
+    /// and thus not leak memory.
+    ///
+    /// This method is sound, but it can leak memory because it will not call
+    /// the destructor for the values.  See [`core::mem::forget`] for more
+    /// information on Rust's safety guarantees.
+    ///
+    /// # Example
+    ///
+    /// This method is cheaper than [`clear`] in terms of memory and speed
+    /// because it does not drop values and it does not make a stack allocation.
+    ///
+    /// These attributes can be useful when working in resource-constrained
+    /// embedded systems with a buffer that lives for the entire program's life.
+    ///
+    /// ```
+    /// use heapless::HistoryBuffer;
+    ///
+    /// static mut BUF: HistoryBuffer<u8, 2048> = HistoryBuffer::new();
+    ///
+    /// unsafe {
+    ///     BUF.write(3);
+    ///     BUF.write(5);
+    ///     BUF.extend(&[4, 4]);
+    ///     assert!(!BUF.is_empty());
+    ///
+    ///     BUF.clear_leak();
+    ///     assert!(BUF.is_empty());
+    /// }
+    /// ```
+    ///
+    /// [`clear`]: Self::clear
+    pub fn clear_leak(&mut self) {
+        self.write_at = 0;
+        self.filled = false;
     }
 }
 
