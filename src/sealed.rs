@@ -4,6 +4,11 @@ pub(crate) const fn smaller_than<const N: usize, const MAX: usize>() {
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
+pub(crate) const fn greater_than_eq<const N: usize, const MIN: usize>() {
+    Assert::<N, MIN>::GREATER_EQ;
+}
+
+#[allow(dead_code, path_statements, clippy::no_effect)]
 pub(crate) const fn greater_than_eq_0<const N: usize>() {
     Assert::<N, 0>::GREATER_EQ;
 }
