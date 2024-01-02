@@ -1203,7 +1203,6 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// ```
     /// use heapless::Vec;
-    ///// use heapless::consts::*;
     ///
     /// let mut v: Vec<_, 8> = Vec::new();
     /// v.push("foo").unwrap();
