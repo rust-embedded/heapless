@@ -956,9 +956,10 @@ impl<const N: usize, A> Vec<u8, N, A> {
         if core::mem::align_of::<A>() % core::mem::align_of::<O>() != 0 {
             panic!("Vec::transmute_buffer: alignment mismatch");
         };
+        let inner_buf_ref: &[MaybeUninit<u8>; N] = &self.buffer;
         // transmute wouldn't work because the size of O is unknown
         // transmute_unchecked is unstable
-        core::mem::transmute_copy(&self.buffer.buffer)
+        core::mem::transmute_copy(inner_buf_ref)
     }
 }
 
