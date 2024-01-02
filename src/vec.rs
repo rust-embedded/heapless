@@ -74,9 +74,19 @@ impl<T, const N: usize, A> VecBuf<T, N, A> {
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut MaybeUninit<T> {
         self.buffer.get_unchecked_mut(index)
     }
+}
 
-    fn iter_mut(&mut self) -> core::slice::IterMut<'_, MaybeUninit<T>> {
-        self.buffer.iter_mut()
+impl<T, const N: usize, A> ops::Deref for VecBuf<T, N, A> {
+    type Target = [MaybeUninit<T>; N];
+
+    fn deref(&self) -> &[MaybeUninit<T>; N] {
+        &self.buffer
+    }
+}
+
+impl<T, const N: usize, A> ops::DerefMut for VecBuf<T, N, A> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buffer
     }
 }
 
