@@ -48,6 +48,7 @@ pub struct Vec<T, const N: usize, A = u8> {
     // field which should be left uninitialized. Optimizations were last checked with Rust 1.60
     len: usize,
 
+    // self.buffer.buffer access is greatly discouraged. Use the respective methods instead.
     storage: VecBuf<T, N, A>,
 }
 
@@ -72,6 +73,10 @@ impl<T, const N: usize, A> VecBuf<T, N, A> {
 
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut MaybeUninit<T> {
         self.buffer.get_unchecked_mut(index)
+    }
+
+    fn iter_mut(&mut self) -> core::slice::IterMut<'_, MaybeUninit<T>> {
+        self.buffer.iter_mut()
     }
 }
 
@@ -142,12 +147,14 @@ impl<T, const N: usize, A> Vec<T, N, A> {
                 len: N,
                 // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
                 // have the same layout when N == M.
-                buffer: unsafe { mem::transmute_copy(&src) },
+                storage: unsafe { mem::transmute_copy(&src) },
             }
         } else {
-            let mut v = Vec::<T, N>::new();
+            let mut v = Vec::<T, N, A>::new();
 
-            for (src_elem, dst_elem) in src.iter().zip(v.buffer.iter_mut()) {
+            // `for` is not allowed in a `const fn`
+            // see issue #87575 <https://github.com/rust-lang/rust/issues/87575> for more information.
+            for (src_elem, dst_elem) in src.iter().zip(v.storage.iter_mut()) {
                 // NOTE(unsafe) src element is not going to drop as src itself
                 // is wrapped in a ManuallyDrop.
                 dst_elem.write(unsafe { ptr::read(src_elem) });
