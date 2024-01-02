@@ -51,6 +51,8 @@
     doc = "- [`Box`](pool::boxed::Box) -- like `std::boxed::Box` but backed by a lock-free memory pool rather than `#[global_allocator]`"
 )]
 //! - [`BinaryHeap`] -- priority queue
+//! - [`Deque`] -- double-ended queue
+//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
 //! - [`IndexMap`] -- hash table
 //! - [`IndexSet`] -- hash set
 //! - [`LinearMap`]
@@ -58,6 +60,7 @@
     any(arm_llsc, target_arch = "x86"),
     doc = "- [`Object`](pool::object::Object) -- objects managed by an object pool"
 )]
+//! - [`sorted_linked_list::SortedLinkedList`]
 //! - [`String`]
 //! - [`Vec`]
 //! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue

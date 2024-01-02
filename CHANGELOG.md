@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `is_full`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
 - Added an optional generic parameter to `Vec` to specify the alignment of the backing array.
 - Added `transmute_buffer` unsafe method for `Vec<u8, N, A>`.
+- Added infallible conversions from arrays to `Vec`.
 
 ### Changed
 
@@ -23,6 +24,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Fixed clippy lints.
 - Fixed `{arc,box,object}_pool!` emitting clippy lints for `CamelCase` and `SNAKE_CASE`.
+- Fixed the list of implemented data structures in the crate docs, by adding `Deque`,
+  `HistoryBuffer` and `SortedLinkedList` to the list.
 
 ## [v0.8.0] - 2023-11-07
 
