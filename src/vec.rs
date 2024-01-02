@@ -49,7 +49,7 @@ pub struct Vec<T, const N: usize, A = u8> {
     len: usize,
 
     // self.buffer.buffer access is greatly discouraged. Use the respective methods instead.
-    storage: VecBuf<T, N, A>,
+    buffer: VecBuf<T, N, A>,
 }
 
 impl<T, const N: usize, A> VecBuf<T, N, A> {
@@ -98,7 +98,7 @@ impl<T, const N: usize, A> Vec<T, N, A> {
     pub const fn new() -> Self {
         Self {
             len: 0,
-            storage: VecBuf::new(),
+            buffer: VecBuf::new(),
         }
     }
 
@@ -147,14 +147,14 @@ impl<T, const N: usize, A> Vec<T, N, A> {
                 len: N,
                 // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
                 // have the same layout when N == M.
-                storage: unsafe { mem::transmute_copy(&src) },
+                buffer: unsafe { mem::transmute_copy(&src) },
             }
         } else {
             let mut v = Vec::<T, N, A>::new();
 
             // `for` is not allowed in a `const fn`
             // see issue #87575 <https://github.com/rust-lang/rust/issues/87575> for more information.
-            for (src_elem, dst_elem) in src.iter().zip(v.storage.iter_mut()) {
+            for (src_elem, dst_elem) in src.iter().zip(v.buffer.iter_mut()) {
                 // NOTE(unsafe) src element is not going to drop as src itself
                 // is wrapped in a ManuallyDrop.
                 dst_elem.write(unsafe { ptr::read(src_elem) });
@@ -182,12 +182,12 @@ impl<T, const N: usize, A> Vec<T, N, A> {
 
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.storage.as_ptr()
+        self.buffer.as_ptr()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.storage.as_mut_ptr()
+        self.buffer.as_mut_ptr()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -204,7 +204,7 @@ impl<T, const N: usize, A> Vec<T, N, A> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.storage.as_ptr(), self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.as_ptr(), self.len) }
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
@@ -338,7 +338,7 @@ impl<T, const N: usize, A> Vec<T, N, A> {
         debug_assert!(!self.is_empty());
 
         self.len -= 1;
-        self.storage.get_unchecked_mut(self.len).as_ptr().read()
+        self.buffer.get_unchecked_mut(self.len).as_ptr().read()
     }
 
     /// Appends an `item` to the back of the collection
@@ -351,7 +351,7 @@ impl<T, const N: usize, A> Vec<T, N, A> {
         // use `ptr::write` to avoid running `T`'s destructor on the uninitialized memory
         debug_assert!(!self.is_full());
 
-        *self.storage.get_unchecked_mut(self.len) = MaybeUninit::new(item);
+        *self.buffer.get_unchecked_mut(self.len) = MaybeUninit::new(item);
 
         self.len += 1;
     }
@@ -948,7 +948,7 @@ impl<const N: usize, A> Vec<u8, N, A> {
         };
         // transmute wouldn't work because the size of O is unknown
         // transmute_unchecked is unstable
-        core::mem::transmute_copy(&self.storage.buffer)
+        core::mem::transmute_copy(&self.buffer.buffer)
     }
 }
 
@@ -1074,13 +1074,7 @@ impl<T, const N: usize, A> Iterator for IntoIter<T, N, A> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.vec.len() {
-            let item = unsafe {
-                self.vec
-                    .storage
-                    .get_unchecked_mut(self.next)
-                    .as_ptr()
-                    .read()
-            };
+            let item = unsafe { self.vec.buffer.get_unchecked_mut(self.next).as_ptr().read() };
             self.next += 1;
             Some(item)
         } else {
@@ -1099,7 +1093,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.storage.as_ptr()).add(self.next),
+                    (self.vec.buffer.as_ptr()).add(self.next),
                     self.vec.len() - self.next,
                 )
             };
