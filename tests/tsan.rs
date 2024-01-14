@@ -2,7 +2,7 @@
 #![deny(rust_2018_idioms)]
 #![deny(warnings)]
 
-use std::thread;
+use std::{ptr::addr_of_mut, thread};
 
 use heapless::spsc;
 
@@ -10,7 +10,7 @@ use heapless::spsc;
 fn once() {
     static mut RB: spsc::Queue<i32, 4> = spsc::Queue::new();
 
-    let rb = unsafe { &mut RB };
+    let rb = unsafe { &mut *addr_of_mut!(RB) };
 
     rb.enqueue(0).unwrap();
 
@@ -31,7 +31,7 @@ fn once() {
 fn twice() {
     static mut RB: spsc::Queue<i32, 5> = spsc::Queue::new();
 
-    let rb = unsafe { &mut RB };
+    let rb = unsafe { &mut *addr_of_mut!(RB) };
 
     rb.enqueue(0).unwrap();
     rb.enqueue(1).unwrap();
