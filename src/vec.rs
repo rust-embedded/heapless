@@ -131,6 +131,14 @@ impl<T, const N: usize> Vec<T, N> {
         }
     }
 
+    /// Constructs a new vector with fixed capacity of `N`, initializing it with the provided
+    /// array.
+    ///
+    /// The length of the provided array must be `N`.
+    pub fn from_array_same_cap(src: [T; N]) -> Self {
+        Self::from_array::<N>(src)
+    }
+
     /// Clones a vec into a new vec
     pub(crate) fn clone(&self) -> Self
     where
@@ -1225,6 +1233,65 @@ where
     fn clone(&self) -> Self {
         self.clone()
     }
+}
+
+/// Shorthand for defining vectors using array syntax.
+///
+/// Create `Vec` with a list of elements
+/// ```
+/// let v = heapless::vec![1, 2, 3];
+/// assert_eq!(v.as_slice(), &[1, 2, 3]);
+/// assert_eq!(v.capacity(), 3);
+/// ```
+///
+/// Create `Vec` with a repeated element and length
+/// ```
+/// let v = heapless::vec!['a'; 3];
+/// assert_eq!(v.as_slice(), &['a', 'a', 'a']);
+/// assert_eq!(v.capacity(), 3);
+/// ```
+///
+/// Unlike the `std` version of this macro, the repeat element must be `Copy` or a constant, like
+/// repeat elements in array expressions.
+#[macro_export]
+macro_rules! vec {
+    ($($elem:expr),+) => {
+        heapless::Vec::from_array_same_cap([$($elem),+])
+    };
+
+    ($elem:expr ; $len:expr) => {
+        heapless::Vec::from_array_same_cap([$elem; $len])
+    };
+}
+
+/// Shorthand for defining vectors using array syntax with an additional capacity argument.
+///
+/// Create `Vec` with a list of elements and capacity
+/// ```
+/// let v = heapless::vec_with_cap!([1, 2, 3]; 5);
+/// assert_eq!(v.as_slice(), &[1, 2, 3]);
+/// assert_eq!(v.capacity(), 5);
+/// ```
+///
+/// Create `Vec` with a repeated element, length, and capacity
+/// ```
+/// let v = heapless::vec_with_cap!(['a'; 3]; 6);
+/// assert_eq!(v.as_slice(), &['a', 'a', 'a']);
+/// assert_eq!(v.capacity(), 6);
+/// ```
+///
+/// The capacity must be greater than or equal to the length of the `Vec`, otherwise there will be
+/// a compile error. Also, the repeat element must be `Copy` or a constant, like repeat elements in
+/// array expressions.
+#[macro_export]
+macro_rules! vec_with_cap {
+    ([$($elem:expr),+] ; $cap:expr) => {
+        heapless::Vec::<_, $cap>::from_array([$($elem),+])
+    };
+
+    ([$elem:expr ; $len:expr]; $cap:expr) => {
+        heapless::Vec::<_, $cap>::from_array([$elem; $len])
+    };
 }
 
 #[cfg(test)]
