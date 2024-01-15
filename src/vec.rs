@@ -16,8 +16,8 @@ use core::{
 ///
 /// // A vector with a fixed capacity of 8 elements allocated on the stack
 /// let mut vec = Vec::<_, 8>::new();
-/// vec.push(1);
-/// vec.push(2);
+/// vec.push(1).unwrap();
+/// vec.push(2).unwrap();
 ///
 /// assert_eq!(vec.len(), 2);
 /// assert_eq!(vec[0], 1);
