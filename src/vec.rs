@@ -70,10 +70,6 @@ impl<T, const N: usize, A> VecBuf<T, N, A> {
     fn as_mut_ptr(&mut self) -> *mut T {
         self.buffer.as_mut_ptr() as *mut T
     }
-
-    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut MaybeUninit<T> {
-        self.buffer.get_unchecked_mut(index)
-    }
 }
 
 impl<T, const N: usize, A> ops::Deref for VecBuf<T, N, A> {
