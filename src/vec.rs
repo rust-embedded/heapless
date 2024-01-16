@@ -214,7 +214,7 @@ impl<T, const N: usize, A> Vec<T, N, A> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.as_ptr(), self.len) }
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.len) }
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
