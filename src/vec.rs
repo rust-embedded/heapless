@@ -919,14 +919,6 @@ impl<const N: usize, A> Vec<u8, N, A> {
     /// - The size of the output type must be equal to the size of the **buffer** (rather than [`Vec`]).
     /// - The alignment of the `Vec` must be equal or be a multiple of the alignment of the output.
     ///
-    /// # Panics
-    ///
-    /// In debug mode, this method panics...
-    ///
-    /// - If the buffer isn't full.
-    /// - If the size of the output type doesn't match the size of the buffer.
-    /// - If the alignment of the `Vec` isn't equal or a multiple of the alignment of the output.
-    ///
     /// # Examples
     ///
     /// ```
