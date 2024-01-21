@@ -795,6 +795,37 @@ impl<T> VecView<T> {
         // All item are processed. This can be optimized to `set_len` by LLVM.
         drop(g);
     }
+
+    /// Returns the remaining spare capacity of the vector as a slice of `MaybeUninit<T>`.
+    ///
+    /// The returned slice can be used to fill the vector with data before marking the data as
+    /// initialized using the `set_len` method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::{Vec, VecView};
+    ///
+    /// // Allocate vector big enough for 10 elements.
+    /// let mut v: Vec<_, 10> = Vec::new();
+    /// let view: &mut VecView<_> = &mut v;
+    ///
+    /// // Fill in the first 3 elements.
+    /// let uninit = view.spare_capacity_mut();
+    /// uninit[0].write(0);
+    /// uninit[1].write(1);
+    /// uninit[2].write(2);
+    ///
+    /// // Mark the first 3 elements of the vector as being initialized.
+    /// unsafe {
+    ///     view.set_len(3);
+    /// }
+    ///
+    /// assert_eq!(view, &[0, 1, 2]);
+    /// ```
+    pub fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<T>] {
+        &mut self.buffer[self.len..]
+    }
 }
 
 impl<T, const N: usize> Vec<T, N> {
@@ -1453,7 +1484,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(&v, &[0, 1, 2]);
     /// ```
     pub fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<T>] {
-        &mut self.buffer[self.len..]
+        self.as_mut_view().spare_capacity_mut()
     }
 }
 
