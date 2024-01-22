@@ -909,48 +909,6 @@ impl<T, const N: usize, A> Vec<T, N, A> {
     }
 }
 
-impl<const N: usize, A> Vec<u8, N, A> {
-    /// Transmutes the filled buffer to the output type. The storage of the length of the [`Vec`] does
-    /// not participate in the transmutation.
-    ///
-    /// # Safety
-    ///
-    /// - The buffer must be full.
-    /// - The size of the output type must be equal to the size of the **buffer** (rather than [`Vec`]).
-    /// - The alignment of the `Vec` must be equal or be a multiple of the alignment of the output.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// let mut v: Vec<u8, 2, u16> = Vec::new();
-    /// v.extend_from_slice(&[0, 0]).unwrap();
-    /// let number: u16 = unsafe { v.transmute_buffer() };
-    /// assert_eq!(number, 0u16);
-    /// ```
-    pub unsafe fn transmute_buffer<O: Sized>(self) -> O {
-        // While transmuting to the smaller type is not UB,
-        // it's discouraged.
-        #[cfg(debug_assertions)]
-        if self.len() != N {
-            panic!("Vec::transmute_buffer: the buffer isn't full");
-        };
-        #[cfg(debug_assertions)]
-        if N * core::mem::size_of::<u8>() != core::mem::size_of::<O>() {
-            panic!("Vec::transmute_buffer: size mismatch");
-        };
-        #[cfg(debug_assertions)]
-        if core::mem::align_of::<A>() % core::mem::align_of::<O>() != 0 {
-            panic!("Vec::transmute_buffer: alignment mismatch");
-        };
-        let inner_buf_ref: &[MaybeUninit<u8>; N] = &self.buffer;
-        // transmute wouldn't work because the size of O is unknown
-        // transmute_unchecked is unstable
-        core::mem::transmute_copy(inner_buf_ref)
-    }
-}
-
 // Trait implementations
 
 impl<T, const N: usize, A> Default for Vec<T, N, A> {
