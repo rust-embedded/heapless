@@ -80,13 +80,13 @@ pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
 
 /// A [`Vec`] with dynamic capacity
 ///
-/// [`Vec`] coerces to `VecView`. `VecView` is `!Sized`, meaning that it can only ever be used through pointer
+/// [`Vec`] coerces to `VecView`. `VecView` is `!Sized`, meaning it can only ever be used by reference.
 ///
 /// Unlike [`Vec`], `VecView` does not have an `N` const-generic parameter.
-/// This has the ergonomic advantages of making it possible to use functions without needing to know at
+/// This has the ergonomic advantage of making it possible to use functions without needing to know at
 /// compile-time the size of the buffers used, for example for use in `dyn` traits.
 ///
-/// `VecView<T>` is to `Vec<T, N>` what `[T]` is to `[T; N]`
+/// `VecView<T>` is to `Vec<T, N>` what `[T]` is to `[T; N]`.
 ///
 /// ```rust
 /// use heapless::{Vec, VecView};
