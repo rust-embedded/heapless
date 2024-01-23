@@ -9,6 +9,10 @@ use core::{
 
 /// Workaround forbidden specialization of Drop
 pub trait VecDrop {
+    // SAFETY: drop_with_len will be called to call drop in place the first `len` elements of the buffer.
+    // Only the Owned buffer (`[MaybeUninit<T>; N]`) must drop the items
+    // and the view (`[MaybeUninit<T>]`) drops nothing.
+    // `drop_with_len `assumes that the buffer can contain `len` elements.
     unsafe fn drop_with_len(&mut self, len: usize);
 }
 
@@ -21,12 +25,11 @@ impl<T> VecDrop for [MaybeUninit<T>] {
 impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
     unsafe fn drop_with_len(&mut self, len: usize) {
         // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..self.len]
-        let mut_slice = unsafe { slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len) };
+        // &mut buffer[..len]
+        // SAFETY: buffer[..len] must be valid to drop given the safety requirement of the trait definition.
+        let mut_slice = slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len);
         // We drop each element used in the vector by turning into a `&mut [T]`.
-        unsafe {
-            ptr::drop_in_place(mut_slice);
-        }
+        ptr::drop_in_place(mut_slice);
     }
 }
 
@@ -1540,6 +1543,7 @@ impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
 
 impl<T: ?Sized + VecDrop> Drop for VecInner<T> {
     fn drop(&mut self) {
+        // SAFETY: the buffer contains initialized data for the range 0..self.len
         unsafe { self.buffer.drop_with_len(self.len) }
     }
 }
