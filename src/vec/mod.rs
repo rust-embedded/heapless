@@ -287,12 +287,13 @@ impl<T> VecView<T> {
         unsafe {
             // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
             self.set_len(start);
-            let range_slice = slice::from_raw_parts(self.as_ptr().add(start), end - start);
+            let vec = NonNull::from(self);
+            let range_slice = slice::from_raw_parts(vec.as_ref().as_ptr().add(start), end - start);
             Drain {
                 tail_start: end,
                 tail_len: len - end,
                 iter: range_slice.iter(),
-                vec: NonNull::from(self),
+                vec,
             }
         }
     }
