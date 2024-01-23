@@ -41,9 +41,8 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly
           components: miri
 
       - name: Run miri
@@ -155,9 +154,8 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust with target (${{ matrix.target }})
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: cargo check
@@ -248,9 +246,8 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust with target (${{ matrix.target }})
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: cargo test
@@ -292,9 +289,8 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust nightly with target (${{ matrix.target }})
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly
           target: ${{ matrix.target }}
           components: rust-src
 
