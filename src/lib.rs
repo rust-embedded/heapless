@@ -76,7 +76,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
-#![deny(warnings)]
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
