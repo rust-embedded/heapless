@@ -1973,8 +1973,6 @@ where
 
 // Implements Eq if underlying data is Eq
 impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
-// Not sure about this one? Should two distinct capacities really be Eq?
-// Anyways it derefs to &[u8] which implements Eq so I suppose it should
 impl<T> Eq for VecView<T> where T: Eq {}
 
 impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
