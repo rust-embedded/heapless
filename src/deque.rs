@@ -382,6 +382,22 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
     }
 }
 
+/// As with the standard library's `VecDeque`, items are added via `push_back`.
+impl<T, const N: usize> Extend<T> for Deque<T, N> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push_back(item).ok().unwrap();
+        }
+    }
+}
+impl<'a, T: Copy, const N: usize> Extend<&'a T> for Deque<T, N> {
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push_back(*item).ok().unwrap();
+        }
+    }
+}
+
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
