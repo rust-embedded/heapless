@@ -1,5 +1,5 @@
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> ui/not-send.rs:19:15
+  --> tests/ui/not-send.rs:19:15
    |
 19 |     is_send::<Consumer<NotSend, 4>>();
    |               ^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
@@ -12,7 +12,7 @@ note: required because it appears within the type `PhantomData<*const ()>`
    |            ^^^^^^^^^^^
    = note: required for `Consumer<'_, PhantomData<*const ()>, 4>` to implement `Send`
 note: required by a bound in `is_send`
-  --> ui/not-send.rs:14:8
+  --> tests/ui/not-send.rs:14:8
    |
 12 | fn is_send<T>()
    |    ------- required by a bound in this function
@@ -21,7 +21,7 @@ note: required by a bound in `is_send`
    |        ^^^^ required by this bound in `is_send`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> ui/not-send.rs:20:15
+  --> tests/ui/not-send.rs:20:15
    |
 20 |     is_send::<Producer<NotSend, 4>>();
    |               ^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
@@ -34,7 +34,7 @@ note: required because it appears within the type `PhantomData<*const ()>`
    |            ^^^^^^^^^^^
    = note: required for `Producer<'_, PhantomData<*const ()>, 4>` to implement `Send`
 note: required by a bound in `is_send`
-  --> ui/not-send.rs:14:8
+  --> tests/ui/not-send.rs:14:8
    |
 12 | fn is_send<T>()
    |    ------- required by a bound in this function
@@ -43,7 +43,7 @@ note: required by a bound in `is_send`
    |        ^^^^ required by this bound in `is_send`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> ui/not-send.rs:21:15
+  --> tests/ui/not-send.rs:21:15
    |
 21 |     is_send::<Queue<NotSend, 4>>();
    |               ^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
@@ -71,12 +71,12 @@ note: required because it appears within the type `UnsafeCell<MaybeUninit<Phanto
    |            ^^^^^^^^^^
    = note: required because it appears within the type `[UnsafeCell<MaybeUninit<PhantomData<*const ()>>>; 4]`
 note: required because it appears within the type `Queue<PhantomData<*const ()>, 4>`
-  --> $HEAPLESS/src/spsc.rs
+  --> src/spsc.rs
    |
    | pub struct Queue<T, const N: usize> {
    |            ^^^^^
 note: required by a bound in `is_send`
-  --> ui/not-send.rs:14:8
+  --> tests/ui/not-send.rs:14:8
    |
 12 | fn is_send<T>()
    |    ------- required by a bound in this function
@@ -85,7 +85,7 @@ note: required by a bound in `is_send`
    |        ^^^^ required by this bound in `is_send`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> ui/not-send.rs:22:15
+  --> tests/ui/not-send.rs:22:15
    |
 22 |     is_send::<Vec<NotSend, 4>>();
    |               ^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
@@ -108,12 +108,12 @@ note: required because it appears within the type `MaybeUninit<PhantomData<*cons
    |           ^^^^^^^^^^^
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
 note: required because it appears within the type `Vec<PhantomData<*const ()>, 4>`
-  --> $HEAPLESS/src/vec.rs
+  --> src/vec.rs
    |
    | pub struct Vec<T, const N: usize> {
    |            ^^^
 note: required by a bound in `is_send`
-  --> ui/not-send.rs:14:8
+  --> tests/ui/not-send.rs:14:8
    |
 12 | fn is_send<T>()
    |    ------- required by a bound in this function
@@ -122,7 +122,7 @@ note: required by a bound in `is_send`
    |        ^^^^ required by this bound in `is_send`
 
 error[E0277]: `*const ()` cannot be sent between threads safely
-  --> ui/not-send.rs:23:15
+  --> tests/ui/not-send.rs:23:15
    |
 23 |     is_send::<HistoryBuffer<NotSend, 4>>();
    |               ^^^^^^^^^^^^^^^^^^^^^^^^^ `*const ()` cannot be sent between threads safely
@@ -145,12 +145,12 @@ note: required because it appears within the type `MaybeUninit<PhantomData<*cons
    |           ^^^^^^^^^^^
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
 note: required because it appears within the type `HistoryBuffer<PhantomData<*const ()>, 4>`
-  --> $HEAPLESS/src/histbuf.rs
+  --> src/histbuf.rs
    |
    | pub struct HistoryBuffer<T, const N: usize> {
    |            ^^^^^^^^^^^^^
 note: required by a bound in `is_send`
-  --> ui/not-send.rs:14:8
+  --> tests/ui/not-send.rs:14:8
    |
 12 | fn is_send<T>()
    |    ------- required by a bound in this function

@@ -1,6 +1,7 @@
 use trybuild::TestCases;
 
-fn main() {
+#[test]
+fn ui() {
     let t = TestCases::new();
-    t.compile_fail("ui/*.rs");
+    t.compile_fail("tests/ui/*.rs");
 }

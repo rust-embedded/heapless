@@ -343,4 +343,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run cargo
-        run: cargo run
+        run: cargo test --test ui

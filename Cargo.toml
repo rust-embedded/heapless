@@ -52,6 +52,7 @@ stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
 ufmt = "0.2"
+trybuild = "1.0.89"
 
 [package.metadata.docs.rs]
 features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
