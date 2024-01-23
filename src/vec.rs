@@ -848,7 +848,6 @@ impl<T, const N: usize> Vec<T, N> {
     /// // allocate the vector in a static variable
     /// static mut X: Vec<u8, 16> = Vec::new();
     /// ```
-    /// `Vec` `const` constructor; wrap the returned value in [`Vec`].
     pub const fn new() -> Self {
         Self {
             len: 0,
