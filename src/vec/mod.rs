@@ -1,42 +1,63 @@
+//! A contiguous growable array type with statically-allocated contents, written
+//! `Vec<T, N>`.
+//!
+//! Vectors have *O*(1) indexing, amortized *O*(1) push (to the end) and
+//! *O*(1) pop (from the end).
 use core::{
     cmp::Ordering,
     fmt, hash,
     iter::FromIterator,
     mem,
     mem::{ManuallyDrop, MaybeUninit},
-    ops, ptr, slice,
+    ops::{self, Range, RangeBounds},
+    ptr::{self, NonNull},
+    slice,
 };
 
-/// Workaround forbidden specialization of Drop
-pub trait VecDrop {
-    // SAFETY: drop_with_len will be called to call drop in place the first `len` elements of the buffer.
-    // Only the Owned buffer (`[MaybeUninit<T>; N]`) must drop the items
-    // and the view (`[MaybeUninit<T>]`) drops nothing.
-    // `drop_with_len `assumes that the buffer can contain `len` elements.
-    unsafe fn drop_with_len(&mut self, len: usize);
-}
+mod drain;
+pub use drain::Drain;
 
-impl<T> VecDrop for [MaybeUninit<T>] {
-    unsafe fn drop_with_len(&mut self, _len: usize) {
-        // Case of a view, drop does nothing
+pub(super) mod sealed {
+    use core::{mem::MaybeUninit, ptr, slice};
+
+    /// Workaround forbidden specialization of Drop
+    pub trait VecDrop {
+        // SAFETY: drop_with_len will be called to call drop in place the first `len` elements of the buffer.
+        // Only the Owned buffer (`[MaybeUninit<T>; N]`) must drop the items
+        // and the view (`[MaybeUninit<T>]`) drops nothing.
+        // `drop_with_len `assumes that the buffer can contain `len` elements.
+        unsafe fn drop_with_len(&mut self, len: usize);
     }
-}
 
-impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
-    unsafe fn drop_with_len(&mut self, len: usize) {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..len]
-        // SAFETY: buffer[..len] must be valid to drop given the safety requirement of the trait definition.
-        let mut_slice = slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len);
-        // We drop each element used in the vector by turning into a `&mut [T]`.
-        ptr::drop_in_place(mut_slice);
+    impl<T> VecDrop for [MaybeUninit<T>] {
+        unsafe fn drop_with_len(&mut self, _len: usize) {
+            // Case of a view, drop does nothing
+        }
     }
-}
 
-/// <div class="warn">This is private API and should not be used</div>
-pub struct VecInner<B: ?Sized + VecDrop> {
-    len: usize,
-    buffer: B,
+    impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
+        unsafe fn drop_with_len(&mut self, len: usize) {
+            // NOTE(unsafe) avoid bound checks in the slicing operation
+            // &mut buffer[..len]
+            // SAFETY: buffer[..len] must be valid to drop given the safety requirement of the trait definition.
+            let mut_slice = slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len);
+            // We drop each element used in the vector by turning into a `&mut [T]`.
+            ptr::drop_in_place(mut_slice);
+        }
+    }
+
+    /// <div class="warn">This is private API and should not be used.</div>
+    pub struct VecInner<B: ?Sized + VecDrop> {
+        pub(super) len: usize,
+        pub(super) buffer: B,
+    }
+
+    impl<T: ?Sized + VecDrop> Drop for VecInner<T> {
+        fn drop(&mut self) {
+            // SAFETY: the buffer contains initialized data for the range 0..self.len
+            unsafe { self.buffer.drop_with_len(self.len) }
+        }
+    }
 }
 
 /// A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
@@ -76,7 +97,7 @@ pub struct VecInner<B: ?Sized + VecDrop> {
 /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
 /// let view: &VecView<_> = &vec;
 /// ```
-pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
+pub type Vec<T, const N: usize> = sealed::VecInner<[MaybeUninit<T>; N]>;
 
 /// A [`Vec`] with dynamic capacity
 ///
@@ -99,7 +120,7 @@ pub type Vec<T, const N: usize> = VecInner<[MaybeUninit<T>; N]>;
 /// mut_view.push(5);
 /// assert_eq!(vec, [1, 2, 3, 4, 5]);
 /// ```
-pub type VecView<T> = VecInner<[MaybeUninit<T>]>;
+pub type VecView<T> = sealed::VecInner<[MaybeUninit<T>]>;
 
 impl<T> VecView<T> {
     /// Returns a raw pointer to the vector’s buffer.
@@ -211,6 +232,68 @@ impl<T> VecView<T> {
             Some(unsafe { self.pop_unchecked() })
         } else {
             None
+        }
+    }
+
+    /// Removes the specified range from the vector in bulk, returning all
+    /// removed elements as an iterator. If the iterator is dropped before
+    /// being fully consumed, it drops the remaining removed elements.
+    ///
+    /// The returned iterator keeps a mutable borrow on the vector to optimize
+    /// its implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point is greater than the end point or if
+    /// the end point is greater than the length of the vector.
+    ///
+    /// # Leaking
+    ///
+    /// If the returned iterator goes out of scope without being dropped (due to
+    /// [`mem::forget`], for example), the vector may have lost and leaked
+    /// elements arbitrarily, including elements outside the range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
+    /// let u: Vec<_, 8> = v.drain(1..).collect();
+    /// assert_eq!(v, &[1]);
+    /// assert_eq!(u, &[2, 3]);
+    ///
+    /// // A full range clears the vector, like `clear()` does.
+    /// v.drain(..);
+    /// assert_eq!(v, &[]);
+    /// ```
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
+    where
+        R: RangeBounds<usize>,
+    {
+        // Memory Safety
+        //
+        // When the `Drain` is first created, it shortens the length of
+        // the source vector to make sure no uninitialized or moved-from elements
+        // are accessible at all if the `Drain`'s destructor never gets to run.
+        //
+        // `Drain` will `ptr::read` out the values to remove.
+        // When finished, remaining tail of the vec is copied back to cover
+        // the hole, and the vector length is restored to the new length.
+        //
+        let len = self.len();
+        let Range { start, end } = crate::slice::range(range, ..len);
+
+        unsafe {
+            // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
+            self.set_len(start);
+            let range_slice = slice::from_raw_parts(self.as_ptr().add(start), end - start);
+            Drain {
+                tail_start: end,
+                tail_len: len - end,
+                iter: range_slice.iter(),
+                vec: NonNull::from(self),
+            }
         }
     }
 
@@ -1033,6 +1116,46 @@ impl<T, const N: usize> Vec<T, N> {
         N
     }
 
+    /// Removes the specified range from the vector in bulk, returning all
+    /// removed elements as an iterator. If the iterator is dropped before
+    /// being fully consumed, it drops the remaining removed elements.
+    ///
+    /// The returned iterator keeps a mutable borrow on the vector to optimize
+    /// its implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point is greater than the end point or if
+    /// the end point is greater than the length of the vector.
+    ///
+    /// # Leaking
+    ///
+    /// If the returned iterator goes out of scope without being dropped (due to
+    /// [`mem::forget`], for example), the vector may have lost and leaked
+    /// elements arbitrarily, including elements outside the range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
+    /// let u: Vec<_, 8> = v.drain(1..).collect();
+    /// assert_eq!(v, &[1]);
+    /// assert_eq!(u, &[2, 3]);
+    ///
+    /// // A full range clears the vector, like `clear()` does.
+    /// v.drain(..);
+    /// assert_eq!(v, &[]);
+    /// ```
+    #[inline]
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
+    where
+        R: RangeBounds<usize>,
+    {
+        self.as_mut_view().drain(range)
+    }
+
     /// Clears the vector, removing all values.
     pub fn clear(&mut self) {
         self.as_mut_view().clear()
@@ -1548,13 +1671,6 @@ impl fmt::Write for VecView<u8> {
 impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
     fn from(array: [T; M]) -> Self {
         Self::from_array(array)
-    }
-}
-
-impl<T: ?Sized + VecDrop> Drop for VecInner<T> {
-    fn drop(&mut self) {
-        // SAFETY: the buffer contains initialized data for the range 0..self.len
-        unsafe { self.buffer.drop_with_len(self.len) }
     }
 }
 
