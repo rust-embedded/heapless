@@ -88,6 +88,10 @@ pub use indexmap::{
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
 pub use linear_map::LinearMap;
 pub use string::String;
+
+// Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
+// cfg(doc) prevents `VecInner` being part of the public API.
+// doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
 #[cfg(doc)]
 #[doc(hidden)]
 pub use vec::VecInner as _;
