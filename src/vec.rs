@@ -9,17 +9,17 @@ use core::{
 
 /// Workaround forbidden specialization of Drop
 pub trait VecDrop {
-    fn drop_with_len(&mut self, len: usize);
+    unsafe fn drop_with_len(&mut self, len: usize);
 }
 
 impl<T> VecDrop for [MaybeUninit<T>] {
-    fn drop_with_len(&mut self, _len: usize) {
+    unsafe fn drop_with_len(&mut self, _len: usize) {
         // Case of a view, drop does nothing
     }
 }
 
 impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
-    fn drop_with_len(&mut self, len: usize) {
+    unsafe fn drop_with_len(&mut self, len: usize) {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         let mut_slice = unsafe { slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len) };
@@ -1540,7 +1540,7 @@ impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
 
 impl<T: ?Sized + VecDrop> Drop for VecInner<T> {
     fn drop(&mut self) {
-        self.buffer.drop_with_len(self.len)
+        unsafe { self.buffer.drop_with_len(self.len) }
     }
 }
 
