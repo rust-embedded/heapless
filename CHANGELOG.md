@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Deque::make_contiguous`.
 - Added `VecView`, the `!Sized` version of `Vec`.
 - Added `Vec::drain`.
+- Added `String::drain`.
 
 ### Changed
 
