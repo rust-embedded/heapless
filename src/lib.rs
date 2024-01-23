@@ -96,6 +96,7 @@ pub use indexmap::{
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
 pub use linear_map::LinearMap;
 pub use string::String;
+
 pub use vec::{Vec, VecView};
 
 #[macro_use]
@@ -107,6 +108,7 @@ mod histbuf;
 mod indexmap;
 mod indexset;
 mod linear_map;
+mod slice;
 pub mod storage;
 pub mod string;
 pub mod vec;
