@@ -207,6 +207,25 @@ impl<T, const N: usize> Deque<T, N> {
     ///
     /// [`as_slices`]: Deque::as_slices
     /// [`as_mut_slices`]: Deque::as_mut_slices
+    ///
+    /// # Examples
+    /// Sorting a deque:
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut buf = Deque::<_, 4>::new();
+    /// buf.push_back(2).unwrap();
+    /// buf.push_back(1).unwrap();
+    /// buf.push_back(3).unwrap();
+    ///
+    /// // Sort the deque
+    /// buf.make_contiguous().sort();
+    /// assert_eq!(buf.as_slices(), (&[1, 2, 3][..], &[][..]));
+    ///
+    /// // Sort the deque in reverse
+    /// buf.make_contiguous().sort_by(|a, b| b.cmp(a));
+    /// assert_eq!(buf.as_slices(), (&[3, 2, 1][..], &[][..]));
+    /// ```
     pub fn make_contiguous(&mut self) -> &mut [T] {
         if self.is_contiguous() {
             return unsafe {
