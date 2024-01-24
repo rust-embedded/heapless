@@ -390,11 +390,9 @@ impl<T, const N: usize> Extend<T> for Deque<T, N> {
         }
     }
 }
-impl<'a, T: Copy, const N: usize> Extend<&'a T> for Deque<T, N> {
+impl<'a, T: 'a + Copy, const N: usize> Extend<&'a T> for Deque<T, N> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
-        for item in iter {
-            self.push_back(*item).ok().unwrap();
-        }
+        self.extend(iter.into_iter().copied())
     }
 }
 
