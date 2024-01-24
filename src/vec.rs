@@ -931,29 +931,40 @@ impl<T, const N: usize> Vec<T, N> {
         new
     }
 
-    /// Get a reference to the Vec, erasing the `N` const-generic
+    /// Get a reference to the `Vec`, erasing the `N` const-generic.
     ///
-    /// This can also be used through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
     ///
     /// ```rust
-    /// use heapless::{Vec, VecView};
-    ///
+    /// # use heapless::{Vec, VecView};
     /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &VecView<_> = &vec;
+    /// let view: &VecView<u8> = vec.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<u8> = &vec;
     /// ```
     pub const fn as_view(&self) -> &VecView<T> {
         self
     }
 
-    /// Get a `mut` reference to the Vec, erasing the `N` const-generic
-    ///
-    /// This can also be used through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
     ///
     /// ```rust
-    /// use heapless::{Vec, VecView};
-    ///
+    /// # use heapless::{Vec, VecView};
     /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &mut VecView<_> = &mut vec;
+    /// let view: &mut VecView<u8> = vec.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<u8> = &mut vec;
     /// ```
     pub fn as_mut_view(&mut self) -> &mut VecView<T> {
         self
