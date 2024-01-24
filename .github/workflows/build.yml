@@ -9,6 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-D warnings'
 
 jobs:
   # Run MIRI tests on nightly
@@ -111,7 +112,7 @@ jobs:
         with:
           components: clippy
           targets: i686-unknown-linux-musl
-      - run: cargo clippy --all --target i686-unknown-linux-musl --all-targets -- --deny warnings
+      - run: cargo clippy --all --target i686-unknown-linux-musl --all-targets
 
   # Compilation check
   check:
