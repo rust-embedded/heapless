@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `String::from_utf16`.
 - Added `is_full`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
 - Added an optional generic parameter to `Vec` to specify the alignment of the backing array.
-- Added `transmute_buffer` unsafe method for `Vec<u8, N, A>`.
 - Added infallible conversions from arrays to `Vec`.
 
 ### Changed
