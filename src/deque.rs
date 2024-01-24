@@ -236,6 +236,8 @@ impl<T, const N: usize> Deque<T, N> {
             };
         }
 
+        let buffer_ptr: *mut T = self.buffer.as_mut_ptr().cast();
+
         let len = self.len();
 
         let free = N - len;
@@ -251,17 +253,9 @@ impl<T, const N: usize> Deque<T, N> {
             // from: DEFGH....ABC
             // to:   ABCDEFGH....
             unsafe {
-                ptr::copy(
-                    self.buffer.as_ptr(),
-                    self.buffer.as_mut_ptr().add(front_len),
-                    back_len,
-                );
+                ptr::copy(buffer_ptr, buffer_ptr.add(front_len), back_len);
                 // ...DEFGH.ABC
-                ptr::copy_nonoverlapping(
-                    self.buffer.as_ptr().add(self.front),
-                    self.buffer.as_mut_ptr(),
-                    front_len,
-                );
+                ptr::copy_nonoverlapping(buffer_ptr.add(self.front), buffer_ptr, front_len);
                 // ABCDEFGH....
             }
 
@@ -276,14 +270,14 @@ impl<T, const N: usize> Deque<T, N> {
             // to:   ...ABCDEFGH.
             unsafe {
                 ptr::copy(
-                    self.buffer.as_ptr().add(self.front),
-                    self.buffer.as_mut_ptr().add(self.back),
+                    buffer_ptr.add(self.front),
+                    buffer_ptr.add(self.back),
                     front_len,
                 );
                 // FGHABCDE....
                 ptr::copy_nonoverlapping(
-                    self.buffer.as_ptr(),
-                    self.buffer.as_mut_ptr().add(self.back + front_len),
+                    buffer_ptr,
+                    buffer_ptr.add(self.back + front_len),
                     back_len,
                 );
                 // ...ABCDEFGH.
@@ -321,19 +315,12 @@ impl<T, const N: usize> Deque<T, N> {
                         // because we only move the tail forward as much as there's free space
                         // behind it, we don't overwrite any elements of the head slice, and
                         // the slices end up right next to each other.
-                        ptr::copy(
-                            self.buffer.as_ptr(),
-                            self.buffer.as_mut_ptr().add(free),
-                            back_len,
-                        );
+                        ptr::copy(buffer_ptr, buffer_ptr.add(free), back_len);
                     }
 
                     // We just copied the tail right next to the head slice,
                     // so all of the elements in the range are initialized
-                    let slice: &mut [T] = slice::from_raw_parts_mut(
-                        self.buffer.as_mut_ptr().add(free).cast(),
-                        N - free,
-                    );
+                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr.add(free), N - free);
 
                     // because the deque wasn't contiguous, we know that `tail_len < self.len == slice.len()`,
                     // so this will never panic.
@@ -356,16 +343,15 @@ impl<T, const N: usize> Deque<T, N> {
                     if free != 0 {
                         // copy the head slice to lie right behind the tail slice.
                         ptr::copy(
-                            self.buffer.as_ptr().add(self.front),
-                            self.buffer.as_mut_ptr().add(back_len),
+                            buffer_ptr.add(self.front),
+                            buffer_ptr.add(back_len),
                             front_len,
                         );
                     }
 
                     // because we copied the head slice so that both slices lie right
                     // next to each other, all the elements in the range are initialized.
-                    let slice: &mut [T] =
-                        slice::from_raw_parts_mut(self.buffer.as_mut_ptr().cast(), len);
+                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr, len);
 
                     // because the deque wasn't contiguous, we know that `head_len < self.len == slice.len()`
                     // so this will never panic.
@@ -379,7 +365,7 @@ impl<T, const N: usize> Deque<T, N> {
             }
         }
 
-        unsafe { slice::from_raw_parts_mut(self.buffer.as_mut_ptr().add(self.front).cast(), len) }
+        unsafe { slice::from_raw_parts_mut(buffer_ptr.add(self.front), len) }
     }
 
     /// Provides a reference to the front element, or None if the `Deque` is empty.
