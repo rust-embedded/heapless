@@ -382,6 +382,20 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
     }
 }
 
+/// As with the standard library's `VecDeque`, items are added via `push_back`.
+impl<T, const N: usize> Extend<T> for Deque<T, N> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push_back(item).ok().unwrap();
+        }
+    }
+}
+impl<'a, T: 'a + Copy, const N: usize> Extend<&'a T> for Deque<T, N> {
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        self.extend(iter.into_iter().copied())
+    }
+}
+
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
@@ -659,6 +673,31 @@ mod tests {
         assert_eq!(v.front_mut(), None);
         assert_eq!(v.back(), None);
         assert_eq!(v.back_mut(), None);
+    }
+
+    #[test]
+    fn extend() {
+        let mut v: Deque<i32, 4> = Deque::new();
+        v.extend(&[1, 2, 3]);
+        assert_eq!(v.pop_front().unwrap(), 1);
+        assert_eq!(v.pop_front().unwrap(), 2);
+        assert_eq!(*v.front().unwrap(), 3);
+
+        v.push_back(4).unwrap();
+        v.extend(&[5, 6]);
+        assert_eq!(v.pop_front().unwrap(), 3);
+        assert_eq!(v.pop_front().unwrap(), 4);
+        assert_eq!(v.pop_front().unwrap(), 5);
+        assert_eq!(v.pop_front().unwrap(), 6);
+        assert!(v.pop_front().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn extend_panic() {
+        let mut v: Deque<i32, 4> = Deque::new();
+        // Is too many elements -> should panic
+        v.extend(&[1, 2, 3, 4, 5]);
     }
 
     #[test]
