@@ -1062,12 +1062,12 @@ mod tests {
         q.push_back(4).unwrap();
 
         // Deque contains: 4, ., 2, 3
-        assert_eq!(q.as_slices(), (&[2, 3][..], &[4][..]));
+        assert_eq!(q.as_slices(), ([2, 3].as_slice(), [4].as_slice()));
 
         assert_eq!(q.make_contiguous(), &[2, 3, 4]);
 
         // Deque contains: ., 2, 3, 4
-        assert_eq!(q.as_slices(), (&[2, 3, 4][..], &[][..]));
+        assert_eq!(q.as_slices(), ([2, 3, 4].as_slice(), [].as_slice()));
 
         assert_eq!(q.pop_front(), Some(2));
         assert_eq!(q.pop_front(), Some(3));
@@ -1075,23 +1075,23 @@ mod tests {
         q.push_back(6).unwrap();
 
         // Deque contains: 5, 6, ., 4
-        assert_eq!(q.as_slices(), (&[4][..], &[5, 6][..]));
+        assert_eq!(q.as_slices(), ([4].as_slice(), [5, 6].as_slice()));
 
         assert_eq!(q.make_contiguous(), &[4, 5, 6]);
 
         // Deque contains: 4, 5, 6, .
-        assert_eq!(q.as_slices(), (&[4, 5, 6][..], &[][..]));
+        assert_eq!(q.as_slices(), ([4, 5, 6].as_slice(), [].as_slice()));
 
         assert_eq!(q.pop_front(), Some(4));
         q.push_back(7).unwrap();
         q.push_back(8).unwrap();
 
         // Deque contains: 8, 5, 6, 7
-        assert_eq!(q.as_slices(), (&[5, 6, 7][..], &[8][..]));
+        assert_eq!(q.as_slices(), ([5, 6, 7].as_slice(), [8].as_slice()));
 
         assert_eq!(q.make_contiguous(), &[5, 6, 7, 8]);
 
         // Deque contains: 5, 6, 7, 8
-        assert_eq!(q.as_slices(), (&[5, 6, 7, 8][..], &[][..]));
+        assert_eq!(q.as_slices(), ([5, 6, 7, 8].as_slice(), [].as_slice()));
     }
 }
