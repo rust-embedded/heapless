@@ -94,7 +94,7 @@ pub use string::String;
 // doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
 #[cfg(doc)]
 #[doc(hidden)]
-pub use vec::VecInner as _;
+pub use vec::sealed::VecInner as _;
 pub use vec::{Vec, VecView};
 
 #[macro_use]
@@ -106,8 +106,9 @@ mod histbuf;
 mod indexmap;
 mod indexset;
 mod linear_map;
+mod slice;
 pub mod string;
-mod vec;
+pub mod vec;
 
 #[cfg(feature = "serde")]
 mod de;
