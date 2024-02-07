@@ -191,6 +191,183 @@ impl<T, const N: usize> Deque<T, N> {
         }
     }
 
+    #[inline]
+    fn is_contiguous(&self) -> bool {
+        self.front <= N - self.len()
+    }
+
+    /// Rearranges the internal storage of the [`Deque`] to make it into a contiguous slice,
+    /// which is returned.
+    ///
+    /// This does **not** change the order of the elements in the deque.
+    /// The returned slice can then be used to perform contiguous slice operations on the deque.
+    ///
+    /// After calling this method, subsequent [`as_slices`] and [`as_mut_slices`] calls will return
+    /// a single contiguous slice.
+    ///
+    /// [`as_slices`]: Deque::as_slices
+    /// [`as_mut_slices`]: Deque::as_mut_slices
+    ///
+    /// # Examples
+    /// Sorting a deque:
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut buf = Deque::<_, 4>::new();
+    /// buf.push_back(2).unwrap();
+    /// buf.push_back(1).unwrap();
+    /// buf.push_back(3).unwrap();
+    ///
+    /// // Sort the deque
+    /// buf.make_contiguous().sort();
+    /// assert_eq!(buf.as_slices(), (&[1, 2, 3][..], &[][..]));
+    ///
+    /// // Sort the deque in reverse
+    /// buf.make_contiguous().sort_by(|a, b| b.cmp(a));
+    /// assert_eq!(buf.as_slices(), (&[3, 2, 1][..], &[][..]));
+    /// ```
+    pub fn make_contiguous(&mut self) -> &mut [T] {
+        if self.is_contiguous() {
+            return unsafe {
+                slice::from_raw_parts_mut(
+                    self.buffer.as_mut_ptr().add(self.front).cast(),
+                    self.len(),
+                )
+            };
+        }
+
+        let buffer_ptr: *mut T = self.buffer.as_mut_ptr().cast();
+
+        let len = self.len();
+
+        let free = N - len;
+        let front_len = N - self.front;
+        let back = len - front_len;
+        let back_len = back;
+
+        if free >= front_len {
+            // there is enough free space to copy the head in one go,
+            // this means that we first shift the tail backwards, and then
+            // copy the head to the correct position.
+            //
+            // from: DEFGH....ABC
+            // to:   ABCDEFGH....
+            unsafe {
+                ptr::copy(buffer_ptr, buffer_ptr.add(front_len), back_len);
+                // ...DEFGH.ABC
+                ptr::copy_nonoverlapping(buffer_ptr.add(self.front), buffer_ptr, front_len);
+                // ABCDEFGH....
+            }
+
+            self.front = 0;
+            self.back = len;
+        } else if free >= back_len {
+            // there is enough free space to copy the tail in one go,
+            // this means that we first shift the head forwards, and then
+            // copy the tail to the correct position.
+            //
+            // from: FGH....ABCDE
+            // to:   ...ABCDEFGH.
+            unsafe {
+                ptr::copy(
+                    buffer_ptr.add(self.front),
+                    buffer_ptr.add(self.back),
+                    front_len,
+                );
+                // FGHABCDE....
+                ptr::copy_nonoverlapping(
+                    buffer_ptr,
+                    buffer_ptr.add(self.back + front_len),
+                    back_len,
+                );
+                // ...ABCDEFGH.
+            }
+
+            self.front = back;
+            self.back = 0;
+        } else {
+            // `free` is smaller than both `head_len` and `tail_len`.
+            // the general algorithm for this first moves the slices
+            // right next to each other and then uses `slice::rotate`
+            // to rotate them into place:
+            //
+            // initially:   HIJK..ABCDEFG
+            // step 1:      ..HIJKABCDEFG
+            // step 2:      ..ABCDEFGHIJK
+            //
+            // or:
+            //
+            // initially:   FGHIJK..ABCDE
+            // step 1:      FGHIJKABCDE..
+            // step 2:      ABCDEFGHIJK..
+
+            // pick the shorter of the 2 slices to reduce the amount
+            // of memory that needs to be moved around.
+            if front_len > back_len {
+                // tail is shorter, so:
+                //  1. copy tail forwards
+                //  2. rotate used part of the buffer
+                //  3. update head to point to the new beginning (which is just `free`)
+                unsafe {
+                    // if there is no free space in the buffer, then the slices are already
+                    // right next to each other and we don't need to move any memory.
+                    if free != 0 {
+                        // because we only move the tail forward as much as there's free space
+                        // behind it, we don't overwrite any elements of the head slice, and
+                        // the slices end up right next to each other.
+                        ptr::copy(buffer_ptr, buffer_ptr.add(free), back_len);
+                    }
+
+                    // We just copied the tail right next to the head slice,
+                    // so all of the elements in the range are initialized
+                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr.add(free), N - free);
+
+                    // because the deque wasn't contiguous, we know that `tail_len < self.len == slice.len()`,
+                    // so this will never panic.
+                    slice.rotate_left(back_len);
+
+                    // the used part of the buffer now is `free..self.capacity()`, so set
+                    // `head` to the beginning of that range.
+                    self.front = free;
+                    self.back = 0;
+                }
+            } else {
+                // head is shorter so:
+                //  1. copy head backwards
+                //  2. rotate used part of the buffer
+                //  3. update head to point to the new beginning (which is the beginning of the buffer)
+
+                unsafe {
+                    // if there is no free space in the buffer, then the slices are already
+                    // right next to each other and we don't need to move any memory.
+                    if free != 0 {
+                        // copy the head slice to lie right behind the tail slice.
+                        ptr::copy(
+                            buffer_ptr.add(self.front),
+                            buffer_ptr.add(back_len),
+                            front_len,
+                        );
+                    }
+
+                    // because we copied the head slice so that both slices lie right
+                    // next to each other, all the elements in the range are initialized.
+                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr, len);
+
+                    // because the deque wasn't contiguous, we know that `head_len < self.len == slice.len()`
+                    // so this will never panic.
+                    slice.rotate_right(front_len);
+
+                    // the used part of the buffer now is `0..self.len`, so set
+                    // `head` to the beginning of that range.
+                    self.front = 0;
+                    self.back = len;
+                }
+            }
+        }
+
+        unsafe { slice::from_raw_parts_mut(buffer_ptr.add(self.front), len) }
+    }
+
     /// Provides a reference to the front element, or None if the `Deque` is empty.
     pub fn front(&self) -> Option<&T> {
         if self.is_empty() {
@@ -865,5 +1042,56 @@ mod tests {
 
         q.push_back(0).unwrap();
         assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn make_contiguous() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.len(), 0);
+
+        q.push_back(0).unwrap();
+        q.push_back(1).unwrap();
+        q.push_back(2).unwrap();
+        q.push_back(3).unwrap();
+
+        // Deque contains: 0, 1, 2, 3
+        assert_eq!(q.pop_front(), Some(0));
+        assert_eq!(q.pop_front(), Some(1));
+
+        // Deque contains: ., ., 2, 3
+        q.push_back(4).unwrap();
+
+        // Deque contains: 4, ., 2, 3
+        assert_eq!(q.as_slices(), ([2, 3].as_slice(), [4].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[2, 3, 4]);
+
+        // Deque contains: ., 2, 3, 4
+        assert_eq!(q.as_slices(), ([2, 3, 4].as_slice(), [].as_slice()));
+
+        assert_eq!(q.pop_front(), Some(2));
+        assert_eq!(q.pop_front(), Some(3));
+        q.push_back(5).unwrap();
+        q.push_back(6).unwrap();
+
+        // Deque contains: 5, 6, ., 4
+        assert_eq!(q.as_slices(), ([4].as_slice(), [5, 6].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[4, 5, 6]);
+
+        // Deque contains: 4, 5, 6, .
+        assert_eq!(q.as_slices(), ([4, 5, 6].as_slice(), [].as_slice()));
+
+        assert_eq!(q.pop_front(), Some(4));
+        q.push_back(7).unwrap();
+        q.push_back(8).unwrap();
+
+        // Deque contains: 8, 5, 6, 7
+        assert_eq!(q.as_slices(), ([5, 6, 7].as_slice(), [8].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[5, 6, 7, 8]);
+
+        // Deque contains: 5, 6, 7, 8
+        assert_eq!(q.as_slices(), ([5, 6, 7, 8].as_slice(), [].as_slice()));
     }
 }
