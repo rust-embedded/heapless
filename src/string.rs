@@ -314,7 +314,7 @@ impl<const N: usize> String<N> {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
-    ///     assert_eq!(&[104, 101, 108, 108, 111][..], &vec[..]);
+    ///     assert_eq!(&b"hello", &vec);
     ///
     ///     vec.reverse();
     /// }
@@ -322,6 +322,37 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), ()>(())
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
+        &mut self.vec
+    }
+
+    /// Returns a mutable reference to the contents of this `String`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the bytes passed
+    /// to it are valid UTF-8. If this constraint is violated, it may cause
+    /// memory unsafety issues with future users of the `String`, as the rest of
+    /// the library assumes that `String`s are valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
+    ///
+    /// unsafe {
+    ///     let vec = s.as_mut_vec_view();
+    ///     assert_eq!(&b"hello", &vec);
+    ///
+    ///     vec.reverse();
+    /// }
+    /// assert_eq!(s, "olleh");
+    /// # Ok::<(), ()>(())
+    /// ```
+    pub unsafe fn as_mut_vec_view(&mut self) -> &mut VecView<u8> {
         &mut self.vec
     }
 
@@ -592,7 +623,7 @@ impl StringView {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
-    ///     assert_eq!(&[104, 101, 108, 108, 111][..], &vec[..]);
+    ///     assert_eq!(&b"hello", &vec);
     ///
     ///     vec.reverse();
     /// }
