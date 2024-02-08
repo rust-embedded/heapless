@@ -1,8 +1,8 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    binary_heap::Kind as BinaryHeapKind, string::StringView, BinaryHeap, Deque, IndexMap, IndexSet,
+    LinearMap, String, Vec,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -112,6 +112,15 @@ where
 }
 
 // String containers
+
+impl Serialize for StringView {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&*self)
+    }
+}
 
 impl<const N: usize> Serialize for String<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
