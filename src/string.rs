@@ -272,7 +272,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(self.vec.as_slice()) }
+        self.as_view().as_str()
     }
 
     /// Converts a `String` into a mutable string slice.
@@ -291,7 +291,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
-        unsafe { str::from_utf8_unchecked_mut(self.vec.as_mut_slice()) }
+        self.as_mut_view().as_mut_str()
     }
 
     /// Returns a mutable reference to the contents of this `String`.
@@ -353,7 +353,7 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), ()>(())
     /// ```
     pub unsafe fn as_mut_vec_view(&mut self) -> &mut VecView<u8> {
-        &mut self.vec
+        self.as_mut_view().as_mut_vec_view()
     }
 
     /// Appends a given string slice onto the end of this `String`.
@@ -377,7 +377,7 @@ impl<const N: usize> String<N> {
     #[inline]
     #[allow(clippy::result_unit_err)]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
-        self.vec.extend_from_slice(string.as_bytes())
+        self.as_mut_view().push_str(string)
     }
 
     /// Returns the maximum number of elements the String can hold.
@@ -394,7 +394,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.capacity()
+        self.as_view().capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
@@ -420,12 +420,7 @@ impl<const N: usize> String<N> {
     #[inline]
     #[allow(clippy::result_unit_err)]
     pub fn push(&mut self, c: char) -> Result<(), ()> {
-        match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
-            _ => self
-                .vec
-                .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
-        }
+        self.as_mut_view().push(c)
     }
 
     /// Shortens this `String` to the specified length.
@@ -456,10 +451,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
-        if new_len <= self.len() {
-            assert!(self.is_char_boundary(new_len));
-            self.vec.truncate(new_len)
-        }
+        self.as_mut_view().truncate(new_len)
     }
 
     /// Removes the last character from the string buffer and returns it.
@@ -483,16 +475,7 @@ impl<const N: usize> String<N> {
     /// Ok::<(), ()>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
-        let ch = self.chars().next_back()?;
-
-        // pop bytes that correspond to `ch`
-        for _ in 0..ch.len_utf8() {
-            unsafe {
-                self.vec.pop_unchecked();
-            }
-        }
-
-        Some(ch)
+        self.as_mut_view().pop()
     }
 
     /// Removes a [`char`] from this `String` at a byte position and returns it.
@@ -520,19 +503,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn remove(&mut self, index: usize) -> char {
-        let ch = match self[index..].chars().next() {
-            Some(ch) => ch,
-            None => panic!("cannot remove a char from the end of a string"),
-        };
-
-        let next = index + ch.len_utf8();
-        let len = self.len();
-        let ptr = self.vec.as_mut_ptr();
-        unsafe {
-            core::ptr::copy(ptr.add(next), ptr.add(index), len - next);
-            self.vec.set_len(len - (next - index));
-        }
-        ch
+        self.as_mut_view().remove(index)
     }
 
     /// Truncates this `String`, removing all contents.
@@ -558,7 +529,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn clear(&mut self) {
-        self.vec.clear()
+        self.as_mut_view().clear()
     }
 }
 
@@ -905,7 +876,7 @@ impl<const N: usize> Clone for String<N> {
 
 impl<const N: usize> fmt::Debug for String<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Debug>::fmt(self, f)
+        self.as_view().fmt(f)
     }
 }
 
@@ -917,7 +888,7 @@ impl fmt::Debug for StringView {
 
 impl<const N: usize> fmt::Display for String<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Display>::fmt(self, f)
+        self.as_view().fmt(f)
     }
 }
 
@@ -930,7 +901,7 @@ impl fmt::Display for StringView {
 impl<const N: usize> hash::Hash for String<N> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        <str as hash::Hash>::hash(self, hasher)
+        self.as_view().hash(hasher)
     }
 }
 
@@ -943,11 +914,11 @@ impl hash::Hash for StringView {
 
 impl<const N: usize> fmt::Write for String<N> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).map_err(|_| fmt::Error)
+        self.as_mut_view().write_str(s)
     }
 
     fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.push(c).map_err(|_| fmt::Error)
+        self.as_mut_view().write_char(c)
     }
 }
 
@@ -965,7 +936,7 @@ impl<const N: usize> ops::Deref for String<N> {
     type Target = str;
 
     fn deref(&self) -> &str {
-        self.as_str()
+        self.as_view().deref()
     }
 }
 
@@ -979,7 +950,7 @@ impl ops::Deref for StringView {
 
 impl<const N: usize> ops::DerefMut for String<N> {
     fn deref_mut(&mut self) -> &mut str {
-        self.as_mut_str()
+        self.as_mut_view().deref_mut()
     }
 }
 
@@ -1006,7 +977,7 @@ impl AsRef<str> for StringView {
 impl<const N: usize> AsRef<[u8]> for String<N> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
-        self.as_bytes()
+        self.as_view().as_bytes()
     }
 }
 
