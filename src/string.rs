@@ -541,9 +541,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<4> = String::try_from("ab")?;
+    /// let s: &mut StringView = &mut s;
     /// assert!(s.as_str() == "ab");
     ///
     /// let _s = s.as_str();
@@ -562,9 +563,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<4> = String::try_from("ab")?;
+    /// let s: &mut StringView = &mut s;
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
     /// # Ok::<(), ()>(())
@@ -588,12 +590,13 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("hello")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// unsafe {
-    ///     let vec = s.as_mut_vec();
+    ///     let vec = s.as_mut_vec_view();
     ///     assert_eq!(&b"hello", &vec);
     ///
     ///     vec.reverse();
@@ -612,9 +615,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
@@ -636,9 +640,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
-    /// let mut s: String<4> = String::new();
+    /// let s: String<4> = String::new();
+    /// let s: &StringView = &s;
     /// assert!(s.capacity() == 4);
     /// ```
     #[inline]
@@ -653,9 +658,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("abc")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -694,9 +700,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("hello")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.truncate(2);
     ///
@@ -720,9 +727,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
@@ -759,9 +767,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String,StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo").unwrap();
+    /// let s: &mut StringView = &mut s;
     ///
     /// assert_eq!(s.remove(0), 'f');
     /// assert_eq!(s.remove(1), 'o');
@@ -794,9 +803,10 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.clear();
     ///
