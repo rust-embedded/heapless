@@ -2,7 +2,7 @@ use core::hash::{BuildHasher, Hash};
 
 use crate::{
     binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    Vec, VecView,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -43,6 +43,18 @@ where
 }
 
 impl<T, const N: usize> Serialize for Vec<T, N>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_view().serialize(serializer)
+    }
+}
+
+impl<T> Serialize for VecView<T>
 where
     T: Serialize,
 {
