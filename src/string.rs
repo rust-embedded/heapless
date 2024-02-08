@@ -107,7 +107,7 @@ impl<const N: usize> String<N> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let s: String<12> = String::try_from("Hello").unwrap();
-    /// let view: &StringView  = &s;
+    /// let view: &StringView = &s;
     /// ```
     pub fn as_view(&self) -> &StringView {
         self
@@ -126,7 +126,7 @@ impl<const N: usize> String<N> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<12> = String::try_from("Hello").unwrap();
-    /// let view: &mut StringView  = &mut s;
+    /// let view: &mut StringView = &mut s;
     /// ```
     pub fn as_mut_view(&mut self) -> &mut StringView {
         self
@@ -590,7 +590,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("hello")?;
     /// let s: &mut StringView = &mut s;
@@ -615,7 +615,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
     /// let s: &mut StringView = &mut s;
@@ -640,7 +640,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let s: String<4> = String::new();
     /// let s: &StringView = &s;
@@ -658,7 +658,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("abc")?;
     /// let s: &mut StringView = &mut s;
@@ -700,7 +700,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("hello")?;
     /// let s: &mut StringView = &mut s;
@@ -727,7 +727,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
     /// let s: &mut StringView = &mut s;
@@ -767,7 +767,7 @@ impl StringView {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::string::{String,StringView};
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo").unwrap();
     /// let s: &mut StringView = &mut s;
