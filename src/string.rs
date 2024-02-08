@@ -94,6 +94,44 @@ impl<const N: usize> String<N> {
         Self { vec: Vec::new() }
     }
 
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &StringView  = &s;
+    /// ```
+    pub fn as_view(&self) -> &StringView {
+        self
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &mut StringView  = &mut s;
+    /// ```
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        self
+    }
+
     /// Decodes a UTF-16–encoded slice `v` into a `String`, returning [`Err`]
     /// if `v` contains any invalid data.
     ///
