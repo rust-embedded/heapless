@@ -109,6 +109,7 @@ impl<const N: usize> String<N> {
     /// let s: String<12> = String::try_from("Hello").unwrap();
     /// let view: &StringView = &s;
     /// ```
+    #[inline]
     pub fn as_view(&self) -> &StringView {
         self
     }
@@ -128,6 +129,7 @@ impl<const N: usize> String<N> {
     /// let mut s: String<12> = String::try_from("Hello").unwrap();
     /// let view: &mut StringView = &mut s;
     /// ```
+    #[inline]
     pub fn as_mut_view(&mut self) -> &mut StringView {
         self
     }
@@ -352,6 +354,7 @@ impl<const N: usize> String<N> {
     /// assert_eq!(s, "olleh");
     /// # Ok::<(), ()>(())
     /// ```
+    #[inline]
     pub unsafe fn as_mut_vec_view(&mut self) -> &mut VecView<u8> {
         self.as_mut_view().as_mut_vec_view()
     }
