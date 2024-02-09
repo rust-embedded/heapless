@@ -887,226 +887,161 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<const N: usize> fmt::Debug for String<N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_view().fmt(f)
-    }
+macro_rules! imp_traits {
+    ($Ty:ident$(<const $N:ident : usize, const $M:ident : usize>)?) => {
+        // String<N>/StringView == String<N>
+        impl<const N: usize, $(const $M: usize)*> PartialEq<String<N>> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &String<N>) -> bool {
+                self.as_str().eq(other.as_str())
+            }
+        }
+
+        // String<N>/StringView == StringView
+        impl<$(const $M: usize)*> PartialEq<StringView> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &StringView) -> bool {
+                self.as_str().eq(other.as_str())
+            }
+        }
+
+        // String<N>/StringView == str
+        impl<$(const $M: usize)*> PartialEq<str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &str) -> bool {
+                self.as_str().eq(other)
+            }
+        }
+
+        // str == String<N>/StringView
+        impl<$(const $M: usize)*> PartialEq<$Ty<$($M)*>> for str
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<$($M)*>) -> bool {
+                self.eq(other.as_str())
+            }
+        }
+
+        // &str == String<N>/StringView
+        impl<$(const $M: usize)*> PartialEq<&str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &&str) -> bool {
+                (*self).as_str().eq(*other)
+            }
+        }
+
+        // String<N>/StringView == str
+        impl<$(const $M: usize)*> PartialEq<$Ty<$($M)*>> for &str
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<$($M)*>) -> bool {
+                (*self).eq(other.as_str())
+            }
+        }
+
+        impl<$(const $M: usize)*> Eq for $Ty<$($M)*> {}
+
+        impl<const N: usize, $(const $M: usize)*> PartialOrd<String<N>> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &String<N>) -> Option<Ordering> {
+                Some(<str as Ord>::cmp(self, other))
+            }
+        }
+
+        impl<$(const $M: usize)*> PartialOrd<StringView> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &StringView) -> Option<Ordering> {
+                Some(<str as Ord>::cmp(self, other))
+            }
+        }
+
+        impl<$(const $M: usize)*> Ord for $Ty<$($M)*> {
+            fn cmp(&self, other: &$Ty<$($M)*>) -> Ordering {
+                <str as Ord>::cmp(self, other)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Debug for $Ty<$($M)*>
+        {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <str as fmt::Debug>::fmt(self, f)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Display for $Ty<$($M)*>
+        {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <str as fmt::Display>::fmt(self, f)
+            }
+        }
+
+        impl<$(const $M: usize)*> hash::Hash for $Ty<$($M)*>
+        {
+            #[inline]
+            fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+                <str as hash::Hash>::hash(self, hasher)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Write for $Ty<$($M)*>
+        {
+            #[inline]
+            fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+                self.push_str(s).map_err(|_| fmt::Error)
+            }
+
+            #[inline]
+            fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
+                self.push(c).map_err(|_| fmt::Error)
+            }
+        }
+
+        impl<$(const $M: usize)*> ops::Deref for $Ty<$($M)*>
+        {
+            type Target = str;
+
+            #[inline]
+            fn deref(&self) -> &str {
+                self.as_str()
+            }
+        }
+
+        impl<$(const $M: usize)*> ops::DerefMut for $Ty<$($M)*>
+        {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut str {
+                self.as_mut_str()
+            }
+        }
+
+        impl<$(const $M: usize)*> AsRef<str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn as_ref(&self) -> &str {
+                self
+            }
+        }
+
+        impl<$(const $M: usize)*> AsRef<[u8]> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn as_ref(&self) -> &[u8] {
+                self.as_bytes()
+            }
+        }
+    };
 }
 
-impl fmt::Debug for StringView {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Debug>::fmt(self, f)
-    }
-}
-
-impl<const N: usize> fmt::Display for String<N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_view().fmt(f)
-    }
-}
-
-impl fmt::Display for StringView {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Display>::fmt(self, f)
-    }
-}
-
-impl<const N: usize> hash::Hash for String<N> {
-    #[inline]
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        self.as_view().hash(hasher)
-    }
-}
-
-impl hash::Hash for StringView {
-    #[inline]
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        <str as hash::Hash>::hash(self, hasher)
-    }
-}
-
-impl<const N: usize> fmt::Write for String<N> {
-    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.as_mut_view().write_str(s)
-    }
-
-    fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.as_mut_view().write_char(c)
-    }
-}
-
-impl fmt::Write for StringView {
-    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).map_err(|_| fmt::Error)
-    }
-
-    fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.push(c).map_err(|_| fmt::Error)
-    }
-}
-
-impl<const N: usize> ops::Deref for String<N> {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        self.as_view().deref()
-    }
-}
-
-impl ops::Deref for StringView {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl<const N: usize> ops::DerefMut for String<N> {
-    fn deref_mut(&mut self) -> &mut str {
-        self.as_mut_view().deref_mut()
-    }
-}
-
-impl ops::DerefMut for StringView {
-    fn deref_mut(&mut self) -> &mut str {
-        self.as_mut_str()
-    }
-}
-
-impl<const N: usize> AsRef<str> for String<N> {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        self
-    }
-}
-
-impl AsRef<str> for StringView {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        self
-    }
-}
-
-impl<const N: usize> AsRef<[u8]> for String<N> {
-    #[inline]
-    fn as_ref(&self) -> &[u8] {
-        self.as_view().as_bytes()
-    }
-}
-
-impl AsRef<[u8]> for StringView {
-    #[inline]
-    fn as_ref(&self) -> &[u8] {
-        self.as_bytes()
-    }
-}
-
-impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
-    fn eq(&self, rhs: &String<N2>) -> bool {
-        str::eq(&**self, &**rhs)
-    }
-}
-
-impl PartialEq<StringView> for StringView {
-    fn eq(&self, rhs: &StringView) -> bool {
-        str::eq(&**self, &**rhs)
-    }
-}
-
-// String<N> == str
-impl<const N: usize> PartialEq<str> for String<N> {
-    #[inline]
-    fn eq(&self, other: &str) -> bool {
-        str::eq(self, other)
-    }
-}
-
-// StringView == str
-impl PartialEq<str> for StringView {
-    #[inline]
-    fn eq(&self, other: &str) -> bool {
-        str::eq(self, other)
-    }
-}
-
-// String<N> == &'str
-impl<const N: usize> PartialEq<&str> for String<N> {
-    #[inline]
-    fn eq(&self, other: &&str) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// StringView == &'str
-impl PartialEq<&str> for StringView {
-    #[inline]
-    fn eq(&self, other: &&str) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// str == String<N>
-impl<const N: usize> PartialEq<String<N>> for str {
-    #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// str == StringView
-impl PartialEq<StringView> for str {
-    #[inline]
-    fn eq(&self, other: &StringView) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// &'str == String<N>
-impl<const N: usize> PartialEq<String<N>> for &str {
-    #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// &'str == StringView
-impl PartialEq<StringView> for &str {
-    #[inline]
-    fn eq(&self, other: &StringView) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-impl<const N: usize> Eq for String<N> {}
-impl Eq for StringView {}
-
-impl<const N1: usize, const N2: usize> PartialOrd<String<N2>> for String<N1> {
-    #[inline]
-    fn partial_cmp(&self, other: &String<N2>) -> Option<Ordering> {
-        Some(Ord::cmp(&**self, &**other))
-    }
-}
-
-impl PartialOrd<StringView> for StringView {
-    #[inline]
-    fn partial_cmp(&self, other: &StringView) -> Option<Ordering> {
-        Some(Ord::cmp(&**self, &**other))
-    }
-}
-
-impl<const N: usize> Ord for String<N> {
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&**self, &**other)
-    }
-}
-
-impl Ord for StringView {
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&**self, &**other)
-    }
-}
+imp_traits!(String<const N: usize, const M: usize>);
+imp_traits!(StringView);
 
 /// Equivalent to [`format`](https://doc.rust-lang.org/std/fmt/fn.format.html).
 ///
