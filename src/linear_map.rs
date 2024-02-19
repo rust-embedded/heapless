@@ -1,5 +1,5 @@
 use crate::Vec;
-use core::{borrow::Borrow, fmt, iter::FromIterator, mem, ops, slice};
+use core::{borrow::Borrow, fmt, mem, ops, slice};
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///

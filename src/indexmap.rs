@@ -2,7 +2,6 @@ use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
-    iter::FromIterator,
     mem,
     num::NonZeroU32,
     ops, slice,

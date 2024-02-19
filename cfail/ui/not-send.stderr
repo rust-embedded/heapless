@@ -7,6 +7,9 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
 note: required because it appears within the type `PhantomData<*const ()>`
   --> $RUST/core/src/marker.rs
+   |
+   | pub struct PhantomData<T: ?Sized>;
+   |            ^^^^^^^^^^^
    = note: required for `Consumer<'_, PhantomData<*const ()>, 4>` to implement `Send`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
@@ -26,6 +29,9 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = help: within `PhantomData<*const ()>`, the trait `Send` is not implemented for `*const ()`
 note: required because it appears within the type `PhantomData<*const ()>`
   --> $RUST/core/src/marker.rs
+   |
+   | pub struct PhantomData<T: ?Sized>;
+   |            ^^^^^^^^^^^
    = note: required for `Producer<'_, PhantomData<*const ()>, 4>` to implement `Send`
 note: required by a bound in `is_send`
   --> ui/not-send.rs:14:8
@@ -45,12 +51,24 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = help: within `Queue<PhantomData<*const ()>, 4>`, the trait `Send` is not implemented for `*const ()`
 note: required because it appears within the type `PhantomData<*const ()>`
   --> $RUST/core/src/marker.rs
+   |
+   | pub struct PhantomData<T: ?Sized>;
+   |            ^^^^^^^^^^^
 note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/manually_drop.rs
+   |
+   | pub struct ManuallyDrop<T: ?Sized> {
+   |            ^^^^^^^^^^^^
 note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/maybe_uninit.rs
+   |
+   | pub union MaybeUninit<T> {
+   |           ^^^^^^^^^^^
 note: required because it appears within the type `UnsafeCell<MaybeUninit<PhantomData<*const ()>>>`
   --> $RUST/core/src/cell.rs
+   |
+   | pub struct UnsafeCell<T: ?Sized> {
+   |            ^^^^^^^^^^
    = note: required because it appears within the type `[UnsafeCell<MaybeUninit<PhantomData<*const ()>>>; 4]`
 note: required because it appears within the type `Queue<PhantomData<*const ()>, 4>`
   --> $HEAPLESS/src/spsc.rs
@@ -75,12 +93,21 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = help: within `heapless::vec::VecInner<[MaybeUninit<PhantomData<*const ()>>; 4]>`, the trait `Send` is not implemented for `*const ()`
 note: required because it appears within the type `PhantomData<*const ()>`
   --> $RUST/core/src/marker.rs
+   |
+   | pub struct PhantomData<T: ?Sized>;
+   |            ^^^^^^^^^^^
 note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/manually_drop.rs
+   |
+   | pub struct ManuallyDrop<T: ?Sized> {
+   |            ^^^^^^^^^^^^
 note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/maybe_uninit.rs
+   |
+   | pub union MaybeUninit<T> {
+   |           ^^^^^^^^^^^
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
-note: required because it appears within the type `VecInner<[MaybeUninit<PhantomData<*const ()>>; 4]>`
+note: required because it appears within the type `heapless::vec::VecInner<[MaybeUninit<PhantomData<*const ()>>; 4]>`
   --> $HEAPLESS/src/vec.rs
    |
    | pub struct VecInner<B: ?Sized + VecDrop> {
@@ -103,10 +130,19 @@ error[E0277]: `*const ()` cannot be sent between threads safely
    = help: within `HistoryBuffer<PhantomData<*const ()>, 4>`, the trait `Send` is not implemented for `*const ()`
 note: required because it appears within the type `PhantomData<*const ()>`
   --> $RUST/core/src/marker.rs
+   |
+   | pub struct PhantomData<T: ?Sized>;
+   |            ^^^^^^^^^^^
 note: required because it appears within the type `ManuallyDrop<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/manually_drop.rs
+   |
+   | pub struct ManuallyDrop<T: ?Sized> {
+   |            ^^^^^^^^^^^^
 note: required because it appears within the type `MaybeUninit<PhantomData<*const ()>>`
   --> $RUST/core/src/mem/maybe_uninit.rs
+   |
+   | pub union MaybeUninit<T> {
+   |           ^^^^^^^^^^^
    = note: required because it appears within the type `[MaybeUninit<PhantomData<*const ()>>; 4]`
 note: required because it appears within the type `HistoryBuffer<PhantomData<*const ()>, 4>`
   --> $HEAPLESS/src/histbuf.rs

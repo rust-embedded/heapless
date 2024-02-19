@@ -564,9 +564,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::vec::Vec;
+    use static_assertions::assert_not_impl_any;
 
-    use crate::binary_heap::{BinaryHeap, Max, Min};
+    use super::{BinaryHeap, Max, Min};
+
+    // Ensure a `BinaryHeap` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(BinaryHeap<*const (), Max, 4>: Send);
+    assert_not_impl_any!(BinaryHeap<*const (), Min, 4>: Send);
 
     #[test]
     fn static_new() {

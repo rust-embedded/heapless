@@ -3,7 +3,6 @@ use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
-    iter::FromIterator,
 };
 use hash32::{BuildHasherDefault, FnvHasher};
 

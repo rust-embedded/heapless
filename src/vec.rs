@@ -1,7 +1,6 @@
 use core::{
     cmp::Ordering,
     fmt, hash,
-    iter::FromIterator,
     mem,
     mem::{ManuallyDrop, MaybeUninit},
     ops, ptr, slice,
