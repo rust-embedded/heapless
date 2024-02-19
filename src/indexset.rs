@@ -1,10 +1,12 @@
-use crate::indexmap::{self, IndexMap};
 use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
 };
+
 use hash32::{BuildHasherDefault, FnvHasher};
+
+use crate::indexmap::{self, IndexMap};
 
 /// An [`IndexSet`] using the default FNV hasher.
 ///
@@ -658,4 +660,14 @@ where
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use static_assertions::assert_not_impl_any;
+
+    use super::{BuildHasherDefault, IndexSet};
+
+    // Ensure a `IndexSet` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(IndexSet<*const (), BuildHasherDefault<()>, 4>: Send);
 }

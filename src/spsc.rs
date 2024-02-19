@@ -632,7 +632,18 @@ impl<'a, T, const N: usize> Producer<'a, T, N> {
 mod tests {
     use std::hash::{Hash, Hasher};
 
-    use crate::spsc::Queue;
+    use super::{Consumer, Producer, Queue};
+
+    use static_assertions::assert_not_impl_any;
+
+    // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Queue<*const (), 4>: Send);
+
+    // Ensure a `Producer` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Producer<*const (), 4>: Send);
+
+    // Ensure a `Consumer` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Consumer<*const (), 4>: Send);
 
     #[test]
     fn full() {

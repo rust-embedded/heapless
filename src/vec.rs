@@ -1,7 +1,6 @@
 use core::{
     cmp::Ordering,
-    fmt, hash,
-    mem,
+    fmt, hash, mem,
     mem::{ManuallyDrop, MaybeUninit},
     ops, ptr, slice,
 };
@@ -2079,8 +2078,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::Vec;
     use core::fmt::Write;
+
+    use static_assertions::assert_not_impl_any;
+
+    use crate::Vec;
+
+    // Ensure a `Vec` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Vec<*const (), 4>: Send);
 
     #[test]
     fn static_new() {

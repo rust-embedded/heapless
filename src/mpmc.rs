@@ -294,7 +294,12 @@ unsafe fn enqueue<T>(
 
 #[cfg(test)]
 mod tests {
-    use super::Q2;
+    use static_assertions::assert_not_impl_any;
+
+    use super::{MpMcQueue, Q2};
+
+    // Ensure a `MpMcQueue` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(MpMcQueue<*const (), 4>: Send);
 
     #[test]
     fn sanity() {

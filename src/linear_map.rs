@@ -1,5 +1,6 @@
-use crate::Vec;
 use core::{borrow::Borrow, fmt, mem, ops, slice};
+
+use crate::Vec;
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
@@ -492,7 +493,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::LinearMap;
+    use static_assertions::assert_not_impl_any;
+
+    use super::LinearMap;
+
+    // Ensure a `LinearMap` containing `!Send` keys stays `!Send` itself.
+    assert_not_impl_any!(LinearMap<*const (), (), 4>: Send);
+    // Ensure a `LinearMap` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(LinearMap<(), *const (), 4>: Send);
 
     #[test]
     fn static_new() {
