@@ -7,8 +7,8 @@
 //!
 //! This queue can be constructed in "const context". Placing it in a `static` variable lets *all*
 //! contexts (interrupts/threads/`main`) safely enqueue and dequeue items from it.
-//!
-//! ``` ignore
+#![cfg_attr(all(target_arch = "arm", target_os = "none"), doc = "```no_run\n")]
+#![cfg_attr(not(all(target_arch = "arm", target_os = "none")), doc = "```ignore\n")]
 //! #![no_main]
 //! #![no_std]
 //!
@@ -50,7 +50,7 @@
 //!     *COUNT += 1;
 //! }
 //! ```
-//!
+//! 
 //! # Benchmark
 //!
 //! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles

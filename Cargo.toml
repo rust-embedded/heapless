@@ -54,6 +54,12 @@ stable_deref_trait = { version = "1", default-features = false }
 ufmt = "0.2"
 static_assertions = "1.1.0"
 
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dev-dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+cortex-m-semihosting = "0.5"
+panic-semihosting = "0.6"
+
 [package.metadata.docs.rs]
 features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
 # for the pool module
