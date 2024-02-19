@@ -16,6 +16,7 @@ impl<N> AtomicPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub const fn null() -> Self {
         Self {
             inner: UnsafeCell::new(None),
@@ -34,10 +35,12 @@ impl<N> NonNullPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub fn as_ptr(&self) -> *mut N {
         self.inner.as_ptr().cast()
     }
 
+    #[inline]
     pub fn from_static_mut_ref(ref_: &'static mut N) -> Self {
         Self {
             inner: NonNull::from(ref_),

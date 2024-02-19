@@ -1,6 +1,6 @@
 use core::mem::ManuallyDrop;
 
-#[cfg_attr(target_arch = "x86", path = "treiber/cas.rs")]
+#[cfg_attr(not(arm_llsc), path = "treiber/cas.rs")]
 #[cfg_attr(arm_llsc, path = "treiber/llsc.rs")]
 mod impl_;
 
