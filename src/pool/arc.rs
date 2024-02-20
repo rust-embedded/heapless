@@ -89,10 +89,13 @@ macro_rules! arc_pool {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::arc::ArcPoolImpl<$data_type> {
-                static POOL: $crate::pool::arc::ArcPoolImpl<$data_type> =
+                // Even though the static variable is not exposed to user code, it is
+                // still useful to have a descriptive symbol name for debugging.
+                #[allow(non_upper_case_globals)]
+                static $name: $crate::pool::arc::ArcPoolImpl<$data_type> =
                     $crate::pool::arc::ArcPoolImpl::new();
 
-                &POOL
+                &$name
             }
         }
 

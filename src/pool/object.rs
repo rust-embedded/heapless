@@ -88,10 +88,13 @@ macro_rules! object_pool {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::object::ObjectPoolImpl<$data_type> {
-                static POOL: $crate::pool::object::ObjectPoolImpl<$data_type> =
+                // Even though the static variable is not exposed to user code, it is
+                // still useful to have a descriptive symbol name for debugging.
+                #[allow(non_upper_case_globals)]
+                static $name: $crate::pool::object::ObjectPoolImpl<$data_type> =
                     $crate::pool::object::ObjectPoolImpl::new();
 
-                &POOL
+                &$name
             }
         }
 

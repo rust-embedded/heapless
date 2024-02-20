@@ -101,10 +101,13 @@ macro_rules! box_pool {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::boxed::BoxPoolImpl<$data_type> {
-                static POOL: $crate::pool::boxed::BoxPoolImpl<$data_type> =
+                // Even though the static variable is not exposed to user code, it is
+                // still useful to have a descriptive symbol name for debugging.
+                #[allow(non_upper_case_globals)]
+                static $name: $crate::pool::boxed::BoxPoolImpl<$data_type> =
                     $crate::pool::boxed::BoxPoolImpl::new();
 
-                &POOL
+                &$name
             }
         }
 
