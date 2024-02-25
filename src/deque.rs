@@ -745,7 +745,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::Deque;
+    use static_assertions::assert_not_impl_any;
+
+    use super::Deque;
+
+    // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Deque<*const (), 4>: Send);
 
     #[test]
     fn static_new() {

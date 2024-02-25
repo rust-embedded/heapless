@@ -2,7 +2,6 @@ use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
-    iter::FromIterator,
     mem,
     num::NonZeroU32,
     ops, slice,
@@ -1263,9 +1262,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{indexmap::Entry, FnvIndexMap};
-
     use core::mem;
+
+    use static_assertions::assert_not_impl_any;
+
+    use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap};
+
+    // Ensure a `IndexMap` containing `!Send` keys stays `!Send` itself.
+    assert_not_impl_any!(IndexMap<*const (), (), BuildHasherDefault<()>, 4>: Send);
+    // Ensure a `IndexMap` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(IndexMap<(), *const (), BuildHasherDefault<()>, 4>: Send);
 
     #[test]
     fn size() {

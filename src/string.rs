@@ -733,7 +733,6 @@ impl_try_from_num!(u64, 20);
 #[cfg(test)]
 mod tests {
     use crate::{String, Vec};
-    use core::convert::TryFrom;
 
     #[test]
     fn static_new() {

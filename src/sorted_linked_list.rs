@@ -743,7 +743,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use static_assertions::assert_not_impl_any;
+
     use super::*;
+
+    // Ensure a `SortedLinkedList` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(SortedLinkedList<*const (), LinkedIndexU8, (), 4>: Send);
 
     #[test]
     fn const_new() {

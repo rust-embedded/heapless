@@ -433,9 +433,15 @@ impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::HistoryBuffer;
     use core::fmt::Debug;
     use core::sync::atomic::{AtomicUsize, Ordering};
+
+    use static_assertions::assert_not_impl_any;
+
+    use super::HistoryBuffer;
+
+    // Ensure a `HistoryBuffer` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(HistoryBuffer<*const (), 4>: Send);
 
     #[test]
     fn new() {
