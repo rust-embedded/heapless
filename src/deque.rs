@@ -4,6 +4,46 @@ use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::{ptr, slice};
 
+pub trait DequeBuffer {
+    type T;
+    fn as_view(deque: &DequeInner<Self>) -> &DequeView<Self::T>;
+    fn as_mut_view(deque: &mut DequeInner<Self>) -> &mut DequeView<Self::T>;
+}
+
+impl<T, const N: usize> DequeBuffer for [MaybeUninit<T>; N] {
+    type T = T;
+    fn as_view(deque: &DequeInner<Self>) -> &DequeView<Self::T> {
+        deque
+    }
+    fn as_mut_view(deque: &mut DequeInner<Self>) -> &mut DequeView<Self::T> {
+        deque
+    }
+}
+
+impl<T> DequeBuffer for [MaybeUninit<T>] {
+    type T = T;
+    fn as_view(deque: &DequeInner<Self>) -> &DequeView<Self::T> {
+        deque
+    }
+    fn as_mut_view(deque: &mut DequeInner<Self>) -> &mut DequeView<Self::T> {
+        deque
+    }
+}
+
+/// <div class="warn">This is private API and should not be used</div>
+pub struct DequeInner<B: ?Sized + DequeBuffer> {
+    /// Front index. Always 0..=(N-1)
+    front: usize,
+    /// Back index. Always 0..=(N-1).
+    back: usize,
+
+    /// Used to distinguish "empty" and "full" cases when `front == back`.
+    /// May only be `true` if `front == back`, always `false` otherwise.
+    full: bool,
+
+    buffer: B,
+}
+
 /// A fixed capacity double-ended queue.
 ///
 /// # Examples
@@ -38,58 +78,59 @@ use core::{ptr, slice};
 ///     println!("{}", x);
 /// }
 /// ```
-pub struct Deque<T, const N: usize> {
-    buffer: [MaybeUninit<T>; N],
+pub type Deque<T, const N: usize> = DequeInner<[MaybeUninit<T>; N]>;
 
-    /// Front index. Always 0..=(N-1)
-    front: usize,
-    /// Back index. Always 0..=(N-1).
-    back: usize,
+/// A double-ended queue with dynamic capacity.
+///
+/// # Examples
+///
+/// ```
+/// use heapless::{Deque, DequeView};
+///
+/// // A deque with a fixed capacity of 8 elements allocated on the stack
+/// let mut deque_buf = Deque::<_, 8>::new();
+///
+/// // A DequeView can be obtained through unsized coercion of a `Deque`
+/// let deque: &mut DequeView<_> = &mut deque_buf;
+///
+/// // You can use it as a good old FIFO queue.
+/// deque.push_back(1);
+/// deque.push_back(2);
+/// assert_eq!(deque.len(), 2);
+///
+/// assert_eq!(deque.pop_front(), Some(1));
+/// assert_eq!(deque.pop_front(), Some(2));
+/// assert_eq!(deque.len(), 0);
+///
+/// // DequeView is double-ended, you can push and pop from the front and back.
+/// deque.push_back(1);
+/// deque.push_front(2);
+/// deque.push_back(3);
+/// deque.push_front(4);
+/// assert_eq!(deque.pop_front(), Some(4));
+/// assert_eq!(deque.pop_front(), Some(2));
+/// assert_eq!(deque.pop_front(), Some(1));
+/// assert_eq!(deque.pop_front(), Some(3));
+///
+/// // You can iterate it, yielding all the elements front-to-back.
+/// for x in deque {
+///     println!("{}", x);
+/// }
+/// ```
+pub type DequeView<T> = DequeInner<[MaybeUninit<T>]>;
 
-    /// Used to distinguish "empty" and "full" cases when `front == back`.
-    /// May only be `true` if `front == back`, always `false` otherwise.
-    full: bool,
-}
-
-impl<T, const N: usize> Deque<T, N> {
-    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
-
-    /// Constructs a new, empty deque with a fixed capacity of `N`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Deque;
-    ///
-    /// // allocate the deque on the stack
-    /// let mut x: Deque<u8, 16> = Deque::new();
-    ///
-    /// // allocate the deque in a static variable
-    /// static mut X: Deque<u8, 16> = Deque::new();
-    /// ```
-    pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
-
-        Self {
-            buffer: [Self::INIT; N],
-            front: 0,
-            back: 0,
-            full: false,
-        }
-    }
-
-    fn increment(i: usize) -> usize {
-        if i + 1 == N {
+impl<T> DequeView<T> {
+    fn increment(&self, i: usize) -> usize {
+        if i + 1 == self.capacity() {
             0
         } else {
             i + 1
         }
     }
 
-    fn decrement(i: usize) -> usize {
+    fn decrement(&self, i: usize) -> usize {
         if i == 0 {
-            N - 1
+            self.capacity() - 1
         } else {
             i - 1
         }
@@ -97,15 +138,15 @@ impl<T, const N: usize> Deque<T, N> {
 
     /// Returns the maximum number of elements the deque can hold.
     pub const fn capacity(&self) -> usize {
-        N
+        self.buffer.len()
     }
 
     /// Returns the number of elements currently in the deque.
     pub const fn len(&self) -> usize {
         if self.full {
-            N
+            self.capacity()
         } else if self.back < self.front {
-            self.back + N - self.front
+            self.back + self.capacity() - self.front
         } else {
             self.back - self.front
         }
@@ -121,7 +162,7 @@ impl<T, const N: usize> Deque<T, N> {
     }
 
     /// Drop all items in the `Deque`, leaving the state `back/front/full` unmodified.
-    ///
+    ///                            
     /// safety: leaves the `Deque` in an inconsistent state, so can cause duplicate drops.
     unsafe fn drop_contents(&mut self) {
         // We drop each element used in the deque by turning into a &mut[T]
@@ -129,7 +170,6 @@ impl<T, const N: usize> Deque<T, N> {
         ptr::drop_in_place(a);
         ptr::drop_in_place(b);
     }
-
     /// Returns whether the deque is empty.
     pub fn is_empty(&self) -> bool {
         self.front == self.back && !self.full
@@ -150,7 +190,7 @@ impl<T, const N: usize> Deque<T, N> {
                 (
                     slice::from_raw_parts(
                         self.buffer.as_ptr().add(self.front) as *const T,
-                        N - self.front,
+                        self.capacity() - self.front,
                     ),
                     slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.back),
                 )
@@ -169,14 +209,18 @@ impl<T, const N: usize> Deque<T, N> {
     /// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.
     pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
         let ptr = self.buffer.as_mut_ptr();
+        let is_empty = self.front == self.back && !self.full;
 
         // NOTE(unsafe) avoid bound checks in the slicing operation
         unsafe {
-            if self.is_empty() {
+            if is_empty {
                 (&mut [], &mut [])
             } else if self.back <= self.front {
                 (
-                    slice::from_raw_parts_mut(ptr.add(self.front) as *mut T, N - self.front),
+                    slice::from_raw_parts_mut(
+                        ptr.add(self.front) as *mut T,
+                        self.buffer.len() - self.front,
+                    ),
                     slice::from_raw_parts_mut(ptr as *mut T, self.back),
                 )
             } else {
@@ -193,7 +237,7 @@ impl<T, const N: usize> Deque<T, N> {
 
     #[inline]
     fn is_contiguous(&self) -> bool {
-        self.front <= N - self.len()
+        self.front <= self.capacity() - self.len()
     }
 
     /// Rearranges the internal storage of the [`Deque`] to make it into a contiguous slice,
@@ -211,9 +255,10 @@ impl<T, const N: usize> Deque<T, N> {
     /// # Examples
     /// Sorting a deque:
     /// ```
-    /// use heapless::Deque;
+    /// use heapless::{Deque, DequeView};
     ///
-    /// let mut buf = Deque::<_, 4>::new();
+    /// let mut deque_buf = Deque::<_, 4>::new();
+    /// let buf: &mut DequeView<_> = &mut deque_buf;
     /// buf.push_back(2).unwrap();
     /// buf.push_back(1).unwrap();
     /// buf.push_back(3).unwrap();
@@ -240,8 +285,8 @@ impl<T, const N: usize> Deque<T, N> {
 
         let len = self.len();
 
-        let free = N - len;
-        let front_len = N - self.front;
+        let free = self.capacity() - len;
+        let front_len = self.capacity() - self.front;
         let back = len - front_len;
         let back_len = back;
 
@@ -320,7 +365,8 @@ impl<T, const N: usize> Deque<T, N> {
 
                     // We just copied the tail right next to the head slice,
                     // so all of the elements in the range are initialized
-                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr.add(free), N - free);
+                    let slice: &mut [T] =
+                        slice::from_raw_parts_mut(buffer_ptr.add(free), self.capacity() - free);
 
                     // because the deque wasn't contiguous, we know that `tail_len < self.len == slice.len()`,
                     // so this will never panic.
@@ -391,7 +437,7 @@ impl<T, const N: usize> Deque<T, N> {
         if self.is_empty() {
             None
         } else {
-            let index = Self::decrement(self.back);
+            let index = self.decrement(self.back);
             Some(unsafe { &*self.buffer.get_unchecked(index).as_ptr() })
         }
     }
@@ -401,7 +447,7 @@ impl<T, const N: usize> Deque<T, N> {
         if self.is_empty() {
             None
         } else {
-            let index = Self::decrement(self.back);
+            let index = self.decrement(self.back);
             Some(unsafe { &mut *self.buffer.get_unchecked_mut(index).as_mut_ptr() })
         }
     }
@@ -459,7 +505,7 @@ impl<T, const N: usize> Deque<T, N> {
 
         let index = self.front;
         self.full = false;
-        self.front = Self::increment(self.front);
+        self.front = self.increment(self.front);
         self.buffer.get_unchecked_mut(index).as_ptr().read()
     }
 
@@ -473,7 +519,7 @@ impl<T, const N: usize> Deque<T, N> {
         debug_assert!(!self.is_empty());
 
         self.full = false;
-        self.back = Self::decrement(self.back);
+        self.back = self.decrement(self.back);
         self.buffer.get_unchecked_mut(self.back).as_ptr().read()
     }
 
@@ -485,7 +531,7 @@ impl<T, const N: usize> Deque<T, N> {
     pub unsafe fn push_front_unchecked(&mut self, item: T) {
         debug_assert!(!self.is_full());
 
-        let index = Self::decrement(self.front);
+        let index = self.decrement(self.front);
         // NOTE: the memory slot that we are about to write to is uninitialized. We assign
         // a `MaybeUninit` to avoid running `T`'s destructor on the uninitialized memory
         *self.buffer.get_unchecked_mut(index) = MaybeUninit::new(item);
@@ -506,10 +552,281 @@ impl<T, const N: usize> Deque<T, N> {
         // NOTE: the memory slot that we are about to write to is uninitialized. We assign
         // a `MaybeUninit` to avoid running `T`'s destructor on the uninitialized memory
         *self.buffer.get_unchecked_mut(self.back) = MaybeUninit::new(item);
-        self.back = Self::increment(self.back);
+        self.back = self.increment(self.back);
         if self.front == self.back {
             self.full = true;
         }
+    }
+
+    /// Returns an iterator over the deque.
+    pub fn iter(&self) -> IterView<'_, T> {
+        let (a, b) = self.as_slices();
+
+        IterView {
+            inner: a.iter().chain(b),
+        }
+    }
+
+    /// Returns an iterator that allows modifying each value.
+    pub fn iter_mut(&mut self) -> IterViewMut<'_, T> {
+        let (a, b) = self.as_mut_slices();
+
+        IterViewMut {
+            inner: a.iter_mut().chain(b),
+        }
+    }
+}
+
+impl<T, const N: usize> Deque<T, N> {
+    const INIT: MaybeUninit<T> = MaybeUninit::uninit();
+
+    /// Constructs a new, empty deque with a fixed capacity of `N`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// // allocate the deque on the stack
+    /// let mut x: Deque<u8, 16> = Deque::new();
+    ///
+    /// // allocate the deque in a static variable
+    /// static mut X: Deque<u8, 16> = Deque::new();
+    /// ```
+    pub const fn new() -> Self {
+        // Const assert N > 0
+        crate::sealed::greater_than_0::<N>();
+
+        Self {
+            buffer: [Self::INIT; N],
+            front: 0,
+            back: 0,
+            full: false,
+        }
+    }
+
+    /// Get a reference to the `Deque`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::{Deque, DequeView};
+    /// let deque: Deque<u8, 10> = Deque::new();
+    /// let view: &DequeView<u8> = deque.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Deque<T, N>` implements `Unsize<DequeView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Deque, DequeView};
+    /// let deque: Deque<u8, 10> = Deque::new();
+    /// let view: &DequeView<u8> = &deque;
+    /// ```
+    pub const fn as_view(&self) -> &DequeView<T> {
+        self
+    }
+
+    /// Get a mutable reference to the `Deque`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::{Deque, DequeView};
+    /// let mut deque: Deque<u8, 10> = Deque::new();
+    /// let view: &mut DequeView<u8> = deque.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Deque<T, N>` implements `Unsize<DequeView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Deque, DequeView};
+    /// let mut deque: Deque<u8, 10> = Deque::new();
+    /// let view: &mut DequeView<u8> = &mut deque;
+    /// ```
+    pub fn as_mut_view(&mut self) -> &mut DequeView<T> {
+        self
+    }
+
+    fn increment(i: usize) -> usize {
+        if i + 1 == N {
+            0
+        } else {
+            i + 1
+        }
+    }
+
+    fn decrement(i: usize) -> usize {
+        if i == 0 {
+            N - 1
+        } else {
+            i - 1
+        }
+    }
+
+    /// Returns the maximum number of elements the deque can hold.
+    pub const fn capacity(&self) -> usize {
+        N
+    }
+
+    /// Returns the number of elements currently in the deque.
+    #[inline]
+    pub const fn len(&self) -> usize {
+        self.as_view().len()
+    }
+
+    /// Clears the deque, removing all values.
+    #[inline]
+    pub fn clear(&mut self) {
+        self.as_mut_view().clear()
+    }
+
+    /// Returns whether the deque is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_view().is_empty()
+    }
+
+    /// Returns whether the deque is full (i.e. if `len() == capacity()`.
+    #[inline]
+    pub fn is_full(&self) -> bool {
+        self.as_view().is_full()
+    }
+
+    /// Returns a pair of slices which contain, in order, the contents of the `Deque`.
+    #[inline]
+    pub fn as_slices(&self) -> (&[T], &[T]) {
+        self.as_view().as_slices()
+    }
+
+    /// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.
+    #[inline]
+    pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
+        self.as_mut_view().as_mut_slices()
+    }
+
+    /// Rearranges the internal storage of the [`Deque`] to make it into a contiguous slice,
+    /// which is returned.
+    ///
+    /// This does **not** change the order of the elements in the deque.
+    /// The returned slice can then be used to perform contiguous slice operations on the deque.
+    ///
+    /// After calling this method, subsequent [`as_slices`] and [`as_mut_slices`] calls will return
+    /// a single contiguous slice.
+    ///
+    /// [`as_slices`]: Deque::as_slices
+    /// [`as_mut_slices`]: Deque::as_mut_slices
+    ///
+    /// # Examples
+    /// Sorting a deque:
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut buf = Deque::<_, 4>::new();
+    /// buf.push_back(2).unwrap();
+    /// buf.push_back(1).unwrap();
+    /// buf.push_back(3).unwrap();
+    ///
+    /// // Sort the deque
+    /// buf.make_contiguous().sort();
+    /// assert_eq!(buf.as_slices(), (&[1, 2, 3][..], &[][..]));
+    ///
+    /// // Sort the deque in reverse
+    /// buf.make_contiguous().sort_by(|a, b| b.cmp(a));
+    /// assert_eq!(buf.as_slices(), (&[3, 2, 1][..], &[][..]));
+    /// ```
+    #[inline]
+    pub fn make_contiguous(&mut self) -> &mut [T] {
+        self.as_mut_view().make_contiguous()
+    }
+
+    /// Provides a reference to the front element, or None if the `Deque` is empty.
+    #[inline]
+    pub fn front(&self) -> Option<&T> {
+        self.as_view().front()
+    }
+
+    /// Provides a mutable reference to the front element, or None if the `Deque` is empty.
+    #[inline]
+    pub fn front_mut(&mut self) -> Option<&mut T> {
+        self.as_mut_view().front_mut()
+    }
+
+    /// Provides a reference to the back element, or None if the `Deque` is empty.
+    #[inline]
+    pub fn back(&self) -> Option<&T> {
+        self.as_view().back()
+    }
+
+    /// Provides a mutable reference to the back element, or None if the `Deque` is empty.
+    #[inline]
+    pub fn back_mut(&mut self) -> Option<&mut T> {
+        self.as_mut_view().back_mut()
+    }
+
+    /// Removes the item from the front of the deque and returns it, or `None` if it's empty
+    #[inline]
+    pub fn pop_front(&mut self) -> Option<T> {
+        self.as_mut_view().pop_front()
+    }
+
+    /// Removes the item from the back of the deque and returns it, or `None` if it's empty
+    #[inline]
+    pub fn pop_back(&mut self) -> Option<T> {
+        self.as_mut_view().pop_back()
+    }
+
+    /// Appends an `item` to the front of the deque
+    ///
+    /// Returns back the `item` if the deque is full
+    #[inline]
+    pub fn push_front(&mut self, item: T) -> Result<(), T> {
+        self.as_mut_view().push_front(item)
+    }
+
+    /// Appends an `item` to the back of the deque
+    ///
+    /// Returns back the `item` if the deque is full
+    #[inline]
+    pub fn push_back(&mut self, item: T) -> Result<(), T> {
+        self.as_mut_view().push_back(item)
+    }
+
+    /// Removes an item from the front of the deque and returns it, without checking that the deque
+    /// is not empty
+    ///
+    /// # Safety
+    ///
+    /// It's undefined behavior to call this on an empty deque
+    #[inline]
+    pub unsafe fn pop_front_unchecked(&mut self) -> T {
+        self.as_mut_view().pop_front_unchecked()
+    }
+
+    /// Removes an item from the back of the deque and returns it, without checking that the deque
+    /// is not empty
+    ///
+    /// # Safety
+    ///
+    /// It's undefined behavior to call this on an empty deque
+    #[inline]
+    pub unsafe fn pop_back_unchecked(&mut self) -> T {
+        self.as_mut_view().pop_back_unchecked()
+    }
+
+    /// Appends an `item` to the front of the deque
+    ///
+    /// # Safety
+    ///
+    /// This assumes the deque is not full.
+    #[inline]
+    pub unsafe fn push_front_unchecked(&mut self, item: T) {
+        self.as_mut_view().push_front_unchecked(item)
+    }
+
+    /// Appends an `item` to the back of the deque
+    ///
+    /// # Safety
+    ///
+    /// This assumes the deque is not full.
+    #[inline]
+    pub unsafe fn push_back_unchecked(&mut self, item: T) {
+        self.as_mut_view().push_back_unchecked(item)
     }
 
     /// Returns an iterator over the deque.
@@ -545,33 +862,49 @@ impl<T, const N: usize> Default for Deque<T, N> {
     }
 }
 
-impl<T, const N: usize> Drop for Deque<T, N> {
+impl<B: ?Sized + DequeBuffer> Drop for DequeInner<B> {
     fn drop(&mut self) {
-        // safety: `self` is left in an inconsistent state but it doesn't matter since
-        // it's getting dropped. Nothing should be able to observe `self` after drop.
-        unsafe { self.drop_contents() }
-    }
-}
-
-impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self).finish()
-    }
-}
-
-/// As with the standard library's `VecDeque`, items are added via `push_back`.
-impl<T, const N: usize> Extend<T> for Deque<T, N> {
-    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        for item in iter {
-            self.push_back(item).ok().unwrap();
+        let (a, b) = DequeBuffer::as_mut_view(self).as_mut_slices();
+        // SAFETY: The slices of the deque contain all the initialized data of the deque.
+        unsafe {
+            ptr::drop_in_place(a);
+            ptr::drop_in_place(b);
         }
     }
 }
-impl<'a, T: 'a + Copy, const N: usize> Extend<&'a T> for Deque<T, N> {
-    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
-        self.extend(iter.into_iter().copied())
+
+macro_rules! imp_traits {
+    ($Ty:ident$(<const $N:ident : usize, const $M:ident : usize>)?) => {
+        impl<T, $(const $M: usize)*> fmt::Debug for $Ty<T, $($M)*>
+        where T: fmt::Debug
+        {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_list().entries(self).finish()
+            }
+        }
+
+        /// As with the standard library's `VecDeque`, items are added via `push_back`.
+        impl<T, $(const $M: usize)*> Extend<T> for $Ty<T, $($M)*>
+        {
+            fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+                for item in iter {
+                    self.push_back(item).ok().unwrap();
+                }
+            }
+        }
+
+
+        impl<'a, T: 'a + Copy, $(const $M: usize)*> Extend<&'a T> for $Ty<T, $($M)*> {
+            fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+                self.extend(iter.into_iter().copied())
+            }
+        }
     }
 }
+
+imp_traits!(Deque<const N: usize, const M: usize>);
+imp_traits!(DequeView);
 
 /// An iterator that moves out of a [`Deque`].
 ///
@@ -728,6 +1061,64 @@ impl<'a, T, const N: usize> IntoIterator for &'a mut Deque<T, N> {
     }
 }
 
+pub struct IterView<'a, T> {
+    inner: core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>,
+}
+
+impl<'a, T> Iterator for IterView<'a, T> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for IterView<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
+impl<'a, T> ExactSizeIterator for IterView<'a, T> {}
+impl<'a, T> FusedIterator for IterView<'a, T> {}
+
+pub struct IterViewMut<'a, T> {
+    inner: core::iter::Chain<core::slice::IterMut<'a, T>, core::slice::IterMut<'a, T>>,
+}
+
+impl<'a, T> Iterator for IterViewMut<'a, T> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for IterViewMut<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
+impl<'a, T> ExactSizeIterator for IterViewMut<'a, T> {}
+impl<'a, T> FusedIterator for IterViewMut<'a, T> {}
+
+impl<'a, T> IntoIterator for &'a DequeView<T> {
+    type Item = &'a T;
+    type IntoIter = IterView<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut DequeView<T> {
+    type Item = &'a mut T;
+    type IntoIter = IterViewMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 impl<T, const N: usize> Clone for Deque<T, N>
 where
     T: Clone,
@@ -747,7 +1138,7 @@ where
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::Deque;
+    use super::{Deque, DequeView};
 
     // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Deque<*const (), 4>: Send);
@@ -786,6 +1177,42 @@ mod tests {
             let mut v: Deque<Droppable, 2> = Deque::new();
             v.push_front(Droppable::new()).ok().unwrap();
             v.push_front(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn drop_view() {
+        droppable!();
+
+        {
+            let v: Deque<Droppable, 2> = Deque::new();
+            let mut v: Box<DequeView<Droppable>> = Box::new(v);
+            v.push_back(Droppable::new()).ok().unwrap();
+            v.push_back(Droppable::new()).ok().unwrap();
+            assert_eq!(Droppable::count(), 2);
+            v.pop_front().unwrap();
+            assert_eq!(Droppable::count(), 1);
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let v: Deque<Droppable, 2> = Deque::new();
+            let mut v: Box<DequeView<Droppable>> = Box::new(v);
+            v.push_back(Droppable::new()).ok().unwrap();
+            v.push_back(Droppable::new()).ok().unwrap();
+            assert_eq!(Droppable::count(), 2);
+        }
+
+        assert_eq!(Droppable::count(), 0);
+        {
+            let v: Deque<Droppable, 2> = Deque::new();
+            let mut v: Box<DequeView<Droppable>> = Box::new(v);
+            v.push_front(Droppable::new()).ok().unwrap();
+            v.push_front(Droppable::new()).ok().unwrap();
+            assert_eq!(Droppable::count(), 2);
         }
 
         assert_eq!(Droppable::count(), 0);
@@ -949,8 +1376,8 @@ mod tests {
             deque.push_back(Droppable::new()).ok().unwrap();
             let mut items = deque.into_iter();
             // Move all
-            let _ = items.next();
-            let _ = items.next();
+            let _ = items.next().unwrap();
+            let _ = items.next().unwrap();
         }
 
         assert_eq!(Droppable::count(), 0);

@@ -86,7 +86,7 @@
 )]
 
 pub use binary_heap::BinaryHeap;
-pub use deque::Deque;
+pub use deque::{Deque, DequeView};
 pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use indexmap::{
     Bucket, Entry, FnvIndexMap, IndexMap, Iter as IndexMapIter, IterMut as IndexMapIterMut,
@@ -102,7 +102,11 @@ pub use string::String;
 // doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
 #[cfg(doc)]
 #[doc(hidden)]
+pub use deque::DequeInner as _;
+#[cfg(doc)]
+#[doc(hidden)]
 pub use vec::VecInner as _;
+
 pub use vec::{Vec, VecView};
 
 #[macro_use]
