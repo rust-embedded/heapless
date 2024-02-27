@@ -125,7 +125,8 @@ mod arch {
     }
 
     /// # Safety
-    /// - `addr` must be a valid pointer
+    ///
+    /// - `addr` must be a valid pointer.
     #[inline(always)]
     pub unsafe fn load_link(addr: *const usize) -> usize {
         let value;
@@ -134,7 +135,8 @@ mod arch {
     }
 
     /// # Safety
-    /// - `addr` must be a valid pointer
+    ///
+    /// - `addr` must be a valid pointer.
     #[inline(always)]
     pub unsafe fn store_conditional(value: usize, addr: *mut usize) -> Result<(), ()> {
         let outcome: usize;
