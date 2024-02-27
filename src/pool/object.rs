@@ -5,37 +5,37 @@
 //! ```
 //! use heapless::{object_pool, pool::object::{Object, ObjectBlock}};
 //!
-//! object_pool!(P: [u8; 128]);
+//! object_pool!(MyObjectPool: [u8; 128]);
 //!
 //! // cannot request objects without first giving object blocks to the pool
-//! assert!(P.request().is_none());
+//! assert!(MyObjectPool.request().is_none());
 //!
 //! // (some `no_std` runtimes have safe APIs to create `&'static mut` references)
 //! let block: &'static mut ObjectBlock<[u8; 128]> = unsafe {
 //!     // unlike the memory pool APIs, an initial value must be specified here
-//!     static mut B: ObjectBlock<[u8; 128]>= ObjectBlock::new([0; 128]);
-//!     &mut B
+//!     static mut BLOCK: ObjectBlock<[u8; 128]>= ObjectBlock::new([0; 128]);
+//!     &mut BLOCK
 //! };
 //!
 //! // give object block to the pool
-//! P.manage(block);
+//! MyObjectPool.manage(block);
 //!
 //! // it's now possible to request objects
 //! // unlike the memory pool APIs, no initial value is required here
-//! let mut object = P.request().unwrap();
+//! let mut object = MyObjectPool.request().unwrap();
 //!
 //! // mutation is possible
 //! object.iter_mut().for_each(|byte| *byte = byte.wrapping_add(1));
 //!
 //! // the number of live objects is limited to the number of blocks managed by the pool
-//! let res = P.request();
+//! let res = MyObjectPool.request();
 //! assert!(res.is_none());
 //!
 //! // `object`'s destructor returns the object to the pool
 //! drop(object);
 //!
 //! // it's possible to request an `Object` again
-//! let res = P.request();
+//! let res = MyObjectPool.request();
 //!
 //! assert!(res.is_some());
 //! ```
@@ -48,7 +48,7 @@
 //! ```
 //! use heapless::{object_pool, pool::object::ObjectBlock};
 //!
-//! object_pool!(P: [u8; 128]);
+//! object_pool!(MyObjectPool: [u8; 128]);
 //!
 //! const POOL_CAPACITY: usize = 8;
 //!
@@ -59,7 +59,7 @@
 //! };
 //!
 //! for block in blocks {
-//!     P.manage(block);
+//!     MyObjectPool.manage(block);
 //! }
 //! ```
 
@@ -82,13 +82,14 @@ use super::treiber::{AtomicPtr, NonNullPtr, Stack, StructNode};
 #[macro_export]
 macro_rules! object_pool {
     ($name:ident: $data_type:ty) => {
-        #[allow(non_camel_case_types)]
         pub struct $name;
 
         impl $crate::pool::object::ObjectPool for $name {
             type Data = $data_type;
 
             fn singleton() -> &'static $crate::pool::object::ObjectPoolImpl<$data_type> {
+                // Even though the static variable is not exposed to user code, it is
+                // still useful to have a descriptive symbol name for debugging.
                 #[allow(non_upper_case_globals)]
                 static $name: $crate::pool::object::ObjectPoolImpl<$data_type> =
                     $crate::pool::object::ObjectPoolImpl::new();
@@ -336,63 +337,63 @@ mod tests {
 
     #[test]
     fn cannot_request_if_empty() {
-        object_pool!(P: i32);
+        object_pool!(MyObjectPool: i32);
 
-        assert_eq!(None, P.request());
+        assert_eq!(None, MyObjectPool.request());
     }
 
     #[test]
     fn can_request_if_manages_one_block() {
-        object_pool!(P: i32);
+        object_pool!(MyObjectPool: i32);
 
         let block = unsafe {
-            static mut B: ObjectBlock<i32> = ObjectBlock::new(1);
-            &mut B
+            static mut BLOCK: ObjectBlock<i32> = ObjectBlock::new(1);
+            &mut BLOCK
         };
-        P.manage(block);
+        MyObjectPool.manage(block);
 
-        assert_eq!(1, *P.request().unwrap());
+        assert_eq!(1, *MyObjectPool.request().unwrap());
     }
 
     #[test]
     fn request_drop_request() {
-        object_pool!(P: i32);
+        object_pool!(MyObjectPool: i32);
 
         let block = unsafe {
-            static mut B: ObjectBlock<i32> = ObjectBlock::new(1);
-            &mut B
+            static mut BLOCK: ObjectBlock<i32> = ObjectBlock::new(1);
+            &mut BLOCK
         };
-        P.manage(block);
+        MyObjectPool.manage(block);
 
-        let mut object = P.request().unwrap();
+        let mut object = MyObjectPool.request().unwrap();
 
         *object = 2;
         drop(object);
 
-        assert_eq!(2, *P.request().unwrap());
+        assert_eq!(2, *MyObjectPool.request().unwrap());
     }
 
     #[test]
     fn destructor_does_not_run_on_drop() {
         static COUNT: AtomicUsize = AtomicUsize::new(0);
 
-        pub struct S;
+        pub struct MyStruct;
 
-        impl Drop for S {
+        impl Drop for MyStruct {
             fn drop(&mut self) {
                 COUNT.fetch_add(1, atomic::Ordering::Relaxed);
             }
         }
 
-        object_pool!(P: S);
+        object_pool!(MyObjectPool: MyStruct);
 
         let block = unsafe {
-            static mut B: ObjectBlock<S> = ObjectBlock::new(S);
-            &mut B
+            static mut BLOCK: ObjectBlock<MyStruct> = ObjectBlock::new(MyStruct);
+            &mut BLOCK
         };
-        P.manage(block);
+        MyObjectPool.manage(block);
 
-        let object = P.request().unwrap();
+        let object = MyObjectPool.request().unwrap();
 
         assert_eq!(0, COUNT.load(atomic::Ordering::Relaxed));
 
@@ -406,24 +407,17 @@ mod tests {
         #[repr(align(4096))]
         pub struct Zst4096;
 
-        object_pool!(P: Zst4096);
+        object_pool!(MyObjectPool: Zst4096);
 
         let block = unsafe {
-            static mut B: ObjectBlock<Zst4096> = ObjectBlock::new(Zst4096);
-            &mut B
+            static mut BLOCK: ObjectBlock<Zst4096> = ObjectBlock::new(Zst4096);
+            &mut BLOCK
         };
-        P.manage(block);
+        MyObjectPool.manage(block);
 
-        let object = P.request().unwrap();
+        let object = MyObjectPool.request().unwrap();
 
         let raw = &*object as *const Zst4096;
         assert_eq!(0, raw as usize % 4096);
-    }
-
-    #[test]
-    fn object_pool_case() {
-        // https://github.com/rust-embedded/heapless/issues/411
-        object_pool!(CamelCaseType: u128);
-        object_pool!(SCREAMING_SNAKE_CASE_TYPE: u128);
     }
 }

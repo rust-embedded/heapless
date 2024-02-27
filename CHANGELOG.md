@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fixed clippy lints.
-- Fixed `{arc,box,object}_pool!` emitting clippy lints for `CamelCase` and `SNAKE_CASE`.
+- Fixed `{arc,box,object}_pool!` emitting clippy lints.
 - Fixed the list of implemented data structures in the crate docs, by adding `Deque`,
   `HistoryBuffer` and `SortedLinkedList` to the list.
 
