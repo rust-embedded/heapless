@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Extend` impls for `Deque`.
 - Added `Deque::make_contiguous`.
 - Added `VecView`, the `!Sized` version of `Vec`.
+- Added pool implementations for 64-bit architectures.
 
 ### Changed
 

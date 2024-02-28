@@ -1,17 +1,45 @@
-use core::{
-    marker::PhantomData,
-    num::{NonZeroU32, NonZeroU64},
-    ptr::NonNull,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use core::{marker::PhantomData, ptr::NonNull};
+
+#[cfg(not(feature = "portable-atomic"))]
+use core::sync::atomic;
+#[cfg(feature = "portable-atomic")]
+use portable_atomic as atomic;
+
+use atomic::Ordering;
 
 use super::{Node, Stack};
+
+#[cfg(target_pointer_width = "32")]
+mod types {
+    use super::atomic;
+
+    pub type Inner = u64;
+    pub type InnerAtomic = atomic::AtomicU64;
+    pub type InnerNonZero = core::num::NonZeroU64;
+
+    pub type Tag = core::num::NonZeroU32;
+    pub type Address = u32;
+}
+
+#[cfg(target_pointer_width = "64")]
+mod types {
+    use super::atomic;
+
+    pub type Inner = u128;
+    pub type InnerAtomic = atomic::AtomicU128;
+    pub type InnerNonZero = core::num::NonZeroU128;
+
+    pub type Tag = core::num::NonZeroU64;
+    pub type Address = u64;
+}
+
+use types::*;
 
 pub struct AtomicPtr<N>
 where
     N: Node,
 {
-    inner: AtomicU64,
+    inner: InnerAtomic,
     _marker: PhantomData<*mut N>,
 }
 
@@ -19,9 +47,10 @@ impl<N> AtomicPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub const fn null() -> Self {
         Self {
-            inner: AtomicU64::new(0),
+            inner: InnerAtomic::new(0),
             _marker: PhantomData,
         }
     }
@@ -35,29 +64,30 @@ where
     ) -> Result<(), Option<NonNullPtr<N>>> {
         self.inner
             .compare_exchange_weak(
-                current
-                    .map(|pointer| pointer.into_u64())
-                    .unwrap_or_default(),
-                new.map(|pointer| pointer.into_u64()).unwrap_or_default(),
+                current.map(NonNullPtr::into_inner).unwrap_or_default(),
+                new.map(NonNullPtr::into_inner).unwrap_or_default(),
                 success,
                 failure,
             )
             .map(drop)
-            .map_err(NonNullPtr::from_u64)
+            .map_err(|value| {
+                // SAFETY: `value` cam from a `NonNullPtr::into_inner` call.
+                unsafe { NonNullPtr::from_inner(value) }
+            })
     }
 
+    #[inline]
     fn load(&self, order: Ordering) -> Option<NonNullPtr<N>> {
-        NonZeroU64::new(self.inner.load(order)).map(|inner| NonNullPtr {
-            inner,
+        Some(NonNullPtr {
+            inner: InnerNonZero::new(self.inner.load(order))?,
             _marker: PhantomData,
         })
     }
 
+    #[inline]
     fn store(&self, value: Option<NonNullPtr<N>>, order: Ordering) {
-        self.inner.store(
-            value.map(|pointer| pointer.into_u64()).unwrap_or_default(),
-            order,
-        )
+        self.inner
+            .store(value.map(NonNullPtr::into_inner).unwrap_or_default(), order)
     }
 }
 
@@ -65,7 +95,7 @@ pub struct NonNullPtr<N>
 where
     N: Node,
 {
-    inner: NonZeroU64,
+    inner: InnerNonZero,
     _marker: PhantomData<*mut N>,
 }
 
@@ -84,65 +114,72 @@ impl<N> NonNullPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub fn as_ptr(&self) -> *mut N {
         self.inner.get() as *mut N
     }
 
-    pub fn from_static_mut_ref(ref_: &'static mut N) -> NonNullPtr<N> {
-        let non_null = NonNull::from(ref_);
-        Self::from_non_null(non_null)
+    #[inline]
+    pub fn from_static_mut_ref(reference: &'static mut N) -> NonNullPtr<N> {
+        // SAFETY: `reference` is a static mutable reference, i.e. a valid pointer.
+        unsafe { Self::new_unchecked(initial_tag(), NonNull::from(reference)) }
     }
 
-    fn from_non_null(ptr: NonNull<N>) -> Self {
-        let address = ptr.as_ptr() as u32;
-        let tag = initial_tag().get();
-
-        let value = (u64::from(tag) << 32) | u64::from(address);
+    /// # Safety
+    ///
+    /// - `ptr` must be a valid pointer.
+    #[inline]
+    unsafe fn new_unchecked(tag: Tag, ptr: NonNull<N>) -> Self {
+        let value =
+            (Inner::from(tag.get()) << Address::BITS) | Inner::from(ptr.as_ptr() as Address);
 
         Self {
-            inner: unsafe { NonZeroU64::new_unchecked(value) },
+            // SAFETY: `value` is constructed from a `Tag` which is non-zero and half the
+            //         size of the `InnerNonZero` type, and a `NonNull<N>` pointer.
+            inner: unsafe { InnerNonZero::new_unchecked(value) },
             _marker: PhantomData,
         }
     }
 
-    fn from_u64(value: u64) -> Option<Self> {
-        NonZeroU64::new(value).map(|inner| Self {
-            inner,
+    /// # Safety
+    ///
+    /// - `value` must come from a `Self::into_inner` call.
+    #[inline]
+    unsafe fn from_inner(value: Inner) -> Option<Self> {
+        Some(Self {
+            inner: InnerNonZero::new(value)?,
             _marker: PhantomData,
         })
     }
 
+    #[inline]
     fn non_null(&self) -> NonNull<N> {
-        unsafe { NonNull::new_unchecked(self.inner.get() as *mut N) }
+        // SAFETY: `Self` can only be constructed using a `NonNull<N>`.
+        unsafe { NonNull::new_unchecked(self.as_ptr()) }
     }
 
-    fn tag(&self) -> NonZeroU32 {
-        unsafe { NonZeroU32::new_unchecked((self.inner.get() >> 32) as u32) }
-    }
-
-    fn into_u64(self) -> u64 {
+    #[inline]
+    fn into_inner(self) -> Inner {
         self.inner.get()
     }
 
-    fn increase_tag(&mut self) {
-        let address = self.as_ptr() as u32;
+    #[inline]
+    fn tag(&self) -> Tag {
+        // SAFETY: `self.inner` was constructed from a non-zero `Tag`.
+        unsafe { Tag::new_unchecked((self.inner.get() >> Address::BITS) as Address) }
+    }
 
-        let new_tag = self
-            .tag()
-            .get()
-            .checked_add(1)
-            .map(|val| unsafe { NonZeroU32::new_unchecked(val) })
-            .unwrap_or_else(initial_tag)
-            .get();
+    fn increment_tag(&mut self) {
+        let new_tag = self.tag().checked_add(1).unwrap_or_else(initial_tag);
 
-        let value = (u64::from(new_tag) << 32) | u64::from(address);
-
-        self.inner = unsafe { NonZeroU64::new_unchecked(value) };
+        // SAFETY: `self.non_null()` is a valid pointer.
+        *self = unsafe { Self::new_unchecked(new_tag, self.non_null()) };
     }
 }
 
-fn initial_tag() -> NonZeroU32 {
-    unsafe { NonZeroU32::new_unchecked(1) }
+#[inline]
+const fn initial_tag() -> Tag {
+    Tag::MIN
 }
 
 pub unsafe fn push<N>(stack: &Stack<N>, new_top: NonNullPtr<N>)
@@ -184,7 +221,40 @@ where
                 .compare_and_exchange_weak(Some(top), next, Ordering::Release, Ordering::Relaxed)
                 .is_ok()
             {
-                top.increase_tag();
+                // Prevent the ABA problem (https://en.wikipedia.org/wiki/Treiber_stack#Correctness).
+                //
+                // Without this, the following would be possible:
+                //
+                // | Thread 1                      | Thread 2                | Stack                        |
+                // |-------------------------------|-------------------------|------------------------------|
+                // | push((1, 1))                  |                         | (1, 1)                       |
+                // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
+                // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
+                // |                               | p = try_pop() // (1, 2) | (1, 1)                       |
+                // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
+                // |                               | push(p)                 | (1, 2) -> (1, 3) -> (1, 1)   |
+                // | try_pop()::cas(p, p.next)     |                         | (1, 1)                       |
+                //
+                // As can be seen, the `cas` operation succeeds, wrongly removing pointer `3` from the stack.
+                //
+                // By incrementing the tag before returning the pointer, it cannot be pushed again with the,
+                // same tag, preventing the `try_pop()::cas(p, p.next)` operation from succeeding.
+                //
+                // With this fix, `try_pop()` in thread 2 returns `(2, 2)` and the comparison between
+                // `(1, 2)` and `(2, 2)` fails, restarting the loop and correctly removing the new top:
+                //
+                // | Thread 1                      | Thread 2                | Stack                        |
+                // |-------------------------------|-------------------------|------------------------------|
+                // | push((1, 1))                  |                         | (1, 1)                       |
+                // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
+                // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
+                // |                               | p = try_pop() // (2, 2) | (1, 1)                       |
+                // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
+                // |                               | push(p)                 | (2, 2) -> (1, 3) -> (1, 1)   |
+                // | try_pop()::cas(p, p.next)     |                         | (2, 2) -> (1, 3) -> (1, 1)   |
+                // | p = try_pop()::load // (2, 2) |                         | (2, 2) -> (1, 3) -> (1, 1)   |
+                // | try_pop()::cas(p, p.next)     |                         | (1, 3) -> (1, 1)             |
+                top.increment_tag();
 
                 return Some(top);
             }

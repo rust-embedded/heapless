@@ -43,11 +43,11 @@
 //!
 //! List of currently implemented data structures:
 #![cfg_attr(
-    any(arm_llsc, target_arch = "x86"),
+    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
     doc = "- [`Arc`](pool::arc::Arc) -- like `std::sync::Arc` but backed by a lock-free memory pool rather than `#[global_allocator]`"
 )]
 #![cfg_attr(
-    any(arm_llsc, target_arch = "x86"),
+    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
     doc = "- [`Box`](pool::boxed::Box) -- like `std::boxed::Box` but backed by a lock-free memory pool rather than `#[global_allocator]`"
 )]
 //! - [`BinaryHeap`] -- priority queue
@@ -57,7 +57,7 @@
 //! - [`IndexSet`] -- hash set
 //! - [`LinearMap`]
 #![cfg_attr(
-    any(arm_llsc, target_arch = "x86"),
+    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
     doc = "- [`Object`](pool::object::Object) -- objects managed by an object pool"
 )]
 //! - [`sorted_linked_list::SortedLinkedList`]
@@ -76,6 +76,14 @@
 #![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
+#![cfg_attr(
+    all(
+        feature = "nightly",
+        target_pointer_width = "64",
+        target_has_atomic = "128"
+    ),
+    feature(integer_atomics)
+)]
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
@@ -125,7 +133,20 @@ mod defmt;
     all(not(feature = "mpmc_large"), target_has_atomic = "8")
 ))]
 pub mod mpmc;
-#[cfg(any(arm_llsc, target_arch = "x86"))]
+#[cfg(any(
+    arm_llsc,
+    all(
+        target_pointer_width = "32",
+        any(target_has_atomic = "64", feature = "portable-atomic")
+    ),
+    all(
+        target_pointer_width = "64",
+        any(
+            all(target_has_atomic = "128", feature = "nightly"),
+            feature = "portable-atomic"
+        )
+    )
+))]
 pub mod pool;
 pub mod sorted_linked_list;
 #[cfg(any(

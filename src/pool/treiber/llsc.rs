@@ -16,6 +16,7 @@ impl<N> AtomicPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub const fn null() -> Self {
         Self {
             inner: UnsafeCell::new(None),
@@ -34,10 +35,12 @@ impl<N> NonNullPtr<N>
 where
     N: Node,
 {
+    #[inline]
     pub fn as_ptr(&self) -> *mut N {
         self.inner.as_ptr().cast()
     }
 
+    #[inline]
     pub fn from_static_mut_ref(ref_: &'static mut N) -> Self {
         Self {
             inner: NonNull::from(ref_),
@@ -122,7 +125,8 @@ mod arch {
     }
 
     /// # Safety
-    /// - `addr` must be a valid pointer
+    ///
+    /// - `addr` must be a valid pointer.
     #[inline(always)]
     pub unsafe fn load_link(addr: *const usize) -> usize {
         let value;
@@ -131,7 +135,8 @@ mod arch {
     }
 
     /// # Safety
-    /// - `addr` must be a valid pointer
+    ///
+    /// - `addr` must be a valid pointer.
     #[inline(always)]
     pub unsafe fn store_conditional(value: usize, addr: *mut usize) -> Result<(), ()> {
         let outcome: usize;
