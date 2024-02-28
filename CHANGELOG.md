@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Extend` impls for `Deque`.
 - Added `Deque::make_contiguous`.
 - Added `VecView`, the `!Sized` version of `Vec`.
+- Added `String::uDisplay`.
 
 ### Changed
 
@@ -64,6 +65,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `ufmt-impl` is now `ufmt`
   - `cas` is removed, atomic polyfilling is now opt-in via the `portable-atomic` feature.
 - `Vec::as_mut_slice` is now a public method.
+- `ufmt` functions are annotated with `inline(always)`.
 
 ### Fixed
 
