@@ -2,6 +2,7 @@ use crate::{string::String, vec::Vec};
 use ufmt_write::uWrite;
 
 impl<const SIZE: usize> uDisplay for String<SIZE> {
+    #[inline(always)]
     fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
     where
         W: uWrite + ?Sized,
@@ -12,6 +13,7 @@ impl<const SIZE: usize> uDisplay for String<SIZE> {
 
 impl<const N: usize> uWrite for String<N> {
     type Error = ();
+    #[inline(always)]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
@@ -19,6 +21,7 @@ impl<const N: usize> uWrite for String<N> {
 
 impl<const N: usize> uWrite for Vec<u8, N> {
     type Error = ();
+    #[inline(always)]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
     }
