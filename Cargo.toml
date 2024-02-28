@@ -47,13 +47,13 @@ hash32 = "0.3.0"
 serde = { version = "1", optional = true, default-features = false }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
+ufmt = "0.2"
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]
 stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
-ufmt = "0.2"
 static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]

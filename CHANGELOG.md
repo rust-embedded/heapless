@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implemented `PartialEq` and `Eq` for `Deque`.
 - Added `truncate` to `IndexMap`.
 - Added `get_index` and `get_index_mut` to `IndexMap`.
+- Added `String::uDisplay`.
 
 ### Changed
 
