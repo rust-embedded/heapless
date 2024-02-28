@@ -72,8 +72,14 @@ use core::{
     hash::{Hash, Hasher},
     mem::{ManuallyDrop, MaybeUninit},
     ops, ptr,
-    sync::atomic::{self, AtomicUsize, Ordering},
 };
+
+#[cfg(not(feature = "portable-atomic"))]
+use core::sync::atomic;
+#[cfg(feature = "portable-atomic")]
+use portable_atomic as atomic;
+
+use atomic::{AtomicUsize, Ordering};
 
 use super::treiber::{NonNullPtr, Stack, UnionNode};
 

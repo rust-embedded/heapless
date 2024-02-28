@@ -1,9 +1,11 @@
-use core::{marker::PhantomData, ptr::NonNull, sync::atomic::Ordering};
+use core::{marker::PhantomData, ptr::NonNull};
 
 #[cfg(not(feature = "portable-atomic"))]
 use core::sync::atomic;
 #[cfg(feature = "portable-atomic")]
 use portable_atomic as atomic;
+
+use atomic::Ordering;
 
 use super::{Node, Stack};
 
