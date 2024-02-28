@@ -7,6 +7,7 @@ use ufmt::uDisplay;
 use ufmt_write::uWrite;
 
 impl<S: StringStorage + ?Sized> uDisplay for StringInner<S> {
+    #[inline]
     fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
     where
         W: uWrite + ?Sized,
@@ -17,6 +18,7 @@ impl<S: StringStorage + ?Sized> uDisplay for StringInner<S> {
 
 impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
     type Error = CapacityError;
+    #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
@@ -24,6 +26,7 @@ impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
 
 impl<S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, S> {
     type Error = CapacityError;
+    #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
     }
