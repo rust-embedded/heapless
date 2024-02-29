@@ -118,6 +118,7 @@ impl<T> VecView<T> {
     ///
     /// ```
     /// use heapless::{Vec, VecView};
+    ///
     /// let buffer: &VecView<u8> = &Vec::<u8, 5>::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
     /// ```
@@ -214,7 +215,7 @@ impl<T> VecView<T> {
 
     /// Appends an `item` to the back of the collection
     ///
-    /// Returns back the `item` if the vector is full
+    /// Returns back the `item` if the vector is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
         if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
@@ -945,6 +946,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
     /// let view: &VecView<u8> = &vec;
     /// ```
+    #[inline]
     pub const fn as_view(&self) -> &VecView<T> {
         self
     }
@@ -964,6 +966,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
     /// let view: &mut VecView<u8> = &mut vec;
     /// ```
+    #[inline]
     pub fn as_mut_view(&mut self) -> &mut VecView<T> {
         self
     }
@@ -979,6 +982,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// let buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
     /// ```
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         self.as_view().as_slice()
     }
@@ -1022,6 +1026,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// buffer_slice[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
+    #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self.as_mut_view().as_mut_slice()
     }
@@ -1032,6 +1037,7 @@ impl<T, const N: usize> Vec<T, N> {
     }
 
     /// Clears the vector, removing all values.
+    #[inline]
     pub fn clear(&mut self) {
         self.as_mut_view().clear()
     }
@@ -1041,6 +1047,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// # Panic
     ///
     /// Panics if the vec cannot hold all elements of the iterator.
+    #[inline]
     pub fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -1064,6 +1071,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
     #[allow(clippy::result_unit_err)]
+    #[inline]
     pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
     where
         T: Clone,
@@ -1072,13 +1080,15 @@ impl<T, const N: usize> Vec<T, N> {
     }
 
     /// Removes the last element from a vector and returns it, or `None` if it's empty
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         self.as_mut_view().pop()
     }
 
     /// Appends an `item` to the back of the collection
     ///
-    /// Returns back the `item` if the vector is full
+    /// Returns back the `item` if the vector is full.
+    #[inline]
     pub fn push(&mut self, item: T) -> Result<(), T> {
         self.as_mut_view().push(item)
     }
@@ -1088,6 +1098,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// # Safety
     ///
     /// This assumes the vec to have at least one element.
+    #[inline]
     pub unsafe fn pop_unchecked(&mut self) -> T {
         self.as_mut_view().pop_unchecked()
     }
@@ -1097,11 +1108,13 @@ impl<T, const N: usize> Vec<T, N> {
     /// # Safety
     ///
     /// This assumes the vec is not full.
+    #[inline]
     pub unsafe fn push_unchecked(&mut self, item: T) {
         self.as_mut_view().push_unchecked(item)
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    #[inline]
     pub fn truncate(&mut self, len: usize) {
         self.as_mut_view().truncate(len)
     }
@@ -1114,6 +1127,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// See also [`resize_default`](Self::resize_default).
     #[allow(clippy::result_unit_err)]
+    #[inline]
     pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
     where
         T: Clone,
@@ -1129,6 +1143,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// See also [`resize`](Self::resize).
     #[allow(clippy::result_unit_err)]
+    #[inline]
     pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
     where
         T: Clone + Default,
@@ -1258,6 +1273,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(v.swap_remove(0), "foo");
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
+    #[inline]
     pub fn swap_remove(&mut self, index: usize) -> T {
         self.as_mut_view().swap_remove(index)
     }
@@ -1289,6 +1305,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(unsafe { v.swap_remove_unchecked(0) }, "foo");
     /// assert_eq!(&*v, ["baz", "qux"]);
     /// ```
+    #[inline]
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         self.as_mut_view().swap_remove_unchecked(index)
     }
@@ -1371,6 +1388,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// vec.insert(4, 5);
     /// assert_eq!(vec, [1, 4, 2, 3, 5]);
     /// ```
+    #[inline]
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         self.as_mut_view().insert(index, element)
     }
@@ -1400,6 +1418,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// assert_eq!(v.remove(1), 2);
     /// assert_eq!(v, [1, 3]);
     /// ```
+    #[inline]
     pub fn remove(&mut self, index: usize) -> T {
         self.as_mut_view().remove(index)
     }
@@ -1432,6 +1451,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// vec.retain(|_| *iter.next().unwrap());
     /// assert_eq!(vec, [2, 3, 5]);
     /// ```
+    #[inline]
     pub fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&T) -> bool,
@@ -1461,6 +1481,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// });
     /// assert_eq!(vec, [2, 3, 4]);
     /// ```
+    #[inline]
     pub fn retain_mut<F>(&mut self, f: F)
     where
         F: FnMut(&mut T) -> bool,
@@ -1494,6 +1515,7 @@ impl<T, const N: usize> Vec<T, N> {
     ///
     /// assert_eq!(&v, &[0, 1, 2]);
     /// ```
+    #[inline]
     pub fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<T>] {
         self.as_mut_view().spare_capacity_mut()
     }
@@ -1520,6 +1542,7 @@ impl<T, const N: usize> fmt::Debug for Vec<T, N>
 where
     T: fmt::Debug,
 {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_view().fmt(f)
     }
@@ -1735,337 +1758,185 @@ impl<T, const N: usize> IntoIterator for Vec<T, N> {
     }
 }
 
-impl<A, B, const N1: usize, const N2: usize> PartialEq<Vec<B, N2>> for Vec<A, N1>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<B, N2>) -> bool {
-        self.as_view().eq(other.as_view())
+macro_rules! impl_cmp_traits {
+    ($Ty:ident<$T:ident $(, const $M:ident : usize, const $N:ident : usize)?>) => {
+        impl<A, B$(, const $M: usize)*, const N: usize> PartialEq<Vec<B, N>> for $Ty<A$(, $M)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &Vec<B, N>) -> bool {
+                self.as_slice().eq(other.as_slice())
+            }
+        }
+
+        impl<A, B$(, const $N: usize)*> PartialEq<VecView<B>> for $Ty<A$(, $N)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &VecView<B>) -> bool {
+                self.as_slice().eq(other.as_slice())
+            }
+        }
+
+        impl<A, B, const M: usize$(, const $N: usize)*> PartialEq<$Ty<B$(, $N)*>> for [A; M]
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<B$(, $N)*>) -> bool {
+                self.eq(other.as_slice())
+            }
+        }
+
+        impl<A, B, const M: usize$(, const $N: usize)*> PartialEq<$Ty<B$(, $N)*>> for &[A; M]
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<B$(, $N)*>) -> bool {
+                (*self).eq(other)
+            }
+        }
+
+        impl<A, B$(, const $N: usize)*> PartialEq<$Ty<B$(, $N)*>> for [A]
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<B$(, $N)*>) -> bool {
+                self.eq(other.as_slice())
+            }
+        }
+
+        impl<A, B$(, const $N: usize)*> PartialEq<$Ty<B$(, $N)*>> for &[A]
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<B$(, $N)*>) -> bool {
+                (*self).eq(other)
+            }
+        }
+
+        impl<A, B$(, const $M: usize)*, const N: usize> PartialEq<[B; N]> for $Ty<A$(, $M)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &[B; N]) -> bool {
+                self.as_slice().eq(other.as_slice())
+            }
+        }
+
+        impl<A, B$(, const $M: usize)*, const N: usize> PartialEq<&[B; N]> for $Ty<A$(, $M)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &&[B; N]) -> bool {
+                self.as_slice().eq(other.as_slice())
+            }
+        }
+
+        impl<A, B$(, const $N: usize)*> PartialEq<[B]> for $Ty<A$(, $N)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &[B]) -> bool {
+                self.as_slice().eq(other)
+            }
+        }
+
+        impl<A, B$(, const $N: usize)*> PartialEq<&[B]> for $Ty<A$(, $N)*>
+        where
+            A: PartialEq<B>,
+        {
+            #[inline]
+            fn eq(&self, other: &&[B]) -> bool {
+                self.as_slice().eq(*other)
+            }
+        }
+
+        impl<T $(, const $N: usize)*> Eq for $Ty<T$(, $N)*> where T: Eq {}
+
+        impl<T $(, const $M: usize, const $N: usize)*> PartialOrd<$Ty<T$(, $N)*>> for $Ty<T$(, $M)*>
+        where
+            T: PartialOrd
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &$Ty<T$(, $N)*>) -> Option<Ordering> {
+                self.as_slice().partial_cmp(other.as_slice())
+            }
+        }
+
+        impl<T $(, const $N: usize)*> Ord for $Ty<T$(, $N)*>
+        where
+            T: Ord
+        {
+            #[inline]
+            fn cmp(&self, other: &Self) -> Ordering {
+                self.as_slice().cmp(other.as_slice())
+            }
+        }
     }
 }
 
-impl<A, B, const N: usize> PartialEq<Vec<B, N>> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<B, N>) -> bool {
-        self.eq(other.as_view())
-    }
+impl_cmp_traits!(VecView<T>);
+impl_cmp_traits!(Vec<T, const M: usize, const N: usize>);
+
+macro_rules! impl_ref_traits {
+    ($Ty:ident<$T:ident $(, const $N:ident : usize)?>) => {
+        impl<T $(, const $N: usize)*> ops::Deref for $Ty<T$(, $N)*> {
+            type Target = [T];
+
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                self.as_slice()
+            }
+        }
+
+        impl<T $(, const $N: usize)*> ops::DerefMut for $Ty<T$(, $N)*> {
+          #[inline]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.as_mut_slice()
+            }
+        }
+
+        impl<T $(, const $N: usize)*> AsRef<$Ty<T$(, $N)*>> for $Ty<T$(, $N)*> {
+            #[inline]
+            fn as_ref(&self) -> &Self {
+                self
+            }
+        }
+
+        impl<T $(, const $N: usize)*> AsMut<$Ty<T$(, $N)*>> for $Ty<T$(, $N)*> {
+            #[inline]
+            fn as_mut(&mut self) -> &mut Self {
+                self
+            }
+        }
+
+        impl<T $(, const $N: usize)*> AsRef<[T]> for $Ty<T$(, $N)*> {
+            #[inline]
+            fn as_ref(&self) -> &[T] {
+                self
+            }
+        }
+
+        impl<T $(, const $N: usize)*> AsMut<[T]> for $Ty<T$(, $N)*> {
+            #[inline]
+            fn as_mut(&mut self) -> &mut [T] {
+                self
+            }
+        }
+    };
 }
 
-impl<A, B, const N: usize> PartialEq<VecView<B>> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<B>) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-impl<A, B> PartialEq<VecView<B>> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<B>) -> bool {
-        <[A]>::eq(self, &**other)
-    }
-}
-
-// Vec<A, N> == [B]
-impl<A, B, const N: usize> PartialEq<[B]> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &[B]) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-// VecView<A> == [B]
-impl<A, B> PartialEq<[B]> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &[B]) -> bool {
-        <[A]>::eq(self, other)
-    }
-}
-
-// [B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for [B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        other.as_view().eq(self)
-    }
-}
-
-// [B] == VecView<A>
-impl<A, B> PartialEq<VecView<A>> for [B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<A>) -> bool {
-        <[A]>::eq(other, self)
-    }
-}
-
-// Vec<A, N> == &[B]
-impl<A, B, const N: usize> PartialEq<&[B]> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&[B]) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-// VecView<A> == &[B]
-impl<A, B> PartialEq<&[B]> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&[B]) -> bool {
-        <[A]>::eq(self, *other)
-    }
-}
-
-// &[B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &[B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        other.as_view().eq(self)
-    }
-}
-
-// &[B] == VecView<A>
-impl<A, B> PartialEq<VecView<A>> for &[B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<A>) -> bool {
-        <[A]>::eq(other, *self)
-    }
-}
-
-// Vec<A, N> == &mut [B]
-impl<A, B, const N: usize> PartialEq<&mut [B]> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&mut [B]) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-// VecView<A> == &mut [B]
-impl<A, B> PartialEq<&mut [B]> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&mut [B]) -> bool {
-        <[A]>::eq(self, &other[..])
-    }
-}
-
-// &mut [B] == Vec<A, N>
-impl<A, B, const N: usize> PartialEq<Vec<A, N>> for &mut [B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        other.as_view().eq(self)
-    }
-}
-
-// &mut [B] == VecView<A>
-impl<A, B> PartialEq<VecView<A>> for &mut [B]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<A>) -> bool {
-        <[A]>::eq(other, &self[..])
-    }
-}
-
-// Vec<A, N> == [B; M]
-// Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<[B; M]> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &[B; M]) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-// VecView<A, N> == [B; M]
-// Equality does not require equal capacity
-impl<A, B, const M: usize> PartialEq<[B; M]> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &[B; M]) -> bool {
-        <[A]>::eq(self, other)
-    }
-}
-
-// [B; M] == Vec<A, N>
-// Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for [B; M]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        other.as_view().eq(self)
-    }
-}
-
-// [B; M] == VecView<A>
-// Equality does not require equal capacity
-impl<A, B, const M: usize> PartialEq<VecView<A>> for [B; M]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<A>) -> bool {
-        <[A]>::eq(other, self)
-    }
-}
-
-// Vec<A, N> == &[B; M]
-// Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<&[B; M]> for Vec<A, N>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&[B; M]) -> bool {
-        self.as_view().eq(other)
-    }
-}
-
-// VecView<A> == &[B; M]
-// Equality does not require equal capacity
-impl<A, B, const M: usize> PartialEq<&[B; M]> for VecView<A>
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &&[B; M]) -> bool {
-        <[A]>::eq(self, *other)
-    }
-}
-
-// &[B; M] == Vec<A, N>
-// Equality does not require equal capacity
-impl<A, B, const N: usize, const M: usize> PartialEq<Vec<A, N>> for &[B; M]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &Vec<A, N>) -> bool {
-        other.as_view().eq(self)
-    }
-}
-
-// &[B; M] == VecView<A>
-// Equality does not require equal capacity
-impl<A, B, const M: usize> PartialEq<VecView<A>> for &[B; M]
-where
-    A: PartialEq<B>,
-{
-    fn eq(&self, other: &VecView<A>) -> bool {
-        <[A]>::eq(other, *self)
-    }
-}
-
-// Implements Eq if underlying data is Eq
-impl<T, const N: usize> Eq for Vec<T, N> where T: Eq {}
-impl<T> Eq for VecView<T> where T: Eq {}
-
-impl<T, const N1: usize, const N2: usize> PartialOrd<Vec<T, N2>> for Vec<T, N1>
-where
-    T: PartialOrd,
-{
-    fn partial_cmp(&self, other: &Vec<T, N2>) -> Option<Ordering> {
-        self.as_view().partial_cmp(other.as_view())
-    }
-}
-
-impl<T> PartialOrd<VecView<T>> for VecView<T>
-where
-    T: PartialOrd,
-{
-    fn partial_cmp(&self, other: &VecView<T>) -> Option<Ordering> {
-        PartialOrd::partial_cmp(&**self, &**other)
-    }
-}
-
-impl<T, const N: usize> Ord for Vec<T, N>
-where
-    T: Ord,
-{
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&**self, &**other)
-    }
-}
-
-impl<T, const N: usize> ops::Deref for Vec<T, N> {
-    type Target = [T];
-
-    fn deref(&self) -> &[T] {
-        self.as_slice()
-    }
-}
-
-impl<T, const N: usize> ops::DerefMut for Vec<T, N> {
-    fn deref_mut(&mut self) -> &mut [T] {
-        self.as_mut_slice()
-    }
-}
-
-impl<T> ops::Deref for VecView<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &[T] {
-        self.as_slice()
-    }
-}
-
-impl<T> ops::DerefMut for VecView<T> {
-    fn deref_mut(&mut self) -> &mut [T] {
-        self.as_mut_slice()
-    }
-}
-
-impl<T, const N: usize> AsRef<Vec<T, N>> for Vec<T, N> {
-    #[inline]
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
-impl<T, const N: usize> AsMut<Vec<T, N>> for Vec<T, N> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut Self {
-        self
-    }
-}
-
-impl<T, const N: usize> AsRef<[T]> for Vec<T, N> {
-    #[inline]
-    fn as_ref(&self) -> &[T] {
-        self
-    }
-}
-
-impl<T, const N: usize> AsMut<[T]> for Vec<T, N> {
-    #[inline]
-    fn as_mut(&mut self) -> &mut [T] {
-        self
-    }
-}
+impl_ref_traits!(VecView<T>);
+impl_ref_traits!(Vec<T, const N: usize>);
 
 impl<T, const N: usize> Clone for Vec<T, N>
 where
