@@ -9,7 +9,7 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::Vec;
+use crate::{Vec, VecView};
 
 /// A possible error value when converting a [`String`] from a UTF-16 byte slice.
 ///
@@ -33,10 +33,45 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
-/// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub struct String<const N: usize> {
-    vec: Vec<u8, N>,
+mod sealed {
+    /// <div class="warn">This is private API and should not be used</div>
+    pub struct StringInner<V: ?Sized> {
+        pub(super) vec: V,
+    }
 }
+
+// Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
+// cfg(doc) prevents `StringInner` being part of the public API.
+// doc(hidden) prevents the `pub use sealed::StringInner` from being visible in the documentation.
+#[cfg(doc)]
+#[doc(hidden)]
+pub use sealed::StringInner as _;
+
+/// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
+pub type String<const N: usize> = sealed::StringInner<Vec<u8, N>>;
+
+/// A [`String`] with dynamic capacity
+///
+/// [`String`] coerces to `StringView`. `StringView` is `!Sized`, meaning it can only ever be used by reference.
+///
+/// Unlike [`String`], `StringView` does not have an `N` const-generic parameter.
+/// This has the ergonomic advantage of making it possible to use functions without needing to know at
+/// compile-time the size of the buffers used, for example for use in `dyn` traits.
+///
+/// `StringView` is to `String<N>` what [`VecView`] is to [`Vec`].
+///
+/// ```rust
+/// use heapless::string::{String, StringView};
+///
+/// let mut s: String<12> = String::try_from("Hello").unwrap();
+/// let view: &StringView = &s;
+/// assert_eq!(view, "Hello");
+///
+/// let mut_view: &mut StringView = &mut s;
+/// mut_view.push_str(" World!");
+/// assert_eq!(s, "Hello World!");
+/// ```
+pub type StringView = sealed::StringInner<VecView<u8>>;
 
 impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
@@ -57,6 +92,46 @@ impl<const N: usize> String<N> {
     #[inline]
     pub const fn new() -> Self {
         Self { vec: Vec::new() }
+    }
+
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &StringView = &s;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &StringView {
+        self
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<12> = String::try_from("Hello").unwrap();
+    /// let view: &mut StringView = &mut s;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        self
     }
 
     /// Decodes a UTF-16–encoded slice `v` into a `String`, returning [`Err`]
@@ -199,7 +274,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(self.vec.as_slice()) }
+        self.as_view().as_str()
     }
 
     /// Converts a `String` into a mutable string slice.
@@ -218,7 +293,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
-        unsafe { str::from_utf8_unchecked_mut(self.vec.as_mut_slice()) }
+        self.as_mut_view().as_mut_str()
     }
 
     /// Returns a mutable reference to the contents of this `String`.
@@ -241,7 +316,7 @@ impl<const N: usize> String<N> {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
-    ///     assert_eq!(&[104, 101, 108, 108, 111][..], &vec[..]);
+    ///     assert_eq!(&b"hello", &vec);
     ///
     ///     vec.reverse();
     /// }
@@ -250,6 +325,38 @@ impl<const N: usize> String<N> {
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
         &mut self.vec
+    }
+
+    /// Returns a mutable reference to the contents of this `String`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the bytes passed
+    /// to it are valid UTF-8. If this constraint is violated, it may cause
+    /// memory unsafety issues with future users of the `String`, as the rest of
+    /// the library assumes that `String`s are valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
+    ///
+    /// unsafe {
+    ///     let vec = s.as_mut_vec_view();
+    ///     assert_eq!(&b"hello", &vec);
+    ///
+    ///     vec.reverse();
+    /// }
+    /// assert_eq!(s, "olleh");
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    pub unsafe fn as_mut_vec_view(&mut self) -> &mut VecView<u8> {
+        self.as_mut_view().as_mut_vec_view()
     }
 
     /// Appends a given string slice onto the end of this `String`.
@@ -273,7 +380,7 @@ impl<const N: usize> String<N> {
     #[inline]
     #[allow(clippy::result_unit_err)]
     pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
-        self.vec.extend_from_slice(string.as_bytes())
+        self.as_mut_view().push_str(string)
     }
 
     /// Returns the maximum number of elements the String can hold.
@@ -290,7 +397,7 @@ impl<const N: usize> String<N> {
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.capacity()
+        self.as_view().capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
@@ -303,6 +410,261 @@ impl<const N: usize> String<N> {
     /// use heapless::String;
     ///
     /// let mut s: String<8> = String::try_from("abc")?;
+    ///
+    /// s.push('1').unwrap();
+    /// s.push('2').unwrap();
+    /// s.push('3').unwrap();
+    ///
+    /// assert!("abc123" == s.as_str());
+    ///
+    /// assert_eq!("abc123", s);
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    #[allow(clippy::result_unit_err)]
+    pub fn push(&mut self, c: char) -> Result<(), ()> {
+        self.as_mut_view().push(c)
+    }
+
+    /// Shortens this `String` to the specified length.
+    ///
+    /// If `new_len` is greater than the string's current length, this has no
+    /// effect.
+    ///
+    /// Note that this method has no effect on the allocated capacity
+    /// of the string
+    ///
+    /// # Panics
+    ///
+    /// Panics if `new_len` does not lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
+    ///
+    /// s.truncate(2);
+    ///
+    /// assert_eq!("he", s);
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    pub fn truncate(&mut self, new_len: usize) {
+        self.as_mut_view().truncate(new_len)
+    }
+
+    /// Removes the last character from the string buffer and returns it.
+    ///
+    /// Returns [`None`] if this `String` is empty.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("foo")?;
+    ///
+    /// assert_eq!(s.pop(), Some('o'));
+    /// assert_eq!(s.pop(), Some('o'));
+    /// assert_eq!(s.pop(), Some('f'));
+    ///
+    /// assert_eq!(s.pop(), None);
+    /// Ok::<(), ()>(())
+    /// ```
+    pub fn pop(&mut self) -> Option<char> {
+        self.as_mut_view().pop()
+    }
+
+    /// Removes a [`char`] from this `String` at a byte position and returns it.
+    ///
+    /// Note: Because this shifts over the remaining elements, it has a
+    /// worst-case performance of *O*(n).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than or equal to the `String`'s length,
+    /// or if it does not lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("foo").unwrap();
+    ///
+    /// assert_eq!(s.remove(0), 'f');
+    /// assert_eq!(s.remove(1), 'o');
+    /// assert_eq!(s.remove(0), 'o');
+    /// ```
+    #[inline]
+    pub fn remove(&mut self, index: usize) -> char {
+        self.as_mut_view().remove(index)
+    }
+
+    /// Truncates this `String`, removing all contents.
+    ///
+    /// While this means the `String` will have a length of zero, it does not
+    /// touch its capacity.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("foo")?;
+    ///
+    /// s.clear();
+    ///
+    /// assert!(s.is_empty());
+    /// assert_eq!(0, s.len());
+    /// assert_eq!(8, s.capacity());
+    /// Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    pub fn clear(&mut self) {
+        self.as_mut_view().clear()
+    }
+}
+
+impl StringView {
+    /// Extracts a string slice containing the entire string.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let mut s: String<4> = String::try_from("ab")?;
+    /// let s: &mut StringView = &mut s;
+    /// assert!(s.as_str() == "ab");
+    ///
+    /// let _s = s.as_str();
+    /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        unsafe { str::from_utf8_unchecked(self.vec.as_slice()) }
+    }
+
+    /// Converts a `String` into a mutable string slice.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let mut s: String<4> = String::try_from("ab")?;
+    /// let s: &mut StringView = &mut s;
+    /// let s = s.as_mut_str();
+    /// s.make_ascii_uppercase();
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    pub fn as_mut_str(&mut self) -> &mut str {
+        unsafe { str::from_utf8_unchecked_mut(self.vec.as_mut_slice()) }
+    }
+
+    /// Returns a mutable reference to the contents of this `String`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the bytes passed
+    /// to it are valid UTF-8. If this constraint is violated, it may cause
+    /// memory unsafety issues with future users of the `String`, as the rest of
+    /// the library assumes that `String`s are valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let mut s: String<8> = String::try_from("hello")?;
+    /// let s: &mut StringView = &mut s;
+    ///
+    /// unsafe {
+    ///     let vec = s.as_mut_vec_view();
+    ///     assert_eq!(&b"hello", &vec);
+    ///
+    ///     vec.reverse();
+    /// }
+    /// assert_eq!(s, "olleh");
+    /// # Ok::<(), ()>(())
+    /// ```
+    pub unsafe fn as_mut_vec_view(&mut self) -> &mut VecView<u8> {
+        &mut self.vec
+    }
+
+    /// Appends a given string slice onto the end of this `String`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
+    ///
+    /// assert!(s.push_str("bar").is_ok());
+    ///
+    /// assert_eq!("foobar", s);
+    ///
+    /// assert!(s.push_str("tender").is_err());
+    /// # Ok::<(), ()>(())
+    /// ```
+    #[inline]
+    #[allow(clippy::result_unit_err)]
+    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+        self.vec.extend_from_slice(string.as_bytes())
+    }
+
+    /// Returns the maximum number of elements the String can hold.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let s: String<4> = String::new();
+    /// let s: &StringView = &s;
+    /// assert!(s.capacity() == 4);
+    /// ```
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.vec.capacity()
+    }
+
+    /// Appends the given [`char`] to the end of this `String`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use heapless::string::{String, StringView};
+    ///
+    /// let mut s: String<8> = String::try_from("abc")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.push('1').unwrap();
     /// s.push('2').unwrap();
@@ -341,9 +703,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("hello")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.truncate(2);
     ///
@@ -367,9 +730,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// assert_eq!(s.pop(), Some('o'));
     /// assert_eq!(s.pop(), Some('o'));
@@ -406,9 +770,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo").unwrap();
+    /// let s: &mut StringView = &mut s;
     ///
     /// assert_eq!(s.remove(0), 'f');
     /// assert_eq!(s.remove(1), 'o');
@@ -441,9 +806,10 @@ impl<const N: usize> String<N> {
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::String;
+    /// use heapless::string::{String, StringView};
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
+    /// let s: &mut StringView = &mut s;
     ///
     /// s.clear();
     ///
@@ -521,116 +887,161 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<const N: usize> fmt::Debug for String<N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Debug>::fmt(self, f)
-    }
+macro_rules! imp_traits {
+    ($Ty:ident$(<const $N:ident : usize, const $M:ident : usize>)?) => {
+        // String<N>/StringView == String<N>
+        impl<const N: usize, $(const $M: usize)*> PartialEq<String<N>> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &String<N>) -> bool {
+                self.as_str().eq(other.as_str())
+            }
+        }
+
+        // String<N>/StringView == StringView
+        impl<$(const $M: usize)*> PartialEq<StringView> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &StringView) -> bool {
+                self.as_str().eq(other.as_str())
+            }
+        }
+
+        // String<N>/StringView == str
+        impl<$(const $M: usize)*> PartialEq<str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &str) -> bool {
+                self.as_str().eq(other)
+            }
+        }
+
+        // str == String<N>/StringView
+        impl<$(const $M: usize)*> PartialEq<$Ty<$($M)*>> for str
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<$($M)*>) -> bool {
+                self.eq(other.as_str())
+            }
+        }
+
+        // &str == String<N>/StringView
+        impl<$(const $M: usize)*> PartialEq<&str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn eq(&self, other: &&str) -> bool {
+                (*self).as_str().eq(*other)
+            }
+        }
+
+        // String<N>/StringView == str
+        impl<$(const $M: usize)*> PartialEq<$Ty<$($M)*>> for &str
+        {
+            #[inline]
+            fn eq(&self, other: &$Ty<$($M)*>) -> bool {
+                (*self).eq(other.as_str())
+            }
+        }
+
+        impl<$(const $M: usize)*> Eq for $Ty<$($M)*> {}
+
+        impl<const N: usize, $(const $M: usize)*> PartialOrd<String<N>> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &String<N>) -> Option<Ordering> {
+                Some(<str as Ord>::cmp(self, other))
+            }
+        }
+
+        impl<$(const $M: usize)*> PartialOrd<StringView> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &StringView) -> Option<Ordering> {
+                Some(<str as Ord>::cmp(self, other))
+            }
+        }
+
+        impl<$(const $M: usize)*> Ord for $Ty<$($M)*> {
+            fn cmp(&self, other: &$Ty<$($M)*>) -> Ordering {
+                <str as Ord>::cmp(self, other)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Debug for $Ty<$($M)*>
+        {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <str as fmt::Debug>::fmt(self, f)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Display for $Ty<$($M)*>
+        {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <str as fmt::Display>::fmt(self, f)
+            }
+        }
+
+        impl<$(const $M: usize)*> hash::Hash for $Ty<$($M)*>
+        {
+            #[inline]
+            fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+                <str as hash::Hash>::hash(self, hasher)
+            }
+        }
+
+        impl<$(const $M: usize)*> fmt::Write for $Ty<$($M)*>
+        {
+            #[inline]
+            fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+                self.push_str(s).map_err(|_| fmt::Error)
+            }
+
+            #[inline]
+            fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
+                self.push(c).map_err(|_| fmt::Error)
+            }
+        }
+
+        impl<$(const $M: usize)*> ops::Deref for $Ty<$($M)*>
+        {
+            type Target = str;
+
+            #[inline]
+            fn deref(&self) -> &str {
+                self.as_str()
+            }
+        }
+
+        impl<$(const $M: usize)*> ops::DerefMut for $Ty<$($M)*>
+        {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut str {
+                self.as_mut_str()
+            }
+        }
+
+        impl<$(const $M: usize)*> AsRef<str> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn as_ref(&self) -> &str {
+                self
+            }
+        }
+
+        impl<$(const $M: usize)*> AsRef<[u8]> for $Ty<$($M)*>
+        {
+            #[inline]
+            fn as_ref(&self) -> &[u8] {
+                self.as_bytes()
+            }
+        }
+    };
 }
 
-impl<const N: usize> fmt::Display for String<N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <str as fmt::Display>::fmt(self, f)
-    }
-}
-
-impl<const N: usize> hash::Hash for String<N> {
-    #[inline]
-    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        <str as hash::Hash>::hash(self, hasher)
-    }
-}
-
-impl<const N: usize> fmt::Write for String<N> {
-    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).map_err(|_| fmt::Error)
-    }
-
-    fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.push(c).map_err(|_| fmt::Error)
-    }
-}
-
-impl<const N: usize> ops::Deref for String<N> {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl<const N: usize> ops::DerefMut for String<N> {
-    fn deref_mut(&mut self) -> &mut str {
-        self.as_mut_str()
-    }
-}
-
-impl<const N: usize> AsRef<str> for String<N> {
-    #[inline]
-    fn as_ref(&self) -> &str {
-        self
-    }
-}
-
-impl<const N: usize> AsRef<[u8]> for String<N> {
-    #[inline]
-    fn as_ref(&self) -> &[u8] {
-        self.as_bytes()
-    }
-}
-
-impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
-    fn eq(&self, rhs: &String<N2>) -> bool {
-        str::eq(&**self, &**rhs)
-    }
-}
-
-// String<N> == str
-impl<const N: usize> PartialEq<str> for String<N> {
-    #[inline]
-    fn eq(&self, other: &str) -> bool {
-        str::eq(self, other)
-    }
-}
-
-// String<N> == &'str
-impl<const N: usize> PartialEq<&str> for String<N> {
-    #[inline]
-    fn eq(&self, other: &&str) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// str == String<N>
-impl<const N: usize> PartialEq<String<N>> for str {
-    #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-// &'str == String<N>
-impl<const N: usize> PartialEq<String<N>> for &str {
-    #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
-        str::eq(self, &other[..])
-    }
-}
-
-impl<const N: usize> Eq for String<N> {}
-
-impl<const N1: usize, const N2: usize> PartialOrd<String<N2>> for String<N1> {
-    #[inline]
-    fn partial_cmp(&self, other: &String<N2>) -> Option<Ordering> {
-        PartialOrd::partial_cmp(&**self, &**other)
-    }
-}
-
-impl<const N: usize> Ord for String<N> {
-    #[inline]
-    fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&**self, &**other)
-    }
-}
+imp_traits!(String<const N: usize, const M: usize>);
+imp_traits!(StringView);
 
 /// Equivalent to [`format`](https://doc.rust-lang.org/std/fmt/fn.format.html).
 ///
