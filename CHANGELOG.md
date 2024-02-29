@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - Changed `stable_deref_trait` to a platform-dependent dependency.
+- Changed `Queue::split` to be `const` when `"nightly"` feature is enabled.
 
 ### Fixed
 
