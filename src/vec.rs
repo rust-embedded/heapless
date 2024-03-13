@@ -2076,6 +2076,32 @@ where
     }
 }
 
+#[cfg(feature = "embedded-dma")]
+unsafe impl<T, const N: usize> embedded_dma::ReadTarget for Vec<T, N>
+where
+    T: embedded_dma::ReadTarget,
+{
+    type Word = T::Word;
+
+    // Replace default implementation to return self.len() as buffer size
+    fn as_read_buffer(&self) -> (*const Self::Word, usize) {
+        (self.as_ptr() as *const T::Word, self.len)
+    }
+}
+
+#[cfg(feature = "embedded-dma")]
+unsafe impl<T, const N: usize> embedded_dma::WriteTarget for Vec<T, N>
+where
+    T: embedded_dma::WriteTarget,
+{
+    type Word = T::Word;
+
+    // Replace default implementation to return N as buffer size
+    fn as_write_buffer(&mut self) -> (*mut Self::Word, usize) {
+        (self.as_mut_ptr() as *mut T::Word, N)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::fmt::Write;

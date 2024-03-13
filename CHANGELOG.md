@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Deque::make_contiguous`.
 - Added `VecView`, the `!Sized` version of `Vec`.
 - Added pool implementations for 64-bit architectures.
+- Add `embedded_dma` feature to one can send `Vec`, `pool::object::Object` and `pool::boxed::Box` to DMA as read/write buffers [#362].
 
 ### Changed
 
