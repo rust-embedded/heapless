@@ -5,34 +5,37 @@ use core::{
     ops, ptr, slice,
 };
 
-/// Workaround forbidden specialization of Drop
-pub trait VecDrop {
-    // SAFETY: drop_with_len will be called to call drop in place the first `len` elements of the buffer.
-    // Only the Owned buffer (`[MaybeUninit<T>; N]`) must drop the items
-    // and the view (`[MaybeUninit<T>]`) drops nothing.
-    // `drop_with_len `assumes that the buffer can contain `len` elements.
-    unsafe fn drop_with_len(&mut self, len: usize);
+pub trait VecBuffer {
+    type T;
+
+    fn as_vecview(vec: &VecInner<Self>) -> &VecView<Self::T>;
+    fn as_mut_vecview(vec: &mut VecInner<Self>) -> &mut VecView<Self::T>;
 }
 
-impl<T> VecDrop for [MaybeUninit<T>] {
-    unsafe fn drop_with_len(&mut self, len: usize) {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..len]
-        // SAFETY: buffer[..len] must be valid to drop given the safety requirement of the trait definition.
-        let mut_slice = slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len);
-        // We drop each element used in the vector by turning into a `&mut [T]`.
-        ptr::drop_in_place(mut_slice);
+impl<T, const N: usize> VecBuffer for [MaybeUninit<T>; N] {
+    type T = T;
+
+    fn as_vecview(vec: &VecInner<Self>) -> &VecView<Self::T> {
+        vec
+    }
+    fn as_mut_vecview(vec: &mut VecInner<Self>) -> &mut VecView<Self::T> {
+        vec
     }
 }
 
-impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
-    unsafe fn drop_with_len(&mut self, len: usize) {
-        VecDrop::drop_with_len(self.as_mut_slice(), len)
+impl<T> VecBuffer for [MaybeUninit<T>] {
+    type T = T;
+
+    fn as_vecview(vec: &VecInner<Self>) -> &VecView<Self::T> {
+        vec
+    }
+    fn as_mut_vecview(vec: &mut VecInner<Self>) -> &mut VecView<Self::T> {
+        vec
     }
 }
 
 /// <div class="warn">This is private API and should not be used</div>
-pub struct VecInner<B: ?Sized + VecDrop> {
+pub struct VecInner<B: ?Sized + VecBuffer> {
     len: usize,
     buffer: B,
 }
@@ -1572,10 +1575,12 @@ impl<T, const N: usize, const M: usize> From<[T; M]> for Vec<T, N> {
     }
 }
 
-impl<T: ?Sized + VecDrop> Drop for VecInner<T> {
+impl<T: ?Sized + VecBuffer> Drop for VecInner<T> {
     fn drop(&mut self) {
+        let mut_slice = VecBuffer::as_mut_vecview(self).as_mut_slice();
+        // We drop each element used in the vector by turning into a `&mut [T]`.
         // SAFETY: the buffer contains initialized data for the range 0..self.len
-        unsafe { self.buffer.drop_with_len(self.len) }
+        unsafe { ptr::drop_in_place(mut_slice) }
     }
 }
 
