@@ -15,12 +15,6 @@ pub trait VecDrop {
 }
 
 impl<T> VecDrop for [MaybeUninit<T>] {
-    unsafe fn drop_with_len(&mut self, _len: usize) {
-        // Case of a view, drop does nothing
-    }
-}
-
-impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
     unsafe fn drop_with_len(&mut self, len: usize) {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..len]
@@ -28,6 +22,12 @@ impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
         let mut_slice = slice::from_raw_parts_mut(self.as_mut_ptr() as *mut T, len);
         // We drop each element used in the vector by turning into a `&mut [T]`.
         ptr::drop_in_place(mut_slice);
+    }
+}
+
+impl<T, const N: usize> VecDrop for [MaybeUninit<T>; N] {
+    unsafe fn drop_with_len(&mut self, len: usize) {
+        VecDrop::drop_with_len(self.as_mut_slice(), len)
     }
 }
 
@@ -1953,7 +1953,7 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use crate::Vec;
+    use super::{Vec, VecView};
 
     // Ensure a `Vec` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Vec<*const (), 4>: Send);
@@ -2009,6 +2009,33 @@ mod tests {
             let mut v: Vec<Droppable, 2> = Vec::new();
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn drop_vecview() {
+        droppable!();
+
+        {
+            let v: Vec<Droppable, 2> = Vec::new();
+            let mut v: Box<VecView<Droppable>> = Box::new(v);
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            assert_eq!(Droppable::count(), 2);
+            v.pop().unwrap();
+            assert_eq!(Droppable::count(), 1);
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        {
+            let v: Vec<Droppable, 2> = Vec::new();
+            let mut v: Box<VecView<Droppable>> = Box::new(v);
+            v.push(Droppable::new()).ok().unwrap();
+            v.push(Droppable::new()).ok().unwrap();
+            assert_eq!(Droppable::count(), 2);
         }
 
         assert_eq!(Droppable::count(), 0);
