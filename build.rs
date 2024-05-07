@@ -9,6 +9,9 @@ use std::{
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
+    println!("cargo::rustc-check-cfg=cfg(arm_llsc)");
+    println!("cargo::rustc-check-cfg=cfg(has_atomic_load_store)");
+
     let target = env::var("TARGET")?;
 
     // Manually list targets that have atomic load/store, but no CAS.

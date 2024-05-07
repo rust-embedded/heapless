@@ -13,7 +13,7 @@
 //! // (some `no_std` runtimes have safe APIs to create `&'static mut` references)
 //! let block: &'static mut ArcBlock<u128> = unsafe {
 //!     static mut BLOCK: ArcBlock<u128> = ArcBlock::new();
-//!     &mut BLOCK
+//!     addr_of_mut!(BLOCK).as_mut().unwrap()
 //! };
 //!
 //! MyArcPool.manage(block);
@@ -54,7 +54,7 @@
 //! let blocks: &'static mut [ArcBlock<u128>] = {
 //!     const BLOCK: ArcBlock<u128> = ArcBlock::new(); // <=
 //!     static mut BLOCKS: [ArcBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { &mut BLOCKS }
+//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
 //! };
 //!
 //! for block in blocks {
@@ -162,6 +162,7 @@ pub struct ArcPoolImpl<T> {
 impl<T> ArcPoolImpl<T> {
     /// `arc_pool!` implementation detail
     #[doc(hidden)]
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self {
             stack: Stack::new(),
@@ -387,9 +388,16 @@ impl<T> ArcBlock<T> {
     }
 }
 
+impl<T> Default for ArcBlock<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ptr::addr_of_mut;
 
     #[test]
     fn cannot_alloc_if_empty() {
@@ -404,7 +412,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<i32> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -417,7 +425,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<i32> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -434,7 +442,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<i32> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -449,7 +457,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<i32> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -470,7 +478,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<i32> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -501,7 +509,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<MyStruct> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
@@ -523,7 +531,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ArcBlock<Zst4096> = ArcBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyArcPool.manage(block);
 
