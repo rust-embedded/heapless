@@ -14,7 +14,7 @@
 //! let block: &'static mut ObjectBlock<[u8; 128]> = unsafe {
 //!     // unlike the memory pool APIs, an initial value must be specified here
 //!     static mut BLOCK: ObjectBlock<[u8; 128]>= ObjectBlock::new([0; 128]);
-//!     &mut BLOCK
+//!     addr_of_mut!(BLOCK).as_mut().unwrap()
 //! };
 //!
 //! // give object block to the pool
@@ -55,7 +55,7 @@
 //! let blocks: &'static mut [ObjectBlock<[u8; 128]>] = {
 //!     const BLOCK: ObjectBlock<[u8; 128]> = ObjectBlock::new([0; 128]); // <=
 //!     static mut BLOCKS: [ObjectBlock<[u8; 128]>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { &mut BLOCKS }
+//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
 //! };
 //!
 //! for block in blocks {
@@ -332,6 +332,7 @@ impl<T> ObjectBlock<T> {
 #[cfg(test)]
 mod tests {
     use core::sync::atomic::{self, AtomicUsize};
+    use std::ptr::addr_of_mut;
 
     use super::*;
 
@@ -348,7 +349,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ObjectBlock<i32> = ObjectBlock::new(1);
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyObjectPool.manage(block);
 
@@ -361,7 +362,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ObjectBlock<i32> = ObjectBlock::new(1);
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyObjectPool.manage(block);
 
@@ -389,7 +390,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ObjectBlock<MyStruct> = ObjectBlock::new(MyStruct);
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyObjectPool.manage(block);
 
@@ -411,7 +412,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: ObjectBlock<Zst4096> = ObjectBlock::new(Zst4096);
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyObjectPool.manage(block);
 

@@ -39,6 +39,8 @@ pub trait Node: Sized {
     type Data;
 
     fn next(&self) -> &AtomicPtr<Self>;
+
+    #[allow(dead_code)] // used conditionally
     fn next_mut(&mut self) -> &mut AtomicPtr<Self>;
 }
 

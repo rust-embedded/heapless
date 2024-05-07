@@ -13,7 +13,7 @@
 //! // (some `no_std` runtimes have safe APIs to create `&'static mut` references)
 //! let block: &'static mut BoxBlock<u128> = unsafe {
 //!     static mut BLOCK: BoxBlock <u128>= BoxBlock::new();
-//!     &mut BLOCK
+//!     addr_of_mut!(BLOCK).as_mut().unwrap()
 //! };
 //!
 //! // give block of memory to the pool
@@ -33,7 +33,7 @@
 //! // give another memory block to the pool
 //! MyBoxPool.manage(unsafe {
 //!     static mut BLOCK: BoxBlock<u128> = BoxBlock::new();
-//!     &mut BLOCK
+//!     addr_of_mut!(BLOCK).as_mut().unwrap()
 //! });
 //!
 //! // cloning also consumes a memory block from the pool
@@ -70,7 +70,7 @@
 //!     #[allow(clippy::declare_interior_mutable_const)]
 //!     const BLOCK: BoxBlock<u128> = BoxBlock::new(); // <=
 //!     static mut BLOCKS: [BoxBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { &mut BLOCKS }
+//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
 //! };
 //!
 //! for block in blocks {
@@ -317,6 +317,7 @@ pub struct BoxPoolImpl<T> {
 }
 
 impl<T> BoxPoolImpl<T> {
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self {
             stack: Stack::new(),
@@ -358,9 +359,16 @@ impl<T> BoxBlock<T> {
     }
 }
 
+impl<T> Default for BoxBlock<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::ptr::addr_of_mut;
     use std::thread;
 
     use super::*;
@@ -378,7 +386,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: BoxBlock<i32> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyBoxPool.manage(block);
 
@@ -391,7 +399,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: BoxBlock<i32> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyBoxPool.manage(block);
 
@@ -418,7 +426,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyBoxPool.manage(block);
 
@@ -440,7 +448,7 @@ mod tests {
 
         let block = unsafe {
             static mut BLOCK: BoxBlock<Zst4096> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         };
         MyBoxPool.manage(block);
 
@@ -467,11 +475,11 @@ mod tests {
 
         MyBoxPool.manage(unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         });
         MyBoxPool.manage(unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         });
 
         let first = MyBoxPool.alloc(MyStruct).ok().unwrap();
@@ -500,7 +508,7 @@ mod tests {
 
         MyBoxPool.manage(unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         });
 
         let first = MyBoxPool.alloc(MyStruct).ok().unwrap();
@@ -534,11 +542,11 @@ mod tests {
 
         MyBoxPool.manage(unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         });
         MyBoxPool.manage(unsafe {
             static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
-            &mut BLOCK
+            addr_of_mut!(BLOCK).as_mut().unwrap()
         });
 
         let boxed = MyBoxPool.alloc(MyStruct).ok().unwrap();
