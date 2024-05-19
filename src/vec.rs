@@ -853,6 +853,27 @@ impl<T, const N: usize> Vec<T, N> {
         }
     }
 
+    /// Constructs a new, empty vector with a fixed capacity of `N` with 'LEN'
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// // allocate the vector on the stack
+    /// let mut x: Vec<u8, 16> = Vec::new_len(4);
+    ///
+    /// // allocate the vector in a static variable
+    /// static mut X: Vec<u8, 16> = Vec::new_len(4);
+    /// ```
+    pub const fn new_with_len<const LEN: usize>() -> Self {
+        crate::sealed::smaller_than::<LEN, N>();
+        Self {
+            len: LEN,
+            buffer: Self::INIT,
+        }
+    }
+
     /// Constructs a new vector with a fixed capacity of `N` and fills it
     /// with the provided slice.
     ///
