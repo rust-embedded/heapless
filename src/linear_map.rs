@@ -581,7 +581,7 @@ mod test {
         src.insert("k4", "v4").unwrap();
         let clone = src.clone();
         for (k, v) in clone.into_iter() {
-            assert_eq!(v, *src.get(k).unwrap());
+            assert_eq!(v, src.remove(k).unwrap());
         }
     }
 }
