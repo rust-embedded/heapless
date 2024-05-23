@@ -430,6 +430,20 @@ where
     }
 }
 
+impl<K, V, const N: usize> IntoIterator for LinearMap<K, V, N>
+where
+    K: Eq,
+{
+    type Item = (K, V);
+    type IntoIter = IntoIter<K, V, N>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            inner: self.buffer.into_iter(),
+        }
+    }
+}
+
 impl<'a, K, V, const N: usize> IntoIterator for &'a LinearMap<K, V, N>
 where
     K: Eq,
@@ -556,5 +570,18 @@ mod test {
         }
 
         assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn into_iter() {
+        let mut src: LinearMap<_, _, 4> = LinearMap::new();
+        src.insert("k1", "v1").unwrap();
+        src.insert("k2", "v2").unwrap();
+        src.insert("k3", "v3").unwrap();
+        src.insert("k4", "v4").unwrap();
+        let clone = src.clone();
+        for (k, v) in clone.into_iter() {
+            assert_eq!(v, src.remove(k).unwrap());
+        }
     }
 }
