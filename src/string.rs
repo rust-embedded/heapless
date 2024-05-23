@@ -246,7 +246,7 @@ impl<const N: usize> String<N> {
     ///
     /// let s: String<4> = String::try_from("ab")?;
     /// let b = s.into_bytes();
-    /// assert!(b.len() == 2);
+    /// assert_eq!(b.len(), 2);
     ///
     /// assert_eq!(&[b'a', b'b'], &b[..]);
     /// # Ok::<(), ()>(())
@@ -266,7 +266,7 @@ impl<const N: usize> String<N> {
     /// use heapless::String;
     ///
     /// let mut s: String<4> = String::try_from("ab")?;
-    /// assert!(s.as_str() == "ab");
+    /// assert_eq!(s.as_str(), "ab");
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
@@ -316,7 +316,7 @@ impl<const N: usize> String<N> {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec();
-    ///     assert_eq!(&b"hello", &vec);
+    ///     assert_eq!(&vec, &b"hello");
     ///
     ///     vec.reverse();
     /// }
@@ -347,7 +347,7 @@ impl<const N: usize> String<N> {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec_view();
-    ///     assert_eq!(&b"hello", &vec);
+    ///     assert_eq!(&vec, &b"hello");
     ///
     ///     vec.reverse();
     /// }
@@ -393,7 +393,7 @@ impl<const N: usize> String<N> {
     /// use heapless::String;
     ///
     /// let mut s: String<4> = String::new();
-    /// assert!(s.capacity() == 4);
+    /// assert_eq!(s.capacity(), 4);
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
@@ -415,7 +415,7 @@ impl<const N: usize> String<N> {
     /// s.push('2').unwrap();
     /// s.push('3').unwrap();
     ///
-    /// assert!("abc123" == s.as_str());
+    /// assert_eq!("abc123", s.as_str());
     ///
     /// assert_eq!("abc123", s);
     /// # Ok::<(), ()>(())
@@ -449,7 +449,7 @@ impl<const N: usize> String<N> {
     ///
     /// s.truncate(2);
     ///
-    /// assert_eq!("he", s);
+    /// assert_eq!(s, "he");
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
@@ -548,7 +548,7 @@ impl StringView {
     ///
     /// let mut s: String<4> = String::try_from("ab")?;
     /// let s: &mut StringView = &mut s;
-    /// assert!(s.as_str() == "ab");
+    /// assert_eq!(s.as_str(), "ab");
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
@@ -600,7 +600,7 @@ impl StringView {
     ///
     /// unsafe {
     ///     let vec = s.as_mut_vec_view();
-    ///     assert_eq!(&b"hello", &vec);
+    ///     assert_eq!(&vec, &b"hello");
     ///
     ///     vec.reverse();
     /// }
@@ -625,7 +625,7 @@ impl StringView {
     ///
     /// assert!(s.push_str("bar").is_ok());
     ///
-    /// assert_eq!("foobar", s);
+    /// assert_eq!(s, "foobar");
     ///
     /// assert!(s.push_str("tender").is_err());
     /// # Ok::<(), ()>(())
@@ -647,7 +647,7 @@ impl StringView {
     ///
     /// let s: String<4> = String::new();
     /// let s: &StringView = &s;
-    /// assert!(s.capacity() == 4);
+    /// assert_eq!(s.capacity(), 4);
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
@@ -670,9 +670,9 @@ impl StringView {
     /// s.push('2').unwrap();
     /// s.push('3').unwrap();
     ///
-    /// assert!("abc123" == s.as_str());
+    /// assert_eq!(s.as_str(), "abc123");
     ///
-    /// assert_eq!("abc123", s);
+    /// assert_eq!(s, "abc123");
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
@@ -1199,7 +1199,7 @@ mod tests {
     #[test]
     fn empty() {
         let s: String<4> = String::new();
-        assert!(s.capacity() == 4);
+        assert_eq!(s.capacity(), 4);
         assert_eq!(s, "");
         assert_eq!(s.len(), 0);
         assert_ne!(s.len(), 4);
@@ -1208,7 +1208,7 @@ mod tests {
     #[test]
     fn try_from() {
         let s: String<4> = String::try_from("123").unwrap();
-        assert!(s.len() == 3);
+        assert_eq!(s.len(), 3);
         assert_eq!(s, "123");
 
         let _: () = String::<2>::try_from("123").unwrap_err();
@@ -1219,7 +1219,7 @@ mod tests {
         use core::str::FromStr;
 
         let s: String<4> = String::<4>::from_str("123").unwrap();
-        assert!(s.len() == 3);
+        assert_eq!(s.len(), 3);
         assert_eq!(s, "123");
 
         let _: () = String::<2>::from_str("123").unwrap_err();
@@ -1297,7 +1297,7 @@ mod tests {
         assert!(s.push('2').is_ok());
         assert!(s.push('3').is_ok());
         assert!(s.push('4').is_err());
-        assert!("abc123" == s.as_str());
+        assert_eq!("abc123", s.as_str());
     }
 
     #[test]
