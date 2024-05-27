@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Vec::drain`.
 - Added `String::drain`.
 - Implemented `DoubleEndedIterator` for `OldestOrdered`.
+- Added std `Entry` methods to indexmap `Entry`.
 
 ### Changed
 
