@@ -2,7 +2,7 @@ use core::hash::{BuildHasher, Hash};
 
 use crate::{
     binary_heap::Kind as BinaryHeapKind, storage::Storage, vec::VecInner, BinaryHeap, Deque,
-    IndexMap, IndexSet, LinearMap, String,
+    HistoryBuffer, IndexMap, IndexSet, LinearMap, String,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -68,6 +68,22 @@ where
     {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
         for element in self {
+            seq.serialize_element(element)?;
+        }
+        seq.end()
+    }
+}
+
+impl<T, const N: usize> Serialize for HistoryBuffer<T, N>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for element in self.oldest_ordered() {
             seq.serialize_element(element)?;
         }
         seq.end()
