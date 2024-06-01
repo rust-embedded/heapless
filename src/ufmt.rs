@@ -1,4 +1,4 @@
-use crate::{string::String, vec::Vec};
+use crate::{cstring::CString, string::String, vec::Vec};
 use ufmt_write::uWrite;
 
 impl<const N: usize> uWrite for String<N> {
@@ -12,6 +12,14 @@ impl<const N: usize> uWrite for Vec<u8, N> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
+    }
+}
+
+impl<const N: usize> uWrite for CString<N> {
+    type Error = ();
+
+    fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
+        self.push_bytes(s.as_bytes())
     }
 }
 
