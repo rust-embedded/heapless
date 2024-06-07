@@ -535,6 +535,58 @@ impl<T, const N: usize> Deque<T, N> {
             done,
         }
     }
+
+    /// Returns a reference to the element at the given index.
+    ///
+    /// Index 0 is the front of the `Deque`.
+    pub fn get(&self, index: usize) -> Option<&T> {
+        if index < self.len() {
+            let idx = self.to_physical_index(index);
+            Some(unsafe { self.buffer.get_unchecked(idx).assume_init_ref() })
+        } else {
+            None
+        }
+    }
+
+    /// Returns a mutable reference to the element at the given index.
+    ///
+    /// Index 0 is the front of the `Deque`.
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        if index < self.len() {
+            let idx = self.to_physical_index(index);
+            Some(unsafe { self.buffer.get_unchecked_mut(idx).assume_init_mut() })
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the element at the given index without checking if it exists.
+    ///
+    /// # Safety
+    ///
+    /// The element at the given `index` must exist (i.e. `index < self.len()`).
+    pub unsafe fn get_unchecked(&self, index: usize) -> &T {
+        debug_assert!(index < self.len());
+
+        let idx = self.to_physical_index(index);
+        self.buffer.get_unchecked(idx).assume_init_ref()
+    }
+
+    /// Returns a mutable reference to the element at the given index without checking if it exists.
+    ///
+    /// # Safety
+    ///
+    /// The element at the given `index` must exist (i.e. `index < self.len()`).
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        debug_assert!(index < self.len());
+
+        let idx = self.to_physical_index(index);
+        self.buffer.get_unchecked_mut(idx).assume_init_mut()
+    }
+
+    fn to_physical_index(&self, index: usize) -> usize {
+        self.front.wrapping_add(index) % N
+    }
 }
 
 // Trait implementations
@@ -1098,5 +1150,32 @@ mod tests {
 
         // Deque contains: 5, 6, 7, 8
         assert_eq!(q.as_slices(), ([5, 6, 7, 8].as_slice(), [].as_slice()));
+    }
+
+    #[test]
+    fn get() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.get(0), None);
+
+        q.push_back(0).unwrap();
+        assert_eq!(q.get(0), Some(&0));
+        assert_eq!(q.get(1), None);
+
+        q.push_back(1).unwrap();
+        assert_eq!(q.get(0), Some(&0));
+        assert_eq!(q.get(1), Some(&1));
+        assert_eq!(q.get(2), None);
+
+        q.pop_front().unwrap();
+        assert_eq!(q.get(0), Some(&1));
+        assert_eq!(q.get(1), None);
+
+        q.push_back(2).unwrap();
+        q.push_back(3).unwrap();
+        q.push_back(4).unwrap();
+        assert_eq!(q.get(0), Some(&1));
+        assert_eq!(q.get(1), Some(&2));
+        assert_eq!(q.get(2), Some(&3));
+        assert_eq!(q.get(3), Some(&4));
     }
 }
