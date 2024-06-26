@@ -94,7 +94,7 @@ pub use indexmap::{
     ValuesMut as IndexMapValuesMut,
 };
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
-pub use linear_map::LinearMap;
+pub use linear_map::{LinearMap, LinearMapView};
 pub use string::String;
 
 // Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
