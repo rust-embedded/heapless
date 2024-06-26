@@ -10,7 +10,7 @@ mod sealed {
 }
 
 // Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
-// cfg(doc) prevents `StringInner` being part of the public API.
+// cfg(doc) prevents `LinearMapInner` being part of the public API.
 // doc(hidden) prevents the `pub use sealed::StringInner` from being visible in the documentation.
 #[cfg(doc)]
 #[doc(hidden)]
@@ -32,14 +32,15 @@ pub type LinearMap<K, V, const N: usize> = sealed::LinearMapInner<Vec<(K, V), N>
 /// `LinearMapView` is to `LinearMap` what [`VecView`] is to [`Vec`].
 ///
 /// ```rust
-/// use heapless::LinearMap;
+/// use heapless::{LinearMap, LinearMapView};
 ///
 /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
-/// map.insert(1, "a").unwrap();
-/// if let Some(x) = map.get_mut(&1) {
+/// let map_view: &mut LinearMapView<_, _> = &mut map;
+/// map_view.insert(1, "a").unwrap();
+/// if let Some(x) = map_view.get_mut(&1) {
 ///     *x = "b";
 /// }
-/// assert_eq!(map[&1], "b");
+/// assert_eq!(map_view[&1], "b");
 /// ```
 pub type LinearMapView<K, V> = sealed::LinearMapInner<VecView<(K, V)>>;
 
@@ -69,6 +70,58 @@ impl<K, V, const N: usize> LinearMap<K, V, N>
 where
     K: Eq,
 {
+    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// use heapless::{LinearMap, LinearMapView};
+    ///
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
+    /// map.insert(1, "a").unwrap();
+    /// if let Some(x) = map.get_mut(&1) {
+    ///     *x = "b";
+    /// }
+    /// let map_view: &LinearMapView<_, _> = map.as_view();
+    /// assert_eq!(map_view[&1], "b");
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `LinearMap<K, V, N>` implements `Unsize<LinearMapView<K, V>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{LinearMap, LinearMapView};
+    ///
+    /// let map: LinearMap<&str, &str, 8> = LinearMap::new();
+    /// let map_view: &LinearMapView<_, _> = &map;
+    /// ```
+    pub fn as_view(&self) -> &LinearMapView<K, V> {
+        self
+    }
+
+    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// use heapless::{LinearMap, LinearMapView};
+    ///
+    /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
+    /// let map_view: &mut LinearMapView<_, _> = map.as_mut_view();
+    /// map_view.insert(1, "a").unwrap();
+    /// if let Some(x) = map_view.get_mut(&1) {
+    ///     *x = "b";
+    /// }
+    /// assert_eq!(map_view[&1], "b");
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `LinearMap<K, V, N>` implements `Unsize<LinearMapView<K, V>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{LinearMap, LinearMapView};
+    ///
+    /// let mut map: LinearMap<&str, &str, 8> = LinearMap::new();
+    /// let map_view: &mut LinearMapView<_, _> = &mut map;
+    /// ```
+    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
+        self
+    }
+
     /// Returns the number of elements that the map can hold.
     ///
     /// Computes in *O*(1) time.
@@ -100,7 +153,7 @@ where
     /// assert!(map.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.buffer.clear()
+        self.as_mut_view().clear()
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -118,7 +171,7 @@ where
     /// assert_eq!(map.contains_key(&2), false);
     /// ```
     pub fn contains_key(&self, key: &K) -> bool {
-        self.get(key).is_some()
+        self.as_view().contains_key(key)
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -140,9 +193,7 @@ where
         K: Borrow<Q>,
         Q: Eq + ?Sized,
     {
-        self.iter()
-            .find(|&(k, _)| k.borrow() == key)
-            .map(|(_, v)| v)
+        self.as_view().get(key)
     }
 
     /// Returns a mutable reference to the value corresponding to the key.
@@ -166,9 +217,7 @@ where
         K: Borrow<Q>,
         Q: Eq + ?Sized,
     {
-        self.iter_mut()
-            .find(|&(k, _)| k.borrow() == key)
-            .map(|(_, v)| v)
+        self.as_mut_view().get_mut(key)
     }
 
     /// Returns the number of elements in this map.
@@ -186,7 +235,7 @@ where
     /// assert_eq!(a.len(), 1);
     /// ```
     pub fn len(&self) -> usize {
-        self.buffer.len()
+        self.as_view().len()
     }
 
     /// Inserts a key-value pair into the map.
@@ -210,14 +259,8 @@ where
     /// assert_eq!(map.insert(37, "c").unwrap(), Some("b"));
     /// assert_eq!(map[&37], "c");
     /// ```
-    pub fn insert(&mut self, key: K, mut value: V) -> Result<Option<V>, (K, V)> {
-        if let Some((_, v)) = self.iter_mut().find(|&(k, _)| *k == key) {
-            mem::swap(v, &mut value);
-            return Ok(Some(value));
-        }
-
-        self.buffer.push((key, value))?;
-        Ok(None)
+    pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, (K, V)> {
+        self.as_mut_view().insert(key, value)
     }
 
     /// Returns true if the map contains no elements.
@@ -235,7 +278,7 @@ where
     /// assert!(!a.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.as_view().is_empty()
     }
 
     /// An iterator visiting all key-value pairs in arbitrary order.
@@ -255,9 +298,7 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> Iter<'_, K, V> {
-        Iter {
-            iter: self.buffer.as_slice().iter(),
-        }
+        self.as_view().iter()
     }
 
     /// An iterator visiting all key-value pairs in arbitrary order,
@@ -283,9 +324,7 @@ where
     /// }
     /// ```
     pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
-        IterMut {
-            iter: self.buffer.as_mut_slice().iter_mut(),
-        }
+        self.as_mut_view().iter_mut()
     }
 
     /// An iterator visiting all keys in arbitrary order.
@@ -305,7 +344,7 @@ where
     /// }
     /// ```
     pub fn keys(&self) -> impl Iterator<Item = &K> {
-        self.iter().map(|(k, _)| k)
+        self.as_view().keys()
     }
 
     /// Removes a key from the map, returning the value at
@@ -328,13 +367,7 @@ where
         K: Borrow<Q>,
         Q: Eq + ?Sized,
     {
-        let idx = self
-            .keys()
-            .enumerate()
-            .find(|&(_, k)| k.borrow() == key)
-            .map(|(idx, _)| idx);
-
-        idx.map(|idx| self.buffer.swap_remove(idx).1)
+        self.as_mut_view().remove(key)
     }
 
     /// An iterator visiting all values in arbitrary order.
@@ -354,7 +387,7 @@ where
     /// }
     /// ```
     pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.iter().map(|(_, v)| v)
+        self.as_view().values()
     }
 
     /// An iterator visiting all values mutably in arbitrary order.
@@ -378,7 +411,7 @@ where
     /// }
     /// ```
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
-        self.iter_mut().map(|(_, v)| v)
+        self.as_mut_view().values_mut()
     }
 }
 
@@ -390,7 +423,7 @@ where
     type Output = V;
 
     fn index(&self, key: &Q) -> &V {
-        self.get(key).expect("no entry found for key")
+        self.as_view().index(key)
     }
 }
 
@@ -400,7 +433,7 @@ where
     Q: Eq + ?Sized,
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
-        self.get_mut(key).expect("no entry found for key")
+        self.as_mut_view().index_mut(key)
     }
 }
 
@@ -431,7 +464,7 @@ where
     V: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(self.iter()).finish()
+        self.as_view().fmt(f)
     }
 }
 
@@ -463,7 +496,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::{LinearMapView, LinearMap};
+    /// use heapless::{LinearMap, LinearMapView};
     ///
     /// let mut map: LinearMap<_, _, 8> = LinearMap::new();
     /// let map_view: &mut LinearMapView<_, _> = &mut map;
@@ -851,7 +884,7 @@ where
     type IntoIter = Iter<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+        self.as_view().iter()
     }
 }
 
@@ -926,6 +959,26 @@ where
             && self
                 .iter()
                 .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
+    }
+}
+
+impl<K, V, const N: usize> PartialEq<LinearMap<K, V, N>> for LinearMapView<K, V>
+where
+    K: Eq,
+    V: PartialEq,
+{
+    fn eq(&self, other: &LinearMap<K, V, N>) -> bool {
+        self.eq(other.as_view())
+    }
+}
+
+impl<K, V, const N: usize> PartialEq<LinearMapView<K, V>> for LinearMap<K, V, N>
+where
+    K: Eq,
+    V: PartialEq,
+{
+    fn eq(&self, other: &LinearMapView<K, V>) -> bool {
+        self.as_view().eq(other)
     }
 }
 
