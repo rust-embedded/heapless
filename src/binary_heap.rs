@@ -115,7 +115,7 @@ pub type BinaryHeap<T, K, const N: usize> = private::BinaryHeapInner<K, Vec<T, N
 /// normally only possible through `Cell`, `RefCell`, global state, I/O, or unsafe code.
 ///
 /// ```
-/// use heapless::binary_heap::{BinaryHeapView, BinaryHeap, Max};
+/// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
 ///
 /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
 /// let mut heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
@@ -180,7 +180,7 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
         self
     }
 
-    pub fn as_mut_view(&self) -> &BinaryHeapView<T, K> {
+    pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
         self
     }
 }
@@ -193,7 +193,7 @@ where
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.data.capacity()
+        self.as_view().capacity()
     }
 
     /// Drops all items from the binary heap.
@@ -212,7 +212,7 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.data.clear()
+        self.as_mut_view().clear()
     }
 
     /// Returns the length of the binary heap.
@@ -227,7 +227,7 @@ where
     /// assert_eq!(heap.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.as_view().len()
     }
 
     /// Checks if the binary heap is empty.
@@ -246,7 +246,7 @@ where
     /// assert!(!heap.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.as_view().is_empty()
     }
 
     /// Returns an iterator visiting all values in the underlying vector, in arbitrary order.
@@ -266,7 +266,7 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> slice::Iter<'_, T> {
-        self.data.as_slice().iter()
+        self.as_view().iter()
     }
 
     /// Returns a mutable iterator visiting all values in the underlying vector, in arbitrary order.
@@ -274,7 +274,7 @@ where
     /// **WARNING** Mutating the items in the binary heap can leave the heap in an inconsistent
     /// state.
     pub fn iter_mut(&mut self) -> slice::IterMut<'_, T> {
-        self.data.as_mut_slice().iter_mut()
+        self.as_mut_view().iter_mut()
     }
 
     /// Returns the *top* (greatest if max-heap, smallest if min-heap) item in the binary heap, or
@@ -292,7 +292,7 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        self.data.as_slice().first()
+        self.as_view().peek()
     }
 
     /// Returns a mutable reference to the greatest item in the binary heap, or
@@ -322,6 +322,7 @@ where
     /// assert_eq!(heap.peek(), Some(&2));
     /// ```
     pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, K, N>> {
+        // FIXME: return a PeekMutView. Require breaking change
         if self.is_empty() {
             None
         } else {
@@ -347,24 +348,14 @@ where
     /// assert_eq!(heap.pop(), None);
     /// ```
     pub fn pop(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            Some(unsafe { self.pop_unchecked() })
-        }
+        self.as_mut_view().pop()
     }
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
     #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn pop_unchecked(&mut self) -> T {
-        let mut item = self.data.pop_unchecked();
-
-        if !self.is_empty() {
-            mem::swap(&mut item, self.data.as_mut_slice().get_unchecked_mut(0));
-            self.sift_down_to_bottom(0);
-        }
-        item
+        self.as_mut_view().pop_unchecked()
     }
 
     /// Pushes an item onto the binary heap.
@@ -381,20 +372,13 @@ where
     /// assert_eq!(heap.peek(), Some(&5));
     /// ```
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.data.is_full() {
-            return Err(item);
-        }
-
-        unsafe { self.push_unchecked(item) }
-        Ok(())
+        self.as_mut_view().push(item)
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.
     #[allow(clippy::missing_safety_doc)] // TODO
     pub unsafe fn push_unchecked(&mut self, item: T) {
-        let old_len = self.len();
-        self.data.push_unchecked(item);
-        self.sift_up(0, old_len);
+        self.as_mut_view().push_unchecked(item)
     }
 
     /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
@@ -403,40 +387,8 @@ where
     }
 
     /* Private API */
-    fn sift_down_to_bottom(&mut self, mut pos: usize) {
-        let end = self.len();
-        let start = pos;
-        unsafe {
-            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
-            let mut child = 2 * pos + 1;
-            while child < end {
-                let right = child + 1;
-                // compare with the greater of the two children
-                if right < end && hole.get(child).cmp(hole.get(right)) != K::ordering() {
-                    child = right;
-                }
-                hole.move_to(child);
-                child = 2 * hole.pos() + 1;
-            }
-            pos = hole.pos;
-        }
-        self.sift_up(start, pos);
-    }
-
-    fn sift_up(&mut self, start: usize, pos: usize) -> usize {
-        unsafe {
-            // Take out the value at `pos` and create a hole.
-            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
-
-            while hole.pos() > start {
-                let parent = (hole.pos() - 1) / 2;
-                if hole.element().cmp(hole.get(parent)) != K::ordering() {
-                    break;
-                }
-                hole.move_to(parent);
-            }
-            hole.pos()
-        }
+    fn sift_down_to_bottom(&mut self, pos: usize) {
+        self.as_mut_view().sift_down_to_bottom(pos)
     }
 }
 
@@ -454,17 +406,19 @@ where
     /// Drops all items from the binary heap.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// heap.push(1).unwrap();
-    /// heap.push(3).unwrap();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
     ///
-    /// assert!(!heap.is_empty());
+    /// heap_view.push(1).unwrap();
+    /// heap_view.push(3).unwrap();
     ///
-    /// heap.clear();
+    /// assert!(!heap_view.is_empty());
     ///
-    /// assert!(heap.is_empty());
+    /// heap_view.clear();
+    ///
+    /// assert!(heap_view.is_empty());
     /// ```
     pub fn clear(&mut self) {
         self.data.clear()
@@ -473,13 +427,14 @@ where
     /// Returns the length of the binary heap.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// heap.push(1).unwrap();
-    /// heap.push(3).unwrap();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// heap_view.push(1).unwrap();
+    /// heap_view.push(3).unwrap();
     ///
-    /// assert_eq!(heap.len(), 2);
+    /// assert_eq!(heap_view.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
         self.data.len()
@@ -488,17 +443,18 @@ where
     /// Checks if the binary heap is empty.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
     ///
-    /// assert!(heap.is_empty());
+    /// assert!(heap_view.is_empty());
     ///
-    /// heap.push(3).unwrap();
-    /// heap.push(5).unwrap();
-    /// heap.push(1).unwrap();
+    /// heap_view.push(3).unwrap();
+    /// heap_view.push(5).unwrap();
+    /// heap_view.push(1).unwrap();
     ///
-    /// assert!(!heap.is_empty());
+    /// assert!(!heap_view.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -507,16 +463,17 @@ where
     /// Returns an iterator visiting all values in the underlying vector, in arbitrary order.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// heap.push(1).unwrap();
-    /// heap.push(2).unwrap();
-    /// heap.push(3).unwrap();
-    /// heap.push(4).unwrap();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// heap_view.push(1).unwrap();
+    /// heap_view.push(2).unwrap();
+    /// heap_view.push(3).unwrap();
+    /// heap_view.push(4).unwrap();
     ///
     /// // Print 1, 2, 3, 4 in arbitrary order
-    /// for x in heap.iter() {
+    /// for x in heap_view.iter() {
     ///     println!("{}", x);
     /// }
     /// ```
@@ -536,15 +493,16 @@ where
     /// None if it is empty.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// assert_eq!(heap.peek(), None);
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// assert_eq!(heap_view.peek(), None);
     ///
-    /// heap.push(1).unwrap();
-    /// heap.push(5).unwrap();
-    /// heap.push(2).unwrap();
-    /// assert_eq!(heap.peek(), Some(&5));
+    /// heap_view.push(1).unwrap();
+    /// heap_view.push(5).unwrap();
+    /// heap_view.push(2).unwrap();
+    /// assert_eq!(heap_view.peek(), Some(&5));
     /// ```
     pub fn peek(&self) -> Option<&T> {
         self.data.as_slice().first()
@@ -561,20 +519,21 @@ where
     /// Basic usage:
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// assert!(heap.peek_mut().is_none());
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// assert!(heap_view.peek_mut().is_none());
     ///
-    /// heap.push(1);
-    /// heap.push(5);
-    /// heap.push(2);
+    /// heap_view.push(1);
+    /// heap_view.push(5);
+    /// heap_view.push(2);
     /// {
-    ///     let mut val = heap.peek_mut().unwrap();
+    ///     let mut val = heap_view.peek_mut().unwrap();
     ///     *val = 0;
     /// }
     ///
-    /// assert_eq!(heap.peek(), Some(&2));
+    /// assert_eq!(heap_view.peek(), Some(&2));
     /// ```
     pub fn peek_mut(&mut self) -> Option<PeekMutView<'_, T, K>> {
         if self.is_empty() {
@@ -591,15 +550,16 @@ where
     /// returns it, or None if it is empty.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// heap.push(1).unwrap();
-    /// heap.push(3).unwrap();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// heap_view.push(1).unwrap();
+    /// heap_view.push(3).unwrap();
     ///
-    /// assert_eq!(heap.pop(), Some(3));
-    /// assert_eq!(heap.pop(), Some(1));
-    /// assert_eq!(heap.pop(), None);
+    /// assert_eq!(heap_view.pop(), Some(3));
+    /// assert_eq!(heap_view.pop(), Some(1));
+    /// assert_eq!(heap_view.pop(), None);
     /// ```
     pub fn pop(&mut self) -> Option<T> {
         if self.is_empty() {
@@ -625,15 +585,16 @@ where
     /// Pushes an item onto the binary heap.
     ///
     /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
     ///
     /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-    /// heap.push(3).unwrap();
-    /// heap.push(5).unwrap();
-    /// heap.push(1).unwrap();
+    /// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+    /// heap_view.push(3).unwrap();
+    /// heap_view.push(5).unwrap();
+    /// heap_view.push(1).unwrap();
     ///
-    /// assert_eq!(heap.len(), 3);
-    /// assert_eq!(heap.peek(), Some(&5));
+    /// assert_eq!(heap_view.len(), 3);
+    /// assert_eq!(heap_view.peek(), Some(&5));
     /// ```
     pub fn push(&mut self, item: T) -> Result<(), T> {
         if self.data.is_full() {

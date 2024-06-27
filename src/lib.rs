@@ -85,7 +85,7 @@
     feature(integer_atomics)
 )]
 
-pub use binary_heap::BinaryHeap;
+pub use binary_heap::{BinaryHeap, BinaryHeapView};
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use indexmap::{
