@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed the list of implemented data structures in the crate docs, by adding `Deque`,
   `HistoryBuffer` and `SortedLinkedList` to the list.
 - Fixed `MpMcQueue` with `mpmc_large` feature.
+- Fix missing `Drop` for `MpMcQueue`
 
 ## [v0.8.0] - 2023-11-07
 
