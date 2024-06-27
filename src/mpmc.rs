@@ -128,17 +128,77 @@ pub type Q32<T> = MpMcQueue<T, 32>;
 /// MPMC queue with a capability for 64 elements.
 pub type Q64<T> = MpMcQueue<T, 64>;
 
+mod private {
+    use core::marker::PhantomData;
+
+    use super::*;
+
+    /// <div class="warn">This is private API and should not be used</div>
+    pub struct Owned<T, const N: usize>(PhantomData<[T; N]>);
+    /// <div class="warn">This is private API and should not be used</div>
+    pub struct View<T>(PhantomData<[T]>);
+
+    /// <div class="warn">This is private API and should not be used</div>
+    pub struct MpMcQueueInner<B: MpMcQueueBuffer + ?Sized> {
+        pub(super) dequeue_pos: AtomicTargetSize,
+        pub(super) enqueue_pos: AtomicTargetSize,
+        pub(super) buffer: UnsafeCell<B::Buffer>,
+    }
+    pub trait MpMcQueueBuffer {
+        type Buffer: ?Sized;
+        type T;
+
+        fn as_view(this: &private::MpMcQueueInner<Self>) -> &MpMcQueueView<Self::T>;
+        fn as_mut_view(this: &mut private::MpMcQueueInner<Self>) -> &mut MpMcQueueView<Self::T>;
+    }
+
+    impl<T, const N: usize> MpMcQueueBuffer for private::Owned<T, N> {
+        type Buffer = [Cell<T>; N];
+        type T = T;
+        fn as_view(this: &private::MpMcQueueInner<Self>) -> &MpMcQueueView<Self::T> {
+            this
+        }
+        fn as_mut_view(this: &mut private::MpMcQueueInner<Self>) -> &mut MpMcQueueView<Self::T> {
+            this
+        }
+    }
+
+    impl<T> MpMcQueueBuffer for private::View<T> {
+        type Buffer = [Cell<T>];
+        type T = T;
+        fn as_view(this: &private::MpMcQueueInner<Self>) -> &MpMcQueueView<Self::T> {
+            this
+        }
+        fn as_mut_view(this: &mut private::MpMcQueueInner<Self>) -> &mut MpMcQueueView<Self::T> {
+            this
+        }
+    }
+
+    // Cell is sealed to satisfy the compiler's requirement of not leaking private types through the MpMcQueueBuffer trait implementations
+    pub struct Cell<T> {
+        pub(super) data: MaybeUninit<T>,
+        pub(super) sequence: AtomicTargetSize,
+    }
+}
+
+// Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
+// cfg(doc) prevents `MpMcQueueInner` being part of the public API.
+// doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
+#[cfg(doc)]
+#[doc(hidden)]
+pub use private::MpMcQueueInner as _;
+
+use private::Cell;
+
 /// MPMC queue with a capacity for N elements
 /// N must be a power of 2
 /// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
-pub struct MpMcQueue<T, const N: usize> {
-    buffer: UnsafeCell<[Cell<T>; N]>,
-    dequeue_pos: AtomicTargetSize,
-    enqueue_pos: AtomicTargetSize,
-}
+pub type MpMcQueue<T, const N: usize> = private::MpMcQueueInner<private::Owned<T, N>>;
+
+/// MPMC queue with a capacity for a dynamic number of element
+pub type MpMcQueueView<T> = private::MpMcQueueInner<private::View<T>>;
 
 impl<T, const N: usize> MpMcQueue<T, N> {
-    const MASK: UintSize = (N - 1) as UintSize;
     const EMPTY_CELL: Cell<T> = Cell::new(0);
 
     const ASSERT: [(); 1] = [()];
@@ -170,7 +230,69 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
     /// Returns the item in the front of the queue, or `None` if the queue is empty
     pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, Self::MASK) }
+        self.as_view().dequeue()
+    }
+
+    /// Adds an `item` to the end of the queue
+    ///
+    /// Returns back the `item` if the queue is full
+    pub fn enqueue(&self, item: T) -> Result<(), T> {
+        self.as_view().enqueue(item)
+    }
+
+    /// Get a reference to the `MpMcQueue`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView, Q2};
+    /// let q: MpMcQueue<u8, 2> = Q2::new();
+    /// let view: &MpMcQueueView<u8> = q.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueue<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView, Q2};
+    /// let q: MpMcQueue<u8, 2> = Q2::new();
+    /// let view: &MpMcQueueView<u8> = &q;
+    /// ```
+    pub fn as_view(&self) -> &MpMcQueueView<T> {
+        self
+    }
+
+    /// Get a mutable reference to the `MpMcQueue`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView, Q2};
+    /// let mut q: MpMcQueue<u8, 2> = Q2::new();
+    /// let view: &mut MpMcQueueView<u8> = q.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueue<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView, Q2};
+    /// let mut q: MpMcQueue<u8, 2> = Q2::new();
+    /// let view: &mut MpMcQueueView<u8> = &mut q;
+    /// ```
+    pub fn as_mut_view(&mut self) -> &mut MpMcQueueView<T> {
+        self
+    }
+}
+
+impl<T> MpMcQueueView<T> {
+    fn mask(&self) -> UintSize {
+        // We get the len of the buffer. There is now revireversee method of `core::ptr::from_raw_parts`, so we have to work around it.
+        let ptr: *const [()] = self.buffer.get() as _;
+        // SAFETY: There is no aliasing as () is zero-sized
+        let slice: &[()] = unsafe { &*ptr };
+        let len = slice.len();
+
+        (len - 1) as _
+    }
+
+    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    pub fn dequeue(&self) -> Option<T> {
+        unsafe { dequeue(self.buffer.get() as *mut _, &self.dequeue_pos, self.mask()) }
     }
 
     /// Adds an `item` to the end of the queue
@@ -181,7 +303,7 @@ impl<T, const N: usize> MpMcQueue<T, N> {
             enqueue(
                 self.buffer.get() as *mut _,
                 &self.enqueue_pos,
-                Self::MASK,
+                self.mask(),
                 item,
             )
         }
@@ -194,19 +316,16 @@ impl<T, const N: usize> Default for MpMcQueue<T, N> {
     }
 }
 
-impl<T, const N: usize> Drop for MpMcQueue<T, N> {
+impl<B: private::MpMcQueueBuffer + ?Sized> Drop for private::MpMcQueueInner<B> {
     fn drop(&mut self) {
+        let this = B::as_mut_view(self);
         // drop all contents currently in the queue
-        while self.dequeue().is_some() {}
+        while this.dequeue().is_some() {}
     }
 }
 
 unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
-
-struct Cell<T> {
-    data: MaybeUninit<T>,
-    sequence: AtomicTargetSize,
-}
+unsafe impl<T> Sync for MpMcQueueView<T> where T: Send {}
 
 impl<T> Cell<T> {
     const fn new(seq: usize) -> Self {
