@@ -1,4 +1,6 @@
 use core::fmt;
+use core::iter;
+use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 use core::ptr;
@@ -422,6 +424,10 @@ impl<T> HistoryBufferView<T> {
     /// }
     /// ```
     pub fn oldest_ordered(&self) -> impl Iterator<Item = &T> {
+        self.oldest_ordered_inner()
+    }
+
+    fn oldest_ordered_inner(&self) -> iter::Chain<slice::Iter<'_, T>, slice::Iter<'_, T>> {
         let (old, new) = self.as_slices();
         old.iter().chain(new)
     }
@@ -579,19 +585,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// }
     /// ```
     pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
-        if self.filled {
-            OldestOrdered {
-                buf: self,
-                cur: self.write_at,
-                wrapped: false,
-            }
-        } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
-                buf: self,
-                cur: 0,
-                wrapped: true,
-            }
+        OldestOrdered {
+            inner: self.as_view().oldest_ordered_inner(),
+            phantom: PhantomData,
         }
     }
 }
@@ -754,28 +750,15 @@ where
 /// An iterator on the underlying buffer ordered from oldest data to newest
 #[derive(Clone)]
 pub struct OldestOrdered<'a, T, const N: usize> {
-    buf: &'a HistoryBuffer<T, N>,
-    cur: usize,
-    wrapped: bool,
+    inner: iter::Chain<slice::Iter<'a, T>, slice::Iter<'a, T>>,
+    phantom: PhantomData<[T; N]>,
 }
 
 impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled {
-            // roll-over
-            self.cur = 0;
-            self.wrapped = true;
-        }
-
-        if self.cur == self.buf.write_at && self.wrapped {
-            return None;
-        }
-
-        let item = &self.buf[self.cur];
-        self.cur += 1;
-        Some(item)
+        self.inner.next()
     }
 }
 
