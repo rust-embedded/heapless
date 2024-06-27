@@ -80,29 +80,29 @@ pub type HistoryBuffer<T, const N: usize> = HistoryBufferInner<[MaybeUninit<T>; 
 ///
 /// # Examples
 /// ```
-/// use heapless::HistoryBuffer;
+/// use heapless::{HistoryBuffer, HistoryBufferView};
 ///
 /// // Initialize a new buffer with 8 elements.
 /// let mut buf = HistoryBuffer::<_, 8>::new();
 /// let buf_view: &mut HistoryBufferView<_> = &mut buf;
 ///
 /// // Starts with no data
-/// assert_eq!(buf.recent(), None);
+/// assert_eq!(buf_view.recent(), None);
 ///
-/// buf.write(3);
-/// buf.write(5);
-/// buf.extend(&[4, 4]);
+/// buf_view.write(3);
+/// buf_view.write(5);
+/// buf_view.extend(&[4, 4]);
 ///
 /// // The most recent written element is a four.
-/// assert_eq!(buf.recent(), Some(&4));
+/// assert_eq!(buf_view.recent(), Some(&4));
 ///
 /// // To access all elements in an unspecified order, use `as_slice()`.
-/// for el in buf.as_slice() {
+/// for el in buf_view.as_slice() {
 ///     println!("{:?}", el);
 /// }
 ///
 /// // Now we can prepare an average of all values, which comes out to 4.
-/// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+/// let avg = buf_view.as_slice().iter().sum::<usize>() / buf_view.len();
 /// assert_eq!(avg, 4);
 /// ```
 pub type HistoryBufferView<T> = HistoryBufferInner<[MaybeUninit<T>]>;
@@ -299,12 +299,13 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
-    /// x.write(4);
-    /// x.write(10);
-    /// assert_eq!(x.recent(), Some(&10));
+    /// let mut x_view = &mut x;
+    /// x_view.write(4);
+    /// x_view.write(10);
+    /// assert_eq!(x_view.recent(), Some(&10));
     /// ```
     pub fn recent(&self) -> Option<&T> {
         self.recent_index()
@@ -316,12 +317,13 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
-    /// x.write(4);
-    /// x.write(10);
-    /// assert_eq!(x.recent_index(), Some(1));
+    /// let mut x_view = &mut x;
+    /// x_view.write(4);
+    /// x_view.write(10);
+    /// assert_eq!(x_view.recent_index(), Some(1));
     /// ```
     pub fn recent_index(&self) -> Option<usize> {
         if self.write_at == 0 {
@@ -340,12 +342,13 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
-    /// x.write(4);
-    /// x.write(10);
-    /// assert_eq!(x.oldest(), Some(&4));
+    /// let mut x_view = &mut x;
+    /// x_view.write(4);
+    /// x_view.write(10);
+    /// assert_eq!(x_view.oldest(), Some(&4));
     /// ```
     pub fn oldest(&self) -> Option<&T> {
         self.oldest_index()
@@ -357,12 +360,13 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     ///
     /// let mut x: HistoryBuffer<u8, 16> = HistoryBuffer::new();
-    /// x.write(4);
-    /// x.write(10);
-    /// assert_eq!(x.oldest_index(), Some(0));
+    /// let mut x_view = &mut x;
+    /// x_view.write(4);
+    /// x_view.write(10);
+    /// assert_eq!(x_view.oldest_index(), Some(0));
     /// ```
     pub fn oldest_index(&self) -> Option<usize> {
         if self.filled {
@@ -385,12 +389,12 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
-    ///
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
-    /// buffer.extend([0, 0, 0]);
-    /// buffer.extend([1, 2, 3, 4, 5, 6]);
-    /// assert_eq!(buffer.as_slices(), (&[1, 2, 3][..], &[4, 5, 6][..]));
+    /// let mut buffer_view: &mut HistoryBufferView<u8> = &mut buffer;
+    /// buffer_view.extend([0, 0, 0]);
+    /// buffer_view.extend([1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(buffer_view.as_slices(), (&[1, 2, 3][..], &[4, 5, 6][..]));
     /// ```
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let buffer = self.as_slice();
@@ -407,12 +411,13 @@ impl<T> HistoryBufferView<T> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::HistoryBuffer;
+    /// use heapless::{HistoryBuffer, HistoryBufferView};
     ///
     /// let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
-    /// buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
+    /// let mut buffer_view: &mut HistoryBufferView<u8> = &mut buffer;
+    /// buffer_view.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
     /// let expected = [1, 2, 3, 4, 5, 6];
-    /// for (x, y) in buffer.oldest_ordered().zip(expected.iter()) {
+    /// for (x, y) in buffer_view.oldest_ordered().zip(expected.iter()) {
     ///     assert_eq!(x, y)
     /// }
     /// ```
@@ -426,11 +431,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the current fill level of the buffer.
     #[inline]
     pub fn len(&self) -> usize {
-        if self.filled {
-            N
-        } else {
-            self.write_at
-        }
+        self.as_view().len()
     }
 
     /// Returns true if the buffer is empty.
@@ -445,7 +446,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.as_view().is_empty()
     }
 
     /// Returns the capacity of the buffer, which is the length of the
@@ -463,17 +464,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
 
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
-        if self.filled {
-            // Drop the old before we overwrite it.
-            unsafe { ptr::drop_in_place(self.data[self.write_at].as_mut_ptr()) }
-        }
-        self.data[self.write_at] = MaybeUninit::new(t);
-
-        self.write_at += 1;
-        if self.write_at == self.capacity() {
-            self.write_at = 0;
-            self.filled = true;
-        }
+        self.as_mut_view().write(t)
     }
 
     /// Clones and writes all elements in a slice to the buffer.
@@ -484,9 +475,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     where
         T: Clone,
     {
-        for item in other {
-            self.write(item.clone());
-        }
+        self.as_mut_view().extend_from_slice(other)
     }
 
     /// Returns a reference to the most recently written value.
@@ -502,8 +491,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
     pub fn recent(&self) -> Option<&T> {
-        self.recent_index()
-            .map(|i| unsafe { &*self.data[i].as_ptr() })
+        self.as_view().recent()
     }
 
     /// Returns index of the most recently written value in the underlying slice.
@@ -519,15 +507,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.recent_index(), Some(1));
     /// ```
     pub fn recent_index(&self) -> Option<usize> {
-        if self.write_at == 0 {
-            if self.filled {
-                Some(self.capacity() - 1)
-            } else {
-                None
-            }
-        } else {
-            Some(self.write_at - 1)
-        }
+        self.as_view().recent_index()
     }
 
     /// Returns a reference to the oldest value in the buffer.
@@ -543,8 +523,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.oldest(), Some(&4));
     /// ```
     pub fn oldest(&self) -> Option<&T> {
-        self.oldest_index()
-            .map(|i| unsafe { &*self.data[i].as_ptr() })
+        self.as_view().oldest()
     }
 
     /// Returns index of the oldest value in the underlying slice.
@@ -560,19 +539,13 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(x.oldest_index(), Some(0));
     /// ```
     pub fn oldest_index(&self) -> Option<usize> {
-        if self.filled {
-            Some(self.write_at)
-        } else if self.write_at == 0 {
-            None
-        } else {
-            Some(0)
-        }
+        self.as_view().oldest_index()
     }
 
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
+        self.as_view().as_slice()
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -588,13 +561,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// assert_eq!(buffer.as_slices(), (&[1, 2, 3][..], &[4, 5, 6][..]));
     /// ```
     pub fn as_slices(&self) -> (&[T], &[T]) {
-        let buffer = self.as_slice();
-
-        if !self.filled {
-            (buffer, &[])
-        } else {
-            (&buffer[self.write_at..], &buffer[..self.write_at])
-        }
+        self.as_view().as_slices()
     }
 
     /// Returns an iterator for iterating over the buffer from oldest to newest.
