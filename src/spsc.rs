@@ -97,7 +97,7 @@
 //! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
 //! and `Ok` is returned by `enqueue`).
 
-use core::{cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
+use core::{cell::UnsafeCell, fmt, hash, marker::PhantomData, mem::MaybeUninit, ptr};
 
 #[cfg(not(feature = "portable-atomic"))]
 use core::sync::atomic;
@@ -106,26 +106,106 @@ use portable_atomic as atomic;
 
 use atomic::{AtomicUsize, Ordering};
 
+mod private {
+    use super::*;
+
+    /// <div class="warn">This is private API and should not be used</div>
+    pub struct QueueInner<B: ?Sized + QueueBuffer> {
+        // this is from where we dequeue items
+        pub(crate) head: AtomicUsize,
+
+        // this is where we enqueue new items
+        pub(crate) tail: AtomicUsize,
+
+        pub(crate) buffer: B,
+    }
+
+    pub trait QueueBuffer {
+        type T;
+        fn as_view(this: &QueueInner<Self>) -> &QueueView<Self::T>;
+        fn as_mut_view(this: &mut QueueInner<Self>) -> &mut QueueView<Self::T>;
+    }
+}
+
+// Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `Queue` and `QueueView` are properly documented.
+// cfg(doc) prevents `QueueInner` being part of the public API.
+// doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
+#[cfg(doc)]
+#[doc(hidden)]
+pub use private::QueueInner as _;
+
 /// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements
 ///
 /// *IMPORTANT*: To get better performance use a value for `N` that is a power of 2 (e.g. `16`, `32`,
 /// etc.).
-pub struct Queue<T, const N: usize> {
-    // this is from where we dequeue items
-    pub(crate) head: AtomicUsize,
+pub type Queue<T, const N: usize> = private::QueueInner<[UnsafeCell<MaybeUninit<T>>; N]>;
 
-    // this is where we enqueue new items
-    pub(crate) tail: AtomicUsize,
+/// A statically allocated single producer single consumer queue with dynamic capacity
+pub type QueueView<T> = private::QueueInner<[UnsafeCell<MaybeUninit<T>>]>;
 
-    pub(crate) buffer: [UnsafeCell<MaybeUninit<T>>; N],
+impl<T, const N: usize> private::QueueBuffer for [UnsafeCell<MaybeUninit<T>>; N] {
+    type T = T;
+
+    fn as_view(this: &private::QueueInner<Self>) -> &QueueView<Self::T> {
+        this
+    }
+    fn as_mut_view(this: &mut private::QueueInner<Self>) -> &mut QueueView<Self::T> {
+        this
+    }
+}
+
+impl<T> private::QueueBuffer for [UnsafeCell<MaybeUninit<T>>] {
+    type T = T;
+
+    fn as_view(this: &private::QueueInner<Self>) -> &QueueView<Self::T> {
+        this
+    }
+    fn as_mut_view(this: &mut private::QueueInner<Self>) -> &mut QueueView<Self::T> {
+        this
+    }
 }
 
 impl<T, const N: usize> Queue<T, N> {
     const INIT: UnsafeCell<MaybeUninit<T>> = UnsafeCell::new(MaybeUninit::uninit());
 
-    #[inline]
-    fn increment(val: usize) -> usize {
-        (val + 1) % N
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    /// ```
+    /// use heapless::spsc::{Queue, QueueView};
+    ///
+    /// let rb: Queue<u8, 4> = Queue::new();
+    /// let rb_view: &QueueView<u8> = rb.as_view();
+    /// ```
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```
+    /// use heapless::spsc::{Queue, QueueView};
+    ///
+    /// let rb: Queue<u8, 4> = Queue::new();
+    /// let rb_view: &QueueView<u8> = &rb;
+    /// ```
+    pub fn as_view(&self) -> &QueueView<T> {
+        self
+    }
+
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    /// ```
+    /// use heapless::spsc::{Queue, QueueView};
+    ///
+    /// let mut rb: Queue<u8, 4> = Queue::new();
+    /// let rb_view: &mut QueueView<u8> = rb.as_mut_view();
+    /// ```
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```
+    /// use heapless::spsc::{Queue, QueueView};
+    ///
+    /// let mut rb: Queue<u8, 4> = Queue::new();
+    /// let rb_view: &mut QueueView<u8> = &mut rb;
+    /// ```
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+        self
     }
 
     /// Creates an empty queue with a fixed capacity of `N - 1`
@@ -149,10 +229,135 @@ impl<T, const N: usize> Queue<T, N> {
     /// Returns the number of elements in the queue
     #[inline]
     pub fn len(&self) -> usize {
+        self.as_view().len()
+    }
+
+    /// Returns `true` if the queue is empty
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_view().is_empty()
+    }
+
+    /// Returns `true` if the queue is full
+    #[inline]
+    pub fn is_full(&self) -> bool {
+        self.as_view().is_full()
+    }
+
+    /// Iterates from the front of the queue to the back
+    pub fn iter(&self) -> Iter<'_, T, N> {
+        Iter {
+            inner: self.as_view().iter(),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Returns an iterator that allows modifying each value
+    pub fn iter_mut(&mut self) -> IterMut<'_, T, N> {
+        IterMut {
+            inner: self.as_mut_view().iter_mut(),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Adds an `item` to the end of the queue
+    ///
+    /// Returns back the `item` if the queue is full
+    #[inline]
+    pub fn enqueue(&mut self, val: T) -> Result<(), T> {
+        self.as_mut_view().enqueue(val)
+    }
+
+    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    #[inline]
+    pub fn dequeue(&mut self) -> Option<T> {
+        self.as_mut_view().dequeue()
+    }
+
+    /// Returns a reference to the item in the front of the queue without dequeuing, or
+    /// `None` if the queue is empty.
+    ///
+    /// # Examples
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert_eq!(None, consumer.peek());
+    /// producer.enqueue(1);
+    /// assert_eq!(Some(&1), consumer.peek());
+    /// assert_eq!(Some(1), consumer.dequeue());
+    /// assert_eq!(None, consumer.peek());
+    /// ```
+    pub fn peek(&self) -> Option<&T> {
+        self.as_view().peek()
+    }
+
+    /// Adds an `item` to the end of the queue, without checking if it's full
+    ///
+    /// # Safety
+    ///
+    /// If the queue is full this operation will leak a value (T's destructor won't run on
+    /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
+    /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
+    /// twice.
+    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
+        self.as_mut_view().inner_enqueue_unchecked(val)
+    }
+
+    /// Returns the item in the front of the queue, without checking if there is something in the
+    /// queue
+    ///
+    /// # Safety
+    ///
+    /// If the queue is empty this operation will return uninitialized memory.
+    pub unsafe fn dequeue_unchecked(&mut self) -> T {
+        self.as_mut_view().dequeue_unchecked()
+    }
+
+    /// Splits a queue into producer and consumer endpoints
+    pub fn split(&mut self) -> (Producer<'_, T, N>, Consumer<'_, T, N>) {
+        let (producer, consumer) = self.as_mut_view().split();
+        (
+            Producer {
+                inner: producer,
+                phantom: PhantomData,
+            },
+            Consumer {
+                inner: consumer,
+                phantom: PhantomData,
+            },
+        )
+    }
+}
+
+impl<T> QueueView<T> {
+    #[inline]
+    fn increment(&self, val: usize) -> usize {
+        (val + 1) % self.n()
+    }
+
+    /// Returns the maximum number of elements the queue can hold
+    #[inline]
+    pub const fn capacity(&self) -> usize {
+        self.n() - 1
+    }
+
+    #[inline]
+    const fn n(&self) -> usize {
+        self.buffer.len()
+    }
+
+    /// Returns the number of elements in the queue
+    #[inline]
+    pub fn len(&self) -> usize {
         let current_head = self.head.load(Ordering::Relaxed);
         let current_tail = self.tail.load(Ordering::Relaxed);
 
-        current_tail.wrapping_sub(current_head).wrapping_add(N) % N
+        current_tail
+            .wrapping_sub(current_head)
+            .wrapping_add(self.n())
+            % self.n()
     }
 
     /// Returns `true` if the queue is empty
@@ -164,12 +369,12 @@ impl<T, const N: usize> Queue<T, N> {
     /// Returns `true` if the queue is full
     #[inline]
     pub fn is_full(&self) -> bool {
-        Self::increment(self.tail.load(Ordering::Relaxed)) == self.head.load(Ordering::Relaxed)
+        self.increment(self.tail.load(Ordering::Relaxed)) == self.head.load(Ordering::Relaxed)
     }
 
     /// Iterates from the front of the queue to the back
-    pub fn iter(&self) -> Iter<'_, T, N> {
-        Iter {
+    pub fn iter(&self) -> IterView<'_, T> {
+        IterView {
             rb: self,
             index: 0,
             len: self.len(),
@@ -177,9 +382,9 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     /// Returns an iterator that allows modifying each value
-    pub fn iter_mut(&mut self) -> IterMut<'_, T, N> {
+    pub fn iter_mut(&mut self) -> IterMutView<'_, T> {
         let len = self.len();
-        IterMut {
+        IterMutView {
             rb: self,
             index: 0,
             len,
@@ -205,10 +410,11 @@ impl<T, const N: usize> Queue<T, N> {
     ///
     /// # Examples
     /// ```
-    /// use heapless::spsc::Queue;
+    /// use heapless::spsc::{Queue, QueueView};
     ///
     /// let mut queue: Queue<u8, 235> = Queue::new();
-    /// let (mut producer, mut consumer) = queue.split();
+    /// let queue_view: &mut QueueView<u8> = &mut queue;
+    /// let (mut producer, mut consumer) = queue_view.split();
     /// assert_eq!(None, consumer.peek());
     /// producer.enqueue(1);
     /// assert_eq!(Some(&1), consumer.peek());
@@ -225,11 +431,11 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     // The memory for enqueueing is "owned" by the tail pointer.
-    // NOTE: This internal function uses internal mutability to allow the [`Producer`] to enqueue
+    // NOTE: This internal function uses internal mutability to allow the [`ProducerView`] to enqueue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_enqueue(&self, val: T) -> Result<(), T> {
         let current_tail = self.tail.load(Ordering::Relaxed);
-        let next_tail = Self::increment(current_tail);
+        let next_tail = self.increment(current_tail);
 
         if next_tail != self.head.load(Ordering::Acquire) {
             (self.buffer.get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
@@ -242,14 +448,14 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     // The memory for enqueueing is "owned" by the tail pointer.
-    // NOTE: This internal function uses internal mutability to allow the [`Producer`] to enqueue
+    // NOTE: This internal function uses internal mutability to allow the [`ProducerView`] to enqueue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_enqueue_unchecked(&self, val: T) {
         let current_tail = self.tail.load(Ordering::Relaxed);
 
         (self.buffer.get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
         self.tail
-            .store(Self::increment(current_tail), Ordering::Release);
+            .store(self.increment(current_tail), Ordering::Release);
     }
 
     /// Adds an `item` to the end of the queue, without checking if it's full
@@ -265,7 +471,7 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     // The memory for dequeuing is "owned" by the head pointer,.
-    // NOTE: This internal function uses internal mutability to allow the [`Consumer`] to dequeue
+    // NOTE: This internal function uses internal mutability to allow the [`ConsumerView`] to dequeue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_dequeue(&self) -> Option<T> {
         let current_head = self.head.load(Ordering::Relaxed);
@@ -276,21 +482,21 @@ impl<T, const N: usize> Queue<T, N> {
             let v = (self.buffer.get_unchecked(current_head).get() as *const T).read();
 
             self.head
-                .store(Self::increment(current_head), Ordering::Release);
+                .store(self.increment(current_head), Ordering::Release);
 
             Some(v)
         }
     }
 
     // The memory for dequeuing is "owned" by the head pointer,.
-    // NOTE: This internal function uses internal mutability to allow the [`Consumer`] to dequeue
+    // NOTE: This internal function uses internal mutability to allow the [`ConsumerView`] to dequeue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_dequeue_unchecked(&self) -> T {
         let current_head = self.head.load(Ordering::Relaxed);
         let v = (self.buffer.get_unchecked(current_head).get() as *const T).read();
 
         self.head
-            .store(Self::increment(current_head), Ordering::Release);
+            .store(self.increment(current_head), Ordering::Release);
 
         v
     }
@@ -306,8 +512,8 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     /// Splits a queue into producer and consumer endpoints
-    pub fn split(&mut self) -> (Producer<'_, T, N>, Consumer<'_, T, N>) {
-        (Producer { rb: self }, Consumer { rb: self })
+    pub fn split(&mut self) -> (ProducerView<'_, T>, ConsumerView<'_, T>) {
+        (ProducerView { rb: self }, ConsumerView { rb: self })
     }
 }
 
@@ -341,20 +547,49 @@ where
     T: PartialEq,
 {
     fn eq(&self, other: &Queue<T, N2>) -> bool {
-        self.len() == other.len() && self.iter().zip(other.iter()).all(|(v1, v2)| v1 == v2)
+        self.as_view().eq(other.as_view())
     }
 }
 
 impl<T, const N: usize> Eq for Queue<T, N> where T: Eq {}
 
+impl<T> PartialEq<QueueView<T>> for QueueView<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &QueueView<T>) -> bool {
+        self.len() == other.len() && self.iter().zip(other.iter()).all(|(v1, v2)| v1 == v2)
+    }
+}
+
+impl<T, const N: usize> PartialEq<Queue<T, N>> for QueueView<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Queue<T, N>) -> bool {
+        self.eq(other.as_view())
+    }
+}
+
+impl<T, const N: usize> PartialEq<QueueView<T>> for Queue<T, N>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &QueueView<T>) -> bool {
+        self.as_view().eq(other)
+    }
+}
+
+impl<T> Eq for QueueView<T> where T: Eq {}
+
 /// An iterator over the items of a queue
-pub struct Iter<'a, T, const N: usize> {
-    rb: &'a Queue<T, N>,
+pub struct IterView<'a, T> {
+    rb: &'a QueueView<T>,
     index: usize,
     len: usize,
 }
 
-impl<'a, T, const N: usize> Clone for Iter<'a, T, N> {
+impl<'a, T> Clone for IterView<'a, T> {
     fn clone(&self) -> Self {
         Self {
             rb: self.rb,
@@ -365,26 +600,104 @@ impl<'a, T, const N: usize> Clone for Iter<'a, T, N> {
 }
 
 /// A mutable iterator over the items of a queue
-pub struct IterMut<'a, T, const N: usize> {
-    rb: &'a mut Queue<T, N>,
+pub struct IterMutView<'a, T> {
+    rb: &'a mut QueueView<T>,
     index: usize,
     len: usize,
 }
 
-impl<'a, T, const N: usize> Iterator for Iter<'a, T, N> {
+impl<'a, T> Iterator for IterView<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
 
-            let i = (head + self.index) % N;
+            let i = (head + self.index) % self.rb.n();
             self.index += 1;
 
             Some(unsafe { &*(self.rb.buffer.get_unchecked(i).get() as *const T) })
         } else {
             None
         }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for IterView<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.index < self.len {
+            let head = self.rb.head.load(Ordering::Relaxed);
+
+            // self.len > 0, since it's larger than self.index > 0
+            let i = (head + self.len - 1) % self.rb.n();
+            self.len -= 1;
+            Some(unsafe { &*(self.rb.buffer.get_unchecked(i).get() as *const T) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for IterMutView<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.index < self.len {
+            let head = self.rb.head.load(Ordering::Relaxed);
+
+            // self.len > 0, since it's larger than self.index > 0
+            let i = (head + self.len - 1) % self.rb.n();
+            self.len -= 1;
+            Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, T> Iterator for IterMutView<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.len {
+            let head = self.rb.head.load(Ordering::Relaxed);
+
+            let i = (head + self.index) % self.rb.n();
+            self.index += 1;
+
+            Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
+        } else {
+            None
+        }
+    }
+}
+
+/// A mutable iterator over the items of a queue
+pub struct Iter<'a, T, const N: usize> {
+    inner: IterView<'a, T>,
+    /// PhantomData to keep the `N` const generic and avoid a breaking change
+    phantom: PhantomData<[T; N]>,
+}
+
+impl<'a, T, const N: usize> Clone for Iter<'a, T, N> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+/// A mutable iterator over the items of a queue
+pub struct IterMut<'a, T, const N: usize> {
+    inner: IterMutView<'a, T>,
+    /// PhantomData to keep the `N` const generic and avoid a breaking change
+    phantom: PhantomData<[T; N]>,
+}
+
+impl<'a, T, const N: usize> Iterator for Iter<'a, T, N> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
     }
 }
 
@@ -392,52 +705,26 @@ impl<'a, T, const N: usize> Iterator for IterMut<'a, T, N> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.len {
-            let head = self.rb.head.load(Ordering::Relaxed);
-
-            let i = (head + self.index) % N;
-            self.index += 1;
-
-            Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
-        } else {
-            None
-        }
+        self.inner.next()
     }
 }
 
 impl<'a, T, const N: usize> DoubleEndedIterator for Iter<'a, T, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.index < self.len {
-            let head = self.rb.head.load(Ordering::Relaxed);
-
-            // self.len > 0, since it's larger than self.index > 0
-            let i = (head + self.len - 1) % N;
-            self.len -= 1;
-            Some(unsafe { &*(self.rb.buffer.get_unchecked(i).get() as *const T) })
-        } else {
-            None
-        }
+        self.inner.next_back()
     }
 }
 
 impl<'a, T, const N: usize> DoubleEndedIterator for IterMut<'a, T, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.index < self.len {
-            let head = self.rb.head.load(Ordering::Relaxed);
-
-            // self.len > 0, since it's larger than self.index > 0
-            let i = (head + self.len - 1) % N;
-            self.len -= 1;
-            Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
-        } else {
-            None
-        }
+        self.inner.next_back()
     }
 }
 
-impl<T, const N: usize> Drop for Queue<T, N> {
+impl<B: ?Sized + private::QueueBuffer> Drop for private::QueueInner<B> {
     fn drop(&mut self) {
-        for item in self {
+        let this = private::QueueBuffer::as_mut_view(self);
+        for item in this {
             unsafe {
                 ptr::drop_in_place(item);
             }
@@ -446,6 +733,15 @@ impl<T, const N: usize> Drop for Queue<T, N> {
 }
 
 impl<T, const N: usize> fmt::Debug for Queue<T, N>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_view().fmt(f)
+    }
+}
+
+impl<T> fmt::Debug for QueueView<T>
 where
     T: fmt::Debug,
 {
@@ -459,10 +755,37 @@ where
     T: hash::Hash,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.as_view().hash(state)
+    }
+}
+
+impl<T> hash::Hash for QueueView<T>
+where
+    T: hash::Hash,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
         // iterate over self in order
         for t in self.iter() {
             hash::Hash::hash(t, state);
         }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a QueueView<T> {
+    type Item = &'a T;
+    type IntoIter = IterView<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut QueueView<T> {
+    type Item = &'a mut T;
+    type IntoIter = IterMutView<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
@@ -487,20 +810,164 @@ impl<'a, T, const N: usize> IntoIterator for &'a mut Queue<T, N> {
 /// A queue "consumer"; it can dequeue items from the queue
 /// NOTE the consumer semantically owns the `head` pointer of the queue
 pub struct Consumer<'a, T, const N: usize> {
-    rb: &'a Queue<T, N>,
+    phantom: PhantomData<[T; N]>,
+    inner: ConsumerView<'a, T>,
 }
-
-unsafe impl<'a, T, const N: usize> Send for Consumer<'a, T, N> where T: Send {}
 
 /// A queue "producer"; it can enqueue items into the queue
 /// NOTE the producer semantically owns the `tail` pointer of the queue
 pub struct Producer<'a, T, const N: usize> {
-    rb: &'a Queue<T, N>,
+    phantom: PhantomData<[T; N]>,
+    inner: ProducerView<'a, T>,
 }
 
 unsafe impl<'a, T, const N: usize> Send for Producer<'a, T, N> where T: Send {}
 
 impl<'a, T, const N: usize> Consumer<'a, T, N> {
+    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    #[inline]
+    pub fn dequeue(&mut self) -> Option<T> {
+        self.inner.dequeue()
+    }
+
+    /// Returns the item in the front of the queue, without checking if there are elements in the
+    /// queue
+    ///
+    /// # Safety
+    ///
+    /// See [`Queue::dequeue_unchecked`]
+    #[inline]
+    pub unsafe fn dequeue_unchecked(&mut self) -> T {
+        self.inner.dequeue_unchecked()
+    }
+
+    /// Returns if there are any items to dequeue. When this returns `true`, at least the
+    /// first subsequent dequeue will succeed
+    #[inline]
+    pub fn ready(&self) -> bool {
+        self.inner.ready()
+    }
+
+    /// Returns the number of elements in the queue
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Returns true if the queue is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert!(consumer.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Returns the maximum number of elements the queue can hold
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.inner.capacity()
+    }
+
+    /// Returns the item in the front of the queue without dequeuing, or `None` if the queue is
+    /// empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert_eq!(None, consumer.peek());
+    /// producer.enqueue(1);
+    /// assert_eq!(Some(&1), consumer.peek());
+    /// assert_eq!(Some(1), consumer.dequeue());
+    /// assert_eq!(None, consumer.peek());
+    /// ```
+    #[inline]
+    pub fn peek(&self) -> Option<&T> {
+        self.inner.peek()
+    }
+}
+
+impl<'a, T, const N: usize> Producer<'a, T, N> {
+    /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full
+    #[inline]
+    pub fn enqueue(&mut self, val: T) -> Result<(), T> {
+        self.inner.enqueue(val)
+    }
+
+    /// Adds an `item` to the end of the queue, without checking if the queue is full
+    ///
+    /// # Safety
+    ///
+    /// See [`Queue::enqueue_unchecked`]
+    #[inline]
+    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
+        self.inner.enqueue_unchecked(val)
+    }
+
+    /// Returns if there is any space to enqueue a new item. When this returns true, at
+    /// least the first subsequent enqueue will succeed.
+    #[inline]
+    pub fn ready(&self) -> bool {
+        self.inner.ready()
+    }
+
+    /// Returns the number of elements in the queue
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Returns true if the queue is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::spsc::Queue;
+    ///
+    /// let mut queue: Queue<u8, 235> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// assert!(producer.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Returns the maximum number of elements the queue can hold
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.inner.capacity()
+    }
+}
+
+/// A queue "consumer"; it can dequeue items from the queue
+/// NOTE the consumer semantically owns the `head` pointer of the queue
+pub struct ConsumerView<'a, T> {
+    rb: &'a QueueView<T>,
+}
+
+unsafe impl<'a, T> Send for ConsumerView<'a, T> where T: Send {}
+
+/// A queue "producer"; it can enqueue items into the queue
+/// NOTE the producer semantically owns the `tail` pointer of the queue
+pub struct ProducerView<'a, T> {
+    rb: &'a QueueView<T>,
+}
+
+unsafe impl<'a, T> Send for ProducerView<'a, T> where T: Send {}
+
+impl<'a, T> ConsumerView<'a, T> {
     /// Returns the item in the front of the queue, or `None` if the queue is empty
     #[inline]
     pub fn dequeue(&mut self) -> Option<T> {
@@ -575,7 +1042,7 @@ impl<'a, T, const N: usize> Consumer<'a, T, N> {
     }
 }
 
-impl<'a, T, const N: usize> Producer<'a, T, N> {
+impl<'a, T> ProducerView<'a, T> {
     /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full
     #[inline]
     pub fn enqueue(&mut self, val: T) -> Result<(), T> {
