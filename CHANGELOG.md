@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `VecView`, the `!Sized` version of `Vec`.
 - Added pool implementations for 64-bit architectures.
 - Added `IntoIterator` implementation for `LinearMap`
+- Added `BinaryHeapView`, the `!Sized` version of `BinaryHeap`.
 
 ### Changed
 
