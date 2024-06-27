@@ -49,6 +49,7 @@ mod private {
 
     pub trait Sealed {}
 
+    /// <div class="warn">This is private API and should not be used</div>
     pub struct BinaryHeapInner<K, B: ?Sized> {
         pub(crate) _kind: PhantomData<K>,
         pub(crate) data: B,
