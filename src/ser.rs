@@ -1,14 +1,27 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    binary_heap::Kind as BinaryHeapKind, BinaryHeap, BinaryHeapView, Deque, IndexMap, IndexSet,
+    LinearMap, String, Vec,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 // Sequential containers
 
 impl<T, KIND, const N: usize> Serialize for BinaryHeap<T, KIND, N>
+where
+    T: Ord + Serialize,
+    KIND: BinaryHeapKind,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_view().serialize(serializer)
+    }
+}
+
+impl<T, KIND> Serialize for BinaryHeapView<T, KIND>
 where
     T: Ord + Serialize,
     KIND: BinaryHeapKind,
