@@ -125,7 +125,7 @@ pub type BinaryHeap<T, K, const N: usize> = private::BinaryHeapInner<K, Vec<T, N
 /// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
 ///
 /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
-/// let mut heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
+/// let heap_view: &mut BinaryHeapView<_, Max> = &mut heap;
 ///
 /// // We can use peek to look at the next item in the heap_view. In this case,
 /// // there's no items in there yet so we get None.
@@ -183,10 +183,44 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
         }
     }
 
+    /// Get a reference to the `BinaryHeap`, erasing the `N` const-generic
+    ///
+    /// ```
+    /// # use heapless::{BinaryHeap, BinaryHeapView, binary_heap::Max};
+    ///
+    /// let heap: BinaryHeap<u8, Max, 8> = BinaryHeap::new();
+    /// let heap_view: &BinaryHeapView<_, _> = heap.as_view();
+    /// ````
+    ///
+    /// It is often preferable to do the same through type coerction, since `BinaryHeap<T, K, N>` implements `Unsize<BinaryHeapView<T, K>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{BinaryHeap, BinaryHeapView, binary_heap::Max};
+    ///
+    /// let heap: BinaryHeap<u8, Max, 8> = BinaryHeap::new();
+    /// let heap_view: &BinaryHeapView<_, _> = &heap;
+    /// ```
     pub fn as_view(&self) -> &BinaryHeapView<T, K> {
         self
     }
 
+    /// Get a mutable reference to the `BinaryHeap`, erasing the `N` const-generic
+    ///
+    /// ```
+    /// # use heapless::{BinaryHeap, BinaryHeapView, binary_heap::Max};
+    ///
+    /// let mut heap: BinaryHeap<u8, Max, 8> = BinaryHeap::new();
+    /// let heap_view: &mut BinaryHeapView<_, _> = heap.as_mut_view();
+    /// ````
+    ///
+    /// It is often preferable to do the same through type coerction, since `BinaryHeap<T, K, N>` implements `Unsize<BinaryHeapView<T, K>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{BinaryHeap, BinaryHeapView, binary_heap::Max};
+    ///
+    /// let mut heap: BinaryHeap<u8, Max, 8> = BinaryHeap::new();
+    /// let heap_view: &mut BinaryHeapView<_, _> = &mut heap;
+    /// ```
     pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
         self
     }
