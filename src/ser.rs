@@ -1,8 +1,8 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    binary_heap::Kind as BinaryHeapKind,
+    BinaryHeap, Deque, IndexMap, IndexSet, String, Vec, {LinearMap, LinearMapView},
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -94,7 +94,7 @@ where
     }
 }
 
-impl<K, V, const N: usize> Serialize for LinearMap<K, V, N>
+impl<K, V> Serialize for LinearMapView<K, V>
 where
     K: Eq + Serialize,
     V: Serialize,
@@ -108,6 +108,19 @@ where
             map.serialize_entry(k, v)?;
         }
         map.end()
+    }
+}
+
+impl<K, V, const N: usize> Serialize for LinearMap<K, V, N>
+where
+    K: Eq + Serialize,
+    V: Serialize,
+{
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
+    where
+        SER: Serializer,
+    {
+        self.as_view().serialize(serializer)
     }
 }
 
