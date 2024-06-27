@@ -55,6 +55,13 @@ mod private {
     }
 }
 
+// Workaround https://github.com/rust-lang/rust/issues/119015. This is required so that the methods on `VecView` and `Vec` are properly documented.
+// cfg(doc) prevents `VecInner` being part of the public API.
+// doc(hidden) prevents the `pub use vec::VecInner` from being visible in the documentation.
+#[cfg(doc)]
+#[doc(hidden)]
+pub use private::BinaryHeapInner as _;
+
 impl private::Sealed for Max {}
 impl private::Sealed for Min {}
 
