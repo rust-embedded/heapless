@@ -341,17 +341,27 @@ impl<T, S: Storage> VecInner<T, S> {
     where
         T: Clone,
     {
-        if self.len + other.len() > self.capacity() {
-            // won't fit in the `Vec`; don't modify anything and return an error
-            Err(())
-        } else {
-            for elem in other {
-                unsafe {
-                    self.push_unchecked(elem.clone());
+        pub fn extend_from_slice_inner<T>(
+            len: &mut usize,
+            buf: &mut [MaybeUninit<T>],
+            other: &[T],
+        ) -> Result<(), ()>
+        where
+            T: Clone,
+        {
+            if *len + other.len() > buf.len() {
+                // won't fit in the `Vec`; don't modify anything and return an error
+                Err(())
+            } else {
+                for elem in other {
+                    unsafe { *buf.get_unchecked_mut(*len) = MaybeUninit::new(elem.clone()) }
+                    *len += 1;
                 }
+                Ok(())
             }
-            Ok(())
         }
+
+        extend_from_slice_inner(&mut self.len, self.buffer.borrow_mut(), other)
     }
 
     /// Removes the last element from a vector and returns it, or `None` if it's empty
