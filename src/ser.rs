@@ -1,8 +1,8 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, storage::Storage, vec::VecInner, BinaryHeap, Deque,
-    HistoryBuffer, IndexMap, IndexSet, LinearMap, String,
+    binary_heap::Kind as BinaryHeapKind, storage::Storage, string::StringInner, vec::VecInner,
+    BinaryHeap, Deque, HistoryBuffer, IndexMap, IndexSet, LinearMap,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -129,10 +129,10 @@ where
 
 // String containers
 
-impl<const N: usize> Serialize for String<N> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+impl<S: Storage> Serialize for StringInner<S> {
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
-        S: Serializer,
+        SER: Serializer,
     {
         serializer.serialize_str(&*self)
     }

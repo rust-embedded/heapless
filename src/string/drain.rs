@@ -1,6 +1,6 @@
 use core::{fmt, iter::FusedIterator, str::Chars};
 
-use super::String;
+use super::StringView;
 
 /// A draining iterator for `String`.
 ///
@@ -8,10 +8,10 @@ use super::String;
 /// documentation for more.
 ///
 /// [`drain`]: String::drain
-pub struct Drain<'a, const N: usize> {
+pub struct Drain<'a> {
     /// Will be used as &'a mut String in the destructor
-    pub(super) string: *mut String<N>,
-    /// Start of part to remove
+    pub(super) string: *mut StringView,
+    /// Stast of part to remove
     pub(super) start: usize,
     /// End of part to remove
     pub(super) end: usize,
@@ -19,16 +19,16 @@ pub struct Drain<'a, const N: usize> {
     pub(super) iter: Chars<'a>,
 }
 
-impl<const N: usize> fmt::Debug for Drain<'_, N> {
+impl fmt::Debug for Drain<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Drain").field(&self.as_str()).finish()
     }
 }
 
-unsafe impl<const N: usize> Sync for Drain<'_, N> {}
-unsafe impl<const N: usize> Send for Drain<'_, N> {}
+unsafe impl Sync for Drain<'_> {}
+unsafe impl Send for Drain<'_> {}
 
-impl<const N: usize> Drop for Drain<'_, N> {
+impl Drop for Drain<'_> {
     fn drop(&mut self) {
         unsafe {
             // Use `Vec::drain`. “Reaffirm” the bounds checks to avoid
@@ -41,7 +41,7 @@ impl<const N: usize> Drop for Drain<'_, N> {
     }
 }
 
-impl<'a, const N: usize> Drain<'a, N> {
+impl<'a> Drain<'a> {
     /// Returns the remaining (sub)string of this iterator as a slice.
     ///
     /// # Examples
@@ -61,19 +61,19 @@ impl<'a, const N: usize> Drain<'a, N> {
     }
 }
 
-impl<const N: usize> AsRef<str> for Drain<'_, N> {
+impl AsRef<str> for Drain<'_> {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-impl<const N: usize> AsRef<[u8]> for Drain<'_, N> {
+impl AsRef<[u8]> for Drain<'_> {
     fn as_ref(&self) -> &[u8] {
         self.as_str().as_bytes()
     }
 }
 
-impl<const N: usize> Iterator for Drain<'_, N> {
+impl Iterator for Drain<'_> {
     type Item = char;
 
     #[inline]
@@ -91,18 +91,18 @@ impl<const N: usize> Iterator for Drain<'_, N> {
     }
 }
 
-impl<const N: usize> DoubleEndedIterator for Drain<'_, N> {
+impl DoubleEndedIterator for Drain<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<char> {
         self.iter.next_back()
     }
 }
 
-impl<const N: usize> FusedIterator for Drain<'_, N> {}
+impl FusedIterator for Drain<'_> {}
 
 #[cfg(test)]
 mod tests {
-    use super::String;
+    use crate::String;
 
     #[test]
     fn drain_front() {
