@@ -1,8 +1,8 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, IndexMap, IndexSet, LinearMap, String,
-    Vec,
+    binary_heap::Kind as BinaryHeapKind, storage::Storage, vec::VecInner, BinaryHeap, Deque,
+    IndexMap, IndexSet, LinearMap, String,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<T, const N: usize> Serialize for Vec<T, N>
+impl<T, St: Storage> Serialize for VecInner<T, St>
 where
     T: Serialize,
 {

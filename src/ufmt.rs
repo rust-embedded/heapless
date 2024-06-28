@@ -1,4 +1,4 @@
-use crate::{string::String, vec::Vec};
+use crate::{storage::Storage, string::String, vec::VecInner};
 use ufmt_write::uWrite;
 
 impl<const N: usize> uWrite for String<N> {
@@ -8,7 +8,7 @@ impl<const N: usize> uWrite for String<N> {
     }
 }
 
-impl<const N: usize> uWrite for Vec<u8, N> {
+impl<S: Storage> uWrite for VecInner<u8, S> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
@@ -17,7 +17,7 @@ impl<const N: usize> uWrite for Vec<u8, N> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{String, Vec};
 
     use ufmt::{derive::uDebug, uwrite};
 
