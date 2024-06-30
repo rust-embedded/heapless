@@ -1182,4 +1182,25 @@ mod tests {
         assert_eq!(q.get(2), Some(&3));
         assert_eq!(q.get(3), Some(&4));
     }
+
+    #[test]
+    fn get_mut() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.get(0), None);
+
+        q.push_back(0).unwrap();
+        assert_eq!(q.get_mut(0), Some(&mut 0));
+        assert_eq!(q.get_mut(1), None);
+
+        q.push_back(1).unwrap();
+        assert_eq!(q.get_mut(0), Some(&mut 0));
+        assert_eq!(q.get_mut(1), Some(&mut 1));
+        assert_eq!(q.get_mut(2), None);
+        *q.get_mut(0).unwrap() = 42;
+        *q.get_mut(1).unwrap() = 43;
+
+        assert_eq!(q.pop_front(), Some(42));
+        assert_eq!(q.pop_front(), Some(43));
+        assert_eq!(q.pop_front(), None);
+    }
 }
