@@ -646,6 +646,13 @@ mod tests {
         assert_eq!(iter.next_back(), None);
         assert_eq!(iter.next(), None);
 
+        // test on an exactly filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([1, 2, 3, 4, 5, 6]);
+        assert_eq!(buffer.len(), 6);
+        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq_iter(buffer.oldest_ordered().rev(), &[6, 5, 4, 3, 2, 1]);
+
         // test on a filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
