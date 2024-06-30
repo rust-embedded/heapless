@@ -194,6 +194,13 @@ impl<T, const N: usize> Default for MpMcQueue<T, N> {
     }
 }
 
+impl<T, const N: usize> Drop for MpMcQueue<T, N> {
+    fn drop(&mut self) {
+        // drop all contents currently in the queue
+        while self.dequeue().is_some() {}
+    }
+}
+
 unsafe impl<T, const N: usize> Sync for MpMcQueue<T, N> where T: Send {}
 
 struct Cell<T> {
@@ -305,6 +312,18 @@ mod tests {
 
     // Ensure a `MpMcQueue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(MpMcQueue<*const (), 4>: Send);
+
+    #[test]
+    fn memory_leak() {
+        droppable!();
+
+        let q = Q2::new();
+        q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
+        q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
+        drop(q);
+
+        assert_eq!(Droppable::count(), 0);
+    }
 
     #[test]
     fn sanity() {
