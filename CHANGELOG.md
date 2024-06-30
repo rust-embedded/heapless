@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `IntoIterator` implementation for `LinearMap`
 - Added `Deque::{get, get_mut, get_unchecked, get_unchecked_mut}`.
 - Added `serde::Serialize` and `serde::Deserialize` implementations to `HistoryBuffer`.
+- Added `Vec::drain`.
+- Added `String::drain`.
 
 ### Changed
 
