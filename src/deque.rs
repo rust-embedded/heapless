@@ -585,7 +585,11 @@ impl<T, const N: usize> Deque<T, N> {
     }
 
     fn to_physical_index(&self, index: usize) -> usize {
-        self.front.wrapping_add(index) % N
+        let mut res = self.front + index;
+        if res >= N {
+            res -= N;
+        }
+        res
     }
 }
 
