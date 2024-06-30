@@ -283,7 +283,8 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         }
     }
 
-    /// Returns an iterator for iterating over the buffer from oldest to newest.
+    /// Returns double ended iterator for iterating over the buffer from
+    /// the oldest to the newest and back.
     ///
     /// # Examples
     ///
@@ -298,19 +299,19 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// }
     /// ```
     pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
-        if self.filled {
-            OldestOrdered {
+        match (self.oldest_index(), self.recent_index()) {
+            (Some(oldest_index), Some(recent_index)) => OldestOrdered {
                 buf: self,
-                cur: self.write_at,
-                wrapped: false,
-            }
-        } else {
-            // special case: act like we wrapped already to handle empty buffer.
-            OldestOrdered {
+                next: oldest_index,
+                back: recent_index,
+                done: false,
+            },
+            _ => OldestOrdered {
                 buf: self,
-                cur: 0,
-                wrapped: true,
-            }
+                next: 0,
+                back: 0,
+                done: true,
+            },
         }
     }
 }
@@ -403,30 +404,50 @@ where
     }
 }
 
-/// An iterator on the underlying buffer ordered from oldest data to newest
+/// Double ended iterator on the underlying buffer ordered from the oldest data
+/// to the newest
 #[derive(Clone)]
 pub struct OldestOrdered<'a, T, const N: usize> {
     buf: &'a HistoryBuffer<T, N>,
-    cur: usize,
-    wrapped: bool,
+    next: usize,
+    back: usize,
+    done: bool,
 }
 
 impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.cur == self.buf.len() && self.buf.filled {
-            // roll-over
-            self.cur = 0;
-            self.wrapped = true;
-        }
-
-        if self.cur == self.buf.write_at && self.wrapped {
+        if self.done {
             return None;
         }
 
-        let item = &self.buf[self.cur];
-        self.cur += 1;
+        if self.next == self.back {
+            self.done = true;
+        }
+
+        let item = &self.buf[self.next];
+
+        self.next = if self.next == N - 1 { 0 } else { self.next + 1 };
+
+        Some(item)
+    }
+}
+
+impl<'a, T, const N: usize> DoubleEndedIterator for OldestOrdered<'a, T, N> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+
+        if self.next == self.back {
+            self.done = true;
+        }
+
+        let item = &self.buf[self.back];
+
+        self.back = if self.back == 0 { N - 1 } else { self.back - 1 };
+
         Some(item)
     }
 }
@@ -609,18 +630,35 @@ mod tests {
         let mut iter = buffer.oldest_ordered();
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next_back(), None);
 
         // test on a un-filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([1, 2, 3]);
         assert_eq!(buffer.len(), 3);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3]);
+        assert_eq_iter(buffer.oldest_ordered().rev(), &[3, 2, 1]);
+        let mut iter = buffer.oldest_ordered();
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next_back(), Some(&3));
+        assert_eq!(iter.next_back(), Some(&2));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+
+        // test on an exactly filled buffer
+        let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
+        buffer.extend([1, 2, 3, 4, 5, 6]);
+        assert_eq!(buffer.len(), 6);
+        assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq_iter(buffer.oldest_ordered().rev(), &[6, 5, 4, 3, 2, 1]);
 
         // test on a filled buffer
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
         buffer.extend([0, 0, 0, 1, 2, 3, 4, 5, 6]);
         assert_eq!(buffer.len(), 6);
         assert_eq_iter(buffer.oldest_ordered(), &[1, 2, 3, 4, 5, 6]);
+        assert_eq_iter(buffer.oldest_ordered().rev(), &[6, 5, 4, 3, 2, 1]);
 
         // comprehensive test all cases
         for n in 0..50 {
@@ -630,6 +668,10 @@ mod tests {
             assert_eq_iter(
                 buffer.oldest_ordered().copied(),
                 n.saturating_sub(N as u8)..n,
+            );
+            assert_eq_iter(
+                buffer.oldest_ordered().rev().copied(),
+                (n.saturating_sub(N as u8)..n).rev(),
             );
         }
     }

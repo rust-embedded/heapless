@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `serde::Serialize` and `serde::Deserialize` implementations to `HistoryBuffer`.
 - Added `Vec::drain`.
 - Added `String::drain`.
+- Implemented `DoubleEndedIterator` for `OldestOrdered`.
 
 ### Changed
 
