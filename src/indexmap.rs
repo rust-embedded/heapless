@@ -386,6 +386,182 @@ pub enum Entry<'a, K, V, const N: usize> {
     Vacant(VacantEntry<'a, K, V, N>),
 }
 
+impl<'a, K, V, const N: usize> Entry<'a, K, V, N>
+where
+    K: Eq + Hash,
+{
+    /// Ensures a value is in the entry by inserting the default if empty, and
+    /// returns a mutable reference to the value in the entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+    /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
+    /// let result = book_reviews
+    ///     .entry("Adventures of Huckleberry Finn")
+    ///     .or_insert("My favorite book.");
+    ///
+    /// assert_eq!(result, Ok(&mut "My favorite book."));
+    /// assert_eq!(
+    ///     book_reviews["Adventures of Huckleberry Finn"],
+    ///     "My favorite book."
+    /// );
+    /// ```
+    pub fn or_insert(self, default: V) -> Result<&'a mut V, V> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(default),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting the result of the default
+    /// function if empty, and returns a mutable reference to the value in the
+    /// entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+    /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
+    /// let s = "Masterpiece.".to_string();
+    ///
+    /// book_reviews
+    ///     .entry("Grimms' Fairy Tales")
+    ///     .or_insert_with(|| s);
+    ///
+    /// assert_eq!(
+    ///     book_reviews["Grimms' Fairy Tales"],
+    ///     "Masterpiece.".to_string()
+    /// );
+    /// ```
+    pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> Result<&'a mut V, V> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(default()),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting, if empty, the result of
+    /// the default function. This method allows for generating key-derived
+    /// values for insertion by providing the default function a reference to
+    /// the key that was moved during the `.entry(key)` method call.
+    ///
+    /// The reference to the moved key is provided so that cloning or copying
+    /// the key is unnecessary, unlike with `.or_insert_with(|| ... )`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+    /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
+    ///
+    /// book_reviews
+    ///     .entry("Pride and Prejudice")
+    ///     .or_insert_with_key(|key| key.chars().count());
+    ///
+    /// assert_eq!(book_reviews["Pride and Prejudice"], 19);
+    /// ```
+    pub fn or_insert_with_key<F: FnOnce(&K) -> V>(self, default: F) -> Result<&'a mut V, V> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => {
+                let value = default(entry.key());
+                entry.insert(value)
+            }
+        }
+    }
+
+    /// Returns a reference to this entry's key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+    /// let mut book_reviews = FnvIndexMap::<&str, &str, 16>::new();
+    /// assert_eq!(
+    ///     book_reviews
+    ///         .entry("The Adventures of Sherlock Holmes")
+    ///         .key(),
+    ///     &"The Adventures of Sherlock Holmes"
+    /// );
+    /// ```
+    pub fn key(&self) -> &K {
+        match *self {
+            Self::Occupied(ref entry) => entry.key(),
+            Self::Vacant(ref entry) => entry.key(),
+        }
+    }
+
+    /// Provides in-place mutable access to an occupied entry before any
+    /// potential inserts into the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
+    /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
+    ///
+    /// book_reviews
+    ///     .entry("Grimms' Fairy Tales")
+    ///     .and_modify(|e| *e = "Masterpiece.")
+    ///     .or_insert("Very enjoyable.");
+    /// assert_eq!(book_reviews["Grimms' Fairy Tales"], "Very enjoyable.");
+    /// ```
+    pub fn and_modify<F>(self, f: F) -> Self
+    where
+        F: FnOnce(&mut V),
+    {
+        match self {
+            Self::Occupied(mut entry) => {
+                f(entry.get_mut());
+                Self::Occupied(entry)
+            }
+            Self::Vacant(entry) => Self::Vacant(entry),
+        }
+    }
+}
+
+impl<'a, K, V, const N: usize> Entry<'a, K, V, N>
+where
+    K: Eq + Hash,
+    V: Default,
+{
+    /// Ensures a value is in the entry by inserting the default value if empty,
+    /// and returns a mutable reference to the value in the entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() {
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut book_reviews = FnvIndexMap::<&str, Option<&str>, 16>::new();
+    ///
+    /// book_reviews.entry("Pride and Prejudice").or_default();
+    ///
+    /// assert_eq!(book_reviews["Pride and Prejudice"], None);
+    /// # }
+    /// ```
+    #[inline]
+    pub fn or_default(self) -> Result<&'a mut V, V> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(Default::default()),
+        }
+    }
+}
+
 /// An occupied entry which can be manipulated
 pub struct OccupiedEntry<'a, K, V, const N: usize> {
     key: K,
@@ -1314,6 +1490,85 @@ mod tests {
 
             assert!(a == b);
         }
+    }
+
+    #[test]
+    fn entry_or_insert() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.entry("k1").or_insert("v1").unwrap();
+        assert_eq!(a["k1"], "v1");
+
+        a.entry("k2").or_insert("v2").unwrap();
+        assert_eq!(a["k2"], "v2");
+
+        let result = a.entry("k3").or_insert("v3");
+        assert_eq!(result, Err("v3"));
+    }
+
+    #[test]
+    fn entry_or_insert_with() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.entry("k1").or_insert_with(|| "v1").unwrap();
+        assert_eq!(a["k1"], "v1");
+
+        a.entry("k2").or_insert_with(|| "v2").unwrap();
+        assert_eq!(a["k2"], "v2");
+
+        let result = a.entry("k3").or_insert_with(|| "v3");
+        assert_eq!(result, Err("v3"));
+    }
+
+    #[test]
+    fn entry_or_insert_with_key() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.entry("k1")
+            .or_insert_with_key(|key| key.chars().count())
+            .unwrap();
+        assert_eq!(a["k1"], 2);
+
+        a.entry("k22")
+            .or_insert_with_key(|key| key.chars().count())
+            .unwrap();
+        assert_eq!(a["k22"], 3);
+
+        let result = a.entry("k3").or_insert_with_key(|key| key.chars().count());
+        assert_eq!(result, Err(2));
+    }
+
+    #[test]
+    fn entry_key() {
+        let mut a: FnvIndexMap<&str, &str, 2> = FnvIndexMap::new();
+
+        assert_eq!(a.entry("k1").key(), &"k1");
+    }
+
+    #[test]
+    fn entry_and_modify() {
+        let mut a: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        a.insert("k1", "v1").unwrap();
+        a.entry("k1").and_modify(|e| *e = "modified v1");
+
+        assert_eq!(a["k1"], "modified v1");
+
+        a.entry("k2")
+            .and_modify(|e| *e = "v2")
+            .or_insert("default v2")
+            .unwrap();
+
+        assert_eq!(a["k2"], "default v2");
+    }
+
+    #[test]
+    fn entry_or_default() {
+        let mut a: FnvIndexMap<&str, Option<u32>, 2> = FnvIndexMap::new();
+        a.entry("k1").or_default().unwrap();
+
+        assert_eq!(a["k1"], None);
+
+        let mut b: FnvIndexMap<&str, u8, 2> = FnvIndexMap::new();
+        b.entry("k2").or_default().unwrap();
+
+        assert_eq!(b["k2"], 0);
     }
 
     #[test]
