@@ -53,13 +53,7 @@ impl Storage for ViewStorage {}
 impl SealedStorage for ViewStorage {
     type Buffer<T> = [T];
     fn len<T>(this: *const Self::Buffer<T>) -> usize {
-        // We get the len of the buffer. There is no reverse method of `core::ptr::from_raw_parts`, so we have to work around it.
-        let ptr: *const [()] = this as _;
-        // SAFETY: There is no aliasing as () is zero-sized
-        let slice: &[()] = unsafe { &*ptr };
-        let len = slice.len();
-
-        len - 1
+        this.len()
     }
 
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
