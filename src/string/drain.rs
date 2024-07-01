@@ -4,10 +4,10 @@ use super::StringView;
 
 /// A draining iterator for `String`.
 ///
-/// This struct is created by the [`drain`] method on [`String`]. See its
+/// This struct is created by the [`drain`] method on [`crate::String`]. See its
 /// documentation for more.
 ///
-/// [`drain`]: String::drain
+/// [`drain`]: crate::String::drain
 pub struct Drain<'a> {
     /// Will be used as &'a mut String in the destructor
     pub(super) string: *mut StringView,
