@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `MpMcQueueView`, the `!Sized` version of `MpMcQueue`.
 - Added `LinearMapView`, the `!Sized` version of `LinearMap`.
 - Added `HistoryBufferView`, the `!Sized` version of `HistoryBuffer`.
+- Added `DequeView`, the `!Sized` version of `Deque`.
 
 ### Changed
 
