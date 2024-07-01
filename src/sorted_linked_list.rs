@@ -26,12 +26,15 @@
 //!
 //! [`BinaryHeap`]: `crate::binary_heap::BinaryHeap`
 
+use core::borrow::{Borrow, BorrowMut};
 use core::cmp::Ordering;
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
+
+use crate::storage::{OwnedStorage, Storage, ViewStorage};
 
 /// Trait for defining an index for the linked list, never implemented by users.
 pub trait SortedLinkedListIndex: Copy {
@@ -83,16 +86,27 @@ pub struct Node<T, Idx> {
     next: Idx,
 }
 
-/// The linked list.
-pub struct SortedLinkedList<T, Idx, K, const N: usize>
+/// Base struct for [`SortedLinkedList`] and [`SortedLinkedListView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`SortedLinkedList`] or [`SortedLinkedListView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
+    S: Storage,
 {
-    list: [Node<T, Idx>; N],
     head: Idx,
     free: Idx,
     _kind: PhantomData<K>,
+    list: S::Buffer<Node<T, Idx>>,
 }
+
+/// The linked list.
+pub type SortedLinkedList<T, Idx, K, const N: usize> =
+    SortedLinkedListInner<T, Idx, K, OwnedStorage<N>>;
+
+/// The linked list.
+pub type SortedLinkedListView<T, Idx, K> = SortedLinkedListInner<T, Idx, K, ViewStorage>;
 
 // Internal macro for generating indexes for the linkedlist and const new for the linked list
 macro_rules! impl_index_and_const_new {
@@ -187,18 +201,34 @@ impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
     Idx: SortedLinkedListIndex,
 {
+    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+        self
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+        self
+    }
+}
+
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
+where
+    Idx: SortedLinkedListIndex,
+    S: Storage,
+{
     /// Internal access helper
     #[inline(always)]
     fn node_at(&self, index: usize) -> &Node<T, Idx> {
         // Safety: The entire `self.list` is initialized in `new`, which makes this safe.
-        unsafe { self.list.get_unchecked(index) }
+        unsafe { self.list.borrow().get_unchecked(index) }
     }
 
     /// Internal access helper
     #[inline(always)]
     fn node_at_mut(&mut self, index: usize) -> &mut Node<T, Idx> {
         // Safety: The entire `self.list` is initialized in `new`, which makes this safe.
-        unsafe { self.list.get_unchecked_mut(index) }
+        unsafe { self.list.borrow_mut().get_unchecked_mut(index) }
     }
 
     /// Internal access helper
@@ -232,11 +262,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     /// Pushes a value onto the list without checking if the list is full.
     ///
@@ -335,8 +366,8 @@ where
     /// assert_eq!(iter.next(), Some(&1));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn iter(&self) -> Iter<'_, T, Idx, K, N> {
-        Iter {
+    pub fn iter(&self) -> IterInner<'_, T, Idx, K, S> {
+        IterInner {
             list: self,
             index: self.head,
         }
@@ -364,7 +395,7 @@ where
     /// assert_eq!(ll.pop(), Ok(1));
     /// assert_eq!(ll.pop(), Err(()));
     /// ```
-    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMut<'_, T, Idx, K, N>>
+    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutInner<'_, T, Idx, K, S>>
     where
         F: FnMut(&T) -> bool,
     {
@@ -372,7 +403,7 @@ where
 
         // Special-case, first element
         if f(self.read_data_in_node_at(head)) {
-            return Some(FindMut {
+            return Some(FindMutInner {
                 is_head: true,
                 prev_index: Idx::none(),
                 index: self.head,
@@ -385,7 +416,7 @@ where
 
         while let Some(next) = self.node_at(current).next.option() {
             if f(self.read_data_in_node_at(next)) {
-                return Some(FindMut {
+                return Some(FindMutInner {
                     is_head: false,
                     prev_index: unsafe { Idx::new_unchecked(current) },
                     index: unsafe { Idx::new_unchecked(next) },
@@ -514,22 +545,32 @@ where
     }
 }
 
-/// Iterator for the linked list.
-pub struct Iter<'a, T, Idx, K, const N: usize>
+/// Base struct for [`Iter`] and [`IterView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`Iter`] or [`IterView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct IterInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
-    list: &'a SortedLinkedList<T, Idx, K, N>,
+    list: &'a SortedLinkedListInner<T, Idx, K, S>,
     index: Idx,
 }
 
-impl<'a, T, Idx, K, const N: usize> Iterator for Iter<'a, T, Idx, K, N>
+/// Iterator for the linked list.
+pub type Iter<'a, T, Idx, K, const N: usize> = IterInner<'a, T, Idx, K, OwnedStorage<N>>;
+/// Iterator for the linked list.
+pub type IterView<'a, T, Idx, K, const N: usize> = IterInner<'a, T, Idx, K, ViewStorage>;
+
+impl<'a, T, Idx, K, S> Iterator for IterInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     type Item = &'a T;
 
@@ -543,25 +584,35 @@ where
     }
 }
 
-/// Comes from [`SortedLinkedList::find_mut`].
-pub struct FindMut<'a, T, Idx, K, const N: usize>
+/// Base struct for [`FindMut`] and [`FindMutView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`FindMut`] or [`FindMutView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct FindMutInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
-    list: &'a mut SortedLinkedList<T, Idx, K, N>,
+    list: &'a mut SortedLinkedListInner<T, Idx, K, S>,
     is_head: bool,
     prev_index: Idx,
     index: Idx,
     maybe_changed: bool,
 }
 
-impl<'a, T, Idx, K, const N: usize> FindMut<'a, T, Idx, K, N>
+/// Comes from [`SortedLinkedList::find_mut`].
+pub type FindMut<'a, T, Idx, K, const N: usize> = FindMutInner<'a, T, Idx, K, OwnedStorage<N>>;
+/// Comes from [`SortedLinkedList::find_mut`].
+pub type FindMutView<'a, T, Idx, K, const N: usize> = FindMutInner<'a, T, Idx, K, ViewStorage>;
+
+impl<'a, T, Idx, K, S> FindMutInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     fn pop_internal(&mut self) -> T {
         if self.is_head {
@@ -645,11 +696,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> Drop for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> Drop for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     fn drop(&mut self) {
         // Only resort the list if the element has changed
@@ -660,11 +712,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> Deref for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> Deref for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     type Target = T;
 
@@ -674,11 +727,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> DerefMut for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> DerefMut for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.maybe_changed = true;
@@ -712,20 +766,22 @@ where
 //     }
 // }
 
-impl<T, Idx, K, const N: usize> fmt::Debug for SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> fmt::Debug for SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: Storage,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<T, Idx, K, const N: usize> Drop for SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> Drop for SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
+    S: Storage,
 {
     fn drop(&mut self) {
         let mut index = self.head;
