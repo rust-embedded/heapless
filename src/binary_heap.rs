@@ -17,7 +17,10 @@ use core::{
     ptr, slice,
 };
 
-use crate::vec::Vec;
+use crate::{
+    storage::{OwnedStorage, Storage, ViewStorage},
+    vec::{Vec, VecInner},
+};
 
 /// Min-heap
 pub enum Min {}
@@ -50,6 +53,15 @@ mod private {
 
 impl private::Sealed for Max {}
 impl private::Sealed for Min {}
+
+/// Base struct for [`BinaryHeap`] and [`BinaryHeapView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`BinaryHeap`] or [`BinaryHeapView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct BinaryHeapInner<T, K, S: Storage> {
+    pub(crate) _kind: PhantomData<K>,
+    pub(crate) data: VecInner<T, S>,
+}
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -97,10 +109,56 @@ impl private::Sealed for Min {}
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub struct BinaryHeap<T, K, const N: usize> {
-    pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: Vec<T, N>,
-}
+pub type BinaryHeap<T, K, const N: usize> = BinaryHeapInner<T, K, OwnedStorage<N>>;
+
+/// A priority queue implemented with a binary heap.
+///
+/// This can be either a min-heap or a max-heap.
+///
+/// It is a logic error for an item to be modified in such a way that the item's ordering relative
+/// to any other item, as determined by the `Ord` trait, changes while it is in the heap. This is
+/// normally only possible through `Cell`, `RefCell`, global state, I/O, or unsafe code.
+///
+/// ```
+/// use heapless::binary_heap::{BinaryHeap, BinaryHeapView, Max};
+///
+/// let mut heap_buffer: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+/// let heap: &mut BinaryHeapView<_, Max> = &mut heap_buffer;
+///
+/// // We can use peek to look at the next item in the heap. In this case,
+/// // there's no items in there yet so we get None.
+/// assert_eq!(heap.peek(), None);
+///
+/// // Let's add some scores...
+/// heap.push(1).unwrap();
+/// heap.push(5).unwrap();
+/// heap.push(2).unwrap();
+///
+/// // Now peek shows the most important item in the heap.
+/// assert_eq!(heap.peek(), Some(&5));
+///
+/// // We can check the length of a heap.
+/// assert_eq!(heap.len(), 3);
+///
+/// // We can iterate over the items in the heap, although they are returned in
+/// // a random order.
+/// for x in &*heap {
+///     println!("{}", x);
+/// }
+///
+/// // If we instead pop these scores, they should come back in order.
+/// assert_eq!(heap.pop(), Some(5));
+/// assert_eq!(heap.pop(), Some(2));
+/// assert_eq!(heap.pop(), Some(1));
+/// assert_eq!(heap.pop(), None);
+///
+/// // We can clear the heap of any remaining items.
+/// heap.clear();
+///
+/// // The heap should now be empty.
+/// assert!(heap.is_empty())
+/// ```
+pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewStorage>;
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
@@ -124,7 +182,23 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     }
 }
 
-impl<T, K, const N: usize> BinaryHeap<T, K, N>
+impl<T, K, const N: usize> BinaryHeap<T, K, N> {
+    /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
+    pub fn into_vec(self) -> Vec<T, N> {
+        self.data
+    }
+
+    /// Get a reference to the `BinaryHeap`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &BinaryHeapView<T, K> {
+        self
+    }
+    /// Get a mutable reference to the `BinaryHeap`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
+        self
+    }
+}
+
+impl<T, K, S: Storage> BinaryHeapInner<T, K, S>
 where
     T: Ord,
     K: Kind,
@@ -260,11 +334,11 @@ where
     ///
     /// assert_eq!(heap.peek(), Some(&2));
     /// ```
-    pub fn peek_mut(&mut self) -> Option<PeekMut<'_, T, K, N>> {
+    pub fn peek_mut(&mut self) -> Option<PeekMutInner<'_, T, K, S>> {
         if self.is_empty() {
             None
         } else {
-            Some(PeekMut {
+            Some(PeekMutInner {
                 heap: self,
                 sift: true,
             })
@@ -334,11 +408,6 @@ where
         let old_len = self.len();
         self.data.push_unchecked(item);
         self.sift_up(0, old_len);
-    }
-
-    /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
-    pub fn into_vec(self) -> Vec<T, N> {
-        self.data
     }
 
     /* Private API */
@@ -444,21 +513,37 @@ impl<'a, T> Hole<'a, T> {
 /// Structure wrapping a mutable reference to the greatest item on a
 /// `BinaryHeap`.
 ///
-/// This `struct` is created by [`BinaryHeap::peek_mut`].
+/// This `struct` is created by [`BinaryHeapInner::peek_mut`].
 /// See its documentation for more.
-pub struct PeekMut<'a, T, K, const N: usize>
+pub struct PeekMutInner<'a, T, K, S>
 where
     T: Ord,
     K: Kind,
+    S: Storage,
 {
-    heap: &'a mut BinaryHeap<T, K, N>,
+    heap: &'a mut BinaryHeapInner<T, K, S>,
     sift: bool,
 }
 
-impl<T, K, const N: usize> Drop for PeekMut<'_, T, K, N>
+/// Structure wrapping a mutable reference to the greatest item on a
+/// `BinaryHeap`.
+///
+/// This `struct` is created by [`BinaryHeap::peek_mut`].
+/// See its documentation for more.
+pub type PeekMut<'a, T, K, const N: usize> = PeekMutInner<'a, T, K, OwnedStorage<N>>;
+
+/// Structure wrapping a mutable reference to the greatest item on a
+/// `BinaryHeap`.
+///
+/// This `struct` is created by [`BinaryHeapView::peek_mut`].
+/// See its documentation for more.
+pub type PeekMutView<'a, T, K> = PeekMutInner<'a, T, K, ViewStorage>;
+
+impl<T, K, S> Drop for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
+    S: Storage,
 {
     fn drop(&mut self) {
         if self.sift {
@@ -467,10 +552,11 @@ where
     }
 }
 
-impl<T, K, const N: usize> Deref for PeekMut<'_, T, K, N>
+impl<T, K, S> Deref for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
+    S: Storage,
 {
     type Target = T;
     fn deref(&self) -> &T {
@@ -480,10 +566,11 @@ where
     }
 }
 
-impl<T, K, const N: usize> DerefMut for PeekMut<'_, T, K, N>
+impl<T, K, S> DerefMut for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
+    S: Storage,
 {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
@@ -492,13 +579,14 @@ where
     }
 }
 
-impl<'a, T, K, const N: usize> PeekMut<'a, T, K, N>
+impl<'a, T, K, S> PeekMutInner<'a, T, K, S>
 where
     T: Ord,
     K: Kind,
+    S: Storage,
 {
     /// Removes the peeked value from the heap and returns it.
-    pub fn pop(mut this: PeekMut<'a, T, K, N>) -> T {
+    pub fn pop(mut this: PeekMutInner<'a, T, K, S>) -> T {
         let value = this.heap.pop().unwrap();
         this.sift = false;
         value
@@ -539,20 +627,22 @@ where
     }
 }
 
-impl<T, K, const N: usize> fmt::Debug for BinaryHeap<T, K, N>
+impl<T, K, S> fmt::Debug for BinaryHeapInner<T, K, S>
 where
     K: Kind,
     T: Ord + fmt::Debug,
+    S: Storage,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<'a, T, K, const N: usize> IntoIterator for &'a BinaryHeap<T, K, N>
+impl<'a, T, K, S> IntoIterator for &'a BinaryHeapInner<T, K, S>
 where
     K: Kind,
     T: Ord,
+    S: Storage,
 {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;

@@ -1,21 +1,27 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, histbuf::HistoryBufferInner, linear_map::LinearMapInner,
-    storage::Storage, string::StringInner, vec::VecInner, BinaryHeap, Deque, IndexMap, IndexSet,
+    binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
+    histbuf::HistoryBufferInner,
+    linear_map::LinearMapInner,
+    storage::Storage,
+    string::StringInner,
+    vec::VecInner,
+    Deque, IndexMap, IndexSet,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 // Sequential containers
 
-impl<T, KIND, const N: usize> Serialize for BinaryHeap<T, KIND, N>
+impl<T, KIND, S> Serialize for BinaryHeapInner<T, KIND, S>
 where
     T: Ord + Serialize,
     KIND: BinaryHeapKind,
+    S: Storage,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
-        S: Serializer,
+        SER: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
         for element in self {

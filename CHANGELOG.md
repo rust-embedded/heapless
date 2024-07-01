@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implemented `DoubleEndedIterator` for `OldestOrdered`.
 - Added std `Entry` methods to indexmap `Entry`.
 - Added `StringView`, the `!Sized` version of `String`.
+- Added `BinaryHeapView`, the `!Sized` version of `BinaryHeap`.
 - Added `MpMcQueueView`, the `!Sized` version of `MpMcQueue`.
 - Added `LinearMapView`, the `!Sized` version of `LinearMap`.
 - Added `HistoryBufferView`, the `!Sized` version of `HistoryBuffer`.
