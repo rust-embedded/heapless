@@ -4,6 +4,12 @@ use core::borrow::{Borrow, BorrowMut};
 
 pub(crate) trait SealedStorage {
     type Buffer<T>: ?Sized + Borrow<[T]> + BorrowMut<[T]>;
+    /// Obtain the length of the buffer
+    #[allow(unused)]
+    fn len<T>(this: *const Self::Buffer<T>) -> usize;
+    /// Obtain access to the first element of the buffer
+    #[allow(unused)]
+    fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T;
 }
 
 /// Trait defining how data for a container is stored.
@@ -33,6 +39,12 @@ pub enum OwnedStorage<const N: usize> {}
 impl<const N: usize> Storage for OwnedStorage<N> {}
 impl<const N: usize> SealedStorage for OwnedStorage<N> {
     type Buffer<T> = [T; N];
+    fn len<T>(_: *const Self::Buffer<T>) -> usize {
+        N
+    }
+    fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
+        this as _
+    }
 }
 
 /// Implementation of [`Storage`] that stores the data in an unsized `[T]`.
@@ -40,4 +52,11 @@ pub enum ViewStorage {}
 impl Storage for ViewStorage {}
 impl SealedStorage for ViewStorage {
     type Buffer<T> = [T];
+    fn len<T>(this: *const Self::Buffer<T>) -> usize {
+        this.len()
+    }
+
+    fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
+        this as _
+    }
 }
