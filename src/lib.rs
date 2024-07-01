@@ -103,7 +103,7 @@ pub use vec::{Vec, VecView};
 #[cfg(test)]
 mod test_helpers;
 
-mod deque;
+pub mod deque;
 pub mod histbuf;
 mod indexmap;
 mod indexset;
