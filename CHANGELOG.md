@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `String::drain`.
 - Implemented `DoubleEndedIterator` for `OldestOrdered`.
 - Added std `Entry` methods to indexmap `Entry`.
+- Added `StringView`, the `!Sized` version of `String`.
 
 ### Changed
 

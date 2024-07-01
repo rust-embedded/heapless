@@ -10,7 +10,11 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::Vec;
+use crate::{
+    storage::{OwnedStorage, Storage, ViewStorage},
+    vec::VecInner,
+    Vec,
+};
 
 mod drain;
 pub use drain::Drain;
@@ -37,9 +41,83 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
+/// Base struct for [`String`] and [`StringView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`String`] or [`StringView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct StringInner<S: Storage> {
+    vec: VecInner<u8, S>,
+}
+
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub struct String<const N: usize> {
-    vec: Vec<u8, N>,
+pub type String<const N: usize> = StringInner<OwnedStorage<N>>;
+
+/// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
+pub type StringView = StringInner<ViewStorage>;
+
+impl StringView {
+    /// Removes the specified range from the string in bulk, returning all
+    /// removed characters as an iterator.
+    ///
+    /// The returned iterator keeps a mutable borrow on the string to optimize
+    /// its implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point or end point do not lie on a [`char`]
+    /// boundary, or if they're out of bounds.
+    ///
+    /// # Leaking
+    ///
+    /// If the returned iterator goes out of scope without being dropped (due to
+    /// [`core::mem::forget`], for example), the string may still contain a copy
+    /// of any drained characters, or may have lost characters arbitrarily,
+    /// including characters outside the range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s = String::<32>::try_from("α is alpha, β is beta").unwrap();
+    /// let beta_offset = s.find('β').unwrap_or(s.len());
+    ///
+    /// // Remove the range up until the β from the string
+    /// let t: String<32> = s.drain(..beta_offset).collect();
+    /// assert_eq!(t, "α is alpha, ");
+    /// assert_eq!(s, "β is beta");
+    ///
+    /// // A full range clears the string, like `clear()` does
+    /// s.drain(..);
+    /// assert_eq!(s, "");
+    /// ```
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_>
+    where
+        R: RangeBounds<usize>,
+    {
+        // Memory safety
+        //
+        // The `String` version of `Drain` does not have the memory safety issues
+        // of the `Vec` version. The data is just plain bytes.
+        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
+        // the removal will not happen.
+        let Range { start, end } = crate::slice::range(range, ..self.len());
+        assert!(self.is_char_boundary(start));
+        assert!(self.is_char_boundary(end));
+
+        // Take out two simultaneous borrows. The &mut String won't be accessed
+        // until iteration is over, in Drop.
+        let self_ptr = self as *mut _;
+        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
+        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
+
+        Drain {
+            start,
+            end,
+            iter: chars_iter,
+            string: self_ptr,
+        }
+    }
 }
 
 impl<const N: usize> String<N> {
@@ -185,6 +263,92 @@ impl<const N: usize> String<N> {
         self.vec
     }
 
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = &s;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &StringView {
+        self
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = &mut s;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        self
+    }
+
+    /// Removes the specified range from the string in bulk, returning all
+    /// removed characters as an iterator.
+    ///
+    /// The returned iterator keeps a mutable borrow on the string to optimize
+    /// its implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point or end point do not lie on a [`char`]
+    /// boundary, or if they're out of bounds.
+    ///
+    /// # Leaking
+    ///
+    /// If the returned iterator goes out of scope without being dropped (due to
+    /// [`core::mem::forget`], for example), the string may still contain a copy
+    /// of any drained characters, or may have lost characters arbitrarily,
+    /// including characters outside the range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s = String::<32>::try_from("α is alpha, β is beta").unwrap();
+    /// let beta_offset = s.find('β').unwrap_or(s.len());
+    ///
+    /// // Remove the range up until the β from the string
+    /// let t: String<32> = s.drain(..beta_offset).collect();
+    /// assert_eq!(t, "α is alpha, ");
+    /// assert_eq!(s, "β is beta");
+    ///
+    /// // A full range clears the string, like `clear()` does
+    /// s.drain(..);
+    /// assert_eq!(s, "");
+    /// ```
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_>
+    where
+        R: RangeBounds<usize>,
+    {
+        self.as_mut_view().drain(range)
+    }
+}
+
+impl<S: Storage> StringInner<S> {
     /// Extracts a string slice containing the entire string.
     ///
     /// # Examples
@@ -252,7 +416,7 @@ impl<const N: usize> String<N> {
     /// assert_eq!(s, "olleh");
     /// # Ok::<(), ()>(())
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, N> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, S> {
         &mut self.vec
     }
 
@@ -460,69 +624,6 @@ impl<const N: usize> String<N> {
     pub fn clear(&mut self) {
         self.vec.clear()
     }
-
-    /// Removes the specified range from the string in bulk, returning all
-    /// removed characters as an iterator.
-    ///
-    /// The returned iterator keeps a mutable borrow on the string to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point or end point do not lie on a [`char`]
-    /// boundary, or if they're out of bounds.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`core::mem::forget`], for example), the string may still contain a copy
-    /// of any drained characters, or may have lost characters arbitrarily,
-    /// including characters outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::String;
-    ///
-    /// let mut s = String::<32>::try_from("α is alpha, β is beta").unwrap();
-    /// let beta_offset = s.find('β').unwrap_or(s.len());
-    ///
-    /// // Remove the range up until the β from the string
-    /// let t: String<32> = s.drain(..beta_offset).collect();
-    /// assert_eq!(t, "α is alpha, ");
-    /// assert_eq!(s, "β is beta");
-    ///
-    /// // A full range clears the string, like `clear()` does
-    /// s.drain(..);
-    /// assert_eq!(s, "");
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, N>
-    where
-        R: RangeBounds<usize>,
-    {
-        // Memory safety
-        //
-        // The `String` version of `Drain` does not have the memory safety issues
-        // of the `Vec` version. The data is just plain bytes.
-        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
-        // the removal will not happen.
-        let Range { start, end } = crate::slice::range(range, ..self.len());
-        assert!(self.is_char_boundary(start));
-        assert!(self.is_char_boundary(end));
-
-        // Take out two simultaneous borrows. The &mut String won't be accessed
-        // until iteration is over, in Drop.
-        let self_ptr = self as *mut _;
-        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
-        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
-
-        Drain {
-            start,
-            end,
-            iter: chars_iter,
-            string: self_ptr,
-        }
-    }
 }
 
 impl<const N: usize> Default for String<N> {
@@ -588,26 +689,26 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<const N: usize> fmt::Debug for String<N> {
+impl<S: Storage> fmt::Debug for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<const N: usize> fmt::Display for String<N> {
+impl<S: Storage> fmt::Display for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<const N: usize> hash::Hash for String<N> {
+impl<S: Storage> hash::Hash for StringInner<S> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher)
     }
 }
 
-impl<const N: usize> fmt::Write for String<N> {
+impl<S: Storage> fmt::Write for StringInner<S> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -617,7 +718,7 @@ impl<const N: usize> fmt::Write for String<N> {
     }
 }
 
-impl<const N: usize> ops::Deref for String<N> {
+impl<S: Storage> ops::Deref for StringInner<S> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -625,34 +726,34 @@ impl<const N: usize> ops::Deref for String<N> {
     }
 }
 
-impl<const N: usize> ops::DerefMut for String<N> {
+impl<S: Storage> ops::DerefMut for StringInner<S> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<const N: usize> AsRef<str> for String<N> {
+impl<S: Storage> AsRef<str> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<const N: usize> AsRef<[u8]> for String<N> {
+impl<S: Storage> AsRef<[u8]> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<const N1: usize, const N2: usize> PartialEq<String<N2>> for String<N1> {
-    fn eq(&self, rhs: &String<N2>) -> bool {
+impl<S1: Storage, S2: Storage> PartialEq<StringInner<S1>> for StringInner<S2> {
+    fn eq(&self, rhs: &StringInner<S1>) -> bool {
         str::eq(&**self, &**rhs)
     }
 }
 
 // String<N> == str
-impl<const N: usize> PartialEq<str> for String<N> {
+impl<S: Storage> PartialEq<str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(self, other)
@@ -660,7 +761,7 @@ impl<const N: usize> PartialEq<str> for String<N> {
 }
 
 // String<N> == &'str
-impl<const N: usize> PartialEq<&str> for String<N> {
+impl<S: Storage> PartialEq<&str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(self, &other[..])
@@ -668,31 +769,31 @@ impl<const N: usize> PartialEq<&str> for String<N> {
 }
 
 // str == String<N>
-impl<const N: usize> PartialEq<String<N>> for str {
+impl<S: Storage> PartialEq<StringInner<S>> for str {
     #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
+    fn eq(&self, other: &StringInner<S>) -> bool {
         str::eq(self, &other[..])
     }
 }
 
 // &'str == String<N>
-impl<const N: usize> PartialEq<String<N>> for &str {
+impl<S: Storage> PartialEq<StringInner<S>> for &str {
     #[inline]
-    fn eq(&self, other: &String<N>) -> bool {
+    fn eq(&self, other: &StringInner<S>) -> bool {
         str::eq(self, &other[..])
     }
 }
 
-impl<const N: usize> Eq for String<N> {}
+impl<S: Storage> Eq for StringInner<S> {}
 
-impl<const N1: usize, const N2: usize> PartialOrd<String<N2>> for String<N1> {
+impl<S1: Storage, S2: Storage> PartialOrd<StringInner<S1>> for StringInner<S2> {
     #[inline]
-    fn partial_cmp(&self, other: &String<N2>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &StringInner<S1>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<const N: usize> Ord for String<N> {
+impl<S: Storage> Ord for StringInner<S> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)

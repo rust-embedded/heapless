@@ -1,6 +1,6 @@
 //! Defmt implementations for heapless types
 
-use crate::{storage::Storage, vec::VecInner};
+use crate::{storage::Storage, string::StringInner, vec::VecInner};
 use defmt::Formatter;
 
 impl<T, S: Storage> defmt::Format for VecInner<T, S>
@@ -12,7 +12,7 @@ where
     }
 }
 
-impl<const N: usize> defmt::Format for crate::String<N>
+impl<S: Storage> defmt::Format for StringInner<S>
 where
     u8: defmt::Format,
 {

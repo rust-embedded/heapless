@@ -1,7 +1,7 @@
-use crate::{storage::Storage, string::String, vec::VecInner};
+use crate::{storage::Storage, string::StringInner, vec::VecInner};
 use ufmt_write::uWrite;
 
-impl<const N: usize> uWrite for String<N> {
+impl<S: Storage> uWrite for StringInner<S> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
