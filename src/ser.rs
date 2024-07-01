@@ -1,8 +1,8 @@
 use core::hash::{BuildHasher, Hash};
 
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, linear_map::LinearMapInner, storage::Storage,
-    string::StringInner, vec::VecInner, BinaryHeap, Deque, HistoryBuffer, IndexMap, IndexSet,
+    binary_heap::Kind as BinaryHeapKind, histbuf::HistoryBufferInner, linear_map::LinearMapInner,
+    storage::Storage, string::StringInner, vec::VecInner, BinaryHeap, Deque, IndexMap, IndexSet,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -74,13 +74,13 @@ where
     }
 }
 
-impl<T, const N: usize> Serialize for HistoryBuffer<T, N>
+impl<T, S: Storage> Serialize for HistoryBufferInner<T, S>
 where
     T: Serialize,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
-        S: Serializer,
+        SER: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
         for element in self.oldest_ordered() {

@@ -104,7 +104,7 @@ pub use vec::{Vec, VecView};
 mod test_helpers;
 
 mod deque;
-mod histbuf;
+pub mod histbuf;
 mod indexmap;
 mod indexset;
 pub mod linear_map;

@@ -1,8 +1,58 @@
+//! A "history buffer", similar to a write-only ring buffer of fixed length.
+//!
+//! This buffer keeps a fixed number of elements.  On write, the oldest element
+//! is overwritten. Thus, the buffer is useful to keep a history of values with
+//! some desired depth, and for example calculate a rolling average.
+//!
+//! # Examples
+//! ```
+//! use heapless::HistoryBuffer;
+//!
+//! // Initialize a new buffer with 8 elements.
+//! let mut buf = HistoryBuffer::<_, 8>::new();
+//!
+//! // Starts with no data
+//! assert_eq!(buf.recent(), None);
+//!
+//! buf.write(3);
+//! buf.write(5);
+//! buf.extend(&[4, 4]);
+//!
+//! // The most recent written element is a four.
+//! assert_eq!(buf.recent(), Some(&4));
+//!
+//! // To access all elements in an unspecified order, use `as_slice()`.
+//! for el in buf.as_slice() {
+//!     println!("{:?}", el);
+//! }
+//!
+//! // Now we can prepare an average of all values, which comes out to 4.
+//! let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+//! assert_eq!(avg, 4);
+//! ```
+
+use core::borrow::Borrow;
+use core::borrow::BorrowMut;
 use core::fmt;
+use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::ops::Deref;
 use core::ptr;
 use core::slice;
+
+use crate::storage::OwnedStorage;
+use crate::storage::Storage;
+use crate::storage::ViewStorage;
+
+/// Base struct for [`HistoryBuffer`] and [`HistoryBufferView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`HistoryBuffer`] or [`HistoryBufferView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct HistoryBufferInner<T, S: Storage> {
+    write_at: usize,
+    filled: bool,
+    data: S::Buffer<MaybeUninit<T>>,
+}
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
@@ -36,11 +86,40 @@ use core::slice;
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
 /// assert_eq!(avg, 4);
 /// ```
-pub struct HistoryBuffer<T, const N: usize> {
-    data: [MaybeUninit<T>; N],
-    write_at: usize,
-    filled: bool,
-}
+pub type HistoryBuffer<T, const N: usize> = HistoryBufferInner<T, OwnedStorage<N>>;
+
+/// A "view" into a [`HistoryBuffer`]
+///
+/// Unlike [`HistoryBuffer`], it doesn't have the `const N: usize` in its type signature.
+///
+/// # Examples
+/// ```
+/// use heapless::histbuf::{HistoryBuffer, HistoryBufferView};
+///
+/// // Initialize a new buffer with 8 elements.
+/// let mut owned_buf = HistoryBuffer::<_, 8>::new();
+/// let buf: &mut HistoryBufferView<_> = &mut owned_buf;
+///
+/// // Starts with no data
+/// assert_eq!(buf.recent(), None);
+///
+/// buf.write(3);
+/// buf.write(5);
+/// buf.extend(&[4, 4]);
+///
+/// // The most recent written element is a four.
+/// assert_eq!(buf.recent(), Some(&4));
+///
+/// // To access all elements in an unspecified order, use `as_slice()`.
+/// for el in buf.as_slice() {
+///     println!("{:?}", el);
+/// }
+///
+/// // Now we can prepare an average of all values, which comes out to 4.
+/// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+/// assert_eq!(avg, 4);
+/// ```
+pub type HistoryBufferView<T> = HistoryBufferInner<T, ViewStorage>;
 
 impl<T, const N: usize> HistoryBuffer<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
@@ -69,12 +148,6 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             filled: false,
         }
     }
-
-    /// Clears the buffer, replacing every element with the default value of
-    /// type `T`.
-    pub fn clear(&mut self) {
-        *self = Self::new();
-    }
 }
 
 impl<T, const N: usize> HistoryBuffer<T, N>
@@ -101,19 +174,46 @@ where
             filled: true,
         }
     }
-
+}
+impl<T: Copy, S: Storage> HistoryBufferInner<T, S> {
     /// Clears the buffer, replacing every element with the given value.
     pub fn clear_with(&mut self, t: T) {
-        *self = Self::new_with(t);
+        // SAFETY: we reset the values just after
+        unsafe { self.drop_contents() };
+        self.write_at = 0;
+        self.filled = true;
+
+        for d in self.data.borrow_mut() {
+            *d = MaybeUninit::new(t);
+        }
     }
 }
 
-impl<T, const N: usize> HistoryBuffer<T, N> {
+impl<T, S: Storage> HistoryBufferInner<T, S> {
+    /// Clears the buffer
+    pub fn clear(&mut self) {
+        // SAFETY: we reset the values just after
+        unsafe { self.drop_contents() };
+        self.write_at = 0;
+        self.filled = false;
+    }
+}
+
+impl<T, S: Storage> HistoryBufferInner<T, S> {
+    unsafe fn drop_contents(&mut self) {
+        unsafe {
+            ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
+                self.data.borrow_mut().as_mut_ptr() as *mut T,
+                self.len(),
+            ))
+        }
+    }
+
     /// Returns the current fill level of the buffer.
     #[inline]
     pub fn len(&self) -> usize {
         if self.filled {
-            N
+            self.capacity()
         } else {
             self.write_at
         }
@@ -138,7 +238,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// underlying backing array.
     #[inline]
     pub fn capacity(&self) -> usize {
-        N
+        self.data.borrow().len()
     }
 
     /// Returns whether the buffer is full
@@ -151,9 +251,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     pub fn write(&mut self, t: T) {
         if self.filled {
             // Drop the old before we overwrite it.
-            unsafe { ptr::drop_in_place(self.data[self.write_at].as_mut_ptr()) }
+            unsafe { ptr::drop_in_place(self.data.borrow_mut()[self.write_at].as_mut_ptr()) }
         }
-        self.data[self.write_at] = MaybeUninit::new(t);
+        self.data.borrow_mut()[self.write_at] = MaybeUninit::new(t);
 
         self.write_at += 1;
         if self.write_at == self.capacity() {
@@ -189,7 +289,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     pub fn recent(&self) -> Option<&T> {
         self.recent_index()
-            .map(|i| unsafe { &*self.data[i].as_ptr() })
+            .map(|i| unsafe { &*self.data.borrow()[i].as_ptr() })
     }
 
     /// Returns index of the most recently written value in the underlying slice.
@@ -230,7 +330,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     pub fn oldest(&self) -> Option<&T> {
         self.oldest_index()
-            .map(|i| unsafe { &*self.data[i].as_ptr() })
+            .map(|i| unsafe { &*self.data.borrow()[i].as_ptr() })
     }
 
     /// Returns index of the oldest value in the underlying slice.
@@ -258,7 +358,7 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len()) }
+        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr() as *const _, self.len()) }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -298,25 +398,16 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     ///     assert_eq!(x, y)
     /// }
     /// ```
-    pub fn oldest_ordered(&self) -> OldestOrdered<'_, T, N> {
-        match (self.oldest_index(), self.recent_index()) {
-            (Some(oldest_index), Some(recent_index)) => OldestOrdered {
-                buf: self,
-                next: oldest_index,
-                back: recent_index,
-                done: false,
-            },
-            _ => OldestOrdered {
-                buf: self,
-                next: 0,
-                back: 0,
-                done: true,
-            },
+    pub fn oldest_ordered(&self) -> OldestOrderedInner<'_, T, S> {
+        let (old, new) = self.as_slices();
+        OldestOrderedInner {
+            phantom: PhantomData,
+            inner: old.iter().chain(new),
         }
     }
 }
 
-impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
+impl<T, S: Storage> Extend<T> for HistoryBufferInner<T, S> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -327,7 +418,7 @@ impl<T, const N: usize> Extend<T> for HistoryBuffer<T, N> {
     }
 }
 
-impl<'a, T, const N: usize> Extend<&'a T> for HistoryBuffer<T, N>
+impl<'a, T, S: Storage> Extend<&'a T> for HistoryBufferInner<T, S>
 where
     T: 'a + Clone,
 {
@@ -354,18 +445,13 @@ where
     }
 }
 
-impl<T, const N: usize> Drop for HistoryBuffer<T, N> {
+impl<T, S: Storage> Drop for HistoryBufferInner<T, S> {
     fn drop(&mut self) {
-        unsafe {
-            ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
-                self.data.as_mut_ptr() as *mut T,
-                self.len(),
-            ))
-        }
+        unsafe { self.drop_contents() }
     }
 }
 
-impl<T, const N: usize> Deref for HistoryBuffer<T, N> {
+impl<T, S: Storage> Deref for HistoryBufferInner<T, S> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -373,14 +459,14 @@ impl<T, const N: usize> Deref for HistoryBuffer<T, N> {
     }
 }
 
-impl<T, const N: usize> AsRef<[T]> for HistoryBuffer<T, N> {
+impl<T, S: Storage> AsRef<[T]> for HistoryBufferInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T, const N: usize> fmt::Debug for HistoryBuffer<T, N>
+impl<T, S: Storage> fmt::Debug for HistoryBufferInner<T, S>
 where
     T: fmt::Debug,
 {
@@ -395,7 +481,7 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
-impl<T, const N: usize> PartialEq for HistoryBuffer<T, N>
+impl<T, S: Storage> PartialEq for HistoryBufferInner<T, S>
 where
     T: PartialEq,
 {
@@ -404,51 +490,74 @@ where
     }
 }
 
-/// Double ended iterator on the underlying buffer ordered from the oldest data
-/// to the newest
-#[derive(Clone)]
-pub struct OldestOrdered<'a, T, const N: usize> {
-    buf: &'a HistoryBuffer<T, N>,
-    next: usize,
-    back: usize,
-    done: bool,
+/// Base struct for [`OldestOrdered`] and [`OldestOrderedView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`OldestOrdered`] or [`OldestOrderedView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct OldestOrderedInner<'a, T, S: Storage> {
+    phantom: PhantomData<S>,
+    inner: core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>,
 }
 
-impl<'a, T, const N: usize> Iterator for OldestOrdered<'a, T, N> {
+/// Double ended iterator on the underlying buffer ordered from the oldest data
+/// to the newest
+/// This type exists for backwards compatibility. It is always better to convert it to an [`OldestOrderedView`] with [`into_view`](OldestOrdered::into_view)
+pub type OldestOrdered<'a, T, const N: usize> = OldestOrderedInner<'a, T, OwnedStorage<N>>;
+
+/// Double ended iterator on the underlying buffer ordered from the oldest data
+/// to the newest
+pub type OldestOrderedView<'a, T> = OldestOrderedInner<'a, T, ViewStorage>;
+
+impl<'a, T, const N: usize> OldestOrdered<'a, T, N> {
+    /// Remove the `N` const-generic parameter from the iterator
+    ///
+    /// For the opposite operation, see [`into_legacy_iter`](OldestOrderedView::into_legacy_iter)
+    pub fn into_view(self) -> OldestOrderedView<'a, T> {
+        OldestOrderedView {
+            phantom: PhantomData,
+            inner: self.inner,
+        }
+    }
+}
+
+impl<'a, T> OldestOrderedView<'a, T> {
+    /// Add back the `N` const-generic parameter to use it with APIs expecting the legacy type
+    ///
+    /// You probably do not need this
+    ///
+    /// For the opposite operation, see [`into_view`](OldestOrdered::into_view)
+    pub fn into_legacy_iter<const N: usize>(self) -> OldestOrdered<'a, T, N> {
+        OldestOrdered {
+            phantom: PhantomData,
+            inner: self.inner,
+        }
+    }
+}
+
+impl<'a, T, S: Storage> Clone for OldestOrderedInner<'a, T, S> {
+    fn clone(&self) -> Self {
+        Self {
+            phantom: PhantomData,
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<'a, T, S: Storage> Iterator for OldestOrderedInner<'a, T, S> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
-        if self.done {
-            return None;
-        }
+        self.inner.next()
+    }
 
-        if self.next == self.back {
-            self.done = true;
-        }
-
-        let item = &self.buf[self.next];
-
-        self.next = if self.next == N - 1 { 0 } else { self.next + 1 };
-
-        Some(item)
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
     }
 }
 
 impl<'a, T, const N: usize> DoubleEndedIterator for OldestOrdered<'a, T, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
-
-        if self.next == self.back {
-            self.done = true;
-        }
-
-        let item = &self.buf[self.back];
-
-        self.back = if self.back == 0 { N - 1 } else { self.back - 1 };
-
-        Some(item)
+        self.inner.next_back()
     }
 }
 
