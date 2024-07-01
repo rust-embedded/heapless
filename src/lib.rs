@@ -107,7 +107,7 @@ mod deque;
 mod histbuf;
 mod indexmap;
 mod indexset;
-mod linear_map;
+pub mod linear_map;
 mod slice;
 pub mod storage;
 pub mod string;
