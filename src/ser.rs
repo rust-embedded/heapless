@@ -2,12 +2,13 @@ use core::hash::{BuildHasher, Hash};
 
 use crate::{
     binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
+    deque::DequeInner,
     histbuf::HistoryBufferInner,
     linear_map::LinearMapInner,
     storage::Storage,
     string::StringInner,
     vec::VecInner,
-    Deque, IndexMap, IndexSet,
+    IndexMap, IndexSet,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -64,15 +65,15 @@ where
     }
 }
 
-impl<T, const N: usize> Serialize for Deque<T, N>
+impl<T, S: Storage> Serialize for DequeInner<T, S>
 where
     T: Serialize,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
-        S: Serializer,
+        SER: Serializer,
     {
-        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        let mut seq = serializer.serialize_seq(Some(self.storage_len()))?;
         for element in self {
             seq.serialize_element(element)?;
         }
