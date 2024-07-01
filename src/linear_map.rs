@@ -1,14 +1,29 @@
+//! A fixed capacity map/dictionary that performs lookups via linear search.
+//!
+//! Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
+
 use core::{borrow::Borrow, fmt, mem, ops, slice};
 
-use crate::Vec;
+use crate::{
+    storage::{OwnedStorage, Storage, ViewStorage},
+    vec::VecInner,
+    Vec,
+};
+
+/// Base struct for [`LinearMap`] and [`LinearMapView`]
+pub struct LinearMapInner<K, V, S: Storage> {
+    pub(crate) buffer: VecInner<(K, V), S>,
+}
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
 /// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
+pub type LinearMap<K, V, const N: usize> = LinearMapInner<K, V, OwnedStorage<N>>;
 
-pub struct LinearMap<K, V, const N: usize> {
-    pub(crate) buffer: Vec<(K, V), N>,
-}
+/// A dynamic capacity map/dictionary that performs lookups via linear search.
+///
+/// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
+pub type LinearMapView<K, V> = LinearMapInner<K, V, ViewStorage>;
 
 impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap`.
@@ -27,9 +42,19 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     pub const fn new() -> Self {
         Self { buffer: Vec::new() }
     }
+
+    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &LinearMapView<K, V> {
+        self
+    }
+
+    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
+        self
+    }
 }
 
-impl<K, V, const N: usize> LinearMap<K, V, N>
+impl<K, V, S: Storage> LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -46,7 +71,7 @@ where
     /// assert_eq!(map.capacity(), 8);
     /// ```
     pub fn capacity(&self) -> usize {
-        N
+        self.buffer.borrow().capacity()
     }
 
     /// Clears the map, removing all key-value pairs.
@@ -346,7 +371,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, const N: usize> ops::Index<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, Q, S: Storage> ops::Index<&'a Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -358,7 +383,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, const N: usize> ops::IndexMut<&'a Q> for LinearMap<K, V, N>
+impl<'a, K, V, Q, S: Storage> ops::IndexMut<&'a Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -389,7 +414,7 @@ where
     }
 }
 
-impl<K, V, const N: usize> fmt::Debug for LinearMap<K, V, N>
+impl<K, V, S: Storage> fmt::Debug for LinearMapInner<K, V, S>
 where
     K: Eq + fmt::Debug,
     V: fmt::Debug,
@@ -413,6 +438,9 @@ where
     }
 }
 
+/// An iterator that moves out of a [`LinearMap`].
+///
+/// This struct is created by calling the [`into_iter`](LinearMap::into_iter) method on [`LinearMap`].
 pub struct IntoIter<K, V, const N: usize>
 where
     K: Eq,
@@ -444,7 +472,7 @@ where
     }
 }
 
-impl<'a, K, V, const N: usize> IntoIterator for &'a LinearMap<K, V, N>
+impl<'a, K, V, S: Storage> IntoIterator for &'a LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -456,6 +484,9 @@ where
     }
 }
 
+/// An iterator over the items of a [`LinearMap`]
+///
+/// This struct is created by calling the [`iter`](LinearMap::iter) method on [`LinearMap`].
 #[derive(Clone, Debug)]
 pub struct Iter<'a, K, V> {
     iter: slice::Iter<'a, (K, V)>,
@@ -472,6 +503,9 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     }
 }
 
+/// An iterator over the items of a [`LinearMap`] that allows modifying the items
+///
+/// This struct is created by calling the [`iter_mut`](LinearMap::iter_mut) method on [`LinearMap`].
 #[derive(Debug)]
 pub struct IterMut<'a, K, V> {
     iter: slice::IterMut<'a, (K, V)>,
@@ -485,12 +519,13 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, const N: usize, const N2: usize> PartialEq<LinearMap<K, V, N2>> for LinearMap<K, V, N>
+impl<K, V, S1: Storage, S2: Storage> PartialEq<LinearMapInner<K, V, S2>>
+    for LinearMapInner<K, V, S1>
 where
     K: Eq,
     V: PartialEq,
 {
-    fn eq(&self, other: &LinearMap<K, V, N2>) -> bool {
+    fn eq(&self, other: &LinearMapInner<K, V, S2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -498,7 +533,7 @@ where
     }
 }
 
-impl<K, V, const N: usize> Eq for LinearMap<K, V, N>
+impl<K, V, S: Storage> Eq for LinearMapInner<K, V, S>
 where
     K: Eq,
     V: PartialEq,
