@@ -5,8 +5,10 @@ use core::borrow::{Borrow, BorrowMut};
 pub(crate) trait SealedStorage {
     type Buffer<T>: ?Sized + Borrow<[T]> + BorrowMut<[T]>;
     /// Obtain the length of the buffer
+    #[allow(unused)]
     fn len<T>(this: *const Self::Buffer<T>) -> usize;
     /// Obtain access to the first element of the buffer
+    #[allow(unused)]
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T;
 }
 
