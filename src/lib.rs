@@ -76,6 +76,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
+#![cfg_attr(feature = "nightly", feature(const_mut_refs))]
 #![cfg_attr(
     all(
         feature = "nightly",

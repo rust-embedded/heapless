@@ -305,8 +305,111 @@ impl<T, const N: usize> Queue<T, N> {
         self.inner_dequeue_unchecked()
     }
 
-    /// Splits a queue into producer and consumer endpoints
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use core::cell::RefCell;
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Producer, Queue};
+    ///
+    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, (), 4>>>> =
+    ///     Mutex::new(RefCell::new(None));
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'static, (), 4>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PRODUCER.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = {
+    ///         let (p, c) = {
+    ///             static mut Q: Queue<(), 4> = Queue::new();
+    ///             // SAFETY: Mutable access to `Q` is allowed exclusively in this scope
+    ///             // and `main` is only called once.
+    ///             unsafe { Q.split() }
+    ///         };
+    ///
+    ///         critical_section::with(move |cs| {
+    ///             let mut producer = PRODUCER.borrow_ref_mut(cs);
+    ///             *producer = Some(p);
+    ///         });
+    ///
+    ///         c
+    ///     };
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    #[cfg(not(feature = "nightly"))]
     pub fn split(&mut self) -> (Producer<'_, T, N>, Consumer<'_, T, N>) {
+        (Producer { rb: self }, Consumer { rb: self })
+    }
+
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(const_mut_refs)]
+    ///
+    /// use core::cell::RefCell;
+    ///
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Consumer, Producer, Queue};
+    ///
+    /// static PC: (
+    ///     Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
+    ///     Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+    /// ) = {
+    ///     static mut Q: Queue<(), 4> = Queue::new();
+    ///     // SAFETY: Mutable access to `Q` is allowed exclusively in this scope.
+    ///     let (p, c) = unsafe { Q.split() };
+    ///
+    ///     (
+    ///         Mutex::new(RefCell::new(Some(p))),
+    ///         Mutex::new(RefCell::new(Some(c))),
+    ///     )
+    /// };
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'_, (), 4>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    #[cfg(feature = "nightly")]
+    pub const fn split(&mut self) -> (Producer<'_, T, N>, Consumer<'_, T, N>) {
         (Producer { rb: self }, Consumer { rb: self })
     }
 }
@@ -644,6 +747,36 @@ mod tests {
 
     // Ensure a `Consumer` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Consumer<*const (), 4>: Send);
+
+    #[cfg(feature = "nightly")]
+    #[test]
+    fn const_split() {
+        use critical_section::Mutex;
+        use std::cell::RefCell;
+
+        use super::{Consumer, Producer};
+
+        static PC: (
+            Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
+            Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+        ) = {
+            static mut Q: Queue<(), 4> = Queue::new();
+            let (p, c) = unsafe { Q.split() };
+
+            (
+                Mutex::new(RefCell::new(Some(p))),
+                Mutex::new(RefCell::new(Some(c))),
+            )
+        };
+        let producer = critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap());
+        let consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
+
+        let mut producer: Producer<'static, (), 4> = producer;
+        let mut consumer: Consumer<'static, (), 4> = consumer;
+
+        assert_eq!(producer.enqueue(()), Ok(()));
+        assert_eq!(consumer.dequeue(), Some(()));
+    }
 
     #[test]
     fn full() {
