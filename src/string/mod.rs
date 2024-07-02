@@ -1,6 +1,7 @@
 //! A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
 
 use core::{
+    borrow,
     char::DecodeUtf16Error,
     cmp::Ordering,
     fmt,
@@ -728,6 +729,17 @@ impl<S: Storage> ops::Deref for StringInner<S> {
 
 impl<S: Storage> ops::DerefMut for StringInner<S> {
     fn deref_mut(&mut self) -> &mut str {
+        self.as_mut_str()
+    }
+}
+
+impl<S: Storage> borrow::Borrow<str> for StringInner<S> {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+impl<S: Storage> borrow::BorrowMut<str> for StringInner<S> {
+    fn borrow_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }

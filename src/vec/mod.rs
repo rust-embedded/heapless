@@ -1,5 +1,6 @@
 //! A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 
+use core::borrow;
 use core::{
     borrow::{Borrow, BorrowMut},
     cmp::Ordering,
@@ -1406,6 +1407,17 @@ impl<T, S: Storage> ops::Deref for VecInner<T, S> {
 
 impl<T, S: Storage> ops::DerefMut for VecInner<T, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_slice()
+    }
+}
+
+impl<T, S: Storage> borrow::Borrow<[T]> for VecInner<T, S> {
+    fn borrow(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+impl<T, S: Storage> borrow::BorrowMut<[T]> for VecInner<T, S> {
+    fn borrow_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
     }
 }
