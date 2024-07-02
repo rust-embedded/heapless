@@ -71,7 +71,7 @@ where
     /// assert_eq!(map.capacity(), 8);
     /// ```
     pub fn capacity(&self) -> usize {
-        self.buffer.capacity()
+        self.buffer.storage_capacity()
     }
 
     /// Clears the map, removing all key-value pairs.

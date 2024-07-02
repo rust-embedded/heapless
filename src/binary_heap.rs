@@ -206,7 +206,7 @@ where
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.data.capacity()
+        self.data.storage_capacity()
     }
 
     /// Drops all items from the binary heap.
