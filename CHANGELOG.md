@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `DequeView`, the `!Sized` version of `Deque`.
 - Added `QueueView`, the `!Sized` version of `Queue`.
 - Added `SortedLinkedListView`, the `!Sized` version of `SortedLinkedList`.
+- Added implementation of `Borrow` and `BorrowMut` for `String` and `Vec`.
 
 ### Changed
 
