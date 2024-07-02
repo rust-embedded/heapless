@@ -459,7 +459,7 @@ impl<S: Storage> StringInner<S> {
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.capacity()
+        self.vec.storage_capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.

@@ -291,6 +291,13 @@ impl<T, const N: usize> Vec<T, N> {
     {
         self.as_mut_view().drain(range)
     }
+
+    /// Returns the maximum number of elements the vector can hold.
+    ///
+    /// This method is not available on a `VecView`, use [`storage_len`](VecInner::storage_capacity) instead
+    pub const fn capacity(&self) -> usize {
+        self.buffer.len()
+    }
 }
 
 impl<T> VecView<T> {
@@ -408,7 +415,7 @@ impl<T, S: Storage> VecInner<T, S> {
     }
 
     /// Returns the maximum number of elements the vector can hold.
-    pub fn capacity(&self) -> usize {
+    pub fn storage_capacity(&self) -> usize {
         self.buffer.borrow().len()
     }
 
@@ -487,7 +494,7 @@ impl<T, S: Storage> VecInner<T, S> {
     ///
     /// Returns back the `item` if the vector is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.capacity() {
+        if self.len < self.storage_capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -561,7 +568,7 @@ impl<T, S: Storage> VecInner<T, S> {
     where
         T: Clone,
     {
-        if new_len > self.capacity() {
+        if new_len > self.storage_capacity() {
             return Err(());
         }
 
@@ -681,7 +688,7 @@ impl<T, S: Storage> VecInner<T, S> {
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
     pub unsafe fn set_len(&mut self, new_len: usize) {
-        debug_assert!(new_len <= self.capacity());
+        debug_assert!(new_len <= self.storage_capacity());
 
         self.len = new_len
     }
@@ -757,7 +764,7 @@ impl<T, S: Storage> VecInner<T, S> {
 
     /// Returns true if the vec is full
     pub fn is_full(&self) -> bool {
-        self.len == self.capacity()
+        self.len == self.storage_capacity()
     }
 
     /// Returns true if the vec is empty
