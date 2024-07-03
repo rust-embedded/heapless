@@ -114,7 +114,7 @@ pub(crate) trait SealedStorage: Sized {
 /// - [`ViewStorage`]: stores the data in an unsized `[T]`.
 ///
 /// This allows containers to be generic over either sized or unsized storage. For example,
-/// the [`vec`](crate::vec) module contains a [`VecInner`](crate::vec::VecInner) struct
+/// the [`vec`](crate::vec) module contains a [`VecInner`] struct
 /// that's generic on [`Storage`], and two type aliases for convenience:
 ///
 /// - [`Vec<T, N>`](crate::vec::Vec) = `VecInner<T, OwnedStorage<N>>`
