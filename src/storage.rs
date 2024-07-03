@@ -2,7 +2,9 @@
 
 use core::borrow::{Borrow, BorrowMut};
 
-pub(crate) trait SealedStorage {
+use crate::{vec::VecInner, VecView};
+
+pub(crate) trait SealedStorage: Sized {
     type Buffer<T>: ?Sized + Borrow<[T]> + BorrowMut<[T]>;
     /// Obtain the length of the buffer
     #[allow(unused)]
@@ -10,6 +12,15 @@ pub(crate) trait SealedStorage {
     /// Obtain access to the first element of the buffer
     #[allow(unused)]
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T;
+
+    /// Convert a `Vec` to a `VecView`
+    fn as_vec_view<T>(this: &VecInner<T, Self>) -> &VecView<T>
+    where
+        Self: Storage;
+    /// Convert a `Vec` to a `VecView`
+    fn as_mut_vec_view<T>(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+    where
+        Self: Storage;
 }
 
 /// Trait defining how data for a container is stored.
@@ -45,6 +56,14 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
         this as _
     }
+    /// Convert a `Vec` to a `VecView`
+    fn as_vec_view<T>(this: &VecInner<T, Self>) -> &VecView<T> {
+        this
+    }
+    /// Convert a `Vec` to a `VecView`
+    fn as_mut_vec_view<T>(this: &mut VecInner<T, Self>) -> &mut VecView<T> {
+        this
+    }
 }
 
 /// Implementation of [`Storage`] that stores the data in an unsized `[T]`.
@@ -58,5 +77,13 @@ impl SealedStorage for ViewStorage {
 
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
         this as _
+    }
+    /// Convert a `Vec` to a `VecView`
+    fn as_vec_view<T>(this: &VecInner<T, Self>) -> &VecView<T> {
+        this
+    }
+    /// Convert a `Vec` to a `VecView`
+    fn as_mut_vec_view<T>(this: &mut VecInner<T, Self>) -> &mut VecView<T> {
+        this
     }
 }
