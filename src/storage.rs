@@ -2,14 +2,24 @@
 
 use core::borrow::{Borrow, BorrowMut};
 
+#[cfg(any(
+    feature = "portable-atomic",
+    all(feature = "mpmc_large", target_has_atomic = "ptr"),
+    all(not(feature = "mpmc_large"), target_has_atomic = "8")
+))]
+use crate::mpmc::{MpMcQueueInner, MpMcQueueView};
+#[cfg(any(
+    feature = "portable-atomic",
+    target_has_atomic = "ptr",
+    has_atomic_load_store
+))]
+use crate::spsc::{QueueInner, QueueView};
 use crate::{
     binary_heap::{BinaryHeapInner, BinaryHeapView},
     deque::{DequeInner, DequeView},
     histbuf::{HistoryBufferInner, HistoryBufferView},
     linear_map::{LinearMapInner, LinearMapView},
-    mpmc::{MpMcQueueInner, MpMcQueueView},
     sorted_linked_list::{SortedLinkedListIndex, SortedLinkedListInner, SortedLinkedListView},
-    spsc::{QueueInner, QueueView},
     string::{StringInner, StringView},
     vec::VecInner,
     VecView,
@@ -40,10 +50,20 @@ pub(crate) trait SealedStorage: Sized {
     fn as_mut_histbuf_view<T>(this: &mut HistoryBufferInner<T, Self>) -> &mut HistoryBufferView<T>
     where
         Self: Storage;
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mpmc_queue_view<T>(this: &MpMcQueueInner<T, Self>) -> &MpMcQueueView<T>
     where
         Self: Storage;
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mut_mpmc_queue_view<T>(this: &mut MpMcQueueInner<T, Self>) -> &mut MpMcQueueView<T>
     where
@@ -68,10 +88,20 @@ pub(crate) trait SealedStorage: Sized {
     ) -> &mut BinaryHeapView<T, K>
     where
         Self: Storage;
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_queue_view<T>(this: &QueueInner<T, Self>) -> &QueueView<T>
     where
         Self: Storage;
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_mut_queue_view<T>(this: &mut QueueInner<T, Self>) -> &mut QueueView<T>
     where
@@ -159,10 +189,20 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
     ) -> &mut SortedLinkedListView<T, Idx, K> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_queue_view<T>(this: &QueueInner<T, Self>) -> &QueueView<T> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_mut_queue_view<T>(this: &mut QueueInner<T, Self>) -> &mut QueueView<T> {
         this
@@ -193,10 +233,20 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
     ) -> &mut LinearMapView<K, V> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mpmc_queue_view<T>(this: &MpMcQueueInner<T, Self>) -> &MpMcQueueView<T> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mut_mpmc_queue_view<T>(this: &mut MpMcQueueInner<T, Self>) -> &mut MpMcQueueView<T> {
         this
@@ -252,10 +302,20 @@ impl SealedStorage for ViewStorage {
     ) -> &mut SortedLinkedListView<T, Idx, K> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_queue_view<T>(this: &QueueInner<T, Self>) -> &QueueView<T> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        target_has_atomic = "ptr",
+        has_atomic_load_store
+    ))]
     /// Convert a `Queue` to a `QueueView`
     fn as_mut_queue_view<T>(this: &mut QueueInner<T, Self>) -> &mut QueueView<T> {
         this
@@ -286,10 +346,20 @@ impl SealedStorage for ViewStorage {
     ) -> &mut LinearMapView<K, V> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mpmc_queue_view<T>(this: &MpMcQueueInner<T, Self>) -> &MpMcQueueView<T> {
         this
     }
+    #[cfg(any(
+        feature = "portable-atomic",
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8")
+    ))]
     /// Convert a `MpMcQueue` to a `MpMcQueueView`
     fn as_mut_mpmc_queue_view<T>(this: &mut MpMcQueueInner<T, Self>) -> &mut MpMcQueueView<T> {
         this
