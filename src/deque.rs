@@ -33,20 +33,22 @@
 //! }
 //! ```
 
-use core::borrow::{Borrow, BorrowMut};
 use core::cmp::Ordering;
 use core::fmt;
 use core::iter::FusedIterator;
+use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::{ptr, slice};
 
-use crate::storage::{OwnedStorage, Storage, ViewStorage};
+use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
 
-/// Base struct for [`Deque`] and [`DequeView`], generic over the [`Storage`].
+/// Base struct for [`Deque`] and [`DequeView`], generic over the [`VecStorage`].
 ///
 /// In most cases you should use [`Deque`] or [`DequeView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct DequeInner<T, S: Storage> {
+pub struct DequeInner<T, S: VecStorage<T> + ?Sized> {
+    // This phantomdata is required because otherwise rustc thinks that `T` is not used
+    phantom: PhantomData<T>,
     /// Front index. Always 0..=(N-1)
     front: usize,
     /// Back index. Always 0..=(N-1).
@@ -55,7 +57,7 @@ pub struct DequeInner<T, S: Storage> {
     /// Used to distinguish "empty" and "full" cases when `front == back`.
     /// May only be `true` if `front == back`, always `false` otherwise.
     full: bool,
-    buffer: S::Buffer<MaybeUninit<T>>,
+    buffer: S,
 }
 
 /// A fixed capacity double-ended queue.
@@ -92,7 +94,7 @@ pub struct DequeInner<T, S: Storage> {
 ///     println!("{}", x);
 /// }
 /// ```
-pub type Deque<T, const N: usize> = DequeInner<T, OwnedStorage<N>>;
+pub type Deque<T, const N: usize> = DequeInner<T, OwnedVecStorage<T, N>>;
 
 /// A double-ended queue with dynamic capacity.
 ///
@@ -131,7 +133,7 @@ pub type Deque<T, const N: usize> = DequeInner<T, OwnedStorage<N>>;
 ///     println!("{}", x);
 /// }
 /// ```
-pub type DequeView<T> = DequeInner<T, ViewStorage>;
+pub type DequeView<T> = DequeInner<T, ViewVecStorage<T>>;
 
 impl<T, const N: usize> Deque<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
@@ -154,7 +156,10 @@ impl<T, const N: usize> Deque<T, N> {
         crate::sealed::greater_than_0::<N>();
 
         Self {
-            buffer: [Self::INIT; N],
+            phantom: PhantomData,
+            buffer: VecStorageInner {
+                buffer: [Self::INIT; N],
+            },
             front: 0,
             back: 0,
             full: false,
@@ -192,7 +197,7 @@ impl<T, const N: usize> Deque<T, N> {
     }
 }
 
-impl<T, S: Storage> DequeInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Returns the maximum number of elements the deque can hold.
     pub fn storage_capacity(&self) -> usize {
         self.buffer.borrow().len()
@@ -866,7 +871,7 @@ impl<T, const N: usize> Default for Deque<T, N> {
     }
 }
 
-impl<T, S: Storage> Drop for DequeInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> Drop for DequeInner<T, S> {
     fn drop(&mut self) {
         // safety: `self` is left in an inconsistent state but it doesn't matter since
         // it's getting dropped. Nothing should be able to observe `self` after drop.
@@ -874,21 +879,21 @@ impl<T, S: Storage> Drop for DequeInner<T, S> {
     }
 }
 
-impl<T: fmt::Debug, S: Storage> fmt::Debug for DequeInner<T, S> {
+impl<T: fmt::Debug, S: VecStorage<T> + ?Sized> fmt::Debug for DequeInner<T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self).finish()
     }
 }
 
 /// As with the standard library's `VecDeque`, items are added via `push_back`.
-impl<T, S: Storage> Extend<T> for DequeInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> Extend<T> for DequeInner<T, S> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         for item in iter {
             self.push_back(item).ok().unwrap();
         }
     }
 }
-impl<'a, T: 'a + Copy, S: Storage> Extend<&'a T> for DequeInner<T, S> {
+impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T, S> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().copied())
     }
@@ -918,7 +923,7 @@ impl<T, const N: usize> IntoIterator for Deque<T, N> {
     }
 }
 
-impl<'a, T, S: Storage> IntoIterator for &'a DequeInner<T, S> {
+impl<'a, T, S: VecStorage<T> + ?Sized> IntoIterator for &'a DequeInner<T, S> {
     type Item = &'a T;
     type IntoIter = Iter<'a, T>;
 
@@ -927,7 +932,7 @@ impl<'a, T, S: Storage> IntoIterator for &'a DequeInner<T, S> {
     }
 }
 
-impl<'a, T, S: Storage> IntoIterator for &'a mut DequeInner<T, S> {
+impl<'a, T, S: VecStorage<T> + ?Sized> IntoIterator for &'a mut DequeInner<T, S> {
     type Item = &'a mut T;
     type IntoIter = IterMut<'a, T>;
 

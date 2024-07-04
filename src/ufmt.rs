@@ -1,14 +1,17 @@
-use crate::{storage::Storage, string::StringInner, vec::VecInner};
+use crate::{
+    string::StringInner,
+    vec::{VecInner, VecStorage},
+};
 use ufmt_write::uWrite;
 
-impl<S: Storage> uWrite for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> uWrite for StringInner<S> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
 }
 
-impl<S: Storage> uWrite for VecInner<u8, S> {
+impl<S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, S> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
