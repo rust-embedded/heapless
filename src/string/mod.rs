@@ -11,11 +11,7 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::{
-    storage::{OwnedStorage, Storage, ViewStorage},
-    vec::VecInner,
-    Vec,
-};
+use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
 
 mod drain;
 pub use drain::Drain;
@@ -42,19 +38,19 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
-/// Base struct for [`String`] and [`StringView`], generic over the [`Storage`].
+/// Base struct for [`String`] and [`StringView`], generic over the [`VecStorage`].
 ///
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct StringInner<S: Storage> {
+pub struct StringInner<S: VecStorage<u8> + ?Sized> {
     vec: VecInner<u8, S>,
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type String<const N: usize> = StringInner<OwnedStorage<N>>;
+pub type String<const N: usize> = StringInner<OwnedVecStorage<u8, N>>;
 
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type StringView = StringInner<ViewStorage>;
+pub type StringView = StringInner<ViewVecStorage<u8>>;
 
 impl StringView {
     /// Removes the specified range from the string in bulk, returning all
@@ -349,7 +345,7 @@ impl<const N: usize> String<N> {
     }
 }
 
-impl<S: Storage> StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// Extracts a string slice containing the entire string.
     ///
     /// # Examples
@@ -690,26 +686,26 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<S: Storage> fmt::Debug for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> fmt::Debug for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<S: Storage> fmt::Display for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> fmt::Display for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<S: Storage> hash::Hash for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> hash::Hash for StringInner<S> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher)
     }
 }
 
-impl<S: Storage> fmt::Write for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> fmt::Write for StringInner<S> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -719,7 +715,7 @@ impl<S: Storage> fmt::Write for StringInner<S> {
     }
 }
 
-impl<S: Storage> ops::Deref for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> ops::Deref for StringInner<S> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -727,45 +723,47 @@ impl<S: Storage> ops::Deref for StringInner<S> {
     }
 }
 
-impl<S: Storage> ops::DerefMut for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> ops::DerefMut for StringInner<S> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: Storage> borrow::Borrow<str> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> borrow::Borrow<str> for StringInner<S> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
-impl<S: Storage> borrow::BorrowMut<str> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> borrow::BorrowMut<str> for StringInner<S> {
     fn borrow_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: Storage> AsRef<str> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> AsRef<str> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<S: Storage> AsRef<[u8]> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> AsRef<[u8]> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<S1: Storage, S2: Storage> PartialEq<StringInner<S1>> for StringInner<S2> {
+impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialEq<StringInner<S1>>
+    for StringInner<S2>
+{
     fn eq(&self, rhs: &StringInner<S1>) -> bool {
         str::eq(&**self, &**rhs)
     }
 }
 
 // String<N> == str
-impl<S: Storage> PartialEq<str> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> PartialEq<str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(self, other)
@@ -773,7 +771,7 @@ impl<S: Storage> PartialEq<str> for StringInner<S> {
 }
 
 // String<N> == &'str
-impl<S: Storage> PartialEq<&str> for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> PartialEq<&str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(self, &other[..])
@@ -781,7 +779,7 @@ impl<S: Storage> PartialEq<&str> for StringInner<S> {
 }
 
 // str == String<N>
-impl<S: Storage> PartialEq<StringInner<S>> for str {
+impl<S: VecStorage<u8> + ?Sized> PartialEq<StringInner<S>> for str {
     #[inline]
     fn eq(&self, other: &StringInner<S>) -> bool {
         str::eq(self, &other[..])
@@ -789,23 +787,25 @@ impl<S: Storage> PartialEq<StringInner<S>> for str {
 }
 
 // &'str == String<N>
-impl<S: Storage> PartialEq<StringInner<S>> for &str {
+impl<S: VecStorage<u8> + ?Sized> PartialEq<StringInner<S>> for &str {
     #[inline]
     fn eq(&self, other: &StringInner<S>) -> bool {
         str::eq(self, &other[..])
     }
 }
 
-impl<S: Storage> Eq for StringInner<S> {}
+impl<S: VecStorage<u8> + ?Sized> Eq for StringInner<S> {}
 
-impl<S1: Storage, S2: Storage> PartialOrd<StringInner<S1>> for StringInner<S2> {
+impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialOrd<StringInner<S1>>
+    for StringInner<S2>
+{
     #[inline]
     fn partial_cmp(&self, other: &StringInner<S1>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<S: Storage> Ord for StringInner<S> {
+impl<S: VecStorage<u8> + ?Sized> Ord for StringInner<S> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)
