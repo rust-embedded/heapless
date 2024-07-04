@@ -17,10 +17,7 @@ use core::{
     ptr, slice,
 };
 
-use crate::{
-    storage::{OwnedStorage, Storage, ViewStorage},
-    vec::{Vec, VecInner},
-};
+use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
 
 /// Min-heap
 pub enum Min {}
@@ -54,11 +51,11 @@ mod private {
 impl private::Sealed for Max {}
 impl private::Sealed for Min {}
 
-/// Base struct for [`BinaryHeap`] and [`BinaryHeapView`], generic over the [`Storage`].
+/// Base struct for [`BinaryHeap`] and [`BinaryHeapView`], generic over the [`VecStorage`].
 ///
 /// In most cases you should use [`BinaryHeap`] or [`BinaryHeapView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct BinaryHeapInner<T, K, S: Storage> {
+pub struct BinaryHeapInner<T, K, S: VecStorage<T> + ?Sized> {
     pub(crate) _kind: PhantomData<K>,
     pub(crate) data: VecInner<T, S>,
 }
@@ -109,7 +106,7 @@ pub struct BinaryHeapInner<T, K, S: Storage> {
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub type BinaryHeap<T, K, const N: usize> = BinaryHeapInner<T, K, OwnedStorage<N>>;
+pub type BinaryHeap<T, K, const N: usize> = BinaryHeapInner<T, K, OwnedVecStorage<T, N>>;
 
 /// A priority queue implemented with a binary heap.
 ///
@@ -158,7 +155,7 @@ pub type BinaryHeap<T, K, const N: usize> = BinaryHeapInner<T, K, OwnedStorage<N
 /// // The heap should now be empty.
 /// assert!(heap.is_empty())
 /// ```
-pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewStorage>;
+pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewVecStorage<T>>;
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
@@ -198,7 +195,7 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     }
 }
 
-impl<T, K, S: Storage> BinaryHeapInner<T, K, S>
+impl<T, K, S: VecStorage<T> + ?Sized> BinaryHeapInner<T, K, S>
 where
     T: Ord,
     K: Kind,
@@ -539,7 +536,7 @@ pub struct PeekMutInner<'a, T, K, S>
 where
     T: Ord,
     K: Kind,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     heap: &'a mut BinaryHeapInner<T, K, S>,
     sift: bool,
@@ -550,20 +547,20 @@ where
 ///
 /// This `struct` is created by [`BinaryHeap::peek_mut`].
 /// See its documentation for more.
-pub type PeekMut<'a, T, K, const N: usize> = PeekMutInner<'a, T, K, OwnedStorage<N>>;
+pub type PeekMut<'a, T, K, const N: usize> = PeekMutInner<'a, T, K, OwnedVecStorage<T, N>>;
 
 /// Structure wrapping a mutable reference to the greatest item on a
 /// `BinaryHeap`.
 ///
 /// This `struct` is created by [`BinaryHeapView::peek_mut`].
 /// See its documentation for more.
-pub type PeekMutView<'a, T, K> = PeekMutInner<'a, T, K, ViewStorage>;
+pub type PeekMutView<'a, T, K> = PeekMutInner<'a, T, K, ViewVecStorage<T>>;
 
 impl<T, K, S> Drop for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     fn drop(&mut self) {
         if self.sift {
@@ -576,7 +573,7 @@ impl<T, K, S> Deref for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     type Target = T;
     fn deref(&self) -> &T {
@@ -590,7 +587,7 @@ impl<T, K, S> DerefMut for PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
@@ -603,7 +600,7 @@ impl<'a, T, K, S> PeekMutInner<'a, T, K, S>
 where
     T: Ord,
     K: Kind,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     /// Removes the peeked value from the heap and returns it.
     pub fn pop(mut this: PeekMutInner<'a, T, K, S>) -> T {
@@ -651,7 +648,7 @@ impl<T, K, S> fmt::Debug for BinaryHeapInner<T, K, S>
 where
     K: Kind,
     T: Ord + fmt::Debug,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
@@ -662,7 +659,7 @@ impl<'a, T, K, S> IntoIterator for &'a BinaryHeapInner<T, K, S>
 where
     K: Kind,
     T: Ord,
-    S: Storage,
+    S: VecStorage<T> + ?Sized,
 {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
@@ -676,7 +673,7 @@ where
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::{BinaryHeap, Max, Min};
+    use super::{BinaryHeap, BinaryHeapView, Max, Min};
 
     // Ensure a `BinaryHeap` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(BinaryHeap<*const (), Max, 4>: Send);
@@ -848,5 +845,14 @@ mod tests {
         assert_eq!(heap.pop(), Some(7));
         assert_eq!(heap.pop(), Some(1));
         assert_eq!(heap.pop(), None);
+    }
+
+    fn _test_variance<'a: 'b, 'b>(x: BinaryHeap<&'a (), Max, 42>) -> BinaryHeap<&'b (), Max, 42> {
+        x
+    }
+    fn _test_variance_view<'a: 'b, 'b, 'c>(
+        x: &'c BinaryHeapView<&'a (), Max>,
+    ) -> &'c BinaryHeapView<&'b (), Max> {
+        x
     }
 }
