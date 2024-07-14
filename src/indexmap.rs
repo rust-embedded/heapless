@@ -1280,7 +1280,7 @@ impl<K, V, S, S2, const N: usize, const N2: usize> PartialEq<IndexMap<K, V, S2, 
     for IndexMap<K, V, S, N>
 where
     K: Eq + Hash,
-    V: Eq,
+    V: PartialEq,
     S: BuildHasher,
     S2: BuildHasher,
 {
