@@ -42,22 +42,22 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     pub const fn new() -> Self {
         Self { buffer: Vec::new() }
     }
-
-    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &LinearMapView<K, V> {
-        self
-    }
-
-    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
-        self
-    }
 }
 
 impl<K, V, S: Storage> LinearMapInner<K, V, S>
 where
     K: Eq,
 {
+    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &LinearMapView<K, V> {
+        S::as_linear_map_view(self)
+    }
+
+    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
+        S::as_mut_linear_map_view(self)
+    }
+
     /// Returns the number of elements that the map can hold.
     ///
     /// Computes in *O*(1) time.
