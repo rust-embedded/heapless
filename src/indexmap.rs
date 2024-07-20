@@ -1879,4 +1879,11 @@ mod tests {
             assert_eq!(value, i + 1);
         }
     }
+
+    #[test]
+    fn partial_eq_floats() {
+        // Make sure PartialEq is implemented even if V doesn't implement Eq
+        let map: IndexMap<usize, f32> = Default::default();
+        assert_eq!(map, map);
+    }
 }
