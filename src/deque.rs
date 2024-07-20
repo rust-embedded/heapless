@@ -41,9 +41,9 @@ use core::{ptr, slice};
 
 use crate::storage::{OwnedStorage, Storage, ViewStorage};
 
-/// Base struct for [`Deque`] and [`Deque`], generic over the [`Storage`].
+/// Base struct for [`Deque`] and [`DequeView`], generic over the [`Storage`].
 ///
-/// In most cases you should use [`Deque`] or [`Deque`] directly. Only use this
+/// In most cases you should use [`Deque`] or [`DequeView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
 pub struct DequeInner<T, S: Storage> {
     /// Front index. Always 0..=(N-1)
