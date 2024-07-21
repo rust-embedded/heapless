@@ -12,7 +12,7 @@ use crate::{
 
 /// Base struct for [`LinearMap`] and [`LinearMapView`]
 pub struct LinearMapInner<K, V, S: Storage> {
-    pub(crate) buffer: VecInner<(K, V), S>,
+    pub(crate) buffer: VecInner<(K, V), usize, S>,
 }
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
@@ -445,7 +445,7 @@ pub struct IntoIter<K, V, const N: usize>
 where
     K: Eq,
 {
-    inner: <Vec<(K, V), N> as IntoIterator>::IntoIter,
+    inner: <Vec<(K, V), N, usize> as IntoIterator>::IntoIter,
 }
 
 impl<K, V, const N: usize> Iterator for IntoIter<K, V, N>

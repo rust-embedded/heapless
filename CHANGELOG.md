@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `QueueView`, the `!Sized` version of `Queue`.
 - Added `SortedLinkedListView`, the `!Sized` version of `SortedLinkedList`.
 - Added implementation of `Borrow` and `BorrowMut` for `String` and `Vec`.
+- Added `LenT` generic to `Vec<T, N>` and `VecView<T>` to save memory when using a sane capacity value.
 
 ### Changed
 
