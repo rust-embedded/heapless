@@ -1232,7 +1232,7 @@ impl<K, V, S, S2, const N: usize, const N2: usize> PartialEq<IndexMap<K, V, S2, 
     for IndexMap<K, V, S, N>
 where
     K: Eq + Hash,
-    V: Eq,
+    V: PartialEq,
     S: BuildHasher,
     S2: BuildHasher,
 {
@@ -1830,5 +1830,12 @@ mod tests {
         for (&value, i) in map.values().zip(1..MAP_SLOTS) {
             assert_eq!(value, i + 1);
         }
+    }
+
+    #[test]
+    fn partial_eq_floats() {
+        // Make sure PartialEq is implemented even if V doesn't implement Eq
+        let map: FnvIndexMap<usize, f32, 4> = Default::default();
+        assert_eq!(map, map);
     }
 }
