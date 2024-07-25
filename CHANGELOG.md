@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- Relax `PartialEq` bounds on `IndexMap` from `V: Eq` to `V: PartialEq`.
+- Relax bounds on `IndexMap` from `V: Eq` to `V: PartialEq`.
 
 ### Added
 
