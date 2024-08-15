@@ -162,14 +162,14 @@ impl<T, const N: usize> Deque<T, N> {
 
     /// Returns the maximum number of elements the deque can hold.
     ///
-    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_capacity) instead
+    /// This method is not available on a `DequeView`, use [`storage_capacity`](DequeInner::storage_capacity) instead.
     pub const fn capacity(&self) -> usize {
         N
     }
 
     /// Returns the number of elements currently in the deque.
     ///
-    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len) instead
+    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len) instead.
     pub const fn len(&self) -> usize {
         if self.full {
             N
@@ -650,6 +650,7 @@ impl<T, S: Storage> DequeInner<T, S> {
             self.full = true;
         }
     }
+
     /// Returns a reference to the element at the given index.
     ///
     /// Index 0 is the front of the `Deque`.
@@ -704,6 +705,76 @@ impl<T, S: Storage> DequeInner<T, S> {
             .borrow_mut()
             .get_unchecked_mut(idx)
             .assume_init_mut()
+    }
+
+    /// Swaps elements at indices `i` and `j`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either `i` or `j` are out of bounds.
+    pub fn swap(&mut self, i: usize, j: usize) {
+        let len = self.storage_len();
+        assert!(i < len);
+        assert!(j < len);
+        unsafe { self.swap_unchecked(i, j) }
+    }
+
+    /// Swaps elements at indices `i` and `j` without checking that they exist.
+    ///
+    /// # Safety
+    ///
+    /// Elements at indexes `i` and `j` must exist (i.e. `i < self.len()` and `j < self.len()`).
+    pub unsafe fn swap_unchecked(&mut self, i: usize, j: usize) {
+        debug_assert!(i < self.storage_len());
+        debug_assert!(j < self.storage_len());
+        let idx_i = self.to_physical_index(i);
+        let idx_j = self.to_physical_index(j);
+
+        let buffer = self.buffer.borrow_mut();
+        let buffer_ptr = buffer.as_mut_ptr();
+        let ptr_i = buffer_ptr.add(idx_i);
+        let ptr_j = buffer_ptr.add(idx_j);
+        ptr::swap(ptr_i, ptr_j);
+    }
+
+    /// Removes an element from anywhere in the deque and returns it, replacing it with the first
+    /// element.
+    ///
+    /// This does not preserve ordering, but is *O*(1).
+    ///
+    /// Returns `None` if `index` is out of bounds.
+    ///
+    /// Element at index 0 is the front of the queue.
+    pub fn swap_remove_front(&mut self, index: usize) -> Option<T> {
+        let len = self.storage_len();
+        if len > 0 && index < len {
+            Some(unsafe {
+                self.swap_unchecked(index, 0);
+                self.pop_front_unchecked()
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Removes an element from anywhere in the deque and returns it, replacing it with the last
+    /// element.
+    ///
+    /// This does not preserve ordering, but is *O*(1).
+    ///
+    /// Returns `None` if `index` is out of bounds.
+    ///
+    /// Element at index 0 is the front of the queue.
+    pub fn swap_remove_back(&mut self, index: usize) -> Option<T> {
+        let len = self.storage_len();
+        if len > 0 && index < len {
+            Some(unsafe {
+                self.swap_unchecked(index, len - 1);
+                self.pop_back_unchecked()
+            })
+        } else {
+            None
+        }
     }
 
     fn to_physical_index(&self, index: usize) -> usize {
@@ -1282,5 +1353,91 @@ mod tests {
         assert_eq!(q.pop_front(), Some(42));
         assert_eq!(q.pop_front(), Some(43));
         assert_eq!(q.pop_front(), None);
+    }
+
+    #[test]
+    fn swap() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.push_back(43).unwrap();
+        assert_eq!(*q.get(0).unwrap(), 41);
+        assert_eq!(*q.get(1).unwrap(), 42);
+        assert_eq!(*q.get(2).unwrap(), 43);
+
+        q.swap(0, 1);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 41);
+        assert_eq!(*q.get(2).unwrap(), 43);
+
+        q.swap(1, 2);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 43);
+        assert_eq!(*q.get(2).unwrap(), 41);
+
+        q.swap(1, 1);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 43);
+        assert_eq!(*q.get(2).unwrap(), 41);
+    }
+
+    #[test]
+    fn swap_remove_front() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.push_back(43).unwrap();
+
+        assert_eq!(q.swap_remove_front(2), Some(42));
+        assert_eq!(q.swap_remove_front(1), Some(40));
+        assert_eq!(q.swap_remove_front(0), Some(41));
+        assert_eq!(q.swap_remove_front(1), None);
+        assert_eq!(q.swap_remove_front(4), None);
+        assert_eq!(q.swap_remove_front(6), None);
+        assert_eq!(q.swap_remove_front(0), Some(43));
+    }
+
+    #[test]
+    fn swap_remove_back() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.push_back(43).unwrap();
+        q.pop_front().unwrap();
+        q.push_back(44).unwrap();
+
+        assert_eq!(q.swap_remove_back(1), Some(42));
+        assert_eq!(q.swap_remove_front(1), Some(44));
+        assert_eq!(q.swap_remove_front(0), Some(41));
+        assert_eq!(q.swap_remove_front(1), None);
+        assert_eq!(q.swap_remove_front(4), None);
+        assert_eq!(q.swap_remove_front(6), None);
+        assert_eq!(q.swap_remove_front(0), Some(43));
+    }
+
+    #[test]
+    #[should_panic = "i < len"]
+    fn swap_i_out_of_bounds() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.swap(2, 0);
+    }
+
+    #[test]
+    #[should_panic = "j < len"]
+    fn swap_j_out_of_bounds() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.swap(0, 2);
     }
 }
