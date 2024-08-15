@@ -731,8 +731,9 @@ impl<T, S: Storage> DequeInner<T, S> {
         let idx_j = self.to_physical_index(j);
 
         let buffer = self.buffer.borrow_mut();
-        let ptr_i = buffer.as_mut_ptr().add(idx_i);
-        let ptr_j = buffer.as_mut_ptr().add(idx_j);
+        let buffer_ptr = buffer.as_mut_ptr();
+        let ptr_i = buffer_ptr.add(idx_i);
+        let ptr_j = buffer_ptr.add(idx_j);
         ptr::swap(ptr_i, ptr_j);
     }
 
