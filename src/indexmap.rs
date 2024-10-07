@@ -926,6 +926,25 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
         self.len() == 0
     }
 
+    /// Returns true if the map is full.
+    ///
+    /// Computes in *O*(1) time.
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut a = FnvIndexMap::<_, _, 4>::new();
+    /// assert!(!a.is_full());
+    /// a.insert(1, "a");
+    /// a.insert(2, "b");
+    /// a.insert(3, "c");
+    /// a.insert(4, "d");
+    /// assert!(a.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.len() == self.capacity()
+    }
+
     /// Remove all key-value pairs in the map, while preserving its capacity.
     ///
     /// Computes in *O*(n) time.
