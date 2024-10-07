@@ -151,8 +151,6 @@ pub type MpMcQueue<T, const N: usize> = MpMcQueueInner<T, OwnedStorage<N>>;
 pub type MpMcQueueView<T> = MpMcQueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> MpMcQueue<T, N> {
-    const EMPTY_CELL: Cell<T> = Cell::new(0);
-
     const ASSERT: [(); 1] = [()];
 
     /// Creates an empty queue
@@ -167,7 +165,7 @@ impl<T, const N: usize> MpMcQueue<T, N> {
 
         let mut cell_count = 0;
 
-        let mut result_cells: [Cell<T>; N] = [Self::EMPTY_CELL; N];
+        let mut result_cells: [Cell<T>; N] = [const { Cell::new(0) }; N];
         while cell_count != N {
             result_cells[cell_count] = Cell::new(cell_count);
             cell_count += 1;

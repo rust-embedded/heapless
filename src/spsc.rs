@@ -135,7 +135,6 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
-    const INIT: UnsafeCell<MaybeUninit<T>> = UnsafeCell::new(MaybeUninit::uninit());
     /// Creates an empty queue with a fixed capacity of `N - 1`
     pub const fn new() -> Self {
         // Const assert N > 1
@@ -144,7 +143,7 @@ impl<T, const N: usize> Queue<T, N> {
         Queue {
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
-            buffer: [Self::INIT; N],
+            buffer: [const { UnsafeCell::new(MaybeUninit::uninit()) }; N],
         }
     }
 
