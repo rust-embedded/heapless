@@ -262,6 +262,30 @@ where
         self.len() == 0
     }
 
+    /// Checks if the binary heap is full.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    ///
+    /// assert!(!heap.is_full());
+    ///
+    /// heap.push(1).unwrap();
+    /// heap.push(2).unwrap();
+    /// heap.push(3).unwrap();
+    /// heap.push(4).unwrap();
+    /// heap.push(5).unwrap();
+    /// heap.push(6).unwrap();
+    /// heap.push(7).unwrap();
+    /// heap.push(8).unwrap();
+    ///
+    /// assert!(heap.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.len() == self.capacity()
+    }
+
     /// Returns an iterator visiting all values in the underlying vector, in arbitrary order.
     ///
     /// ```

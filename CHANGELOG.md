@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `format` macro.
 - Added `String::from_utf16`.
 - Added `is_full`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
+- Added `is_full` to `BinaryHeap`
 - Added infallible conversions from arrays to `Vec`.
 - Added `Vec::spare_capacity_mut`.
 - Added `Extend` impls for `Deque`.
