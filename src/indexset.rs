@@ -180,6 +180,25 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
         self.map.is_empty()
     }
 
+    /// Returns `true` if the set is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexSet;
+    ///
+    /// let mut v: FnvIndexSet<_, 4> = FnvIndexSet::new();
+    /// assert!(!v.is_full());
+    /// v.insert(1).unwrap();
+    /// v.insert(2).unwrap();
+    /// v.insert(3).unwrap();
+    /// v.insert(4).unwrap();
+    /// assert!(v.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.map.is_full()
+    }
+
     /// Clears the set, removing all values.
     ///
     /// # Examples
