@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `is_full` to `BinaryHeap`
 - Added `is_full` to `IndexMap`
 - Added `is_full` to `IndexSet`
+- Added `is_full` to `LinearMap`
 - Added infallible conversions from arrays to `Vec`.
 - Added `Vec::spare_capacity_mut`.
 - Added `Extend` impls for `Deque`.

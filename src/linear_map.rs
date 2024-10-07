@@ -227,6 +227,27 @@ where
         self.len() == 0
     }
 
+    /// Returns true if the map is full.
+    ///
+    /// Computes in *O*(1) time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// let mut a: LinearMap<_, _, 4> = LinearMap::new();
+    /// assert!(!a.is_full());
+    /// a.insert(1, "a").unwrap();
+    /// a.insert(2, "b").unwrap();
+    /// a.insert(3, "c").unwrap();
+    /// a.insert(4, "d").unwrap();
+    /// assert!(a.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.len() == self.capacity()
+    }
+
     /// An iterator visiting all key-value pairs in arbitrary order.
     ///
     /// # Examples
