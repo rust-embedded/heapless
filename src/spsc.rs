@@ -92,10 +92,10 @@
 //!
 //! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
 //! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
-//! `memcpy(T)` in their successful path.
+//!   `memcpy(T)` in their successful path.
 //! - The optimization level is indicated in the first row.
 //! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
-//! and `Ok` is returned by `enqueue`).
+//!   and `Ok` is returned by `enqueue`).
 
 use core::{borrow::Borrow, cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
 
@@ -135,7 +135,6 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
-    const INIT: UnsafeCell<MaybeUninit<T>> = UnsafeCell::new(MaybeUninit::uninit());
     /// Creates an empty queue with a fixed capacity of `N - 1`
     pub const fn new() -> Self {
         // Const assert N > 1
@@ -144,7 +143,7 @@ impl<T, const N: usize> Queue<T, N> {
         Queue {
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
-            buffer: [Self::INIT; N],
+            buffer: [const { UnsafeCell::new(MaybeUninit::uninit()) }; N],
         }
     }
 
