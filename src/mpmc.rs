@@ -67,10 +67,10 @@
 //!   not.
 //! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
 //! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
-//! `memcpy(T)` in their successful path.
+//!   `memcpy(T)` in their successful path.
 //! - The optimization level is indicated in parentheses.
 //! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
-//! and `Ok` is returned by `enqueue`).
+//!   and `Ok` is returned by `enqueue`).
 //!
 //! # Portability
 //!

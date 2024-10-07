@@ -852,9 +852,9 @@ pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Err
 /// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
 ///
 /// - In case the formatting exceeds the string's capacity. This error does not exist in
-/// the standard library as the string would just grow.
+///   the standard library as the string would just grow.
 /// - If a formatting trait implementation returns an error. The standard library panics
-/// in this case.
+///   in this case.
 ///
 /// # Examples
 ///
@@ -1102,7 +1102,7 @@ mod tests {
         match s.pop() {
             Some(c) => {
                 assert_eq!(s.len(), 1);
-                assert_eq!(c, '\u{0301}'); // accute accent of e
+                assert_eq!(c, '\u{0301}'); // acute accent of e
             }
             None => panic!(),
         };
