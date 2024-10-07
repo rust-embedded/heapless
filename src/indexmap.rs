@@ -1125,7 +1125,7 @@ where
     /// Remove the key-value pair equivalent to `key` and return its value.
     ///
     /// Like `Vec::swap_remove`, the pair is removed by swapping it with the last element of the map
-    /// and popping it off. **This perturbs the postion of what used to be the last element!**
+    /// and popping it off. **This perturbs the position of what used to be the last element!**
     ///
     /// Return `None` if `key` is not in map.
     ///

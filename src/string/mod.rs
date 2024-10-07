@@ -852,9 +852,9 @@ pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Err
 /// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
 ///
 /// - In case the formatting exceeds the string's capacity. This error does not exist in
-/// the standard library as the string would just grow.
+///   the standard library as the string would just grow.
 /// - If a formatting trait implementation returns an error. The standard library panics
-/// in this case.
+///   in this case.
 ///
 /// # Examples
 ///
@@ -1027,7 +1027,7 @@ mod tests {
         let s: String<4> = String::try_from("ab").unwrap();
         let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
-        assert_eq!(&[b'a', b'b'], &b[..]);
+        assert_eq!(b"ab", &b[..]);
     }
 
     #[test]
@@ -1102,7 +1102,7 @@ mod tests {
         match s.pop() {
             Some(c) => {
                 assert_eq!(s.len(), 1);
-                assert_eq!(c, '\u{0301}'); // accute accent of e
+                assert_eq!(c, '\u{0301}'); // acute accent of e
             }
             None => panic!(),
         };
