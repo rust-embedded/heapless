@@ -1027,7 +1027,7 @@ mod tests {
         let s: String<4> = String::try_from("ab").unwrap();
         let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
-        assert_eq!(&[b'a', b'b'], &b[..]);
+        assert_eq!(b"ab", &b[..]);
     }
 
     #[test]
