@@ -154,19 +154,19 @@ impl<T, const N: usize> Queue<T, N> {
     pub const fn capacity(&self) -> usize {
         N - 1
     }
+}
 
+impl<T, S: Storage> QueueInner<T, S> {
     /// Get a reference to the `Queue`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &QueueView<T> {
-        self
+        S::as_queue_view(self)
     }
 
     /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
-        self
+        S::as_mut_queue_view(self)
     }
-}
 
-impl<T, S: Storage> QueueInner<T, S> {
     #[inline]
     fn increment(&self, val: usize) -> usize {
         (val + 1) % self.n()
