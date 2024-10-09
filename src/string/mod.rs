@@ -12,6 +12,7 @@ use core::{
 };
 
 use crate::{
+    len_type::LenType,
     storage::{OwnedStorage, Storage, ViewStorage},
     vec::VecInner,
     Vec,
@@ -47,7 +48,7 @@ impl fmt::Display for FromUtf16Error {
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
 pub struct StringInner<S: Storage> {
-    vec: VecInner<u8, S>,
+    vec: VecInner<u8, usize, S>,
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
@@ -210,9 +211,11 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), core::str::Utf8Error>(())
     /// ```
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, N>) -> Result<Self, Utf8Error> {
+    pub fn from_utf8<LenT: LenType>(vec: Vec<u8, N, LenT>) -> Result<Self, Utf8Error> {
         core::str::from_utf8(&vec)?;
-        Ok(Self { vec })
+
+        // SAFETY: UTF-8 invariant has just been checked by `str::from_utf8`.
+        Ok(unsafe { Self::from_utf8_unchecked(vec) })
     }
 
     /// Convert UTF-8 bytes into a `String`, without checking that the string
@@ -237,8 +240,10 @@ impl<const N: usize> String<N> {
     /// assert_eq!("💖", sparkle_heart);
     /// ```
     #[inline]
-    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> Self {
-        Self { vec }
+    pub unsafe fn from_utf8_unchecked<LenT: LenType>(vec: Vec<u8, N, LenT>) -> Self {
+        Self {
+            vec: vec.cast_len_type(),
+        }
     }
 
     /// Converts a `String` into a byte vector.
@@ -260,7 +265,7 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, N> {
+    pub fn into_bytes(self) -> Vec<u8, N, usize> {
         self.vec
     }
 
@@ -417,7 +422,7 @@ impl<S: Storage> StringInner<S> {
     /// assert_eq!(s, "olleh");
     /// # Ok::<(), ()>(())
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, S> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, usize, S> {
         &mut self.vec
     }
 
@@ -1025,7 +1030,7 @@ mod tests {
     #[test]
     fn into_bytes() {
         let s: String<4> = String::try_from("ab").unwrap();
-        let b: Vec<u8, 4> = s.into_bytes();
+        let b: Vec<u8, 4, usize> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(b"ab", &b[..]);
     }

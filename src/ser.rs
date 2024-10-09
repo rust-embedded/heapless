@@ -8,7 +8,7 @@ use crate::{
     storage::Storage,
     string::StringInner,
     vec::VecInner,
-    IndexMap, IndexSet,
+    IndexMap, IndexSet, LenType,
 };
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<T, St: Storage> Serialize for VecInner<T, St>
+impl<T, LenT: LenType, St: Storage> Serialize for VecInner<T, LenT, St>
 where
     T: Serialize,
 {
