@@ -264,48 +264,6 @@ impl<const N: usize> String<N> {
         self.vec
     }
 
-    /// Get a reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = s.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = &s;
-    /// ```
-    #[inline]
-    pub fn as_view(&self) -> &StringView {
-        self
-    }
-
-    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = s.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = &mut s;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut StringView {
-        self
-    }
-
     /// Removes the specified range from the string in bulk, returning all
     /// removed characters as an iterator.
     ///
@@ -350,6 +308,48 @@ impl<const N: usize> String<N> {
 }
 
 impl<S: Storage> StringInner<S> {
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = &s;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &StringView {
+        S::as_string_view(self)
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = &mut s;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        S::as_mut_string_view(self)
+    }
+
     /// Extracts a string slice containing the entire string.
     ///
     /// # Examples

@@ -212,6 +212,15 @@ impl<T, const N: usize> Vec<T, N> {
         new
     }
 
+    /// Returns the maximum number of elements the vector can hold.
+    ///
+    /// This method is not available on a `VecView`, use [`storage_len`](VecInner::storage_capacity) instead
+    pub const fn capacity(&self) -> usize {
+        self.buffer.len()
+    }
+}
+
+impl<T, S: Storage> VecInner<T, S> {
     /// Get a reference to the `Vec`, erasing the `N` const-generic.
     ///
     ///
@@ -229,8 +238,8 @@ impl<T, const N: usize> Vec<T, N> {
     /// let view: &VecView<u8> = &vec;
     /// ```
     #[inline]
-    pub const fn as_view(&self) -> &VecView<T> {
-        self
+    pub fn as_view(&self) -> &VecView<T> {
+        S::as_vec_view(self)
     }
 
     /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
@@ -250,122 +259,9 @@ impl<T, const N: usize> Vec<T, N> {
     /// ```
     #[inline]
     pub fn as_mut_view(&mut self) -> &mut VecView<T> {
-        self
+        S::as_mut_vec_view(self)
     }
 
-    /// Removes the specified range from the vector in bulk, returning all
-    /// removed elements as an iterator. If the iterator is dropped before
-    /// being fully consumed, it drops the remaining removed elements.
-    ///
-    /// The returned iterator keeps a mutable borrow on the vector to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point is greater than the end point or if
-    /// the end point is greater than the length of the vector.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`mem::forget`], for example), the vector may have lost and leaked
-    /// elements arbitrarily, including elements outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
-    /// let u: Vec<_, 8> = v.drain(1..).collect();
-    /// assert_eq!(v, &[1]);
-    /// assert_eq!(u, &[2, 3]);
-    ///
-    /// // A full range clears the vector, like `clear()` does.
-    /// v.drain(..);
-    /// assert_eq!(v, &[]);
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
-    where
-        R: RangeBounds<usize>,
-    {
-        self.as_mut_view().drain(range)
-    }
-
-    /// Returns the maximum number of elements the vector can hold.
-    ///
-    /// This method is not available on a `VecView`, use [`storage_len`](VecInner::storage_capacity) instead
-    pub const fn capacity(&self) -> usize {
-        self.buffer.len()
-    }
-}
-
-impl<T> VecView<T> {
-    /// Removes the specified range from the vector in bulk, returning all
-    /// removed elements as an iterator. If the iterator is dropped before
-    /// being fully consumed, it drops the remaining removed elements.
-    ///
-    /// The returned iterator keeps a mutable borrow on the vector to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point is greater than the end point or if
-    /// the end point is greater than the length of the vector.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`mem::forget`], for example), the vector may have lost and leaked
-    /// elements arbitrarily, including elements outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
-    /// let u: Vec<_, 8> = v.drain(1..).collect();
-    /// assert_eq!(v, &[1]);
-    /// assert_eq!(u, &[2, 3]);
-    ///
-    /// // A full range clears the vector, like `clear()` does.
-    /// v.drain(..);
-    /// assert_eq!(v, &[]);
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
-    where
-        R: RangeBounds<usize>,
-    {
-        // Memory Safety
-        //
-        // When the `Drain` is first created, it shortens the length of
-        // the source vector to make sure no uninitialized or moved-from elements
-        // are accessible at all if the `Drain`'s destructor never gets to run.
-        //
-        // `Drain` will `ptr::read` out the values to remove.
-        // When finished, remaining tail of the vec is copied back to cover
-        // the hole, and the vector length is restored to the new length.
-        //
-        let len = self.len();
-        let Range { start, end } = crate::slice::range(range, ..len);
-
-        unsafe {
-            // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
-            self.set_len(start);
-            let vec = NonNull::from(self);
-            let range_slice = slice::from_raw_parts(vec.as_ref().as_ptr().add(start), end - start);
-            Drain {
-                tail_start: end,
-                tail_len: len - end,
-                iter: range_slice.iter(),
-                vec,
-            }
-        }
-    }
-}
-
-impl<T, S: Storage> VecInner<T, S> {
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
         self.buffer.borrow().as_ptr() as *const T
@@ -1103,6 +999,71 @@ impl<T, S: Storage> VecInner<T, S> {
     #[inline]
     pub fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<T>] {
         &mut self.buffer.borrow_mut()[self.len..]
+    }
+
+    /// Removes the specified range from the vector in bulk, returning all
+    /// removed elements as an iterator. If the iterator is dropped before
+    /// being fully consumed, it drops the remaining removed elements.
+    ///
+    /// The returned iterator keeps a mutable borrow on the vector to optimize
+    /// its implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point is greater than the end point or if
+    /// the end point is greater than the length of the vector.
+    ///
+    /// # Leaking
+    ///
+    /// If the returned iterator goes out of scope without being dropped (due to
+    /// [`mem::forget`], for example), the vector may have lost and leaked
+    /// elements arbitrarily, including elements outside the range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
+    /// let u: Vec<_, 8> = v.drain(1..).collect();
+    /// assert_eq!(v, &[1]);
+    /// assert_eq!(u, &[2, 3]);
+    ///
+    /// // A full range clears the vector, like `clear()` does.
+    /// v.drain(..);
+    /// assert_eq!(v, &[]);
+    /// ```
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
+    where
+        R: RangeBounds<usize>,
+    {
+        let this = S::as_mut_vec_view(self);
+
+        // Memory Safety
+        //
+        // When the `Drain` is first created, it shortens the length of
+        // the source vector to make sure no uninitialized or moved-from elements
+        // are accessible at all if the `Drain`'s destructor never gets to run.
+        //
+        // `Drain` will `ptr::read` out the values to remove.
+        // When finished, remaining tail of the vec is copied back to cover
+        // the hole, and the vector length is restored to the new length.
+        //
+        let len = this.len();
+        let Range { start, end } = crate::slice::range(range, ..len);
+
+        unsafe {
+            // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
+            this.set_len(start);
+            let vec = NonNull::from(this);
+            let range_slice = slice::from_raw_parts(vec.as_ref().as_ptr().add(start), end - start);
+            Drain {
+                tail_start: end,
+                tail_len: len - end,
+                iter: range_slice.iter(),
+                vec,
+            }
+        }
     }
 }
 
