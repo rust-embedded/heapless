@@ -950,6 +950,46 @@ where
     }
 }
 
+impl<T: PartialEq, const N: usize> PartialEq for Deque<T, N> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        let (sa, sb) = self.as_slices();
+        let (oa, ob) = other.as_slices();
+        if sa.len() == oa.len() {
+            sa == oa && sb == ob
+        } else if sa.len() < oa.len() {
+            // Always divisible in three sections, for example:
+            // self:  [a b c|d e f]
+            // other: [0 1 2 3|4 5]
+            // front = 3, mid = 1,
+            // [a b c] == [0 1 2] && [d] == [3] && [e f] == [4 5]
+            let front = sa.len();
+            let mid = oa.len() - front;
+
+            let (oa_front, oa_mid) = oa.split_at(front);
+            let (sb_mid, sb_back) = sb.split_at(mid);
+            debug_assert_eq!(sa.len(), oa_front.len());
+            debug_assert_eq!(sb_mid.len(), oa_mid.len());
+            debug_assert_eq!(sb_back.len(), ob.len());
+            sa == oa_front && sb_mid == oa_mid && sb_back == ob
+        } else {
+            let front = oa.len();
+            let mid = sa.len() - front;
+
+            let (sa_front, sa_mid) = sa.split_at(front);
+            let (ob_mid, ob_back) = ob.split_at(mid);
+            debug_assert_eq!(sa_front.len(), oa.len());
+            debug_assert_eq!(sa_mid.len(), ob_mid.len());
+            debug_assert_eq!(sb.len(), ob_back.len());
+            sa_front == oa && sa_mid == ob_mid && sb == ob_back
+        }
+    }
+}
+
+impl<T: Eq, const N: usize> Eq for Deque<T, N> {}
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
@@ -1439,5 +1479,61 @@ mod tests {
         q.push_back(42).unwrap();
         q.pop_front().unwrap();
         q.swap(0, 2);
+    }
+
+    #[test]
+    fn equality() {
+        let mut a: Deque<i32, 7> = Deque::new();
+        let mut b: Deque<i32, 7> = Deque::new();
+
+        assert_eq!(a, b);
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+
+        assert_ne!(a, b);
+
+        b.push_back(1).unwrap();
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+
+        assert_eq!(a, b);
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+
+        assert_ne!(a, b);
+
+        b.push_front(3).unwrap();
+        b.push_front(2).unwrap();
+        b.push_front(1).unwrap();
+
+        assert_eq!(a, b);
+
+        a.push_back(4).unwrap();
+        b.push_back(4).unwrap();
+
+        assert_eq!(a, b);
+
+        a.clear();
+        b.clear();
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+        a.push_front(3).unwrap();
+        a.push_front(2).unwrap();
+        a.push_front(1).unwrap();
+
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+        b.push_back(1).unwrap();
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+        b.push_front(1).unwrap();
+
+        assert_eq!(a, b);
     }
 }
