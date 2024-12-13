@@ -36,7 +36,7 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::fmt;
 use core::iter::FusedIterator;
-use core::mem::MaybeUninit;
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::{ptr, slice};
 
 use crate::storage::{OwnedStorage, Storage, ViewStorage};
@@ -947,6 +947,50 @@ where
             unsafe { res.push_back_unchecked(i.clone()) }
         }
         res
+    }
+}
+
+impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
+    /// Converts a `[T; NS]` into a `Deque<T, ND>`.
+    ///
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let deq1 = Deque::<u8, 4>::try_from([1, 2, 3, 4]).unwrap();
+    /// let mut deq2 = Deque::<u8, 4>::new();
+    /// deq2.push_back(1).unwrap();
+    /// deq2.push_back(2).unwrap();
+    /// deq2.push_back(3).unwrap();
+    /// deq2.push_back(4).unwrap();
+    ///
+    /// // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
+    /// assert_eq!(deq1.len(), deq2.len());
+    /// for (i, e1) in deq1.iter().enumerate() {
+    ///   assert_eq!(Some(e1), deq2.get(i));
+    /// }
+    /// ```
+    type Error = ();
+
+    fn try_from(value: [T; NS]) -> Result<Self, Self::Error> {
+        if NS > ND {
+            return Err(());
+        }
+
+        let mut deq = Self::default();
+        let value = ManuallyDrop::new(value);
+
+        if size_of::<T>() != 0 {
+            // SAFETY: We already ensured that value fits in deq.
+            unsafe {
+                ptr::copy_nonoverlapping(value.as_ptr(), deq.buffer.as_mut_ptr() as *mut T, NS);
+            }
+        }
+
+        deq.front = 0;
+        deq.back = NS;
+        deq.full = NS == ND;
+
+        Ok(deq)
     }
 }
 
