@@ -1000,7 +1000,7 @@ impl<T, S: Storage> VecInner<T, S> {
             original_len: usize,
         }
 
-        impl<'a, T, S: Storage> Drop for BackshiftOnDrop<'a, T, S> {
+        impl<T, S: Storage> Drop for BackshiftOnDrop<'_, T, S> {
             fn drop(&mut self) {
                 if self.deleted_cnt > 0 {
                     // SAFETY: Trailing unchecked items must be valid since we never touch them.

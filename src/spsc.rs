@@ -405,7 +405,7 @@ pub type Iter<'a, T, const N: usize> = IterInner<'a, T, OwnedStorage<N>>;
 /// An iterator over the items of a queue
 pub type IterView<'a, T> = IterInner<'a, T, ViewStorage>;
 
-impl<'a, T, const N: usize> Clone for Iter<'a, T, N> {
+impl<T, const N: usize> Clone for Iter<'_, T, N> {
     fn clone(&self) -> Self {
         Self {
             rb: self.rb,
@@ -465,7 +465,7 @@ impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
     }
 }
 
-impl<'a, T, S: Storage> DoubleEndedIterator for IterInner<'a, T, S> {
+impl<T, S: Storage> DoubleEndedIterator for IterInner<'_, T, S> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
@@ -480,7 +480,7 @@ impl<'a, T, S: Storage> DoubleEndedIterator for IterInner<'a, T, S> {
     }
 }
 
-impl<'a, T, S: Storage> DoubleEndedIterator for IterMutInner<'a, T, S> {
+impl<T, S: Storage> DoubleEndedIterator for IterMutInner<'_, T, S> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
@@ -562,7 +562,7 @@ pub type Consumer<'a, T, const N: usize> = ConsumerInner<'a, T, OwnedStorage<N>>
 /// NOTE the consumer semantically owns the `head` pointer of the queue
 pub type ConsumerView<'a, T> = ConsumerInner<'a, T, ViewStorage>;
 
-unsafe impl<'a, T, S: Storage> Send for ConsumerInner<'a, T, S> where T: Send {}
+unsafe impl<T, S: Storage> Send for ConsumerInner<'_, T, S> where T: Send {}
 
 /// Base struct for [`Producer`] and [`ProducerView`], generic over the [`Storage`].
 ///
@@ -580,9 +580,9 @@ pub type Producer<'a, T, const N: usize> = ProducerInner<'a, T, OwnedStorage<N>>
 /// NOTE the producer semantically owns the `tail` pointer of the queue
 pub type ProducerView<'a, T> = ProducerInner<'a, T, ViewStorage>;
 
-unsafe impl<'a, T, S: Storage> Send for ProducerInner<'a, T, S> where T: Send {}
+unsafe impl<T, S: Storage> Send for ProducerInner<'_, T, S> where T: Send {}
 
-impl<'a, T, S: Storage> ConsumerInner<'a, T, S> {
+impl<T, S: Storage> ConsumerInner<'_, T, S> {
     /// Returns the item in the front of the queue, or `None` if the queue is empty
     #[inline]
     pub fn dequeue(&mut self) -> Option<T> {
@@ -657,7 +657,7 @@ impl<'a, T, S: Storage> ConsumerInner<'a, T, S> {
     }
 }
 
-impl<'a, T, S: Storage> ProducerInner<'a, T, S> {
+impl<T, S: Storage> ProducerInner<'_, T, S> {
     /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full
     #[inline]
     pub fn enqueue(&mut self, val: T) -> Result<(), T> {

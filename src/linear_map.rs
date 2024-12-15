@@ -392,7 +392,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, S: Storage> ops::Index<&'a Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: Storage> ops::Index<&Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -404,7 +404,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, S: Storage> ops::IndexMut<&'a Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: Storage> ops::IndexMut<&Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,

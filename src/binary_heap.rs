@@ -613,7 +613,7 @@ where
     }
 }
 
-impl<'a, T> Drop for Hole<'a, T> {
+impl<T> Drop for Hole<'_, T> {
     #[inline]
     fn drop(&mut self) {
         // fill the hole again

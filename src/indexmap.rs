@@ -1183,7 +1183,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, S, const N: usize> ops::Index<&'a Q> for IndexMap<K, V, S, N>
+impl<K, Q, V, S, const N: usize> ops::Index<&Q> for IndexMap<K, V, S, N>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -1196,7 +1196,7 @@ where
     }
 }
 
-impl<'a, K, Q, V, S, const N: usize> ops::IndexMut<&'a Q> for IndexMap<K, V, S, N>
+impl<K, Q, V, S, const N: usize> ops::IndexMut<&Q> for IndexMap<K, V, S, N>
 where
     K: Eq + Hash + Borrow<Q>,
     Q: ?Sized + Eq + Hash,
@@ -1373,7 +1373,7 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     }
 }
 
-impl<'a, K, V> Clone for Iter<'a, K, V> {
+impl<K, V> Clone for Iter<'_, K, V> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
