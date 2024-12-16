@@ -1014,7 +1014,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
     /// assert_eq!(deq1.len(), deq2.len());
     /// for (i, e1) in deq1.iter().enumerate() {
-    ///   assert_eq!(Some(e1), deq2.get(i));
+    ///     assert_eq!(Some(e1), deq2.get(i));
     /// }
     /// ```
     type Error = ();
@@ -1591,7 +1591,6 @@ mod tests {
 
     #[test]
     fn tyr_from_slice() {
-
         assert!(Deque::<u8, 3>::try_from([1, 2, 3, 4]).is_err());
 
         let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
@@ -1604,7 +1603,7 @@ mod tests {
         // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
         assert_eq!(deq1.len(), deq2.len());
         for (i, e1) in deq1.iter().enumerate() {
-          assert_eq!(Some(e1), deq2.get(i));
+            assert_eq!(Some(e1), deq2.get(i));
         }
     }
 }
