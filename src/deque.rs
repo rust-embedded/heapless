@@ -1030,7 +1030,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
         if size_of::<T>() != 0 {
             // SAFETY: We already ensured that value fits in deq.
             unsafe {
-                ptr::copy_nonoverlapping(value.as_ptr(), deq.buffer.as_mut_ptr() as *mut T, NS);
+                ptr::copy_nonoverlapping(value.as_ptr(), deq.buffer.buffer.as_mut_ptr() as *mut T, NS);
             }
         }
 
@@ -1587,5 +1587,24 @@ mod tests {
         b.push_front(1).unwrap();
 
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn tyr_from_slice() {
+
+        assert!(Deque::<u8, 3>::try_from([1, 2, 3, 4]).is_err());
+
+        let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
+        let mut deq2 = Deque::<u8, 8>::new();
+        deq2.push_back(1).unwrap();
+        deq2.push_back(2).unwrap();
+        deq2.push_back(3).unwrap();
+        deq2.push_back(4).unwrap();
+
+        // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
+        assert_eq!(deq1.len(), deq2.len());
+        for (i, e1) in deq1.iter().enumerate() {
+          assert_eq!(Some(e1), deq2.get(i));
+        }
     }
 }
