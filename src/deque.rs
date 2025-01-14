@@ -1486,7 +1486,7 @@ mod tests {
     }
 
     #[test]
-    fn tyr_from_array() {
+    fn try_from_array() {
         assert!(Deque::<u8, 3>::try_from([1, 2, 3, 4]).is_err());
 
         let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
