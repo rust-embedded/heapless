@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Make `String::from_utf8_unchecked` const.
 - Implemented `PartialEq` and `Eq` for `Deque`.
 - Implemented `TyrFrom` for `Deque` from slice.
+- Implemented `TryFrom` for `Deque` from slice.
 
 ### Changed
 
