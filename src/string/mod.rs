@@ -237,7 +237,7 @@ impl<const N: usize> String<N> {
     /// assert_eq!("💖", sparkle_heart);
     /// ```
     #[inline]
-    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> Self {
+    pub const unsafe fn from_utf8_unchecked(vec: Vec<u8, N>) -> Self {
         Self { vec }
     }
 
