@@ -607,7 +607,7 @@ pub type FindMut<'a, T, Idx, K, const N: usize> = FindMutInner<'a, T, Idx, K, Ow
 /// Comes from [`SortedLinkedList::find_mut`].
 pub type FindMutView<'a, T, Idx, K, const N: usize> = FindMutInner<'a, T, Idx, K, ViewStorage>;
 
-impl<'a, T, Idx, K, S> FindMutInner<'a, T, Idx, K, S>
+impl<T, Idx, K, S> FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,

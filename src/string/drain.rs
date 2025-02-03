@@ -41,7 +41,7 @@ impl Drop for Drain<'_> {
     }
 }
 
-impl<'a> Drain<'a> {
+impl Drain<'_> {
     /// Returns the remaining (sub)string of this iterator as a slice.
     ///
     /// # Examples

@@ -534,7 +534,7 @@ impl<'a, T> OldestOrderedView<'a, T> {
     }
 }
 
-impl<'a, T, S: Storage> Clone for OldestOrderedInner<'a, T, S> {
+impl<T, S: Storage> Clone for OldestOrderedInner<'_, T, S> {
     fn clone(&self) -> Self {
         Self {
             phantom: PhantomData,
@@ -555,7 +555,7 @@ impl<'a, T, S: Storage> Iterator for OldestOrderedInner<'a, T, S> {
     }
 }
 
-impl<'a, T, const N: usize> DoubleEndedIterator for OldestOrdered<'a, T, N> {
+impl<T, const N: usize> DoubleEndedIterator for OldestOrdered<'_, T, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner.next_back()
     }

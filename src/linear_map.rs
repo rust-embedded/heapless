@@ -392,7 +392,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, S: Storage> ops::Index<&'a Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: Storage> ops::Index<&Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -404,7 +404,7 @@ where
     }
 }
 
-impl<'a, K, V, Q, S: Storage> ops::IndexMut<&'a Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: Storage> ops::IndexMut<&Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -550,7 +550,7 @@ where
         self.len() == other.len()
             && self
                 .iter()
-                .all(|(key, value)| other.get(key).map_or(false, |v| *value == *v))
+                .all(|(key, value)| other.get(key).is_some_and(|v| *value == *v))
     }
 }
 
