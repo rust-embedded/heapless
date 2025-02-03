@@ -1168,6 +1168,33 @@ where
         self.core.retain_in_order(move |k, v| f(k, v));
     }
 
+    /// Shortens the map, keeping the first len elements and dropping the rest.
+    ///
+    /// If len is greater than the map’s current length, this has no effect.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(3, "c").unwrap();
+    /// map.truncate(2);
+    /// assert_eq!(map.len(), 2);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&1, &"a")));
+    /// assert_eq!(iter.next(), Some((&2, &"b")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn truncate(&mut self, len: usize) {
+        self.core.entries.truncate(len);
+    }
+
     /* Private API */
     /// Return probe (indices) and position (entries)
     fn find<Q>(&self, key: &Q) -> Option<(usize, usize)>
