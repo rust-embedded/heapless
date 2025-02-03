@@ -1084,6 +1084,77 @@ where
         }
     }
 
+    /// Returns a tuple of references to the key and the value corresponding to the index.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
+    /// map.insert(1, "a").unwrap();
+    /// assert_eq!(map.get_index(0), Some((&1, &"a")));
+    /// assert_eq!(map.get_index(1), None);
+    /// ```
+    pub fn get_index(&self, index: usize) -> Option<(&K, &V)> {
+        self.core
+            .entries
+            .get(index)
+            .map(|entry| (&entry.key, &entry.value))
+    }
+
+    /// Returns a tuple of references to the key and the mutable value corresponding to the index.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// if let Some((_, x)) = map.get_index_mut(0) {
+    ///     *x = "b";
+    /// }
+    /// assert_eq!(map[&1], "b");
+    /// ```
+    pub fn get_index_mut(&mut self, index: usize) -> Option<(&K, &mut V)> {
+        self.core
+            .entries
+            .get_mut(index)
+            .map(|entry| (&entry.key, &mut entry.value))
+    }
+
+    /// Returns the index of the key-value pair corresponding to the key.
+    ///
+    /// The key may be any borrowed form of the map's key type, but `Hash` and `Eq` on the borrowed
+    /// form *must* match those for the key type.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// map.insert(0, "b").unwrap();
+    /// assert_eq!(map.get_index_of(&0), Some(1));
+    /// assert_eq!(map.get_index_of(&1), Some(0));
+    /// assert_eq!(map.get_index_of(&2), None);
+    /// ```
+    pub fn get_index_of<Q>(&self, key: &Q) -> Option<usize>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(_, found)| found)
+    }
+
     /// Inserts a key-value pair into the map.
     ///
     /// If an equivalent key already exists in the map: the key remains and retains in its place in

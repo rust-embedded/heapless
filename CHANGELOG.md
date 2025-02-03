@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `SortedLinkedListView`, the `!Sized` version of `SortedLinkedList`.
 - Added implementation of `Borrow` and `BorrowMut` for `String` and `Vec`.
 - Added `Deque::{swap, swap_unchecked, swap_remove_front, swap_remove_back}`.
+- Added `get_index` and `get_index_mut` to `IndexMap`
 
 ### Changed
 
