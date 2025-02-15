@@ -1,8 +1,8 @@
-//! A fixed capacity Single Producer Single Consumer (SPSC) queue.
+//! # A fixed capacity Single Producer Single Consumer (SPSC) queue.
 //!
 //! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
 //!
-//! # Portability
+//! ## Portability
 //!
 //! This module requires CAS atomic instructions which are not available on all architectures
 //! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
@@ -10,9 +10,9 @@
 //! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
 //! targets.
 //!
-//! # Examples
+//! ## Examples
 //!
-//! - `Queue` can be used as a plain queue
+//! - [Queue] can be used as a plain queue
 //!
 //! ```
 //! use heapless::spsc::Queue;
@@ -27,12 +27,16 @@
 //! assert_eq!(rb.dequeue(), Some(0));
 //! ```
 //!
-//! - `Queue` can be `split` and then be used in Single Producer Single Consumer mode.
+//! - [Queue] can be [Queue::split] and then be used in Single Producer Single Consumer mode.
 //!
 //! "no alloc" applications can create a `&'static mut` reference to a `Queue` -- using a static
 //! variable -- and then `split` it: this consumes the static reference. The resulting `Consumer`
 //! and `Producer` can then be moved into different execution contexts (threads, interrupt handlers,
-//! etc.)
+//! etc.).
+//!
+//! Alternatively, you can also create the Queue statically in the global scope by wrapping it with
+//! a [static_cell](https://docs.rs/static_cell/latest/static_cell/)
+//!
 //!
 //! ```
 //! use heapless::spsc::{Producer, Queue};
@@ -43,6 +47,8 @@
 //! }
 //!
 //! fn main() {
+//!     // Alternatively, use something like `static_cell` to create the `Queue` in the global
+//!     // scope.
 //!     let queue: &'static mut Queue<Event, 4> = {
 //!         static mut Q: Queue<Event, 4> = Queue::new();
 //!         unsafe { &mut Q }

@@ -43,28 +43,84 @@
 //!
 //! List of currently implemented data structures:
 #![cfg_attr(
-    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
-    doc = "- [`Arc`](pool::arc::Arc) -- like `std::sync::Arc` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+    any(
+        arm_llsc,
+        all(
+            target_pointer_width = "32",
+            any(target_has_atomic = "64", feature = "portable-atomic")
+        ),
+        all(
+            target_pointer_width = "64",
+            any(
+                all(target_has_atomic = "128", feature = "nightly"),
+                feature = "portable-atomic"
+            )
+        )
+    ),
+    doc = "- [Arc][pool::arc::Arc] -- like `std::sync::Arc` but backed by a lock-free memory pool rather than [global_allocator]"
 )]
 #![cfg_attr(
-    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
-    doc = "- [`Box`](pool::boxed::Box) -- like `std::boxed::Box` but backed by a lock-free memory pool rather than `#[global_allocator]`"
+    any(
+        arm_llsc,
+        all(
+            target_pointer_width = "32",
+            any(target_has_atomic = "64", feature = "portable-atomic")
+        ),
+        all(
+            target_pointer_width = "64",
+            any(
+                all(target_has_atomic = "128", feature = "nightly"),
+                feature = "portable-atomic"
+            )
+        )
+    ),
+    doc = "- [Box][pool::boxed::Box] -- like `std::boxed::Box` but backed by a lock-free memory pool rather than [global_allocator]"
 )]
-//! - [`BinaryHeap`] -- priority queue
-//! - [`Deque`] -- double-ended queue
-//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
-//! - [`IndexMap`] -- hash table
-//! - [`IndexSet`] -- hash set
-//! - [`LinearMap`]
 #![cfg_attr(
-    any(arm_llsc, target_pointer_width = "32", target_pointer_width = "64"),
-    doc = "- [`Object`](pool::object::Object) -- objects managed by an object pool"
+    any(
+        arm_llsc,
+        all(
+            target_pointer_width = "32",
+            any(target_has_atomic = "64", feature = "portable-atomic")
+        ),
+        all(
+            target_pointer_width = "64",
+            any(
+                all(target_has_atomic = "128", feature = "nightly"),
+                feature = "portable-atomic"
+            )
+        )
+    ),
+    doc = "- [Arc][pool::arc::Arc] -- like `std::sync::Arc` but backed by a lock-free memory pool rather than [global_allocator]"
 )]
-//! - [`sorted_linked_list::SortedLinkedList`]
-//! - [`String`]
-//! - [`Vec`]
+#![cfg_attr(
+    any(
+        arm_llsc,
+        all(
+            target_pointer_width = "32",
+            any(target_has_atomic = "64", feature = "portable-atomic")
+        ),
+        all(
+            target_pointer_width = "64",
+            any(
+                all(target_has_atomic = "128", feature = "nightly"),
+                feature = "portable-atomic"
+            )
+        )
+    ),
+    doc = "- [Object](pool::object::Object) -- objects managed by an object pool"
+)]
+//! - [BinaryHeap] -- priority queue
+//! - [Deque] -- double-ended queue
+//! - [HistoryBuffer] -- similar to a write-only ring buffer
+//! - [IndexMap] -- hash table
+//! - [IndexSet] -- hash set
+//! - [LinearMap]
+//! - [sorted_linked_list::SortedLinkedList]
+//! - [String]
+//! - [Vec]
 //! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
-//! - [`spsc::Queue`] -- single producer single consumer lock-free queue
+//! - [spsc] and [spsc::Queue] -- single producer single consumer lock-free queue
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
