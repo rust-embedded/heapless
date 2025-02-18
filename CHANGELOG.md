@@ -41,7 +41,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Deque::{swap, swap_unchecked, swap_remove_front, swap_remove_back}`.
 - Make `String::from_utf8_unchecked` const.
 - Implemented `TyrFrom` for `Deque` from slice.
-- Implemented `TryFrom` for `Deque` from slice.
 
 ### Changed
 
