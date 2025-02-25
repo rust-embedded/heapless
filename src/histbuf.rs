@@ -200,6 +200,15 @@ impl<T, S: Storage> HistoryBufferInner<T, S> {
 }
 
 impl<T, S: Storage> HistoryBufferInner<T, S> {
+    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &HistoryBufferView<T> {
+        S::as_histbuf_view(self)
+    }
+    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
+        S::as_mut_histbuf_view(self)
+    }
+
     unsafe fn drop_contents(&mut self) {
         unsafe {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
