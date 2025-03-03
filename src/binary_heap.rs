@@ -387,6 +387,41 @@ where
         }
     }
 
+    /// Removes all elements from the binary heap that do not satisfy the predicate `f`.
+    /// The elements are visited in arbitrary order.
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(2).unwrap();
+    /// heap.push(3).unwrap();
+    /// heap.push(4).unwrap();
+    ///
+    /// heap.retain(|&x| x % 2 == 0);
+    ///
+    /// let mut iter = heap.iter();
+    /// assert_eq!(iter.next(), Some(&4));
+    /// assert_eq!(iter.next(), Some(&2));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn retain(&mut self, mut f: impl FnMut(&T) -> bool) {
+        let mut del = 0;
+        let len = self.len();
+        {
+            let v = self.data.as_mut_slice();
+            for i in 0..len {
+                if !f(&v[i]) {
+                    del += 1;
+                } else if del > 0 {
+                    v.swap(i - del, i);
+                }
+            }
+        }
+        self.data.truncate(len - del);
+    }
+
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
     #[allow(clippy::missing_safety_doc)] // TODO
@@ -847,6 +882,32 @@ mod tests {
         assert_eq!(heap.pop(), Some(9));
         assert_eq!(heap.pop(), Some(7));
         assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    fn retain() {
+        let mut heap = BinaryHeap::<_, Min, 16>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+
+        heap.retain(|&x| x % 2 == 0);
+
+        assert_eq!(
+            heap.iter().cloned().collect::<Vec<_>>(),
+            [2, 36, 100]
+        );
+
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), Some(36));
+        assert_eq!(heap.pop(), Some(100));
         assert_eq!(heap.pop(), None);
     }
 }
