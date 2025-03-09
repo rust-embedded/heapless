@@ -1,15 +1,19 @@
-use crate::{storage::Storage, string::StringInner, vec::VecInner};
+use crate::{
+    storage::Storage,
+    string::StringInner,
+    vec::{CapacityError, VecInner},
+};
 use ufmt_write::uWrite;
 
 impl<S: Storage> uWrite for StringInner<S> {
-    type Error = ();
+    type Error = CapacityError;
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
 }
 
 impl<S: Storage> uWrite for VecInner<u8, S> {
-    type Error = ();
+    type Error = CapacityError;
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
     }
