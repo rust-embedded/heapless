@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Changed the error type of these methods from `()` to `CapacityError`.
+  - `String::push_str`
+  - `String::push`
+  - `Vec::extend_from_slice`
+  - `Vec::from_slice`
+  - `Vec::resize_default`
+  - `Vec::resize`
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 
 ### Fixed

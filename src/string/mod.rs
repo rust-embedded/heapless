@@ -13,7 +13,7 @@ use core::{
 
 use crate::{
     storage::{OwnedStorage, Storage, ViewStorage},
-    vec::VecInner,
+    vec::{CapacityError, VecInner},
     Vec,
 };
 
@@ -28,7 +28,7 @@ pub use drain::Drain;
 #[derive(Debug)]
 pub enum FromUtf16Error {
     /// The capacity of the `String` is too small for the given operation.
-    Capacity,
+    Capacity(CapacityError),
     /// Error decoding UTF-16.
     DecodeUtf16Error(DecodeUtf16Error),
 }
@@ -36,9 +36,17 @@ pub enum FromUtf16Error {
 impl fmt::Display for FromUtf16Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Capacity => "insufficient capacity".fmt(f),
+            Self::Capacity(e) => write!(f, "{}", e),
             Self::DecodeUtf16Error(e) => write!(f, "invalid UTF-16: {}", e),
         }
+    }
+}
+
+impl core::error::Error for FromUtf16Error {}
+
+impl From<CapacityError> for FromUtf16Error {
+    fn from(e: CapacityError) -> Self {
+        FromUtf16Error::Capacity(e)
     }
 }
 
@@ -168,7 +176,7 @@ impl<const N: usize> String<N> {
         for c in char::decode_utf16(v.iter().cloned()) {
             match c {
                 Ok(c) => {
-                    s.push(c).map_err(|_| FromUtf16Error::Capacity)?;
+                    s.push(c)?;
                 }
                 Err(err) => {
                     return Err(FromUtf16Error::DecodeUtf16Error(err));
@@ -257,7 +265,7 @@ impl<const N: usize> String<N> {
     /// assert!(b.len() == 2);
     ///
     /// assert_eq!(&[b'a', b'b'], &b[..]);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn into_bytes(self) -> Vec<u8, N> {
@@ -364,7 +372,7 @@ impl<S: Storage> StringInner<S> {
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
@@ -383,7 +391,7 @@ impl<S: Storage> StringInner<S> {
     /// let mut s: String<4> = String::try_from("ab")?;
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
@@ -415,7 +423,7 @@ impl<S: Storage> StringInner<S> {
     ///     vec.reverse();
     /// }
     /// assert_eq!(s, "olleh");
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, S> {
         &mut self.vec
@@ -437,11 +445,10 @@ impl<S: Storage> StringInner<S> {
     /// assert_eq!("foobar", s);
     ///
     /// assert!(s.push_str("tender").is_err());
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), CapacityError> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -480,13 +487,12 @@ impl<S: Storage> StringInner<S> {
     /// assert!("abc123" == s.as_str());
     ///
     /// assert_eq!("abc123", s);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push(&mut self, c: char) -> Result<(), ()> {
+    pub fn push(&mut self, c: char) -> Result<(), CapacityError> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
+            1 => self.vec.push(c as u8).map_err(|_| CapacityError {}),
             _ => self
                 .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
@@ -517,7 +523,7 @@ impl<S: Storage> StringInner<S> {
     /// s.truncate(2);
     ///
     /// assert_eq!("he", s);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
@@ -545,7 +551,7 @@ impl<S: Storage> StringInner<S> {
     /// assert_eq!(s.pop(), Some('f'));
     ///
     /// assert_eq!(s.pop(), None);
-    /// Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
         let ch = self.chars().next_back()?;
@@ -577,11 +583,12 @@ impl<S: Storage> StringInner<S> {
     /// ```
     /// use heapless::String;
     ///
-    /// let mut s: String<8> = String::try_from("foo").unwrap();
+    /// let mut s: String<8> = String::try_from("foo")?;
     ///
     /// assert_eq!(s.remove(0), 'f');
     /// assert_eq!(s.remove(1), 'o');
     /// assert_eq!(s.remove(0), 'o');
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn remove(&mut self, index: usize) -> char {
@@ -619,7 +626,7 @@ impl<S: Storage> StringInner<S> {
     /// assert!(s.is_empty());
     /// assert_eq!(0, s.len());
     /// assert_eq!(8, s.capacity());
-    /// Ok::<(), ()>(())
+    /// # Ok::<(), heapless::vec::CapacityError>(())
     /// ```
     #[inline]
     pub fn clear(&mut self) {
@@ -634,7 +641,7 @@ impl<const N: usize> Default for String<N> {
 }
 
 impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
-    type Error = ();
+    type Error = CapacityError;
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         let mut new = String::new();
         new.push_str(s)?;
@@ -643,7 +650,7 @@ impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
 }
 
 impl<const N: usize> str::FromStr for String<N> {
-    type Err = ();
+    type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut new = String::new();
@@ -912,7 +919,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{String, Vec};
+    use crate::{vec::CapacityError, String, Vec};
 
     #[test]
     fn static_new() {
@@ -980,7 +987,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let _: () = String::<2>::try_from("123").unwrap_err();
+        let _: CapacityError = String::<2>::try_from("123").unwrap_err();
     }
 
     #[test]
@@ -991,7 +998,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let _: () = String::<2>::from_str("123").unwrap_err();
+        let _: CapacityError = String::<2>::from_str("123").unwrap_err();
     }
 
     #[test]
