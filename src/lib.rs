@@ -13,7 +13,7 @@
 //!
 //! // on the stack
 //! let mut xs: Vec<u8, 8> = Vec::new(); // can hold up to 8 elements
-//! xs.push(42).unwrap();
+//! xs.push(42)?;
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
@@ -21,13 +21,14 @@
 //!
 //! let xs = unsafe { &mut XS };
 //!
-//! xs.push(42);
+//! xs.push(42)?;
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in the heap (though kind of pointless because no reallocation)
 //! let mut ys: Box<Vec<u8, 8>> = Box::new(Vec::new());
-//! ys.push(42).unwrap();
+//! ys.push(42)?;
 //! assert_eq!(ys.pop(), Some(42));
+//! # Ok::<(), u8>(())
 //! ```
 //!
 //! Because they have fixed capacity `heapless` data structures don't implicitly reallocate. This
