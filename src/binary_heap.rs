@@ -389,7 +389,25 @@ where
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
-    #[allow(clippy::missing_safety_doc)] // TODO
+    ///
+    /// # Safety
+    ///
+    /// The binary heap must not be empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    /// heap.push(42).unwrap();
+    ///
+    /// if !heap.is_empty() {
+    ///     // SAFETY: the heap is not empty
+    ///     let val = unsafe { heap.pop_unchecked() };
+    ///     assert_eq!(val, 42);
+    /// }
+    /// ```
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let mut item = self.data.pop_unchecked();
 
@@ -423,7 +441,25 @@ where
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.
-    #[allow(clippy::missing_safety_doc)] // TODO
+    ///
+    /// # Safety
+    ///
+    /// The binary heap must not be full.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    ///
+    /// if !heap.is_full() {
+    ///     // SAFETY: the heap is not full
+    ///     unsafe { heap.push_unchecked(42) };
+    /// }
+    /// assert_eq!(heap.len(), 1);
+    /// assert_eq!(heap.peek(), Some(&42));
+    /// ```
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
         self.data.push_unchecked(item);
