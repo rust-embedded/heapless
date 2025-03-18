@@ -4,26 +4,22 @@
 
 use core::{borrow::Borrow, fmt, mem, ops, slice};
 
-use crate::{
-    storage::{OwnedStorage, Storage, ViewStorage},
-    vec::VecInner,
-    Vec,
-};
+use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
 
 /// Base struct for [`LinearMap`] and [`LinearMapView`]
-pub struct LinearMapInner<K, V, S: Storage> {
+pub struct LinearMapInner<K, V, S: VecStorage<(K, V)> + ?Sized> {
     pub(crate) buffer: VecInner<(K, V), S>,
 }
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
 /// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
-pub type LinearMap<K, V, const N: usize> = LinearMapInner<K, V, OwnedStorage<N>>;
+pub type LinearMap<K, V, const N: usize> = LinearMapInner<K, V, OwnedVecStorage<(K, V), N>>;
 
 /// A dynamic capacity map/dictionary that performs lookups via linear search.
 ///
 /// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
-pub type LinearMapView<K, V> = LinearMapInner<K, V, ViewStorage>;
+pub type LinearMapView<K, V> = LinearMapInner<K, V, ViewVecStorage<(K, V)>>;
 
 impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap`.
@@ -54,7 +50,7 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     }
 }
 
-impl<K, V, S: Storage> LinearMapInner<K, V, S>
+impl<K, V, S: VecStorage<(K, V)> + ?Sized> LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -392,7 +388,7 @@ where
     }
 }
 
-impl<K, V, Q, S: Storage> ops::Index<&Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: VecStorage<(K, V)> + ?Sized> ops::Index<&'_ Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -404,7 +400,7 @@ where
     }
 }
 
-impl<K, V, Q, S: Storage> ops::IndexMut<&Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: VecStorage<(K, V)> + ?Sized> ops::IndexMut<&'_ Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -435,7 +431,7 @@ where
     }
 }
 
-impl<K, V, S: Storage> fmt::Debug for LinearMapInner<K, V, S>
+impl<K, V, S: VecStorage<(K, V)> + ?Sized> fmt::Debug for LinearMapInner<K, V, S>
 where
     K: Eq + fmt::Debug,
     V: fmt::Debug,
@@ -493,7 +489,7 @@ where
     }
 }
 
-impl<'a, K, V, S: Storage> IntoIterator for &'a LinearMapInner<K, V, S>
+impl<'a, K, V, S: VecStorage<(K, V)> + ?Sized> IntoIterator for &'a LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -540,8 +536,8 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, S1: Storage, S2: Storage> PartialEq<LinearMapInner<K, V, S2>>
-    for LinearMapInner<K, V, S1>
+impl<K, V, S1: VecStorage<(K, V)> + ?Sized, S2: VecStorage<(K, V)> + ?Sized>
+    PartialEq<LinearMapInner<K, V, S2>> for LinearMapInner<K, V, S1>
 where
     K: Eq,
     V: PartialEq,
@@ -554,7 +550,7 @@ where
     }
 }
 
-impl<K, V, S: Storage> Eq for LinearMapInner<K, V, S>
+impl<K, V, S: VecStorage<(K, V)> + ?Sized> Eq for LinearMapInner<K, V, S>
 where
     K: Eq,
     V: PartialEq,
@@ -565,7 +561,7 @@ where
 mod test {
     use static_assertions::assert_not_impl_any;
 
-    use super::LinearMap;
+    use super::{LinearMap, LinearMapView};
 
     // Ensure a `LinearMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(LinearMap<*const (), (), 4>: Send);
@@ -639,5 +635,24 @@ mod test {
         for (k, v) in clone.into_iter() {
             assert_eq!(v, src.remove(k).unwrap());
         }
+    }
+
+    fn _test_variance_value<'a: 'b, 'b>(
+        x: LinearMap<u32, &'a (), 42>,
+    ) -> LinearMap<u32, &'b (), 42> {
+        x
+    }
+    fn _test_variance_value_view<'a: 'b, 'b, 'c>(
+        x: &'c LinearMapView<u32, &'a ()>,
+    ) -> &'c LinearMapView<u32, &'b ()> {
+        x
+    }
+    fn _test_variance_key<'a: 'b, 'b>(x: LinearMap<&'a (), u32, 42>) -> LinearMap<&'b (), u32, 42> {
+        x
+    }
+    fn _test_variance_key_view<'a: 'b, 'b, 'c>(
+        x: &'c LinearMapView<&'a (), u32>,
+    ) -> &'c LinearMapView<&'b (), u32> {
+        x
     }
 }

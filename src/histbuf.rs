@@ -31,8 +31,6 @@
 //! assert_eq!(avg, 4);
 //! ```
 
-use core::borrow::Borrow;
-use core::borrow::BorrowMut;
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
@@ -40,18 +38,89 @@ use core::ops::Deref;
 use core::ptr;
 use core::slice;
 
-use crate::storage::OwnedStorage;
-use crate::storage::Storage;
-use crate::storage::ViewStorage;
+mod storage {
+    use core::mem::MaybeUninit;
 
-/// Base struct for [`HistoryBuffer`] and [`HistoryBufferView`], generic over the [`Storage`].
+    /// Trait defining how data for a container is stored.
+    ///
+    /// There's two implementations available:
+    ///
+    /// - [`OwnedHistBufStorage`]: stores the data in an array `[T; N]` whose size is known at compile time.
+    /// - [`ViewHistBufStorage`]: stores the data in an unsized `[T]`.
+    ///
+    /// This allows [`HistoryBuffer`] to be generic over either sized or unsized storage. The [`histbuf`]
+    /// module contains a [`HistoryBufferInner`] struct that's generic on [`HistBufStorage`],
+    /// and two type aliases for convenience:
+    ///
+    /// - [`HistBuf<T, N>`](super::HistoryBuffer) = `HistoryBufferInner<T, OwnedHistBufStorage<T, N>>`
+    /// - [`HistBufView<T>`](super::HistoryBufferView) = `HistoryBufferInner<T, ViewHistBufStorage<T>>`
+    ///
+    /// `HistoryBuffer` can be unsized into `HistoryBufferView`, either by unsizing coercions such as `&mut HistoryBuffer -> &mut HistoryBufferView` or
+    /// `Box<HistoryBuffer> -> Box<HistoryBufferView>`, or explicitly with [`.as_view()`](super::HistoryBuffer::as_view) or [`.as_mut_view()`](super::HistoryBuffer::as_mut_view).
+    ///
+    /// This trait is sealed, so you cannot implement it for your own types. You can only use
+    /// the implementations provided by this crate.
+    ///
+    /// [`HistoryBufferInner`]: super::HistoryBufferInner
+    /// [`HistoryBuffer`]: super::HistoryBuffer
+    /// [`HistoryBufferView`]: super::HistoryBufferView
+    /// [`histbuf`]: super
+    #[allow(private_bounds)]
+    pub trait HistBufStorage<T>: HistBufSealedStorage<T> {}
+
+    pub trait HistBufSealedStorage<T> {
+        // part of the sealed trait so that no trait is publicly implemented by `OwnedHistBufStorage` besides `Storage`
+        fn borrow(&self) -> &[MaybeUninit<T>];
+        fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
+    }
+
+    // One sealed layer of indirection to hide the internal details (The MaybeUninit).
+    pub struct HistBufStorageInner<T: ?Sized> {
+        pub(crate) buffer: T,
+    }
+
+    /// Implementation of [`HistBufStorage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+    pub type OwnedHistBufStorage<T, const N: usize> = HistBufStorageInner<[MaybeUninit<T>; N]>;
+    /// Implementation of [`HistBufStorage`] that stores the data in an unsized `[T]`.
+    pub type ViewHistBufStorage<T> = HistBufStorageInner<[MaybeUninit<T>]>;
+
+    impl<T, const N: usize> HistBufSealedStorage<T> for OwnedHistBufStorage<T, N> {
+        fn borrow(&self) -> &[MaybeUninit<T>] {
+            &self.buffer
+        }
+        fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
+            &mut self.buffer
+        }
+    }
+    impl<T, const N: usize> HistBufStorage<T> for OwnedHistBufStorage<T, N> {}
+
+    impl<T> HistBufSealedStorage<T> for ViewHistBufStorage<T> {
+        fn borrow(&self) -> &[MaybeUninit<T>] {
+            &self.buffer
+        }
+        fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
+            &mut self.buffer
+        }
+    }
+    impl<T> HistBufStorage<T> for ViewHistBufStorage<T> {}
+}
+
+pub use storage::{HistBufStorage, OwnedHistBufStorage, ViewHistBufStorage};
+
+use storage::HistBufStorageInner;
+
+use self::storage::HistBufSealedStorage;
+
+/// Base struct for [`HistoryBuffer`] and [`HistoryBufferView`], generic over the [`HistBufStorage`].
 ///
 /// In most cases you should use [`HistoryBuffer`] or [`HistoryBufferView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct HistoryBufferInner<T, S: Storage> {
+pub struct HistoryBufferInner<T, S: HistBufStorage<T> + ?Sized> {
+    // This phantomdata is required because otherwise rustc thinks that `T` is not used
+    phantom: PhantomData<T>,
     write_at: usize,
     filled: bool,
-    data: S::Buffer<MaybeUninit<T>>,
+    data: S,
 }
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
@@ -86,7 +155,7 @@ pub struct HistoryBufferInner<T, S: Storage> {
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
 /// assert_eq!(avg, 4);
 /// ```
-pub type HistoryBuffer<T, const N: usize> = HistoryBufferInner<T, OwnedStorage<N>>;
+pub type HistoryBuffer<T, const N: usize> = HistoryBufferInner<T, OwnedHistBufStorage<T, N>>;
 
 /// A "view" into a [`HistoryBuffer`]
 ///
@@ -119,7 +188,7 @@ pub type HistoryBuffer<T, const N: usize> = HistoryBufferInner<T, OwnedStorage<N
 /// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
 /// assert_eq!(avg, 4);
 /// ```
-pub type HistoryBufferView<T> = HistoryBufferInner<T, ViewStorage>;
+pub type HistoryBufferView<T> = HistoryBufferInner<T, ViewHistBufStorage<T>>;
 
 impl<T, const N: usize> HistoryBuffer<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
@@ -143,10 +212,25 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
         crate::sealed::greater_than_0::<N>();
 
         Self {
-            data: [Self::INIT; N],
+            phantom: PhantomData,
+            data: HistBufStorageInner {
+                buffer: [Self::INIT; N],
+            },
             write_at: 0,
             filled: false,
         }
+    }
+
+    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub const fn as_view(&self) -> &HistoryBufferView<T> {
+        self
+    }
+
+    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
+        self
     }
 }
 
@@ -169,13 +253,16 @@ where
     #[inline]
     pub fn new_with(t: T) -> Self {
         Self {
-            data: [MaybeUninit::new(t); N],
+            phantom: PhantomData,
+            data: HistBufStorageInner {
+                buffer: [MaybeUninit::new(t); N],
+            },
             write_at: 0,
             filled: true,
         }
     }
 }
-impl<T: Copy, S: Storage> HistoryBufferInner<T, S> {
+impl<T: Copy, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// Clears the buffer, replacing every element with the given value.
     pub fn clear_with(&mut self, t: T) {
         // SAFETY: we reset the values just after
@@ -189,7 +276,7 @@ impl<T: Copy, S: Storage> HistoryBufferInner<T, S> {
     }
 }
 
-impl<T, S: Storage> HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// Clears the buffer
     pub fn clear(&mut self) {
         // SAFETY: we reset the values just after
@@ -199,7 +286,7 @@ impl<T, S: Storage> HistoryBufferInner<T, S> {
     }
 }
 
-impl<T, S: Storage> HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     unsafe fn drop_contents(&mut self) {
         unsafe {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
@@ -407,7 +494,7 @@ impl<T, S: Storage> HistoryBufferInner<T, S> {
     }
 }
 
-impl<T, S: Storage> Extend<T> for HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> Extend<T> for HistoryBufferInner<T, S> {
     fn extend<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -418,7 +505,7 @@ impl<T, S: Storage> Extend<T> for HistoryBufferInner<T, S> {
     }
 }
 
-impl<'a, T, S: Storage> Extend<&'a T> for HistoryBufferInner<T, S>
+impl<'a, T, S: HistBufStorage<T> + ?Sized> Extend<&'a T> for HistoryBufferInner<T, S>
 where
     T: 'a + Clone,
 {
@@ -436,7 +523,7 @@ where
 {
     fn clone(&self) -> Self {
         let mut ret = Self::new();
-        for (new, old) in ret.data.iter_mut().zip(self.as_slice()) {
+        for (new, old) in ret.data.borrow_mut().iter_mut().zip(self.as_slice()) {
             new.write(old.clone());
         }
         ret.filled = self.filled;
@@ -445,13 +532,13 @@ where
     }
 }
 
-impl<T, S: Storage> Drop for HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> Drop for HistoryBufferInner<T, S> {
     fn drop(&mut self) {
         unsafe { self.drop_contents() }
     }
 }
 
-impl<T, S: Storage> Deref for HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> Deref for HistoryBufferInner<T, S> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
@@ -459,14 +546,14 @@ impl<T, S: Storage> Deref for HistoryBufferInner<T, S> {
     }
 }
 
-impl<T, S: Storage> AsRef<[T]> for HistoryBufferInner<T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> AsRef<[T]> for HistoryBufferInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T, S: Storage> fmt::Debug for HistoryBufferInner<T, S>
+impl<T, S: HistBufStorage<T> + ?Sized> fmt::Debug for HistoryBufferInner<T, S>
 where
     T: fmt::Debug,
 {
@@ -481,7 +568,7 @@ impl<T, const N: usize> Default for HistoryBuffer<T, N> {
     }
 }
 
-impl<T, S: Storage> PartialEq for HistoryBufferInner<T, S>
+impl<T, S: HistBufStorage<T> + ?Sized> PartialEq for HistoryBufferInner<T, S>
 where
     T: PartialEq,
 {
@@ -490,11 +577,11 @@ where
     }
 }
 
-/// Base struct for [`OldestOrdered`] and [`OldestOrderedView`], generic over the [`Storage`].
+/// Base struct for [`OldestOrdered`] and [`OldestOrderedView`], generic over the [`HistBufStorage`].
 ///
 /// In most cases you should use [`OldestOrdered`] or [`OldestOrderedView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct OldestOrderedInner<'a, T, S: Storage> {
+pub struct OldestOrderedInner<'a, T, S: HistBufStorage<T> + ?Sized> {
     phantom: PhantomData<S>,
     inner: core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>,
 }
@@ -502,11 +589,12 @@ pub struct OldestOrderedInner<'a, T, S: Storage> {
 /// Double ended iterator on the underlying buffer ordered from the oldest data
 /// to the newest
 /// This type exists for backwards compatibility. It is always better to convert it to an [`OldestOrderedView`] with [`into_view`](OldestOrdered::into_view)
-pub type OldestOrdered<'a, T, const N: usize> = OldestOrderedInner<'a, T, OwnedStorage<N>>;
+pub type OldestOrdered<'a, T, const N: usize> =
+    OldestOrderedInner<'a, T, OwnedHistBufStorage<T, N>>;
 
 /// Double ended iterator on the underlying buffer ordered from the oldest data
 /// to the newest
-pub type OldestOrderedView<'a, T> = OldestOrderedInner<'a, T, ViewStorage>;
+pub type OldestOrderedView<'a, T> = OldestOrderedInner<'a, T, ViewHistBufStorage<T>>;
 
 impl<'a, T, const N: usize> OldestOrdered<'a, T, N> {
     /// Remove the `N` const-generic parameter from the iterator
@@ -534,7 +622,7 @@ impl<'a, T> OldestOrderedView<'a, T> {
     }
 }
 
-impl<T, S: Storage> Clone for OldestOrderedInner<'_, T, S> {
+impl<T, S: HistBufStorage<T> + ?Sized> Clone for OldestOrderedInner<'_, T, S> {
     fn clone(&self) -> Self {
         Self {
             phantom: PhantomData,
@@ -543,7 +631,7 @@ impl<T, S: Storage> Clone for OldestOrderedInner<'_, T, S> {
     }
 }
 
-impl<'a, T, S: Storage> Iterator for OldestOrderedInner<'a, T, S> {
+impl<'a, T, S: HistBufStorage<T> + ?Sized> Iterator for OldestOrderedInner<'a, T, S> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
@@ -568,7 +656,7 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use super::HistoryBuffer;
+    use super::{HistoryBuffer, HistoryBufferView};
 
     // Ensure a `HistoryBuffer` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(HistoryBuffer<*const (), 4>: Send);
@@ -854,5 +942,14 @@ mod tests {
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 0);
         x.clear();
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 3);
+    }
+
+    fn _test_variance<'a: 'b, 'b>(x: HistoryBuffer<&'a (), 42>) -> HistoryBuffer<&'b (), 42> {
+        x
+    }
+    fn _test_variance_view<'a: 'b, 'b, 'c>(
+        x: &'c HistoryBufferView<&'a ()>,
+    ) -> &'c HistoryBufferView<&'b ()> {
+        x
     }
 }
