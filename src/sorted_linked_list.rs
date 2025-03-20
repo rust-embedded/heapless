@@ -272,18 +272,56 @@ impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
+mod as_view {
+    use super::{SortedLinkedList, SortedLinkedListIndex, SortedLinkedListView};
+
+    pub trait AsView<T, Idx, K>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K>;
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K>;
+    }
+
+    impl<T, Idx, K> AsView<T, Idx, K> for SortedLinkedListView<T, Idx, K>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+            self
+        }
+
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+            self
+        }
+    }
+
+    impl<T, Idx, K, const N: usize> AsView<T, Idx, K> for SortedLinkedList<T, Idx, K, N>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+            self
+        }
+
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+            self
+        }
+    }
+}
+
 impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
     Idx: SortedLinkedListIndex,
 {
     /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
-        self
+        as_view::AsView::as_view(self)
     }
 
     /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
-        self
+        as_view::AsView::as_mut_view(self)
     }
 }
 
@@ -424,88 +462,6 @@ where
         }
     }
 
-    /// Get an iterator over the sorted list.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
-    ///
-    /// ll.push(1).unwrap();
-    /// ll.push(2).unwrap();
-    ///
-    /// let mut iter = ll.iter();
-    ///
-    /// assert_eq!(iter.next(), Some(&2));
-    /// assert_eq!(iter.next(), Some(&1));
-    /// assert_eq!(iter.next(), None);
-    /// ```
-    pub fn iter(&self) -> IterInner<'_, T, Idx, K, S> {
-        IterInner {
-            list: self,
-            index: self.head,
-        }
-    }
-
-    /// Find an element in the list that can be changed and resorted.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
-    ///
-    /// ll.push(1).unwrap();
-    /// ll.push(2).unwrap();
-    /// ll.push(3).unwrap();
-    ///
-    /// // Find a value and update it
-    /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
-    /// *find += 1000;
-    /// find.finish();
-    ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
-    /// ```
-    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutInner<'_, T, Idx, K, S>>
-    where
-        F: FnMut(&T) -> bool,
-    {
-        let head = self.head.option()?;
-
-        // Special-case, first element
-        if f(self.read_data_in_node_at(head)) {
-            return Some(FindMutInner {
-                is_head: true,
-                prev_index: Idx::none(),
-                index: self.head,
-                list: self,
-                maybe_changed: false,
-            });
-        }
-
-        let mut current = head;
-
-        while let Some(next) = self.node_at(current).next.option() {
-            if f(self.read_data_in_node_at(next)) {
-                return Some(FindMutInner {
-                    is_head: false,
-                    prev_index: unsafe { Idx::new_unchecked(current) },
-                    index: unsafe { Idx::new_unchecked(next) },
-                    list: self,
-                    maybe_changed: false,
-                });
-            }
-
-            current = next;
-        }
-
-        None
-    }
-
     /// Peek at the first element.
     ///
     /// # Example
@@ -620,33 +576,113 @@ where
     }
 }
 
-/// Base struct for [`Iter`] and [`IterView`], generic over the [`SortedLinkedListStorage`].
-///
-/// In most cases you should use [`Iter`] or [`IterView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct IterInner<'a, T, Idx, K, S>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
     S: SortedLinkedListStorage<T, Idx> + ?Sized,
+    Self: as_view::AsView<T, Idx, K>,
 {
-    list: &'a SortedLinkedListInner<T, Idx, K, S>,
-    index: Idx,
+    /// Get an iterator over the sorted list.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
+    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
+    ///
+    /// ll.push(1).unwrap();
+    /// ll.push(2).unwrap();
+    ///
+    /// let mut iter = ll.iter();
+    ///
+    /// assert_eq!(iter.next(), Some(&2));
+    /// assert_eq!(iter.next(), Some(&1));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn iter(&self) -> IterView<'_, T, Idx, K> {
+        IterView {
+            list: as_view::AsView::as_view(self),
+            index: self.head,
+        }
+    }
+
+    /// Find an element in the list that can be changed and resorted.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
+    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
+    ///
+    /// ll.push(1).unwrap();
+    /// ll.push(2).unwrap();
+    /// ll.push(3).unwrap();
+    ///
+    /// // Find a value and update it
+    /// let mut find = ll.as_mut_view().find_mut(|v| *v == 2).unwrap();
+    /// *find += 1000;
+    /// find.finish();
+    ///
+    /// assert_eq!(ll.pop(), Ok(1002));
+    /// assert_eq!(ll.pop(), Ok(3));
+    /// assert_eq!(ll.pop(), Ok(1));
+    /// assert_eq!(ll.pop(), Err(()));
+    /// ```
+    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutView<'_, T, Idx, K>>
+    where
+        F: FnMut(&T) -> bool,
+    {
+        let head = self.head.option()?;
+
+        // Special-case, first element
+        if f(self.read_data_in_node_at(head)) {
+            return Some(FindMutView {
+                is_head: true,
+                prev_index: Idx::none(),
+                index: self.head,
+                list: as_view::AsView::as_mut_view(self),
+                maybe_changed: false,
+            });
+        }
+
+        let mut current = head;
+
+        while let Some(next) = self.node_at(current).next.option() {
+            if f(self.read_data_in_node_at(next)) {
+                return Some(FindMutView {
+                    is_head: false,
+                    prev_index: unsafe { Idx::new_unchecked(current) },
+                    index: unsafe { Idx::new_unchecked(next) },
+                    list: as_view::AsView::as_mut_view(self),
+                    maybe_changed: false,
+                });
+            }
+
+            current = next;
+        }
+
+        None
+    }
 }
 
 /// Iterator for the linked list.
-pub type Iter<'a, T, Idx, K, const N: usize> =
-    IterInner<'a, T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
-/// Iterator for the linked list.
-pub type IterView<'a, T, Idx, K> = IterInner<'a, T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
-
-impl<'a, T, Idx, K, S> Iterator for IterInner<'a, T, Idx, K, S>
+pub struct IterView<'a, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
+{
+    list: &'a SortedLinkedListInner<T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>,
+    index: Idx,
+}
+
+impl<'a, T, Idx, K> Iterator for IterView<'a, T, Idx, K>
+where
+    T: Ord,
+    Idx: SortedLinkedListIndex,
+    K: Kind,
 {
     type Item = &'a T;
 
@@ -660,37 +696,25 @@ where
     }
 }
 
-/// Base struct for [`FindMut`] and [`FindMutView`], generic over the [`SortedLinkedListStorage`].
-///
-/// In most cases you should use [`FindMut`] or [`FindMutView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct FindMutInner<'a, T, Idx, K, S>
+/// Comes from [`SortedLinkedList::find_mut`].
+pub struct FindMutView<'a, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
-    list: &'a mut SortedLinkedListInner<T, Idx, K, S>,
+    list: &'a mut SortedLinkedListView<T, Idx, K>,
     is_head: bool,
     prev_index: Idx,
     index: Idx,
     maybe_changed: bool,
 }
 
-/// Comes from [`SortedLinkedList::find_mut`].
-pub type FindMut<'a, T, Idx, K, const N: usize> =
-    FindMutInner<'a, T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
-/// Comes from [`SortedLinkedList::find_mut`].
-pub type FindMutView<'a, T, Idx, K, const N: usize> =
-    FindMutInner<'a, T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
-
-impl<T, Idx, K, S> FindMutInner<'_, T, Idx, K, S>
+impl<T, Idx, K> FindMutView<'_, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn pop_internal(&mut self) -> T {
         if self.is_head {
@@ -727,7 +751,7 @@ where
     /// ll.push(3).unwrap();
     ///
     /// // Find a value and update it
-    /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
+    /// let mut find = ll.as_mut_view().find_mut(|v| *v == 2).unwrap();
     /// find.pop();
     ///
     /// assert_eq!(ll.pop(), Ok(3));
@@ -756,10 +780,10 @@ where
     /// ll.push(2).unwrap();
     /// ll.push(3).unwrap();
     ///
-    /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
+    /// let mut find = ll.as_mut_view().find_mut(|v| *v == 2).unwrap();
     /// find.finish(); // No resort, we did not access the value.
     ///
-    /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
+    /// let mut find = ll.as_mut_view().find_mut(|v| *v == 2).unwrap();
     /// *find += 1000;
     /// find.finish(); // Will resort, we accessed (and updated) the value.
     ///
@@ -774,12 +798,11 @@ where
     }
 }
 
-impl<T, Idx, K, S> Drop for FindMutInner<'_, T, Idx, K, S>
+impl<T, Idx, K> Drop for FindMutView<'_, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn drop(&mut self) {
         // Only resort the list if the element has changed
@@ -790,12 +813,11 @@ where
     }
 }
 
-impl<T, Idx, K, S> Deref for FindMutInner<'_, T, Idx, K, S>
+impl<T, Idx, K> Deref for FindMutView<'_, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     type Target = T;
 
@@ -805,12 +827,11 @@ where
     }
 }
 
-impl<T, Idx, K, S> DerefMut for FindMutInner<'_, T, Idx, K, S>
+impl<T, Idx, K> DerefMut for FindMutView<'_, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.maybe_changed = true;
@@ -849,7 +870,8 @@ where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
+    S: ?Sized + SortedLinkedListStorage<T, Idx>,
+    Self: as_view::AsView<T, Idx, K>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
