@@ -468,30 +468,6 @@ where
         }
     }
 
-    /// Get an iterator over the sorted list.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
-    ///
-    /// ll.push(1).unwrap();
-    /// ll.push(2).unwrap();
-    ///
-    /// let mut iter = ll.iter();
-    ///
-    /// assert_eq!(iter.next(), Some(&2));
-    /// assert_eq!(iter.next(), Some(&1));
-    /// assert_eq!(iter.next(), None);
-    /// ```
-    pub fn iter(&self) -> IterInner<'_, T, Idx, K, S> {
-        IterInner {
-            list: self,
-            index: self.head,
-        }
-    }
-
     /// Find an element in the list that can be changed and resorted.
     ///
     /// # Example
@@ -663,33 +639,53 @@ where
     }
 }
 
-/// Base struct for [`Iter`] and [`IterView`], generic over the [`SortedLinkedListStorage`].
-///
-/// In most cases you should use [`Iter`] or [`IterView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct IterInner<'a, T, Idx, K, S>
+impl<T, Idx, K> SortedLinkedListView<T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
-    list: &'a SortedLinkedListInner<T, Idx, K, S>,
-    index: Idx,
+    /// Get an iterator over the sorted list.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
+    /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
+    ///
+    /// ll.push(1).unwrap();
+    /// ll.push(2).unwrap();
+    ///
+    /// let mut iter = ll.iter();
+    ///
+    /// assert_eq!(iter.next(), Some(&2));
+    /// assert_eq!(iter.next(), Some(&1));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn iter(&self) -> IterView<'_, T, Idx, K> {
+        IterView {
+            list: self,
+            index: self.head,
+        }
+    }
 }
 
 /// Iterator for the linked list.
-pub type Iter<'a, T, Idx, K, const N: usize> =
-    IterInner<'a, T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
-/// Iterator for the linked list.
-pub type IterView<'a, T, Idx, K> = IterInner<'a, T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
-
-impl<'a, T, Idx, K, S> Iterator for IterInner<'a, T, Idx, K, S>
+pub struct IterView<'a, T, Idx, K>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
+{
+    list: &'a SortedLinkedListInner<T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>,
+    index: Idx,
+}
+
+impl<'a, T, Idx, K> Iterator for IterView<'a, T, Idx, K>
+where
+    T: Ord,
+    Idx: SortedLinkedListIndex,
+    K: Kind,
 {
     type Item = &'a T;
 
@@ -887,12 +883,11 @@ where
 //     }
 // }
 
-impl<T, Idx, K, S> fmt::Debug for SortedLinkedListInner<T, Idx, K, S>
+impl<T, Idx, K> fmt::Debug for SortedLinkedListView<T, Idx, K>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
-    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
