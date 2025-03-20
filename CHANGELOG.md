@@ -55,6 +55,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed `MpMcQueue` with `mpmc_large` feature.
 - Fix missing `Drop` for `MpMcQueue`
 
+### Removed
+
+- Removed `sorted_linked_list::Iter` and `sorted_linked_list::IterInner`.
+- Removed `sorted_linked_list::FindMut` and `sorted_linked_list::FindMutInner`.
+
 ## [v0.8.0] - 2023-11-07
 
 ### Added
