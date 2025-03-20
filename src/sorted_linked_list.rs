@@ -272,18 +272,56 @@ impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
+mod as_view {
+    use super::{SortedLinkedList, SortedLinkedListIndex, SortedLinkedListView};
+
+    pub trait AsView<T, Idx, K>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K>;
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K>;
+    }
+
+    impl<T, Idx, K> AsView<T, Idx, K> for SortedLinkedListView<T, Idx, K>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+            self
+        }
+
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+            self
+        }
+    }
+
+    impl<T, Idx, K, const N: usize> AsView<T, Idx, K> for SortedLinkedList<T, Idx, K, N>
+    where
+        Idx: SortedLinkedListIndex,
+    {
+        fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+            self
+        }
+
+        fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+            self
+        }
+    }
+}
+
 impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
 where
     Idx: SortedLinkedListIndex,
 {
     /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
-        self
+        as_view::AsView::as_view(self)
     }
 
     /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
-        self
+        as_view::AsView::as_mut_view(self)
     }
 }
 
@@ -538,11 +576,13 @@ where
     }
 }
 
-impl<T, Idx, K> SortedLinkedListView<T, Idx, K>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
+    Self: as_view::AsView<T, Idx, K>,
 {
     /// Get an iterator over the sorted list.
     ///
@@ -555,7 +595,7 @@ where
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
     ///
-    /// let mut iter = ll.as_view().iter();
+    /// let mut iter = ll.iter();
     ///
     /// assert_eq!(iter.next(), Some(&2));
     /// assert_eq!(iter.next(), Some(&1));
@@ -563,7 +603,7 @@ where
     /// ```
     pub fn iter(&self) -> IterView<'_, T, Idx, K> {
         IterView {
-            list: self,
+            list: as_view::AsView::as_view(self),
             index: self.head,
         }
     }
@@ -602,7 +642,7 @@ where
                 is_head: true,
                 prev_index: Idx::none(),
                 index: self.head,
-                list: self,
+                list: as_view::AsView::as_mut_view(self),
                 maybe_changed: false,
             });
         }
@@ -615,7 +655,7 @@ where
                     is_head: false,
                     prev_index: unsafe { Idx::new_unchecked(current) },
                     index: unsafe { Idx::new_unchecked(next) },
-                    list: self,
+                    list: as_view::AsView::as_mut_view(self),
                     maybe_changed: false,
                 });
             }
@@ -825,11 +865,13 @@ where
 //     }
 // }
 
-impl<T, Idx, K> fmt::Debug for SortedLinkedListView<T, Idx, K>
+impl<T, Idx, K, S> fmt::Debug for SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: ?Sized + SortedLinkedListStorage<T, Idx>,
+    Self: as_view::AsView<T, Idx, K>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
@@ -943,14 +985,14 @@ mod tests {
         ll.push(2).unwrap();
         ll.push(3).unwrap();
 
-        let mut find = ll.as_mut_view().find_mut(|v| *v == 2).unwrap();
+        let mut find = ll.find_mut(|v| *v == 2).unwrap();
 
         *find += 1000;
         find.finish();
 
         assert_eq!(ll.peek().unwrap(), &1002);
 
-        let mut find = ll.as_mut_view().find_mut(|v| *v == 3).unwrap();
+        let mut find = ll.find_mut(|v| *v == 3).unwrap();
 
         *find += 1000;
         find.finish();
@@ -958,7 +1000,7 @@ mod tests {
         assert_eq!(ll.peek().unwrap(), &1003);
 
         // Remove largest element
-        ll.as_mut_view().find_mut(|v| *v == 1003).unwrap().pop();
+        ll.find_mut(|v| *v == 1003).unwrap().pop();
 
         assert_eq!(ll.peek().unwrap(), &1002);
     }
@@ -978,7 +1020,7 @@ mod tests {
         let mut ll: SortedLinkedList<u32, LinkedIndexUsize, Max, 3> = SortedLinkedList::new_usize();
         ll.push(1).unwrap();
 
-        let mut find = ll.as_mut_view().find_mut(|v| *v == 1).unwrap();
+        let mut find = ll.find_mut(|v| *v == 1).unwrap();
 
         *find += 1000;
         find.finish();
