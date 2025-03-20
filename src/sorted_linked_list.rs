@@ -465,10 +465,10 @@ where
     /// *find += 1000;
     /// find.finish();
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutInner<'_, T, Idx, K, S>>
     where
@@ -566,16 +566,15 @@ where
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
     ///
-    /// assert_eq!(ll.pop(), Ok(2));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(2));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn pop(&mut self) -> Result<T, ()> {
+    pub fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
-            Ok(unsafe { self.pop_unchecked() })
+            Some(unsafe { self.pop_unchecked() })
         } else {
-            Err(())
+            None
         }
     }
 
@@ -730,9 +729,9 @@ where
     /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
     /// find.pop();
     ///
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn pop(mut self) -> T {
@@ -763,10 +762,10 @@ where
     /// *find += 1000;
     /// find.finish(); // Will resort, we accessed (and updated) the value.
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn finish(self) {

@@ -192,14 +192,13 @@ impl<T, const N: usize> Vec<T, N> {
     /// let mut v: Vec<u8, 16> = Vec::new();
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    pub fn from_slice(other: &[T]) -> Option<Self>
     where
         T: Clone,
     {
         let mut v = Vec::new();
         v.extend_from_slice(other)?;
-        Ok(v)
+        Some(v)
     }
 
     /// Constructs a new vector with a fixed capacity of `N`, initializing
@@ -524,8 +523,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Option<()>
     where
         T: Clone,
     {
@@ -533,19 +531,19 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
             len: &mut usize,
             buf: &mut [MaybeUninit<T>],
             other: &[T],
-        ) -> Result<(), ()>
+        ) -> Option<()>
         where
             T: Clone,
         {
             if *len + other.len() > buf.len() {
                 // won't fit in the `Vec`; don't modify anything and return an error
-                Err(())
+                None
             } else {
                 for elem in other {
                     unsafe { *buf.get_unchecked_mut(*len) = MaybeUninit::new(elem.clone()) }
                     *len += 1;
                 }
-                Ok(())
+                Some(())
             }
         }
 
@@ -634,13 +632,12 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// new_len is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Option<()>
     where
         T: Clone,
     {
         if new_len > self.storage_capacity() {
-            return Err(());
+            return None;
         }
 
         if new_len > self.len {
@@ -651,7 +648,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
             self.truncate(new_len);
         }
 
-        Ok(())
+        Some(())
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
@@ -661,8 +658,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](Self::resize).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    pub fn resize_default(&mut self, new_len: usize) -> Option<()>
     where
         T: Clone + Default,
     {
@@ -1196,10 +1192,7 @@ where
 
 impl<S: VecStorage<u8> + ?Sized> fmt::Write for VecInner<u8, S> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        match self.extend_from_slice(s.as_bytes()) {
-            Ok(()) => Ok(()),
-            Err(_) => Err(fmt::Error),
-        }
+        self.extend_from_slice(s.as_bytes()).ok_or(fmt::Error)
     }
 }
 
@@ -1222,7 +1215,7 @@ impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 
     fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
-        Vec::from_slice(slice)
+        Vec::from_slice(slice).ok_or(())
     }
 }
 
@@ -1329,7 +1322,7 @@ where
                     self.vec.len() - self.next,
                 )
             };
-            vec.extend_from_slice(s).ok();
+            vec.extend_from_slice(s);
         }
 
         Self { vec, next: 0 }
@@ -1843,7 +1836,7 @@ mod tests {
 
         v.resize(0, 0).unwrap();
         v.resize(4, 0).unwrap();
-        v.resize(5, 0).expect_err("full");
+        assert!(v.resize(5, 0).is_none(), "full");
     }
 
     #[test]
@@ -1923,7 +1916,7 @@ mod tests {
         v.extend_from_slice(&[3]).unwrap();
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
-        assert!(v.extend_from_slice(&[4, 5]).is_err());
+        assert!(v.extend_from_slice(&[4, 5]).is_none());
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
     }
@@ -1936,7 +1929,7 @@ mod tests {
         assert_eq!(v.as_slice(), &[1, 2, 3]);
 
         // Slice too large
-        assert!(Vec::<u8, 2>::from_slice(&[1, 2, 3]).is_err());
+        assert!(Vec::<u8, 2>::from_slice(&[1, 2, 3]).is_none());
     }
 
     #[test]

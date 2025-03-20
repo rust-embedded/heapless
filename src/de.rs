@@ -318,7 +318,7 @@ impl<'de, const N: usize> Deserialize<'de> for String<N> {
             {
                 let mut s = String::new();
                 s.push_str(v)
-                    .map_err(|_| E::invalid_length(v.len(), &self))?;
+                    .ok_or_else(|| E::invalid_length(v.len(), &self))?;
                 Ok(s)
             }
 
@@ -332,7 +332,7 @@ impl<'de, const N: usize> Deserialize<'de> for String<N> {
                     core::str::from_utf8(v)
                         .map_err(|_| E::invalid_value(de::Unexpected::Bytes(v), &self))?,
                 )
-                .map_err(|_| E::invalid_length(v.len(), &self))?;
+                .ok_or_else(|| E::invalid_length(v.len(), &self))?;
 
                 Ok(s)
             }
