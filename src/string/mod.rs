@@ -164,7 +164,7 @@ impl<const N: usize> String<N> {
         for c in char::decode_utf16(v.iter().cloned()) {
             match c {
                 Ok(c) => {
-                    s.push(c).map_err(|_| FromUtf16Error::Capacity)?;
+                    s.push(c).ok_or(FromUtf16Error::Capacity)?;
                 }
                 Err(err) => {
                     return Err(FromUtf16Error::DecodeUtf16Error(err));
@@ -428,16 +428,15 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     ///
     /// let mut s: String<8> = String::try_from("foo")?;
     ///
-    /// assert!(s.push_str("bar").is_ok());
+    /// assert!(s.push_str("bar").is_some());
     ///
     /// assert_eq!("foobar", s);
     ///
-    /// assert!(s.push_str("tender").is_err());
+    /// assert!(s.push_str("tender").is_none());
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+    pub fn push_str(&mut self, string: &str) -> Option<()> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -479,10 +478,9 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// # Ok::<(), ()>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push(&mut self, c: char) -> Result<(), ()> {
+    pub fn push(&mut self, c: char) -> Option<()> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
+            1 => self.vec.push(c as u8).ok(),
             _ => self
                 .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
@@ -633,7 +631,7 @@ impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
     type Error = ();
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         let mut new = Self::new();
-        new.push_str(s)?;
+        new.push_str(s).ok_or(())?;
         Ok(new)
     }
 }
@@ -643,7 +641,7 @@ impl<const N: usize> str::FromStr for String<N> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut new = Self::new();
-        new.push_str(s)?;
+        new.push_str(s).ok_or(())?;
         Ok(new)
     }
 }
@@ -707,11 +705,11 @@ impl<S: VecStorage<u8> + ?Sized> hash::Hash for StringInner<S> {
 
 impl<S: VecStorage<u8> + ?Sized> fmt::Write for StringInner<S> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        self.push_str(s).map_err(|_| fmt::Error)
+        self.push_str(s).ok_or(fmt::Error)
     }
 
     fn write_char(&mut self, c: char) -> Result<(), fmt::Error> {
-        self.push(c).map_err(|_| fmt::Error)
+        self.push(c).ok_or(fmt::Error)
     }
 }
 
@@ -1051,10 +1049,10 @@ mod tests {
     #[test]
     fn push_str() {
         let mut s: String<8> = String::try_from("foo").unwrap();
-        assert!(s.push_str("bar").is_ok());
+        assert!(s.push_str("bar").is_some());
         assert_eq!("foobar", s);
         assert_eq!(s, "foobar");
-        assert!(s.push_str("tender").is_err());
+        assert!(s.push_str("tender").is_none());
         assert_eq!("foobar", s);
         assert_eq!(s, "foobar");
     }
@@ -1062,10 +1060,10 @@ mod tests {
     #[test]
     fn push() {
         let mut s: String<6> = String::try_from("abc").unwrap();
-        assert!(s.push('1').is_ok());
-        assert!(s.push('2').is_ok());
-        assert!(s.push('3').is_ok());
-        assert!(s.push('4').is_err());
+        assert!(s.push('1').is_some());
+        assert!(s.push('2').is_some());
+        assert!(s.push('3').is_some());
+        assert!(s.push('4').is_none());
         assert!("abc123" == s.as_str());
     }
 
