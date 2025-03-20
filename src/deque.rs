@@ -1011,11 +1011,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// deq2.push_back(3).unwrap();
     /// deq2.push_back(4).unwrap();
     ///
-    /// // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
-    /// assert_eq!(deq1.len(), deq2.len());
-    /// for (i, e1) in deq1.iter().enumerate() {
-    ///     assert_eq!(Some(e1), deq2.get(i));
-    /// }
+    /// assert_eq!(deq1, deq2);
     /// ```
     type Error = ();
 
@@ -1591,8 +1587,13 @@ mod tests {
 
     #[test]
     fn try_from_array() {
+        // Array is too big error.
         assert!(Deque::<u8, 3>::try_from([1, 2, 3, 4]).is_err());
 
+        // Array is at limit.
+        assert!(Deque::<u8, 3>::try_from([1, 2, 3]).unwrap().is_full());
+
+        // Array is under limit.
         let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
         let mut deq2 = Deque::<u8, 8>::new();
         deq2.push_back(1).unwrap();
@@ -1600,10 +1601,6 @@ mod tests {
         deq2.push_back(3).unwrap();
         deq2.push_back(4).unwrap();
 
-        // todo change to `assert_eq!(deq1, deq2);` when PR #521 is merged.
-        assert_eq!(deq1.len(), deq2.len());
-        for (i, e1) in deq1.iter().enumerate() {
-            assert_eq!(Some(e1), deq2.get(i));
-        }
+        assert_eq!(deq1, deq2);
     }
 }
