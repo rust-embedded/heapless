@@ -1026,7 +1026,11 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
         if size_of::<T>() != 0 {
             // SAFETY: We already ensured that value fits in deq.
             unsafe {
-                ptr::copy_nonoverlapping(value.as_ptr(), deq.buffer.buffer.as_mut_ptr() as *mut T, NS);
+                ptr::copy_nonoverlapping(
+                    value.as_ptr(),
+                    deq.buffer.buffer.as_mut_ptr() as *mut T,
+                    NS,
+                );
             }
         }
 
