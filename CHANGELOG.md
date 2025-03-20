@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 - Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
 - `Vec::capacity` is no longer a `const` function.
+- Changed `String::push_str` return type to `Option<()>`.
+- Changed `String::push` return type to `Option<()>`.
+- Changed `Vec::from_slice` return type to `Option<Self>`.
+- Changed `Vec::extend_from_slice` return type to `Option<()>`.
+- Changed `Vec::resize` return type to `Option<()>`.
+- Changed `Vec::resize_defualt` return type to `Option<()>`.
+- Changed `SortedLinkedList::rpop` return type to `Option<T>`.
 
 ### Fixed
 
