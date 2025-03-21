@@ -4,29 +4,103 @@
 
 use core::{borrow::Borrow, fmt, mem, ops, slice};
 
-use crate::vec::{OwnedVecStorage, Vec, VecStorage, ViewVecStorage};
+use crate::vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage};
 
-mod sealed {
-    use crate::vec::{VecInner, VecStorage};
-    /// Base struct for [`LinearMap`] and [`LinearMapView`]
-    pub struct LinearMapInnerInner<T, S: VecStorage<T> + ?Sized> {
-        pub(crate) buffer: VecInner<T, S>,
+mod storage {
+    use crate::vec::{OwnedVecStorage, VecStorage, ViewVecStorage};
+
+    use super::{LinearMapInner, LinearMapView};
+
+    /// Trait defining how data for a LinearMap is stored.
+    ///
+    /// There's two implementations available:
+    ///
+    /// - [`OwnedStorage`]: stores the data in an array whose size is known at compile time.
+    /// - [`ViewStorage`]: stores the data in an unsized slice
+    ///
+    /// This allows [`LinearMap`] to be generic over either sized or unsized storage. The [`linear_map`](super)
+    /// module contains a [`LinearMapInner`] struct that's generic on [`LinearMapStorage`],
+    /// and two type aliases for convenience:
+    ///
+    /// - [`LinearMap<N>`](crate::linear_map::LinearMap) = `LinearMapInner<OwnedStorage<u8, N>>`
+    /// - [`LinearMapView<T>`](crate::linear_map::LinearMapView) = `LinearMapInner<ViewStorage<u8>>`
+    ///
+    /// `LinearMap` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut LinearMap -> &mut LinearMapView` or
+    /// `Box<LinearMap> -> Box<LinearMapView>`, or explicitly with [`.as_view()`](crate::linear_map::LinearMap::as_view) or [`.as_mut_view()`](crate::linear_map::LinearMap::as_mut_view).
+    ///
+    /// This trait is sealed, so you cannot implement it for your own types. You can only use
+    /// the implementations provided by this crate.
+    ///
+    /// [`LinearMapInner`]: super::LinearMapInner
+    /// [`LinearMap`]: super::LinearMap
+    /// [`OwnedStorage`]: super::OwnedStorage
+    /// [`ViewStorage`]: super::ViewStorage
+    pub trait LinearMapStorage<K, V>: LinearMapStorageSealed<K, V> {}
+    pub trait LinearMapStorageSealed<K, V>: VecStorage<(K, V)> {
+        fn as_linear_map_view(this: &LinearMapInner<K, V, Self>) -> &LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>;
+        fn as_linear_map_mut_view(
+            this: &mut LinearMapInner<K, V, Self>,
+        ) -> &mut LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>;
+    }
+
+    impl<K, V, const N: usize> LinearMapStorage<K, V> for OwnedVecStorage<(K, V), N> {}
+    impl<K, V, const N: usize> LinearMapStorageSealed<K, V> for OwnedVecStorage<(K, V), N> {
+        fn as_linear_map_view(this: &LinearMapInner<K, V, Self>) -> &LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>,
+        {
+            this
+        }
+        fn as_linear_map_mut_view(this: &mut LinearMapInner<K, V, Self>) -> &mut LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>,
+        {
+            this
+        }
+    }
+
+    impl<K, V> LinearMapStorage<K, V> for ViewVecStorage<(K, V)> {}
+
+    impl<K, V> LinearMapStorageSealed<K, V> for ViewVecStorage<(K, V)> {
+        fn as_linear_map_view(this: &LinearMapInner<K, V, Self>) -> &LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>,
+        {
+            this
+        }
+        fn as_linear_map_mut_view(this: &mut LinearMapInner<K, V, Self>) -> &mut LinearMapView<K, V>
+        where
+            Self: LinearMapStorage<K, V>,
+        {
+            this
+        }
     }
 }
-pub(crate) use sealed::LinearMapInnerInner;
+
+pub use storage::LinearMapStorage;
+/// Implementation of [`LinearMapStorage`] that stores the data in an array whose size is known at compile time.
+pub type OwnedStorage<K, V, const N: usize> = OwnedVecStorage<(K, V), N>;
+/// Implementation of [`LinearMapStorage`] that stores the data in an unsized slice.
+pub type ViewStorage<K, V> = ViewVecStorage<(K, V)>;
 
 /// Base struct for [`LinearMap`] and [`LinearMapView`]
-pub type LinearMapInner<K, V, S> = LinearMapInnerInner<(K, V), S>;
+pub struct LinearMapInner<K, V, S: LinearMapStorage<K, V> + ?Sized> {
+    pub(crate) buffer: VecInner<(K, V), S>,
+}
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
 /// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
-pub type LinearMap<K, V, const N: usize> = LinearMapInner<K, V, OwnedVecStorage<(K, V), N>>;
+pub type LinearMap<K, V, const N: usize> = LinearMapInner<K, V, OwnedStorage<K, V, N>>;
 
 /// A dynamic capacity map/dictionary that performs lookups via linear search.
 ///
 /// Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
-pub type LinearMapView<K, V> = LinearMapInner<K, V, ViewVecStorage<(K, V)>>;
+pub type LinearMapView<K, V> = LinearMapInner<K, V, ViewStorage<K, V>>;
 
 impl<K, V, const N: usize> LinearMap<K, V, N> {
     /// Creates an empty `LinearMap`.
@@ -47,7 +121,7 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     }
 }
 
-impl<K, V, S: VecStorage<(K, V)> + ?Sized> LinearMapInner<K, V, S>
+impl<K, V, S: LinearMapStorage<K, V> + ?Sized> LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -395,7 +469,7 @@ where
     }
 }
 
-impl<K, V, Q, S: VecStorage<(K, V)> + ?Sized> ops::Index<&'_ Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: LinearMapStorage<K, V> + ?Sized> ops::Index<&'_ Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -407,7 +481,7 @@ where
     }
 }
 
-impl<K, V, Q, S: VecStorage<(K, V)> + ?Sized> ops::IndexMut<&'_ Q> for LinearMapInner<K, V, S>
+impl<K, V, Q, S: LinearMapStorage<K, V> + ?Sized> ops::IndexMut<&'_ Q> for LinearMapInner<K, V, S>
 where
     K: Borrow<Q> + Eq,
     Q: Eq + ?Sized,
@@ -438,7 +512,7 @@ where
     }
 }
 
-impl<K, V, S: VecStorage<(K, V)> + ?Sized> fmt::Debug for LinearMapInner<K, V, S>
+impl<K, V, S: LinearMapStorage<K, V> + ?Sized> fmt::Debug for LinearMapInner<K, V, S>
 where
     K: Eq + fmt::Debug,
     V: fmt::Debug,
@@ -496,7 +570,7 @@ where
     }
 }
 
-impl<'a, K, V, S: VecStorage<(K, V)> + ?Sized> IntoIterator for &'a LinearMapInner<K, V, S>
+impl<'a, K, V, S: LinearMapStorage<K, V> + ?Sized> IntoIterator for &'a LinearMapInner<K, V, S>
 where
     K: Eq,
 {
@@ -540,7 +614,7 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, S1: VecStorage<(K, V)> + ?Sized, S2: VecStorage<(K, V)> + ?Sized>
+impl<K, V, S1: LinearMapStorage<K, V> + ?Sized, S2: LinearMapStorage<K, V> + ?Sized>
     PartialEq<LinearMapInner<K, V, S2>> for LinearMapInner<K, V, S1>
 where
     K: Eq,
@@ -554,7 +628,7 @@ where
     }
 }
 
-impl<K, V, S: VecStorage<(K, V)> + ?Sized> Eq for LinearMapInner<K, V, S>
+impl<K, V, S: LinearMapStorage<K, V> + ?Sized> Eq for LinearMapInner<K, V, S>
 where
     K: Eq,
     V: PartialEq,
