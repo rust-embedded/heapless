@@ -19,8 +19,6 @@ mod storage {
     use crate::{
         binary_heap::{BinaryHeapInner, BinaryHeapView},
         deque::{DequeInner, DequeView},
-        linear_map::LinearMapInnerInner,
-        string::StringInnerInner,
     };
 
     use super::{VecInner, VecView};
@@ -76,26 +74,6 @@ mod storage {
         where
             Self: VecStorage<T>;
         fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
-        where
-            Self: VecStorage<T>;
-        fn as_linear_map_view(
-            this: &LinearMapInnerInner<T, Self>,
-        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>;
-        fn as_linear_map_mut_view(
-            this: &mut LinearMapInnerInner<T, Self>,
-        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>;
-        fn as_string_view(
-            this: &StringInnerInner<T, Self>,
-        ) -> &StringInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>;
-        fn as_string_mut_view(
-            this: &mut StringInnerInner<T, Self>,
-        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
         where
             Self: VecStorage<T>;
     }
@@ -157,38 +135,6 @@ mod storage {
         {
             this
         }
-        fn as_linear_map_view(
-            this: &LinearMapInnerInner<T, Self>,
-        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_linear_map_mut_view(
-            this: &mut LinearMapInnerInner<T, Self>,
-        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_string_view(
-            this: &StringInnerInner<T, Self>,
-        ) -> &StringInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_string_mut_view(
-            this: &mut StringInnerInner<T, Self>,
-        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
     }
     impl<T, const N: usize> VecStorage<T> for OwnedVecStorage<T, N> {}
 
@@ -234,39 +180,6 @@ mod storage {
             this
         }
         fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_linear_map_view(
-            this: &LinearMapInnerInner<T, Self>,
-        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_linear_map_mut_view(
-            this: &mut LinearMapInnerInner<T, Self>,
-        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-
-        fn as_string_view(
-            this: &StringInnerInner<T, Self>,
-        ) -> &StringInnerInner<T, ViewVecStorage<T>>
-        where
-            Self: VecStorage<T>,
-        {
-            this
-        }
-        fn as_string_mut_view(
-            this: &mut StringInnerInner<T, Self>,
-        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
         where
             Self: VecStorage<T>,
         {
