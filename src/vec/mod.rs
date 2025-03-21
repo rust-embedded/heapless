@@ -1228,7 +1228,6 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
     /// # Errors
     ///
     /// Returns `Err` if the length of the `alloc::vec::Vec<T>` is greater than `N`.
-    ///
     fn try_from(alloc_vec: alloc::vec::Vec<T>) -> Result<Self, Self::Error> {
         let mut vec = Vec::new();
 
