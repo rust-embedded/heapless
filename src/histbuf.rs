@@ -41,6 +41,8 @@ use core::slice;
 mod storage {
     use core::mem::MaybeUninit;
 
+    use super::{HistoryBufferInner, HistoryBufferView};
+
     /// Trait defining how data for a container is stored.
     ///
     /// There's two implementations available:
@@ -72,6 +74,14 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedHistBufStorage` besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>;
+        fn as_hist_buf_mut_view(
+            this: &mut HistoryBufferInner<T, Self>,
+        ) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -91,6 +101,18 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
         }
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
+        fn as_hist_buf_mut_view(this: &mut HistoryBufferInner<T, Self>) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
     }
     impl<T, const N: usize> HistBufStorage<T> for OwnedHistBufStorage<T, N> {}
 
@@ -100,6 +122,18 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
+        }
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
+        fn as_hist_buf_mut_view(this: &mut HistoryBufferInner<T, Self>) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
         }
     }
     impl<T> HistBufStorage<T> for ViewHistBufStorage<T> {}
@@ -221,18 +255,6 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             filled: false,
         }
     }
-
-    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
-    #[inline]
-    pub const fn as_view(&self) -> &HistoryBufferView<T> {
-        self
-    }
-
-    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
-        self
-    }
 }
 
 impl<T, const N: usize> HistoryBuffer<T, N>
@@ -264,6 +286,17 @@ where
     }
 }
 impl<T: Copy, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
+    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub fn as_view(&self) -> &HistoryBufferView<T> {
+        S::as_hist_buf_view(self)
+    }
+
+    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
+        S::as_hist_buf_mut_view(self)
+    }
     /// Clears the buffer, replacing every element with the given value.
     pub fn clear_with(&mut self, t: T) {
         // SAFETY: we reset the values just after

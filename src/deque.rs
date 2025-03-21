@@ -186,19 +186,19 @@ impl<T, const N: usize> Deque<T, N> {
             self.back - self.front
         }
     }
+}
 
+impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Get a reference to the `Deque`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &DequeView<T> {
-        self
+        S::as_deque_view(self)
     }
 
     /// Get a mutable reference to the `Deque`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut DequeView<T> {
-        self
+        S::as_deque_mut_view(self)
     }
-}
 
-impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Returns the maximum number of elements the deque can hold.
     pub fn storage_capacity(&self) -> usize {
         self.buffer.borrow().len()
