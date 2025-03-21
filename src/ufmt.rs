@@ -1,10 +1,10 @@
 use crate::{
-    string::StringInner,
+    string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
 };
 use ufmt_write::uWrite;
 
-impl<S: VecStorage<u8> + ?Sized> uWrite for StringInner<S> {
+impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
     type Error = ();
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
