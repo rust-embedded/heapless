@@ -1218,6 +1218,28 @@ impl<T, S: VecStorage<T> + ?Sized> Drop for VecInner<T, S> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<'a, T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
+    type Error = ();
+
+    fn try_from(alloc_vec: alloc::vec::Vec<T>) -> Result<Self, Self::Error> {
+        let mut vec = Vec::new();
+
+        for e in alloc_vec {
+            vec.push(e).map_err(|_| ())?;
+        }
+
+        Ok(vec)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, T, const N: usize> From<Vec<T, N>> for alloc::vec::Vec<T> {
+    fn from(vec: Vec<T, N>) -> Self {
+        alloc::vec::Vec::from_iter(vec.into_iter())
+    }
+}
+
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 
