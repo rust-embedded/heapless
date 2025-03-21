@@ -47,13 +47,20 @@ impl From<CapacityError> for FromUtf16Error {
     }
 }
 
+mod sealed {
+    use crate::vec::{VecInner, VecStorage};
+
+    pub struct StringInnerInner<T, S: VecStorage<T> + ?Sized> {
+        pub(crate) vec: VecInner<T, S>,
+    }
+}
+pub(crate) use sealed::StringInnerInner;
+
 /// Base struct for [`String`] and [`StringView`], generic over the [`VecStorage`].
 ///
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct StringInner<S: VecStorage<u8> + ?Sized> {
-    vec: VecInner<u8, S>,
-}
+pub type StringInner<S> = StringInnerInner<u8, S>;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
 pub type String<const N: usize> = StringInner<OwnedVecStorage<u8, N>>;
@@ -269,48 +276,6 @@ impl<const N: usize> String<N> {
         self.vec
     }
 
-    /// Get a reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = s.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = &s;
-    /// ```
-    #[inline]
-    pub fn as_view(&self) -> &StringView {
-        self
-    }
-
-    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = s.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = &mut s;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut StringView {
-        self
-    }
-
     /// Removes the specified range from the string in bulk, returning all
     /// removed characters as an iterator.
     ///
@@ -355,6 +320,48 @@ impl<const N: usize> String<N> {
 }
 
 impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = &s;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &StringView {
+        S::as_string_view(self)
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = &mut s;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        S::as_string_mut_view(self)
+    }
+
     /// Extracts a string slice containing the entire string.
     ///
     /// # Examples

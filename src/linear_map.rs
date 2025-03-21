@@ -4,12 +4,19 @@
 
 use core::{borrow::Borrow, fmt, mem, ops, slice};
 
-use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
+use crate::vec::{OwnedVecStorage, Vec, VecStorage, ViewVecStorage};
+
+mod sealed {
+    use crate::vec::{VecInner, VecStorage};
+    /// Base struct for [`LinearMap`] and [`LinearMapView`]
+    pub struct LinearMapInnerInner<T, S: VecStorage<T> + ?Sized> {
+        pub(crate) buffer: VecInner<T, S>,
+    }
+}
+pub(crate) use sealed::LinearMapInnerInner;
 
 /// Base struct for [`LinearMap`] and [`LinearMapView`]
-pub struct LinearMapInner<K, V, S: VecStorage<(K, V)> + ?Sized> {
-    pub(crate) buffer: VecInner<(K, V), S>,
-}
+pub type LinearMapInner<K, V, S> = LinearMapInnerInner<(K, V), S>;
 
 /// A fixed capacity map/dictionary that performs lookups via linear search.
 ///
@@ -38,22 +45,22 @@ impl<K, V, const N: usize> LinearMap<K, V, N> {
     pub const fn new() -> Self {
         Self { buffer: Vec::new() }
     }
-
-    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &LinearMapView<K, V> {
-        self
-    }
-
-    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
-        self
-    }
 }
 
 impl<K, V, S: VecStorage<(K, V)> + ?Sized> LinearMapInner<K, V, S>
 where
     K: Eq,
 {
+    /// Get a reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &LinearMapView<K, V> {
+        S::as_linear_map_view(self)
+    }
+
+    /// Get a mutable reference to the `LinearMap`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut LinearMapView<K, V> {
+        S::as_linear_map_mut_view(self)
+    }
+
     /// Returns the number of elements that the map can hold.
     ///
     /// Computes in *O*(1) time.

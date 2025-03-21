@@ -18,6 +18,15 @@ mod drain;
 mod storage {
     use core::mem::MaybeUninit;
 
+    use crate::{
+        binary_heap::{BinaryHeapInner, BinaryHeapView},
+        deque::{DequeInner, DequeView},
+        linear_map::LinearMapInnerInner,
+        string::StringInnerInner,
+    };
+
+    use super::{VecInner, VecView};
+
     /// Trait defining how data for a container is stored.
     ///
     /// There's two implementations available:
@@ -48,6 +57,49 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedVecStorage` besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>;
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>;
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>;
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>;
+
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>;
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>;
+        fn as_linear_map_view(
+            this: &LinearMapInnerInner<T, Self>,
+        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>;
+        fn as_linear_map_mut_view(
+            this: &mut LinearMapInnerInner<T, Self>,
+        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>;
+        fn as_string_view(
+            this: &StringInnerInner<T, Self>,
+        ) -> &StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>;
+        fn as_string_mut_view(
+            this: &mut StringInnerInner<T, Self>,
+        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -67,6 +119,78 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
         }
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_linear_map_view(
+            this: &LinearMapInnerInner<T, Self>,
+        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_linear_map_mut_view(
+            this: &mut LinearMapInnerInner<T, Self>,
+        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_string_view(
+            this: &StringInnerInner<T, Self>,
+        ) -> &StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_string_mut_view(
+            this: &mut StringInnerInner<T, Self>,
+        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
     }
     impl<T, const N: usize> VecStorage<T> for OwnedVecStorage<T, N> {}
 
@@ -76,6 +200,79 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
+        }
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_linear_map_view(
+            this: &LinearMapInnerInner<T, Self>,
+        ) -> &LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_linear_map_mut_view(
+            this: &mut LinearMapInnerInner<T, Self>,
+        ) -> &mut LinearMapInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+
+        fn as_string_view(
+            this: &StringInnerInner<T, Self>,
+        ) -> &StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_string_mut_view(
+            this: &mut StringInnerInner<T, Self>,
+        ) -> &mut StringInnerInner<T, ViewVecStorage<T>>
+        where
+            Self: VecStorage<T>,
+        {
+            this
         }
     }
     impl<T> VecStorage<T> for ViewVecStorage<T> {}
@@ -283,47 +480,6 @@ impl<T, const N: usize> Vec<T, N> {
         new
     }
 
-    /// Get a reference to the `Vec`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &VecView<u8> = vec.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &VecView<u8> = &vec;
-    /// ```
-    #[inline]
-    pub const fn as_view(&self) -> &VecView<T> {
-        self
-    }
-
-    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &mut VecView<u8> = vec.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &mut VecView<u8> = &mut vec;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut VecView<T> {
-        self
-    }
-
     /// Removes the specified range from the vector in bulk, returning all
     /// removed elements as an iterator. If the iterator is dropped before
     /// being fully consumed, it drops the remaining removed elements.
@@ -430,6 +586,47 @@ impl<T> VecView<T> {
 }
 
 impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
+    /// Get a reference to the `Vec`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<u8> = vec.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<u8> = &vec;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &VecView<T> {
+        S::as_vec_view(self)
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<u8> = vec.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<u8> = &mut vec;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut VecView<T> {
+        S::as_vec_mut_view(self)
+    }
+
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
         self.buffer.borrow().as_ptr().cast::<T>()
