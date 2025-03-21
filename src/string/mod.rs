@@ -68,71 +68,6 @@ pub type String<const N: usize> = StringInner<OwnedVecStorage<u8, N>>;
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
 pub type StringView = StringInner<ViewVecStorage<u8>>;
 
-impl StringView {
-    /// Removes the specified range from the string in bulk, returning all
-    /// removed characters as an iterator.
-    ///
-    /// The returned iterator keeps a mutable borrow on the string to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point or end point do not lie on a [`char`]
-    /// boundary, or if they're out of bounds.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`core::mem::forget`], for example), the string may still contain a copy
-    /// of any drained characters, or may have lost characters arbitrarily,
-    /// including characters outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::String;
-    ///
-    /// let mut s = String::<32>::try_from("α is alpha, β is beta").unwrap();
-    /// let beta_offset = s.find('β').unwrap_or(s.len());
-    ///
-    /// // Remove the range up until the β from the string
-    /// let t: String<32> = s.drain(..beta_offset).collect();
-    /// assert_eq!(t, "α is alpha, ");
-    /// assert_eq!(s, "β is beta");
-    ///
-    /// // A full range clears the string, like `clear()` does
-    /// s.drain(..);
-    /// assert_eq!(s, "");
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_>
-    where
-        R: RangeBounds<usize>,
-    {
-        // Memory safety
-        //
-        // The `String` version of `Drain` does not have the memory safety issues
-        // of the `Vec` version. The data is just plain bytes.
-        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
-        // the removal will not happen.
-        let Range { start, end } = crate::slice::range(range, ..self.len());
-        assert!(self.is_char_boundary(start));
-        assert!(self.is_char_boundary(end));
-
-        // Take out two simultaneous borrows. The &mut String won't be accessed
-        // until iteration is over, in Drop.
-        let self_ptr = self as *mut _;
-        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
-        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
-
-        Drain {
-            start,
-            end,
-            iter: chars_iter,
-            string: self_ptr,
-        }
-    }
-}
-
 impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
     ///
@@ -275,7 +210,9 @@ impl<const N: usize> String<N> {
     pub fn into_bytes(self) -> Vec<u8, N> {
         self.vec
     }
+}
 
+impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// Removes the specified range from the string in bulk, returning all
     /// removed characters as an iterator.
     ///
@@ -315,11 +252,30 @@ impl<const N: usize> String<N> {
     where
         R: RangeBounds<usize>,
     {
-        self.as_mut_view().drain(range)
-    }
-}
+        // Memory safety
+        //
+        // The `String` version of `Drain` does not have the memory safety issues
+        // of the `Vec` version. The data is just plain bytes.
+        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
+        // the removal will not happen.
+        let Range { start, end } = crate::slice::range(range, ..self.len());
+        assert!(self.is_char_boundary(start));
+        assert!(self.is_char_boundary(end));
 
-impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
+        // Take out two simultaneous borrows. The &mut String won't be accessed
+        // until iteration is over, in Drop.
+        let self_ptr = self.as_mut_view() as *mut _;
+        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
+        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
+
+        Drain {
+            start,
+            end,
+            iter: chars_iter,
+            string: self_ptr,
+        }
+    }
+
     /// Get a reference to the `String`, erasing the `N` const-generic.
     ///
     ///

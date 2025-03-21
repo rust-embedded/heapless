@@ -479,48 +479,9 @@ impl<T, const N: usize> Vec<T, N> {
         }
         new
     }
-
-    /// Removes the specified range from the vector in bulk, returning all
-    /// removed elements as an iterator. If the iterator is dropped before
-    /// being fully consumed, it drops the remaining removed elements.
-    ///
-    /// The returned iterator keeps a mutable borrow on the vector to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point is greater than the end point or if
-    /// the end point is greater than the length of the vector.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`mem::forget`], for example), the vector may have lost and leaked
-    /// elements arbitrarily, including elements outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
-    /// let u: Vec<_, 8> = v.drain(1..).collect();
-    /// assert_eq!(v, &[1]);
-    /// assert_eq!(u, &[2, 3]);
-    ///
-    /// // A full range clears the vector, like `clear()` does.
-    /// v.drain(..);
-    /// assert_eq!(v, &[]);
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
-    where
-        R: RangeBounds<usize>,
-    {
-        self.as_mut_view().drain(range)
-    }
 }
 
-impl<T> VecView<T> {
+impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Removes the specified range from the vector in bulk, returning all
     /// removed elements as an iterator. If the iterator is dropped before
     /// being fully consumed, it drops the remaining removed elements.
@@ -573,7 +534,7 @@ impl<T> VecView<T> {
         unsafe {
             // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
             self.set_len(start);
-            let vec = NonNull::from(self);
+            let vec = NonNull::from(self.as_mut_view());
             let range_slice = slice::from_raw_parts(vec.as_ref().as_ptr().add(start), end - start);
             Drain {
                 tail_start: end,
@@ -583,9 +544,7 @@ impl<T> VecView<T> {
             }
         }
     }
-}
 
-impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Get a reference to the `Vec`, erasing the `N` const-generic.
     ///
     ///
