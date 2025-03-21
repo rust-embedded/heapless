@@ -1218,6 +1218,36 @@ impl<T, S: VecStorage<T> + ?Sized> Drop for VecInner<T, S> {
     }
 }
 
+#[cfg(feature = "alloc")]
+/// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
+impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
+    type Error = ();
+
+    /// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the length of the `alloc::vec::Vec<T>` is greater than `N`.
+    fn try_from(alloc_vec: alloc::vec::Vec<T>) -> Result<Self, Self::Error> {
+        let mut vec = Vec::new();
+
+        for e in alloc_vec {
+            vec.push(e).map_err(|_| ())?;
+        }
+
+        Ok(vec)
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
+impl<T, const N: usize> From<Vec<T, N>> for alloc::vec::Vec<T> {
+    /// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
+    fn from(vec: Vec<T, N>) -> Self {
+        alloc::vec::Vec::from_iter(vec.into_iter())
+    }
+}
+
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 

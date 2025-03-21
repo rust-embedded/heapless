@@ -141,6 +141,9 @@
     feature(integer_atomics)
 )]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
