@@ -97,7 +97,7 @@ pub struct Pos {
 
 impl Pos {
     fn new(index: usize, hash: HashValue) -> Self {
-        Pos {
+        Self {
             nz: unsafe {
                 NonZeroU32::new_unchecked(
                     ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1),
@@ -146,7 +146,7 @@ impl<K, V, const N: usize> CoreMap<K, V, N> {
     const fn new() -> Self {
         const INIT: Option<Pos> = None;
 
-        CoreMap {
+        Self {
             entries: Vec::new(),
             indices: [INIT; N],
         }
@@ -733,7 +733,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
         crate::sealed::greater_than_1::<N>();
         crate::sealed::power_of_two::<N>();
 
-        IndexMap {
+        Self {
             build_hasher: BuildHasherDefault::new(),
             core: CoreMap::new(),
         }
@@ -1240,7 +1240,7 @@ where
         crate::sealed::greater_than_1::<N>();
         crate::sealed::power_of_two::<N>();
 
-        IndexMap {
+        Self {
             build_hasher: <_>::default(),
             core: CoreMap::new(),
         }
@@ -1309,7 +1309,7 @@ where
     where
         I: IntoIterator<Item = (K, V)>,
     {
-        let mut map = IndexMap::default();
+        let mut map = Self::default();
         map.extend(iterable);
         map
     }

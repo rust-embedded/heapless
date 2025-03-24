@@ -140,6 +140,7 @@
     ),
     feature(integer_atomics)
 )]
+#![warn(clippy::use_self)]
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;

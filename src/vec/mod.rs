@@ -197,7 +197,7 @@ impl<T, const N: usize> Vec<T, N> {
     where
         T: Clone,
     {
-        let mut v = Vec::new();
+        let mut v = Self::new();
         v.extend_from_slice(other)?;
         Ok(v)
     }
@@ -229,7 +229,7 @@ impl<T, const N: usize> Vec<T, N> {
                 buffer: unsafe { mem::transmute_copy(&src) },
             }
         } else {
-            let mut v = Vec::<T, N>::new();
+            let mut v = Self::new();
 
             for (src_elem, dst_elem) in src.iter().zip(v.buffer.buffer.iter_mut()) {
                 // NOTE(unsafe) src element is not going to drop as src itself
@@ -1222,7 +1222,7 @@ impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
     type Error = ();
 
     fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
-        Vec::from_slice(slice)
+        Self::from_slice(slice)
     }
 }
 
@@ -1279,7 +1279,7 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
     where
         I: IntoIterator<Item = T>,
     {
-        let mut vec = Vec::new();
+        let mut vec = Self::new();
         for i in iter {
             vec.push(i).ok().expect("Vec::from_iter overflow");
         }
@@ -1509,14 +1509,14 @@ impl<T, S: VecStorage<T> + ?Sized> borrow::BorrowMut<[T]> for VecInner<T, S> {
     }
 }
 
-impl<T, S: VecStorage<T> + ?Sized> AsRef<VecInner<T, S>> for VecInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> AsRef<Self> for VecInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T, S: VecStorage<T> + ?Sized> AsMut<VecInner<T, S>> for VecInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> AsMut<Self> for VecInner<T, S> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self

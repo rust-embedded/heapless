@@ -368,7 +368,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut new: Queue<T, N> = Queue::new();
+        let mut new: Self = Self::new();
 
         for s in self.iter() {
             unsafe {
@@ -829,7 +829,7 @@ mod tests {
                 unsafe {
                     COUNT += 1;
                 }
-                Droppable
+                Self
             }
         }
 
