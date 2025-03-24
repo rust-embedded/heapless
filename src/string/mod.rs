@@ -581,10 +581,10 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// ```
     #[inline]
     pub fn remove(&mut self, index: usize) -> char {
-        let ch = match self[index..].chars().next() {
-            Some(ch) => ch,
-            None => panic!("cannot remove a char from the end of a string"),
-        };
+        let ch = self[index..]
+            .chars()
+            .next()
+            .unwrap_or_else(|| panic!("cannot remove a char from the end of a string"));
 
         let next = index + ch.len_utf8();
         let len = self.len();
