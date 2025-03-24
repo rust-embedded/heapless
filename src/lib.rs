@@ -146,6 +146,7 @@
     clippy::redundant_pub_crate,
     clippy::option_if_let_else,
     clippy::ptr_as_ptr,
+    clippy::ref_as_ptr,
     clippy::doc_markdown,
     clippy::semicolon_if_nothing_returned,
     clippy::if_not_else
