@@ -465,7 +465,7 @@ impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
             let i = (head + self.index) % self.rb.n();
             self.index += 1;
 
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }
@@ -495,7 +495,7 @@ impl<T, S: Storage> DoubleEndedIterator for IterMutInner<'_, T, S> {
             // self.len > 0, since it's larger than self.index > 0
             let i = (head + self.len - 1) % self.rb.n();
             self.len -= 1;
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }

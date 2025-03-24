@@ -291,7 +291,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     unsafe fn drop_contents(&mut self) {
         unsafe {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
-                self.data.borrow_mut().as_mut_ptr() as *mut T,
+                self.data.borrow_mut().as_mut_ptr().cast::<T>(),
                 self.len(),
             ))
         }
@@ -446,7 +446,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr() as *const _, self.len()) }
+        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr().cast(), self.len()) }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.

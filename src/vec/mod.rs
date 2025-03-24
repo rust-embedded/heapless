@@ -255,7 +255,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
         if self.len() == M {
             // This is how the unstable `MaybeUninit::array_assume_init` method does it
-            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+            let array = unsafe { (core::ptr::from_ref(&self.buffer).cast::<[T; M]>()).read() };
 
             // We don't want `self`'s destructor to be called because that would drop all the
             // items in the array
@@ -431,12 +431,12 @@ impl<T> VecView<T> {
 impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.buffer.borrow().as_ptr() as *const T
+        self.buffer.borrow().as_ptr().cast::<T>()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.borrow_mut().as_mut_ptr() as *mut T
+        self.buffer.borrow_mut().as_mut_ptr().cast::<T>()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -453,7 +453,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.len) }
     }
 
     /// Extracts a mutable slice containing the entire vector.
@@ -473,7 +473,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         unsafe {
-            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr() as *mut T, self.len)
+            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr().cast::<T>(), self.len)
         }
     }
 
@@ -1317,7 +1317,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.buffer.buffer.as_ptr() as *const T).add(self.next),
+                    self.vec.buffer.buffer.as_ptr().cast::<T>().add(self.next),
                     self.vec.len() - self.next,
                 )
             };

@@ -144,7 +144,8 @@
     clippy::use_self,
     clippy::too_long_first_doc_paragraph,
     clippy::redundant_pub_crate,
-    clippy::option_if_let_else
+    clippy::option_if_let_else,
+    clippy::ptr_as_ptr,
 )]
 
 pub use binary_heap::BinaryHeap;
