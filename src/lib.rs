@@ -147,7 +147,8 @@
     clippy::option_if_let_else,
     clippy::ptr_as_ptr,
     clippy::doc_markdown,
-    clippy::semicolon_if_nothing_returned
+    clippy::semicolon_if_nothing_returned,
+    clippy::if_not_else
 )]
 
 pub use binary_heap::BinaryHeap;

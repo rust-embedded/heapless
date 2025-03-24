@@ -263,11 +263,11 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// assert_eq!(None, consumer.peek());
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        if !self.is_empty() {
+        if self.is_empty() {
+            None
+        } else {
             let head = self.head.load(Ordering::Relaxed);
             Some(unsafe { &*(self.buffer.borrow().get_unchecked(head).get() as *const T) })
-        } else {
-            None
         }
     }
 
@@ -278,13 +278,13 @@ impl<T, S: Storage> QueueInner<T, S> {
         let current_tail = self.tail.load(Ordering::Relaxed);
         let next_tail = self.increment(current_tail);
 
-        if next_tail != self.head.load(Ordering::Acquire) {
+        if next_tail == self.head.load(Ordering::Acquire) {
+            Err(val)
+        } else {
             (self.buffer.borrow().get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
             self.tail.store(next_tail, Ordering::Release);
 
             Ok(())
-        } else {
-            Err(val)
         }
     }
 

@@ -364,11 +364,8 @@ where
             if self
                 .read_data_in_node_at(head)
                 .cmp(self.read_data_in_node_at(new))
-                != K::ordering()
+                == K::ordering()
             {
-                self.node_at_mut(new).next = self.head;
-                self.head = Idx::new_unchecked(new);
-            } else {
                 // It's not head, search the list for the correct placement
                 let mut current = head;
 
@@ -386,6 +383,9 @@ where
 
                 self.node_at_mut(new).next = self.node_at(current).next;
                 self.node_at_mut(current).next = Idx::new_unchecked(new);
+            } else {
+                self.node_at_mut(new).next = self.head;
+                self.head = Idx::new_unchecked(new);
             }
         } else {
             self.node_at_mut(new).next = self.head;
@@ -417,11 +417,11 @@ where
     /// assert_eq!(ll.push(4), Err(4));
     /// ```
     pub fn push(&mut self, value: T) -> Result<(), T> {
-        if !self.is_full() {
+        if self.is_full() {
+            Err(value)
+        } else {
             unsafe { self.push_unchecked(value) }
             Ok(())
-        } else {
-            Err(value)
         }
     }
 
@@ -572,10 +572,10 @@ where
     /// assert_eq!(ll.pop(), None);
     /// ```
     pub fn pop(&mut self) -> Option<T> {
-        if !self.is_empty() {
-            Some(unsafe { self.pop_unchecked() })
-        } else {
+        if self.is_empty() {
             None
+        } else {
+            Some(unsafe { self.pop_unchecked() })
         }
     }
 

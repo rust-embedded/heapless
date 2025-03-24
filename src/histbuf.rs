@@ -464,10 +464,10 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let buffer = self.as_slice();
 
-        if !self.filled {
-            (buffer, &[])
-        } else {
+        if self.filled {
             (&buffer[self.write_at..], &buffer[..self.write_at])
+        } else {
+            (buffer, &[])
         }
     }
 
