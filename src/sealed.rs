@@ -1,30 +1,30 @@
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn smaller_than<const N: usize, const MAX: usize>() {
+pub const fn smaller_than<const N: usize, const MAX: usize>() {
     Assert::<N, MAX>::LESS;
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn greater_than_eq<const N: usize, const MIN: usize>() {
+pub const fn greater_than_eq<const N: usize, const MIN: usize>() {
     Assert::<N, MIN>::GREATER_EQ;
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn greater_than_eq_0<const N: usize>() {
+pub const fn greater_than_eq_0<const N: usize>() {
     Assert::<N, 0>::GREATER_EQ;
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn greater_than_0<const N: usize>() {
+pub const fn greater_than_0<const N: usize>() {
     Assert::<N, 0>::GREATER;
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn greater_than_1<const N: usize>() {
+pub const fn greater_than_1<const N: usize>() {
     Assert::<N, 1>::GREATER;
 }
 
 #[allow(dead_code, path_statements, clippy::no_effect)]
-pub(crate) const fn power_of_two<const N: usize>() {
+pub const fn power_of_two<const N: usize>() {
     Assert::<N, 0>::GREATER;
     Assert::<N, 0>::POWER_OF_TWO;
 }

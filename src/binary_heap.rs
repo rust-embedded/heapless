@@ -596,14 +596,14 @@ where
     }
 }
 
-impl<'a, T, K, S> PeekMutInner<'a, T, K, S>
+impl<T, K, S> PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
     S: VecStorage<T> + ?Sized,
 {
     /// Removes the peeked value from the heap and returns it.
-    pub fn pop(mut this: PeekMutInner<'a, T, K, S>) -> T {
+    pub fn pop(mut this: Self) -> T {
         let value = this.heap.pop().unwrap();
         this.sift = false;
         value

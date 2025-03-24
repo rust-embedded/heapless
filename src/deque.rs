@@ -946,7 +946,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut res = Deque::new();
+        let mut res = Self::new();
         for i in self {
             // safety: the original and new deques have the same capacity, so it can
             // not become full.

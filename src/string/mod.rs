@@ -581,10 +581,10 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// ```
     #[inline]
     pub fn remove(&mut self, index: usize) -> char {
-        let ch = match self[index..].chars().next() {
-            Some(ch) => ch,
-            None => panic!("cannot remove a char from the end of a string"),
-        };
+        let ch = self[index..]
+            .chars()
+            .next()
+            .unwrap_or_else(|| panic!("cannot remove a char from the end of a string"));
 
         let next = index + ch.len_utf8();
         let len = self.len();
@@ -632,7 +632,7 @@ impl<const N: usize> Default for String<N> {
 impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
     type Error = ();
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        let mut new = String::new();
+        let mut new = Self::new();
         new.push_str(s)?;
         Ok(new)
     }
@@ -642,7 +642,7 @@ impl<const N: usize> str::FromStr for String<N> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut new = String::new();
+        let mut new = Self::new();
         new.push_str(s)?;
         Ok(new)
     }
@@ -650,7 +650,7 @@ impl<const N: usize> str::FromStr for String<N> {
 
 impl<const N: usize> iter::FromIterator<char> for String<N> {
     fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push(c).unwrap();
         }
@@ -660,7 +660,7 @@ impl<const N: usize> iter::FromIterator<char> for String<N> {
 
 impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
     fn from_iter<T: IntoIterator<Item = &'a char>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push(*c).unwrap();
         }
@@ -670,7 +670,7 @@ impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
 
 impl<'a, const N: usize> iter::FromIterator<&'a str> for String<N> {
     fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push_str(c).unwrap();
         }
@@ -782,7 +782,7 @@ impl<S: VecStorage<u8> + ?Sized> PartialEq<&str> for StringInner<S> {
 impl<S: VecStorage<u8> + ?Sized> PartialEq<StringInner<S>> for str {
     #[inline]
     fn eq(&self, other: &StringInner<S>) -> bool {
-        str::eq(self, &other[..])
+        Self::eq(self, &other[..])
     }
 }
 

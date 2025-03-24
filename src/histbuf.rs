@@ -587,7 +587,8 @@ pub struct OldestOrderedInner<'a, T, S: HistBufStorage<T> + ?Sized> {
 }
 
 /// Double ended iterator on the underlying buffer ordered from the oldest data
-/// to the newest
+/// to the newest.
+///
 /// This type exists for backwards compatibility. It is always better to convert it to an [`OldestOrderedView`] with [`into_view`](OldestOrdered::into_view)
 pub type OldestOrdered<'a, T, const N: usize> =
     OldestOrderedInner<'a, T, OwnedHistBufStorage<T, N>>;
