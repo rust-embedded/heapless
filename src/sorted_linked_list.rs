@@ -770,7 +770,7 @@ where
     /// ```
     #[inline]
     pub fn finish(self) {
-        drop(self)
+        drop(self);
     }
 }
 
@@ -925,14 +925,14 @@ mod tests {
         ll.push(2).unwrap();
         ll.push(3).unwrap();
 
-        assert!(ll.is_full())
+        assert!(ll.is_full());
     }
 
     #[test]
     fn test_empty() {
         let ll: SortedLinkedList<u32, LinkedIndexUsize, Max, 3> = SortedLinkedList::new_usize();
 
-        assert!(ll.is_empty())
+        assert!(ll.is_empty());
     }
 
     #[test]

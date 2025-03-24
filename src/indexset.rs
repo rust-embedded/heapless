@@ -212,7 +212,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// assert!(v.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.map.clear()
+        self.map.clear();
     }
 }
 
@@ -560,7 +560,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        self.map.extend(iterable.into_iter().map(|k| (k, ())))
+        self.map.extend(iterable.into_iter().map(|k| (k, ())));
     }
 }
 
@@ -573,7 +573,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iterable.into_iter().cloned())
+        self.extend(iterable.into_iter().cloned());
     }
 }
 

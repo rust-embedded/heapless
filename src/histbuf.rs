@@ -293,7 +293,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
                 self.data.borrow_mut().as_mut_ptr().cast::<T>(),
                 self.len(),
-            ))
+            ));
         }
     }
 
@@ -514,7 +514,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -818,7 +818,7 @@ mod tests {
             assert_eq_iter(
                 [head, tail].iter().copied().flatten(),
                 buffer.oldest_ordered(),
-            )
+            );
         }
     }
 

@@ -229,5 +229,5 @@ fn iterator_properly_wraps() {
     for (idx, el) in rb.iter().enumerate() {
         actual[idx] = *el;
     }
-    assert_eq!(expected, actual)
+    assert_eq!(expected, actual);
 }

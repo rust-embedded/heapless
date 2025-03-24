@@ -497,7 +497,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         I: IntoIterator<Item = T>,
     {
         for elem in iter {
-            self.push(elem).ok().unwrap()
+            self.push(elem).ok().unwrap();
         }
     }
 
@@ -753,7 +753,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
 
-        self.len = new_len
+        self.len = new_len;
     }
 
     /// Removes an element from the vector and returns it.
@@ -1223,7 +1223,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for VecInner<T, S> {
     where
         I: IntoIterator<Item = T>,
     {
-        self.extend(iter)
+        self.extend(iter);
     }
 }
 
@@ -1235,7 +1235,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -1244,7 +1244,7 @@ where
     T: core::hash::Hash,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        <[T] as hash::Hash>::hash(self, state)
+        <[T] as hash::Hash>::hash(self, state);
     }
 }
 

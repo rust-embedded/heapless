@@ -222,7 +222,7 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.data.clear()
+        self.data.clear();
     }
 
     /// Returns the length of the binary heap.

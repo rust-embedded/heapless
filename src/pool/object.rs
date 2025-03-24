@@ -135,7 +135,7 @@ pub trait ObjectPool: Sized {
 
     /// Adds a statically allocate object to the pool
     fn manage(block: &'static mut ObjectBlock<Self::Data>) {
-        Self::singleton().manage(block)
+        Self::singleton().manage(block);
     }
 }
 
@@ -262,7 +262,7 @@ where
     where
         H: Hasher,
     {
-        (**self).hash(state)
+        (**self).hash(state);
     }
 }
 

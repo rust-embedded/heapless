@@ -896,7 +896,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for DequeInner<T, S> {
 }
 impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T, S> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
-        self.extend(iter.into_iter().copied())
+        self.extend(iter.into_iter().copied());
     }
 }
 

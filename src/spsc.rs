@@ -308,7 +308,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
     /// twice.
     pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.inner_enqueue_unchecked(val)
+        self.inner_enqueue_unchecked(val);
     }
 
     // The memory for dequeuing is "owned" by the head pointer,.
@@ -678,7 +678,7 @@ impl<T, S: Storage> ProducerInner<'_, T, S> {
     /// See [`Queue::enqueue_unchecked`]
     #[inline]
     pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.rb.inner_enqueue_unchecked(val)
+        self.rb.inner_enqueue_unchecked(val);
     }
 
     /// Returns if there is any space to enqueue a new item. When this returns true, at
