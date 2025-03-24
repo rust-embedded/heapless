@@ -208,8 +208,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     #[inline]
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_0::<N>();
+        const {
+            assert!(N > 0);
+        }
 
         Self {
             phantom: PhantomData,
