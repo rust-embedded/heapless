@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 - Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
+- `Vec::capacity` is no longer a `const` function.
 
 ### Fixed
 
@@ -55,6 +56,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `HistoryBuffer` and `SortedLinkedList` to the list.
 - Fixed `MpMcQueue` with `mpmc_large` feature.
 - Fix missing `Drop` for `MpMcQueue`
+
+### Removed
+
+- `Vec::storage_capacity` has been removed and `Vec::capacity` must be used instead.
 
 ## [v0.8.0] - 2023-11-07
 
