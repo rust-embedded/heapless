@@ -27,7 +27,7 @@
 //! assert_eq!(rb.dequeue(), Some(0));
 //! ```
 //!
-//! - [Queue] can be [Queue::split] and then be used in Single Producer Single Consumer mode.
+//! - [Queue] can be [`Queue::split`] and then be used in Single Producer Single Consumer mode.
 //!
 //! "no alloc" applications can create a `&'static mut` reference to a `Queue` -- using a static
 //! variable -- and then `split` it: this consumes the static reference. The resulting `Consumer`

@@ -619,11 +619,11 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         }
     }
 
-    /// Resizes the Vec in-place so that len is equal to new_len.
+    /// Resizes the Vec in-place so that len is equal to `new_len`.
     ///
-    /// If new_len is greater than len, the Vec is extended by the
+    /// If `new_len` is greater than len, the Vec is extended by the
     /// difference, with each additional slot filled with value. If
-    /// new_len is less than len, the Vec is simply truncated.
+    /// `new_len` is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
     #[allow(clippy::result_unit_err)]

@@ -791,7 +791,7 @@ mod tests {
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
     }
 
-    /// Test whether .as_slices() behaves as expected.
+    /// Test whether `.as_slices()` behaves as expected.
     #[test]
     fn as_slices() {
         let mut buffer: HistoryBuffer<u8, 4> = HistoryBuffer::new();
@@ -807,7 +807,7 @@ mod tests {
         extend_then_assert(b"123456", (b"34", b"56"));
     }
 
-    /// Test whether .as_slices() and .oldest_ordered() produce elements in the same order.
+    /// Test whether `.as_slices()` and `.oldest_ordered()` produce elements in the same order.
     #[test]
     fn as_slices_equals_ordered() {
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();

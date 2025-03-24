@@ -159,7 +159,7 @@ pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewVecStorage<T>>;
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
-    /// Creates an empty BinaryHeap as a $K-heap.
+    /// Creates an empty `BinaryHeap` as a $K-heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};

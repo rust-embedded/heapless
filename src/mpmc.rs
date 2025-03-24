@@ -142,12 +142,12 @@ pub struct MpMcQueueInner<T, S: Storage> {
 
 /// MPMC queue with a capacity for N elements
 /// N must be a power of 2
-/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
+/// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
 pub type MpMcQueue<T, const N: usize> = MpMcQueueInner<T, OwnedStorage<N>>;
 
 /// MPMC queue with a capacity for N elements
 /// N must be a power of 2
-/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
+/// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
 pub type MpMcQueueView<T> = MpMcQueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> MpMcQueue<T, N> {
