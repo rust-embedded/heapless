@@ -143,8 +143,9 @@ pub type QueueView<T> = QueueInner<T, ViewStorage>;
 impl<T, const N: usize> Queue<T, N> {
     /// Creates an empty queue with a fixed capacity of `N - 1`
     pub const fn new() -> Self {
-        // Const assert N > 1
-        crate::sealed::greater_than_1::<N>();
+        const {
+            assert!(N > 1);
+        }
 
         Queue {
             head: AtomicUsize::new(0),

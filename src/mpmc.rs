@@ -151,17 +151,13 @@ pub type MpMcQueue<T, const N: usize> = MpMcQueueInner<T, OwnedStorage<N>>;
 pub type MpMcQueueView<T> = MpMcQueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> MpMcQueue<T, N> {
-    const ASSERT: [(); 1] = [()];
-
     /// Creates an empty queue
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
-
-        // Const assert on size.
-        #[allow(clippy::no_effect)]
-        Self::ASSERT[(N >= (UintSize::MAX as usize)) as usize];
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+            assert!(N < UintSize::MAX as usize);
+        }
 
         let mut cell_count = 0;
 

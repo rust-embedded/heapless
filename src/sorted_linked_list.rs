@@ -237,8 +237,9 @@ macro_rules! impl_index_and_const_new {
 
             /// Create a new linked list.
             pub const fn $new_name() -> Self {
-                // Const assert N < MAX
-                crate::sealed::smaller_than::<N, $max_val>();
+                const {
+                    assert!(N < $max_val);
+                }
 
                 let mut list = SortedLinkedList {
                     list: OwnedSortedLinkedListStorage {

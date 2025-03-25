@@ -211,10 +211,9 @@ impl<T, const N: usize> Vec<T, N> {
     /// If the length of the provided array is greater than the capacity of the
     /// vector a compile-time error will be produced.
     pub fn from_array<const M: usize>(src: [T; M]) -> Self {
-        // Const assert M >= 0
-        crate::sealed::greater_than_eq_0::<M>();
-        // Const assert N >= M
-        crate::sealed::greater_than_eq::<N, M>();
+        const {
+            assert!(N >= M);
+        }
 
         // We've got to copy `src`, but we're functionally moving it. Don't run
         // any Drop code for T.
