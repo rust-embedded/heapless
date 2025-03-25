@@ -11,6 +11,8 @@ use core::{
     slice,
 };
 
+use crate::CapacityError;
+
 mod drain;
 
 mod storage {
@@ -192,8 +194,7 @@ impl<T, const N: usize> Vec<T, N> {
     /// let mut v: Vec<u8, 16> = Vec::new();
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    pub fn from_slice(other: &[T]) -> Result<Self, CapacityError>
     where
         T: Clone,
     {
@@ -516,8 +517,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
     where
         T: Clone,
     {
@@ -525,13 +525,13 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
             len: &mut usize,
             buf: &mut [MaybeUninit<T>],
             other: &[T],
-        ) -> Result<(), ()>
+        ) -> Result<(), CapacityError>
         where
             T: Clone,
         {
             if *len + other.len() > buf.len() {
                 // won't fit in the `Vec`; don't modify anything and return an error
-                Err(())
+                Err(CapacityError)
             } else {
                 for elem in other {
                     unsafe { *buf.get_unchecked_mut(*len) = MaybeUninit::new(elem.clone()) }
@@ -626,13 +626,12 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// `new_len` is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
     where
         T: Clone,
     {
         if new_len > self.capacity() {
-            return Err(());
+            return Err(CapacityError);
         }
 
         if new_len > self.len {
@@ -653,8 +652,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](Self::resize).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), CapacityError>
     where
         T: Clone + Default,
     {
@@ -1211,7 +1209,7 @@ impl<T, S: VecStorage<T> + ?Sized> Drop for VecInner<T, S> {
 }
 
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
-    type Error = ();
+    type Error = CapacityError;
 
     fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
         Self::from_slice(slice)

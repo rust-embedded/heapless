@@ -44,6 +44,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Changed the error type of these methods from `()` to `CapacityError`.
+  - `String::push_str`
+  - `String::push`
+  - `Vec::extend_from_slice`
+  - `Vec::from_slice`
+  - `Vec::resize_default`
+  - `Vec::resize`
+- Renamed `FromUtf16Error::DecodeUtf16Error` to `FromUtf16Error::DecodeUtf16`.
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 - Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
 - `Vec::capacity` is no longer a `const` function.
