@@ -1232,6 +1232,7 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
         let mut vec = Vec::new();
 
         for e in alloc_vec {
+            // Push each element individually to allow handling capacity errors.
             vec.push(e).map_err(|_| ())?;
         }
 
@@ -1241,10 +1242,26 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
 
 #[cfg(feature = "alloc")]
 /// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
-impl<T, const N: usize> From<Vec<T, N>> for alloc::vec::Vec<T> {
+impl<T, const N: usize> TryFrom<Vec<T, N>> for alloc::vec::Vec<T> {
+    type Error = ();
+
     /// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
-    fn from(vec: Vec<T, N>) -> Self {
-        alloc::vec::Vec::from_iter(vec.into_iter())
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the `alloc::vec::Vec` fails to allocate memory.
+    fn try_from(vec: Vec<T, N>) -> Result<Self, Self::Error> {
+        let mut alloc_vec = alloc::vec::Vec::new();
+
+        // Allocate enough space for the elements, return an error if the
+        // allocation fails.
+        alloc_vec.try_reserve(vec.len()).map_err(|_| ())?;
+
+        // Transfer the elements, since we reserved enough space above, this
+        // should not fail due to OOM.
+        alloc_vec.extend(vec);
+
+        Ok(alloc_vec)
     }
 }
 

@@ -42,8 +42,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Make `String::from_utf8_unchecked` const.
 - Implemented `PartialEq` and `Eq` for `Deque`.
 - Added `alloc` feature to enable `alloc`-Vec interoperability.
-- Added `From<alloc::vec::Vec>` impl for `Vec`.
-- Added `From<Vec>` impl for `alloc::vec::Vec`.
+- Added `TryFrom<alloc::vec::Vec>` impl for `Vec`.
+- Added `TryFrom<Vec>` impl for `alloc::vec::Vec`.
 
 ### Changed
 
