@@ -513,9 +513,6 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        // False positive from clippy
-        // Option<&(K, V)> -> Option<(&K, &V)>
-        #[allow(clippy::map_identity)]
         self.iter.next().map(|(k, v)| (k, v))
     }
 }
