@@ -11,7 +11,7 @@ mod storage {
 
     use super::{LinearMapInner, LinearMapView};
 
-    /// Trait defining how data for a LinearMap is stored.
+    /// Trait defining how data for a [`LinearMap`](super::LinearMap) is stored.
     ///
     /// There's two implementations available:
     ///
