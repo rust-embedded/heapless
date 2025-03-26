@@ -269,15 +269,15 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             } else if self.back <= self.front {
                 (
                     slice::from_raw_parts(
-                        self.buffer.borrow().as_ptr().add(self.front) as *const T,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
                         self.storage_capacity() - self.front,
                     ),
-                    slice::from_raw_parts(self.buffer.borrow().as_ptr() as *const T, self.back),
+                    slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts(
-                        self.buffer.borrow().as_ptr().add(self.front) as *const T,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &[],
@@ -297,15 +297,15 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             } else if self.back <= self.front {
                 (
                     slice::from_raw_parts_mut(
-                        ptr.add(self.front) as *mut T,
+                        ptr.add(self.front).cast::<T>(),
                         self.storage_capacity() - self.front,
                     ),
-                    slice::from_raw_parts_mut(ptr as *mut T, self.back),
+                    slice::from_raw_parts_mut(ptr.cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts_mut(
-                        ptr.add(self.front) as *mut T,
+                        ptr.add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &mut [],
@@ -896,7 +896,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for DequeInner<T, S> {
 }
 impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T, S> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
-        self.extend(iter.into_iter().copied())
+        self.extend(iter.into_iter().copied());
     }
 }
 

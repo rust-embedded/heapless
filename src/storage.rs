@@ -43,7 +43,7 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
         N
     }
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
-        this as _
+        this.cast()
     }
 }
 
@@ -57,6 +57,6 @@ impl SealedStorage for ViewStorage {
     }
 
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
-        this as _
+        this.cast()
     }
 }

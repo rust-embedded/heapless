@@ -148,7 +148,7 @@ pub trait ArcPool: Sized {
 
     /// Add a statically allocated memory block to the memory pool
     fn manage(block: &'static mut ArcBlock<Self::Data>) {
-        Self::singleton().manage(block)
+        Self::singleton().manage(block);
     }
 }
 
@@ -315,7 +315,7 @@ where
     where
         H: Hasher,
     {
-        (**self).hash(state)
+        (**self).hash(state);
     }
 }
 

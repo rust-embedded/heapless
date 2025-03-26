@@ -159,7 +159,7 @@ pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewVecStorage<T>>;
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
-    /// Creates an empty BinaryHeap as a $K-heap.
+    /// Creates an empty `BinaryHeap` as a $K-heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
@@ -222,7 +222,7 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.data.clear()
+        self.data.clear();
     }
 
     /// Returns the length of the binary heap.

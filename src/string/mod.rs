@@ -519,7 +519,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     pub fn truncate(&mut self, new_len: usize) {
         if new_len <= self.len() {
             assert!(self.is_char_boundary(new_len));
-            self.vec.truncate(new_len)
+            self.vec.truncate(new_len);
         }
     }
 
@@ -619,7 +619,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// ```
     #[inline]
     pub fn clear(&mut self) {
-        self.vec.clear()
+        self.vec.clear();
     }
 }
 
@@ -701,7 +701,7 @@ impl<S: VecStorage<u8> + ?Sized> fmt::Display for StringInner<S> {
 impl<S: VecStorage<u8> + ?Sized> hash::Hash for StringInner<S> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        <str as hash::Hash>::hash(self, hasher)
+        <str as hash::Hash>::hash(self, hasher);
     }
 }
 
@@ -1153,26 +1153,26 @@ mod tests {
         let number = 5;
         let float = 3.12;
         let formatted = format!(15; "{:0>3} plus {float}", number).unwrap();
-        assert_eq!(formatted, "005 plus 3.12")
+        assert_eq!(formatted, "005 plus 3.12");
     }
     #[test]
     fn format_inferred_capacity() {
         let number = 5;
         let float = 3.12;
         let formatted: String<15> = format!("{:0>3} plus {float}", number).unwrap();
-        assert_eq!(formatted, "005 plus 3.12")
+        assert_eq!(formatted, "005 plus 3.12");
     }
 
     #[test]
     fn format_overflow() {
         let i = 1234567;
         let formatted = format!(4; "13{}", i);
-        assert_eq!(formatted, Err(core::fmt::Error))
+        assert_eq!(formatted, Err(core::fmt::Error));
     }
 
     #[test]
     fn format_plain_string_overflow() {
         let formatted = format!(2; "123");
-        assert_eq!(formatted, Err(core::fmt::Error))
+        assert_eq!(formatted, Err(core::fmt::Error));
     }
 }

@@ -110,17 +110,17 @@
     ),
     doc = "- [Object](pool::object::Object) -- objects managed by an object pool"
 )]
-//! - [BinaryHeap] -- priority queue
+//! - [`BinaryHeap`] -- priority queue
 //! - [Deque] -- double-ended queue
-//! - [HistoryBuffer] -- similar to a write-only ring buffer
-//! - [IndexMap] -- hash table
-//! - [IndexSet] -- hash set
-//! - [LinearMap]
-//! - [sorted_linked_list::SortedLinkedList]
+//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
+//! - [`IndexMap`] -- hash table
+//! - [`IndexSet`] -- hash set
+//! - [`LinearMap`]
+//! - [`sorted_linked_list::SortedLinkedList`]
 //! - [String]
 //! - [Vec]
 //! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
-//! - [spsc] and [spsc::Queue] -- single producer single consumer lock-free queue
+//! - [spsc] and [`spsc::Queue`] -- single producer single consumer lock-free queue
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
@@ -144,7 +144,12 @@
     clippy::use_self,
     clippy::too_long_first_doc_paragraph,
     clippy::redundant_pub_crate,
-    clippy::option_if_let_else
+    clippy::option_if_let_else,
+    clippy::ptr_as_ptr,
+    clippy::ref_as_ptr,
+    clippy::doc_markdown,
+    clippy::semicolon_if_nothing_returned,
+    clippy::if_not_else
 )]
 
 pub use binary_heap::BinaryHeap;

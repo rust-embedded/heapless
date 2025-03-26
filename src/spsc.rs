@@ -27,7 +27,7 @@
 //! assert_eq!(rb.dequeue(), Some(0));
 //! ```
 //!
-//! - [Queue] can be [Queue::split] and then be used in Single Producer Single Consumer mode.
+//! - [Queue] can be [`Queue::split`] and then be used in Single Producer Single Consumer mode.
 //!
 //! "no alloc" applications can create a `&'static mut` reference to a `Queue` -- using a static
 //! variable -- and then `split` it: this consumes the static reference. The resulting `Consumer`
@@ -263,11 +263,11 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// assert_eq!(None, consumer.peek());
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        if !self.is_empty() {
+        if self.is_empty() {
+            None
+        } else {
             let head = self.head.load(Ordering::Relaxed);
             Some(unsafe { &*(self.buffer.borrow().get_unchecked(head).get() as *const T) })
-        } else {
-            None
         }
     }
 
@@ -278,13 +278,13 @@ impl<T, S: Storage> QueueInner<T, S> {
         let current_tail = self.tail.load(Ordering::Relaxed);
         let next_tail = self.increment(current_tail);
 
-        if next_tail != self.head.load(Ordering::Acquire) {
+        if next_tail == self.head.load(Ordering::Acquire) {
+            Err(val)
+        } else {
             (self.buffer.borrow().get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
             self.tail.store(next_tail, Ordering::Release);
 
             Ok(())
-        } else {
-            Err(val)
         }
     }
 
@@ -308,7 +308,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
     /// twice.
     pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.inner_enqueue_unchecked(val)
+        self.inner_enqueue_unchecked(val);
     }
 
     // The memory for dequeuing is "owned" by the head pointer,.
@@ -465,7 +465,7 @@ impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
             let i = (head + self.index) % self.rb.n();
             self.index += 1;
 
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }
@@ -495,7 +495,7 @@ impl<T, S: Storage> DoubleEndedIterator for IterMutInner<'_, T, S> {
             // self.len > 0, since it's larger than self.index > 0
             let i = (head + self.len - 1) % self.rb.n();
             self.len -= 1;
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }
@@ -678,7 +678,7 @@ impl<T, S: Storage> ProducerInner<'_, T, S> {
     /// See [`Queue::enqueue_unchecked`]
     #[inline]
     pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.rb.inner_enqueue_unchecked(val)
+        self.rb.inner_enqueue_unchecked(val);
     }
 
     /// Returns if there is any space to enqueue a new item. When this returns true, at

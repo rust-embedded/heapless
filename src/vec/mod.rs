@@ -255,7 +255,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
         if self.len() == M {
             // This is how the unstable `MaybeUninit::array_assume_init` method does it
-            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+            let array = unsafe { (core::ptr::from_ref(&self.buffer).cast::<[T; M]>()).read() };
 
             // We don't want `self`'s destructor to be called because that would drop all the
             // items in the array
@@ -431,12 +431,12 @@ impl<T> VecView<T> {
 impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.buffer.borrow().as_ptr() as *const T
+        self.buffer.borrow().as_ptr().cast::<T>()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.borrow_mut().as_mut_ptr() as *mut T
+        self.buffer.borrow_mut().as_mut_ptr().cast::<T>()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -453,7 +453,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.len) }
     }
 
     /// Extracts a mutable slice containing the entire vector.
@@ -473,7 +473,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         unsafe {
-            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr() as *mut T, self.len)
+            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr().cast::<T>(), self.len)
         }
     }
 
@@ -497,7 +497,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         I: IntoIterator<Item = T>,
     {
         for elem in iter {
-            self.push(elem).ok().unwrap()
+            self.push(elem).ok().unwrap();
         }
     }
 
@@ -619,11 +619,11 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         }
     }
 
-    /// Resizes the Vec in-place so that len is equal to new_len.
+    /// Resizes the Vec in-place so that len is equal to `new_len`.
     ///
-    /// If new_len is greater than len, the Vec is extended by the
+    /// If `new_len` is greater than len, the Vec is extended by the
     /// difference, with each additional slot filled with value. If
-    /// new_len is less than len, the Vec is simply truncated.
+    /// `new_len` is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
     #[allow(clippy::result_unit_err)]
@@ -753,7 +753,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
 
-        self.len = new_len
+        self.len = new_len;
     }
 
     /// Removes an element from the vector and returns it.
@@ -1223,7 +1223,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for VecInner<T, S> {
     where
         I: IntoIterator<Item = T>,
     {
-        self.extend(iter)
+        self.extend(iter);
     }
 }
 
@@ -1235,7 +1235,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -1244,7 +1244,7 @@ where
     T: core::hash::Hash,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        <[T] as hash::Hash>::hash(self, state)
+        <[T] as hash::Hash>::hash(self, state);
     }
 }
 
@@ -1317,7 +1317,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.buffer.buffer.as_ptr() as *const T).add(self.next),
+                    self.vec.buffer.buffer.as_ptr().cast::<T>().add(self.next),
                     self.vec.len() - self.next,
                 )
             };

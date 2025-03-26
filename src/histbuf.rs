@@ -291,9 +291,9 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     unsafe fn drop_contents(&mut self) {
         unsafe {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
-                self.data.borrow_mut().as_mut_ptr() as *mut T,
+                self.data.borrow_mut().as_mut_ptr().cast::<T>(),
                 self.len(),
-            ))
+            ));
         }
     }
 
@@ -446,7 +446,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr() as *const _, self.len()) }
+        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr().cast(), self.len()) }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -464,10 +464,10 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let buffer = self.as_slice();
 
-        if !self.filled {
-            (buffer, &[])
-        } else {
+        if self.filled {
             (&buffer[self.write_at..], &buffer[..self.write_at])
+        } else {
+            (buffer, &[])
         }
     }
 
@@ -514,7 +514,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -791,7 +791,7 @@ mod tests {
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
     }
 
-    /// Test whether .as_slices() behaves as expected.
+    /// Test whether `.as_slices()` behaves as expected.
     #[test]
     fn as_slices() {
         let mut buffer: HistoryBuffer<u8, 4> = HistoryBuffer::new();
@@ -807,7 +807,7 @@ mod tests {
         extend_then_assert(b"123456", (b"34", b"56"));
     }
 
-    /// Test whether .as_slices() and .oldest_ordered() produce elements in the same order.
+    /// Test whether `.as_slices()` and `.oldest_ordered()` produce elements in the same order.
     #[test]
     fn as_slices_equals_ordered() {
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
@@ -818,7 +818,7 @@ mod tests {
             assert_eq_iter(
                 [head, tail].iter().copied().flatten(),
                 buffer.oldest_ordered(),
-            )
+            );
         }
     }
 

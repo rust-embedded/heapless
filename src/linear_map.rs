@@ -85,7 +85,7 @@ where
     /// assert!(map.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.buffer.clear()
+        self.buffer.clear();
     }
 
     /// Returns true if the map contains a value for the specified key.

@@ -1298,7 +1298,7 @@ where
     where
         I: IntoIterator<Item = (&'a K, &'a V)>,
     {
-        self.extend(iterable.into_iter().map(|(&key, &value)| (key, value)))
+        self.extend(iterable.into_iter().map(|(&key, &value)| (key, value)));
     }
 }
 
@@ -1481,7 +1481,7 @@ mod tests {
                      mem::size_of::<u16>() // hash
                 ) + // buckets
                 mem::size_of::<usize>() // entries.length
-        )
+        );
     }
 
     #[test]
@@ -1673,7 +1673,7 @@ mod tests {
                 assert_eq!(value, *v.insert(value).unwrap());
             }
         };
-        assert_eq!(value, *src.get(&key).unwrap())
+        assert_eq!(value, *src.get(&key).unwrap());
     }
 
     #[test]
@@ -1693,7 +1693,7 @@ mod tests {
                 panic!("Entry not found");
             }
         };
-        assert_eq!(value2, *src.get(&key).unwrap())
+        assert_eq!(value2, *src.get(&key).unwrap());
     }
 
     #[test]
