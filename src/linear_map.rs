@@ -571,6 +571,18 @@ mod test {
     }
 
     #[test]
+    fn borrow() {
+        use crate::String;
+
+        let mut map = LinearMap::<_, _, 8>::new();
+
+        let s = String::<64>::try_from("Hello, world!").unwrap();
+        map.insert(s, 42).unwrap();
+
+        assert_eq!(map.get("Hello, world!").unwrap(), &42);
+    }
+
+    #[test]
     fn partial_eq() {
         {
             let mut a = LinearMap::<_, _, 1>::new();
