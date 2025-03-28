@@ -233,3 +233,16 @@ mod ufmt;
 pub mod _export {
     pub use crate::string::format;
 }
+
+/// The error type for fallible [`Vec`] and [`String`] methods.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct CapacityError;
+
+impl core::fmt::Display for CapacityError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("insufficient capacity")
+    }
+}
+
+impl core::error::Error for CapacityError {}
