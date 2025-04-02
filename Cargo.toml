@@ -39,6 +39,9 @@ defmt-03 = ["dep:defmt"]
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Implement some alloc Vec interoperability
+alloc = []
+
 nightly = []
 
 [dependencies]
