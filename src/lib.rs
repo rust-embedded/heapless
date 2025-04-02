@@ -187,7 +187,7 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
-#[cfg(feature = "defmt-03")]
+#[cfg(feature = "defmt-1")]
 mod defmt;
 #[cfg(any(
     // assume we have all atomics available if we're using portable-atomic
