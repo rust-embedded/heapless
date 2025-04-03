@@ -58,7 +58,7 @@
             )
         )
     ),
-    doc = "- [Arc][pool::arc::Arc] -- like `std::sync::Arc` but backed by a lock-free memory pool rather than [global_allocator]"
+    doc = "- [`Arc`][pool::arc::Arc]: Like `std::sync::Arc` but backed by a lock-free memory pool rather than `[global_allocator]`."
 )]
 #![cfg_attr(
     any(
@@ -75,7 +75,7 @@
             )
         )
     ),
-    doc = "- [Box][pool::boxed::Box] -- like `std::boxed::Box` but backed by a lock-free memory pool rather than [global_allocator]"
+    doc = "- [`Box`][pool::boxed::Box]: Like `std::boxed::Box` but backed by a lock-free memory pool rather than `[global_allocator]`."
 )]
 #![cfg_attr(
     any(
@@ -92,7 +92,7 @@
             )
         )
     ),
-    doc = "- [Arc][pool::arc::Arc] -- like `std::sync::Arc` but backed by a lock-free memory pool rather than [global_allocator]"
+    doc = "- [`Arc`][pool::arc::Arc]: Like `std::sync::Arc` but backed by a lock-free memory pool rather than `[global_allocator]`."
 )]
 #![cfg_attr(
     any(
@@ -109,19 +109,19 @@
             )
         )
     ),
-    doc = "- [Object](pool::object::Object) -- objects managed by an object pool"
+    doc = "- [`Object`](pool::object::Object): Objects managed by an object pool."
 )]
-//! - [`BinaryHeap`] -- priority queue
-//! - [Deque] -- double-ended queue
-//! - [`HistoryBuf`] -- similar to a write-only ring buffer
-//! - [`IndexMap`] -- hash table
-//! - [`IndexSet`] -- hash set
-//! - [`LinearMap`]
-//! - [`sorted_linked_list::SortedLinkedList`]
-//! - [String]
-//! - [Vec]
-//! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
-//! - [spsc] and [`spsc::Queue`] -- single producer single consumer lock-free queue
+//! - [`BinaryHeap`]: A priority queue.
+//! - [`Deque`]: A double-ended queue.
+//! - [`HistoryBuf`]: A “history buffer”, similar to a write-only ring buffer.
+//! - [`IndexMap`]: A hash table.
+//! - [`IndexSet`]: A hash set.
+//! - [`LinearMap`]: A linear map.
+//! - [`SortedLinkedList`](sorted_linked_list::SortedLinkedList): A sorted linked list.
+//! - [`String`]: A string.
+//! - [`Vec`]: A vector.
+//! - [`mpmc::MpMcQueue`](mpmc): A lock-free multiple-producer, multiple-consumer queue.
+//! - [`spsc::Queue`](spsc): A lock-free single-producer, single-consumer queue.
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
