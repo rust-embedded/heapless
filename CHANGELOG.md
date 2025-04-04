@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `get_index` and `get_index_mut` to `IndexMap`.
 - Added `String::uDisplay`.
 - Added `LenT` generic to `Vec<T, N>` and `VecView<T>` to save memory when using a sane capacity value.
+- Added the `index_set` module.
+- Added the `index_map` module.
 
 ### Changed
 
@@ -60,6 +62,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `Vec::extend_from_slice`
   - `Vec::from_slice`
   - `Vec::resize_default`
+>     * [ ]  Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
   - `Vec::resize`
 - Renamed `FromUtf16Error::DecodeUtf16Error` to `FromUtf16Error::DecodeUtf16`.
 - Changed `stable_deref_trait` to a platform-dependent dependency.
@@ -67,6 +70,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Vec::capacity` is no longer a `const` function.
 - Relaxed bounds on `PartialEq` for `IndexMap` from `V: Eq` to `V1: PartialEq<V2>`.
 - Relaxed bounds on `PartialEq` for `LinearMap` from `V: PartialEq` to `V1: PartialEq<V2>`.
+- The `FnvIndexSet` type is now inside the `index_set` module.
+- The `IndexSetIter` type is now inside the `index_set` module and has been renamed to `Iter`.
+- The `Bucket` type is now inside the `index_map` module.
+- The `Entry` type is now inside the `index_map` module.
+- The `FnvIndexMap` type is now inside the `index_map` module.
+- The `IndexMapIter` type is now inside the `index_map` module and has been renamed to `Iter`.
+- The `IndexMapIterMut` type is now inside the `index_map` module and has been renamed to `IterMut`.
+- The `IndexMapKeys` type is now inside the `index_map` module and has been renamed to `Keys`.
+- The `OccupiedEntry` type is now inside the `index_map` module.
+- The `Pos` type is now inside the `index_map` module.
+- The `VacantEntry` type is now inside the `index_map` module.
+- The `VacantEntry` type is now inside the `index_map` module.
+- The `IndexMapValues` type is now inside the `index_map` module and has been renamed to `Values`.
+- The `IndexMapValuesMut` type is now inside the `index_map` module and has been renamed to `ValuesMut`.
+- The `histbuf` module has been renamed to `history_buf`.
+- The `HistoryBuffer` type has been renamed to `HistoryBuf`. 
+- The `HistoryBufferView` type has been renamed to `HistoryBufView`. 
+- The `OwnedHistBufStorage` type has been renamed to `OwnedHistoryBufStorage`. 
+- The `ViewHistBufStorage` type has been renamed to `ViewHistoryBufStorage`. 
+- The `MpMcQueue` type has been renamed to `Queue`. 
+- The `MpMcQueueView` type has been renamed to `QueueView`. 
+- The `MpMcQueueInner` type has been renamed to `QueueInner`. 
 
 ### Fixed
 
@@ -82,6 +107,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Vec::storage_capacity` has been removed and `Vec::capacity` must be used instead.
 - Removed `sorted_linked_list::Iter` and `sorted_linked_list::IterInner`.
 - Removed `sorted_linked_list::FindMut` and `sorted_linked_list::FindMutInner`.
+- The `Q2`, `Q4`, `Q8`, `Q16`, `Q32` and `Q64` aliases for `MpMcQueue` have been removed.
 
 ## [v0.8.0] - 2023-11-07
 
