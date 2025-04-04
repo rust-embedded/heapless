@@ -156,11 +156,7 @@
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
-pub use indexmap::{
-    Bucket, Entry, FnvIndexMap, IndexMap, Iter as IndexMapIter, IterMut as IndexMapIterMut,
-    Keys as IndexMapKeys, OccupiedEntry, Pos, VacantEntry, Values as IndexMapValues,
-    ValuesMut as IndexMapValuesMut,
-};
+pub use index_map::IndexMap;
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
 pub use linear_map::LinearMap;
 pub use string::String;
@@ -173,7 +169,7 @@ mod test_helpers;
 
 pub mod deque;
 pub mod histbuf;
-mod indexmap;
+pub mod index_map;
 mod indexset;
 pub mod linear_map;
 mod slice;
