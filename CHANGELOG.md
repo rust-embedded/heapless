@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Deque::{swap, swap_unchecked, swap_remove_front, swap_remove_back}`.
 - Make `String::from_utf8_unchecked` const.
 - Implemented `PartialEq` and `Eq` for `Deque`.
+- Added the `index_set` module.
+- Added the `index_map` module.
 
 ### Changed
 
@@ -50,11 +52,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `Vec::extend_from_slice`
   - `Vec::from_slice`
   - `Vec::resize_default`
+>     * [ ]  Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
   - `Vec::resize`
 - Renamed `FromUtf16Error::DecodeUtf16Error` to `FromUtf16Error::DecodeUtf16`.
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 - Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
 - `Vec::capacity` is no longer a `const` function.
+- The `FnvIndexSet` type is now inside the `index_set` module.
+- The `IndexSetIter` type is now inside the `index_set` module and has been renamed to `Iter`.
+- The `Bucket` type is now inside the `index_map` module.
+- The `Entry` type is now inside the `index_map` module.
+- The `FnvIndexMap` type is now inside the `index_map` module.
+- The `IndexMapIter` type is now inside the `index_map` module and has been renamed to `Iter`.
+- The `IndexMapIterMut` type is now inside the `index_map` module and has been renamed to `IterMut`.
+- The `IndexMapKeys` type is now inside the `index_map` module and has been renamed to `Keys`.
+- The `OccupiedEntry` type is now inside the `index_map` module.
+- The `Pos` type is now inside the `index_map` module.
+- The `VacantEntry` type is now inside the `index_map` module.
+- The `VacantEntry` type is now inside the `index_map` module.
+- The `IndexMapValues` type is now inside the `index_map` module and has been renamed to `Values`.
+- The `IndexMapValuesMut` type is now inside the `index_map` module and has been renamed to `ValuesMut`.
+- The `histbuf` module has been renamed to `history_buf`.
+- The `HistoryBuffer` type has been renamed to `HistoryBuf`. 
+- The `HistoryBufferView` type has been renamed to `HistoryBufView`. 
+- The `OwnedHistBufStorage` type has been renamed to `OwnedHistoryBufStorage`. 
+- The `ViewHistBufStorage` type has been renamed to `ViewHistoryBufStorage`. 
+- The `MpMcQueue` type has been renamed to `Queue`. 
+- The `MpMcQueueView` type has been renamed to `QueueView`. 
+- The `MpMcQueueInner` type has been renamed to `QueueInner`. 
 
 ### Fixed
 
@@ -68,6 +93,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 - `Vec::storage_capacity` has been removed and `Vec::capacity` must be used instead.
+- The `Q2`, `Q4`, `Q8`, `Q16`, `Q32` and `Q64` aliases for `MpMcQueue` have been removed.
 
 ## [v0.8.0] - 2023-11-07
 

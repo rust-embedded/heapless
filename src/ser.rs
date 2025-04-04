@@ -3,7 +3,7 @@ use core::hash::{BuildHasher, Hash};
 use crate::{
     binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
     deque::DequeInner,
-    histbuf::{HistBufStorage, HistoryBufferInner},
+    history_buf::{HistoryBufInner, HistoryBufStorage},
     linear_map::LinearMapInner,
     string::StringInner,
     vec::{VecInner, VecStorage},
@@ -80,7 +80,7 @@ where
     }
 }
 
-impl<T, S: HistBufStorage<T> + ?Sized> Serialize for HistoryBufferInner<T, S>
+impl<T, S: HistoryBufStorage<T> + ?Sized> Serialize for HistoryBufInner<T, S>
 where
     T: Serialize,
 {
