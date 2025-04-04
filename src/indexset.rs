@@ -6,7 +6,7 @@ use core::{
 
 use hash32::{BuildHasherDefault, FnvHasher};
 
-use crate::indexmap::{self, IndexMap};
+use crate::index_map::{self, IndexMap};
 
 /// An [`IndexSet`] using the default FNV hasher.
 ///
@@ -610,7 +610,7 @@ where
 /// This `struct` is created by the [`iter`](IndexSet::iter) method on [`IndexSet`]. See its
 /// documentation for more.
 pub struct Iter<'a, T> {
-    iter: indexmap::Iter<'a, T, ()>,
+    iter: index_map::Iter<'a, T, ()>,
 }
 
 impl<'a, T> Iterator for Iter<'a, T> {
