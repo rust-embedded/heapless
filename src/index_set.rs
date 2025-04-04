@@ -1,3 +1,4 @@
+//! A fixed-capacity hash set where the iteration order is independent of the hash values.
 use core::{
     borrow::Borrow,
     fmt,
@@ -15,7 +16,7 @@ use crate::index_map::{self, IndexMap};
 ///
 /// # Examples
 /// ```
-/// use heapless::FnvIndexSet;
+/// use heapless::index_set::FnvIndexSet;
 ///
 /// // A hash set with a capacity of 16 elements allocated on the stack
 /// let mut books = FnvIndexSet::<_, 16>::new();
@@ -57,7 +58,7 @@ pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHash
 /// for this example.
 ///
 /// ```
-/// use heapless::FnvIndexSet;
+/// use heapless::index_set::FnvIndexSet;
 ///
 /// // A hash set with a capacity of 16 elements allocated on the stack
 /// let mut books = FnvIndexSet::<_, 16>::new();
@@ -103,7 +104,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let set = FnvIndexSet::<i32, 16>::new();
     /// assert_eq!(set.capacity(), 16);
@@ -117,7 +118,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut set = FnvIndexSet::<_, 16>::new();
     /// set.insert("a").unwrap();
@@ -153,7 +154,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert_eq!(v.len(), 0);
@@ -169,7 +170,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// assert!(v.is_empty());
@@ -185,7 +186,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut v: FnvIndexSet<_, 4> = FnvIndexSet::new();
     /// assert!(!v.is_full());
@@ -204,7 +205,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut v: FnvIndexSet<_, 16> = FnvIndexSet::new();
     /// v.insert(1).unwrap();
@@ -227,7 +228,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
@@ -264,7 +265,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
@@ -296,7 +297,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
@@ -328,7 +329,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b: FnvIndexSet<_, 16> = [4, 2, 3, 4].iter().cloned().collect();
@@ -359,7 +360,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let set: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// assert_eq!(set.contains(&1), true);
@@ -379,7 +380,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let a: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut b = FnvIndexSet::<_, 16>::new();
@@ -403,7 +404,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let sup: FnvIndexSet<_, 16> = [1, 2, 3].iter().cloned().collect();
     /// let mut set = FnvIndexSet::<_, 16>::new();
@@ -427,7 +428,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let sub: FnvIndexSet<_, 16> = [1, 2].iter().cloned().collect();
     /// let mut set = FnvIndexSet::<_, 16>::new();
@@ -457,7 +458,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
@@ -480,7 +481,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexSet;
+    /// use heapless::index_set::FnvIndexSet;
     ///
     /// let mut set = FnvIndexSet::<_, 16>::new();
     ///
@@ -629,6 +630,9 @@ impl<T> Clone for Iter<'_, T> {
     }
 }
 
+/// An iterator over the difference of two `IndexSet`s.
+///
+/// This is created by the [`IndexSet::difference`] method.
 pub struct Difference<'a, T, S, const N: usize>
 where
     S: BuildHasher,
@@ -655,6 +659,9 @@ where
     }
 }
 
+/// An iterator over the intersection of two `IndexSet`s.
+///
+/// This is created by the [`IndexSet::intersection`] method.
 pub struct Intersection<'a, T, S, const N: usize>
 where
     S: BuildHasher,

@@ -157,7 +157,7 @@ pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use index_map::IndexMap;
-pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
+pub use index_set::IndexSet;
 pub use linear_map::LinearMap;
 pub use string::String;
 
@@ -170,7 +170,7 @@ mod test_helpers;
 pub mod deque;
 pub mod histbuf;
 pub mod index_map;
-mod indexset;
+pub mod index_set;
 pub mod linear_map;
 mod slice;
 pub mod storage;
