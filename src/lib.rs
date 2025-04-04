@@ -113,7 +113,7 @@
 )]
 //! - [`BinaryHeap`] -- priority queue
 //! - [Deque] -- double-ended queue
-//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
+//! - [`HistoryBuf`] -- similar to a write-only ring buffer
 //! - [`IndexMap`] -- hash table
 //! - [`IndexSet`] -- hash set
 //! - [`LinearMap`]
@@ -155,7 +155,7 @@
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
-pub use histbuf::{HistoryBuffer, OldestOrdered};
+pub use history_buf::{HistoryBuf, OldestOrdered};
 pub use index_map::IndexMap;
 pub use index_set::IndexSet;
 pub use linear_map::LinearMap;
@@ -168,7 +168,7 @@ pub use vec::{Vec, VecView};
 mod test_helpers;
 
 pub mod deque;
-pub mod histbuf;
+pub mod history_buf;
 pub mod index_map;
 pub mod index_set;
 pub mod linear_map;
