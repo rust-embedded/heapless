@@ -614,13 +614,13 @@ impl<'a, K, V> Iterator for IterMut<'a, K, V> {
     }
 }
 
-impl<K, V, S1: LinearMapStorage<K, V> + ?Sized, S2: LinearMapStorage<K, V> + ?Sized>
-    PartialEq<LinearMapInner<K, V, S2>> for LinearMapInner<K, V, S1>
+impl<K, V1, V2, S1: LinearMapStorage<K, V1> + ?Sized, S2: LinearMapStorage<K, V2> + ?Sized>
+    PartialEq<LinearMapInner<K, V2, S2>> for LinearMapInner<K, V1, S1>
 where
     K: Eq,
-    V: PartialEq,
+    V1: PartialEq<V2>,
 {
-    fn eq(&self, other: &LinearMapInner<K, V, S2>) -> bool {
+    fn eq(&self, other: &LinearMapInner<K, V2, S2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -744,5 +744,12 @@ mod test {
         x: &'c LinearMapView<&'a (), u32>,
     ) -> &'c LinearMapView<&'b (), u32> {
         x
+    }
+
+    #[test]
+    fn partial_eq_floats() {
+        // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
+        let map: LinearMap<usize, f32, 4> = Default::default();
+        assert_eq!(map, map);
     }
 }
