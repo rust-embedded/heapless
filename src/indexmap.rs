@@ -1882,7 +1882,7 @@ mod tests {
 
     #[test]
     fn partial_eq_floats() {
-        // Make sure PartialEq is implemented even if V doesn't implement Eq
+        // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
         let map: FnvIndexMap<usize, f32, 4> = Default::default();
         assert_eq!(map, map);
     }
