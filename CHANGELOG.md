@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- Relax bounds on `IndexMap` from `V: Eq` to `V: PartialEq`.
-
 ### Added
 
 - Added `format` macro.
@@ -60,6 +58,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Changed `stable_deref_trait` to a platform-dependent dependency.
 - Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
 - `Vec::capacity` is no longer a `const` function.
+- Relaxed bounds on `PartialEq` for `IndexMap` from `V: Eq` to `V1: PartialEq<V2>`.
+- Relaxed bounds on `PartialEq` for `LinearMap` from `V: PartialEq` to `V1: PartialEq<V2>`.
 
 ### Fixed
 
