@@ -1181,14 +1181,14 @@ where
     /// use heapless::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
-    /// map.insert(1, "a").unwrap();
+    /// map.insert(3, "a").unwrap();
     /// map.insert(2, "b").unwrap();
-    /// map.insert(3, "c").unwrap();
+    /// map.insert(1, "c").unwrap();
     /// map.truncate(2);
     /// assert_eq!(map.len(), 2);
     ///
     /// let mut iter = map.iter();
-    /// assert_eq!(iter.next(), Some((&1, &"a")));
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
     /// assert_eq!(iter.next(), Some((&2, &"b")));
     /// assert_eq!(iter.next(), None);
     /// ```
