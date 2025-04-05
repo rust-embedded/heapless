@@ -1169,9 +1169,9 @@ where
         self.core.retain_in_order(move |k, v| f(k, v));
     }
 
-    /// Shortens the map, keeping the first len elements and dropping the rest.
+    /// Shortens the map, keeping the first `len` elements and dropping the rest.
     ///
-    /// If len is greater than the map’s current length, this has no effect.
+    /// If `len` is greater than the map's current length, this has no effect.
     ///
     /// Computes in *O*(1) time (average).
     ///
