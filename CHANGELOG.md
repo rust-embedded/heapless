@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Updated defmt from 0.3 to 1.0.1
+  - Changed the feature name from `defmt-03` to `defmt`.
 - Changed the error type of these methods from `()` to `CapacityError`.
   - `String::push_str`
   - `String::push`
