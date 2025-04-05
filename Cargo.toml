@@ -33,8 +33,8 @@ serde = ["dep:serde"]
 # implement ufmt traits.
 ufmt = ["dep:ufmt-write"]
 
-# Implement defmt::Format from defmt v1
-defmt-1 = ["dep:defmt"]
+# Implement `defmt::Format`.
+defmt = ["dep:defmt"]
 
 # Enable larger MPMC sizes.
 mpmc_large = []
@@ -57,7 +57,13 @@ ufmt = "0.2"
 static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]
-features = ["ufmt", "serde", "defmt-1", "mpmc_large", "portable-atomic-critical-section"]
+features = [
+  "ufmt",
+  "serde",
+  "defmt",
+  "mpmc_large",
+  "portable-atomic-critical-section",
+]
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
