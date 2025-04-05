@@ -173,6 +173,18 @@ impl<T, const N: usize> MpMcQueue<T, N> {
             enqueue_pos: AtomicTargetSize::new(0),
         }
     }
+
+    /// Used in `Storage` implementation
+    pub(crate) fn as_view_private(&self) -> &MpMcQueueView<T> {
+        self
+    }
+    /// Used in `Storage` implementation
+    pub(crate) fn as_view_mut_private(&mut self) -> &mut MpMcQueueView<T> {
+        self
+    }
+}
+
+impl<T, S: Storage> MpMcQueueInner<T, S> {
     /// Get a reference to the `MpMcQueue`, erasing the `N` const-generic.
     ///
     ///
@@ -190,8 +202,8 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     /// let view: &MpMcQueueView<u8> = &queue;
     /// ```
     #[inline]
-    pub const fn as_view(&self) -> &MpMcQueueView<T> {
-        self
+    pub fn as_view(&self) -> &MpMcQueueView<T> {
+        S::as_mpmc_view(self)
     }
 
     /// Get a mutable reference to the `MpMcQueue`, erasing the `N` const-generic.
@@ -211,11 +223,9 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     /// ```
     #[inline]
     pub fn as_mut_view(&mut self) -> &mut MpMcQueueView<T> {
-        self
+        S::as_mpmc_mut_view(self)
     }
-}
 
-impl<T, S: Storage> MpMcQueueInner<T, S> {
     fn mask(&self) -> UintSize {
         (S::len(self.buffer.get()) - 1) as _
     }

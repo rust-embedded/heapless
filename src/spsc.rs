@@ -162,18 +162,28 @@ impl<T, const N: usize> Queue<T, N> {
         N - 1
     }
 
-    /// Get a reference to the `Queue`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &QueueView<T> {
+    /// Used in `Storage` implementation
+    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
         self
     }
 
-    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+    /// Used in `Storage` implementation
+    pub(crate) fn as_mut_view_private(&mut self) -> &mut QueueView<T> {
         self
     }
 }
 
 impl<T, S: Storage> QueueInner<T, S> {
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &QueueView<T> {
+        S::as_queue_view(self)
+    }
+
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+        S::as_mut_queue_view(self)
+    }
+
     #[inline]
     fn increment(&self, val: usize) -> usize {
         (val + 1) % self.n()

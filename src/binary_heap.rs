@@ -184,14 +184,16 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     pub fn into_vec(self) -> Vec<T, N> {
         self.data
     }
+}
 
+impl<T, K, S: VecStorage<T>> BinaryHeapInner<T, K, S> {
     /// Get a reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &BinaryHeapView<T, K> {
-        self
+        S::as_binary_heap_view(self)
     }
     /// Get a mutable reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
-        self
+        S::as_binary_heap_mut_view(self)
     }
 }
 

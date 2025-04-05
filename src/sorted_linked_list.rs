@@ -34,7 +34,7 @@ use core::ops::{Deref, DerefMut};
 use core::ptr;
 
 mod storage {
-    use super::Node;
+    use super::{Node, SortedLinkedListIndex, SortedLinkedListInner, SortedLinkedListView};
 
     /// Trait defining how data for a container is stored.
     ///
@@ -66,6 +66,18 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedSortedLinkedListStorage` besides `Storage`
         fn borrow(&self) -> &[Node<T, Idx>];
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>];
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -88,6 +100,24 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
             &mut self.buffer
         }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
     }
     impl<T, Idx, const N: usize> SortedLinkedListStorage<T, Idx>
         for OwnedSortedLinkedListStorage<T, Idx, N>
@@ -100,6 +130,24 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
             &mut self.buffer
+        }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
         }
     }
     impl<T, Idx> SortedLinkedListStorage<T, Idx> for ViewSortedLinkedListStorage<T, Idx> {}
@@ -273,26 +321,21 @@ impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
-impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
-where
-    Idx: SortedLinkedListIndex,
-{
-    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
-        self
-    }
-
-    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
-        self
-    }
-}
-
 impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
     S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
+    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+        S::as_view(self)
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+        S::as_mut_view(self)
+    }
+
     /// Internal access helper
     #[inline(always)]
     fn node_at(&self, index: usize) -> &Node<T, Idx> {
