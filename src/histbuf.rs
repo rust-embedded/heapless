@@ -504,14 +504,14 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
         }
     }
 
-    /// Returns a reference to the element in the order from oldest to newest
+    /// Returns a reference to the element in the order from oldest to newest.
     ///
-    /// `buf.ordered_get(0)` will always return the oldest element in the buffer
+    /// `buf.ordered_get(0)` will always return the oldest element in the buffer.
     ///
     /// `buf.ordered_get(buf.len() - 1)` will always return the newest element
-    /// in the buffer
+    /// in the buffer.
     ///
-    /// Returns None if `index >= self.len()`
+    /// Returns None if `index >= self.len()`.
     ///
     /// # Examples
     ///
