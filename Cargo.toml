@@ -31,7 +31,7 @@ portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-at
 serde = ["dep:serde"]
 
 # implement ufmt traits.
-ufmt = ["dep:ufmt-write"]
+ufmt = ["dep:ufmt", "dep:ufmt-write"]
 
 # Implement `defmt::Format`.
 defmt = ["dep:defmt"]
@@ -45,6 +45,7 @@ nightly = []
 portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
 serde = { version = "1", optional = true, default-features = false }
+ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
 
@@ -53,7 +54,6 @@ defmt = { version = "1.0.1", optional = true }
 stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
-ufmt = "0.2"
 static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]

@@ -3,10 +3,22 @@ use crate::{
     vec::{VecInner, VecStorage},
     CapacityError,
 };
+use ufmt::uDisplay;
 use ufmt_write::uWrite;
+
+impl<S: StringStorage + ?Sized> uDisplay for StringInner<S> {
+    #[inline]
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: uWrite + ?Sized,
+    {
+        f.write_str(&self.as_str())
+    }
+}
 
 impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
     type Error = CapacityError;
+    #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
     }
@@ -14,6 +26,7 @@ impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
 
 impl<S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, S> {
     type Error = CapacityError;
+    #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
     }
@@ -32,7 +45,16 @@ mod tests {
     }
 
     #[test]
-    fn test_string() {
+    fn test_udisplay_string() {
+        let str_a = String::<32>::try_from("world").unwrap();
+        let mut str_b = String::<32>::new();
+        uwrite!(str_b, "Hello {}!", str_a).unwrap();
+
+        assert_eq!(str_b, "Hello world!");
+    }
+
+    #[test]
+    fn test_uwrite_string() {
         let a = 123;
         let b = Pair { x: 0, y: 1234 };
 
@@ -43,14 +65,14 @@ mod tests {
     }
 
     #[test]
-    fn test_string_err() {
+    fn test_uwrite_string_err() {
         let p = Pair { x: 0, y: 1234 };
         let mut s = String::<4>::new();
         assert!(uwrite!(s, "{:?}", p).is_err());
     }
 
     #[test]
-    fn test_vec() {
+    fn test_uwrite_vec() {
         let a = 123;
         let b = Pair { x: 0, y: 1234 };
 
