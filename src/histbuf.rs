@@ -527,16 +527,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// assert_eq!(buffer.ordered_get(6), None);
     /// ```
     pub fn ordered_get(&self, idx: usize) -> Option<&T> {
-        if self.len() <= idx {
-            None
-        } else {
-            let (front, back) = self.as_slices();
-            if idx < front.len() {
-                Some(&front[idx])
-            } else {
-                Some(&back[idx - front.len()])
-            }
-        }
+        self.oldest_ordered().nth(idx)
     }
 
     /// Returns double ended iterator for iterating over the buffer from
