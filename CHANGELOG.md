@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Make `String::from_utf8_unchecked` const.
 - Implemented `PartialEq` and `Eq` for `Deque`.
 - Added `truncate` to `IndexMap`.
+- Added `get_index` and `get_index_mut` to `IndexMap`.
 
 ### Changed
 
