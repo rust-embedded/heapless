@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fixed compilation on `thumbv6m-none-eabi` without `portable-atomic` feature.
 - Fixed clippy lints.
 - Fixed `{arc,box,object}_pool!` emitting clippy lints.
 - Fixed the list of implemented data structures in the crate docs, by adding `Deque`,
