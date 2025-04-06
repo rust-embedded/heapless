@@ -192,6 +192,8 @@ mod de;
 mod ser;
 
 pub mod binary_heap;
+#[cfg(feature = "bytes")]
+mod bytes;
 #[cfg(feature = "defmt")]
 mod defmt;
 #[cfg(any(
