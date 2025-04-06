@@ -100,6 +100,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fixed bug in `IndexMap::truncate` that left the map in an inconsistent state.
+- Fixed compilation on `thumbv6m-none-eabi` without `portable-atomic` feature.
 - Fixed clippy lints.
 - Fixed `{arc,box,object}_pool!` emitting clippy lints.
 - Fixed the list of implemented data structures in the crate docs, by adding `Deque`,
