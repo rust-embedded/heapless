@@ -348,7 +348,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         if N == M {
             Self {
                 phantom: PhantomData,
-                len: LenType::from_usize(N),
+                len: LenT::from_usize(N),
                 // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
                 // have the same layout when N == M.
                 buffer: unsafe { mem::transmute_copy(&src) },

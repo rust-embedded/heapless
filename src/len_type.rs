@@ -3,34 +3,8 @@ use core::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-mod private {
-    pub trait Sealed {}
-
-    impl Sealed for u8 {}
-    impl Sealed for u16 {}
-    #[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
-    impl Sealed for u32 {}
-
-    impl Sealed for usize {}
-}
-
-macro_rules! impl_lentype {
-    ($($(#[$meta:meta])* $LenT:ty),*) => {$(
-        $(#[$meta])*
-        impl LenType for $LenT {
-            const ZERO: Self = 0;
-            const ONE: Self = 1;
-            const MAX: usize = Self::MAX as _;
-        }
-    )*}
-}
-
-/// A sealed trait representing a valid type to use as a length for a container.
-///
-/// This cannot be implemented in user code, and is restricted to `u8`, `u16`, `u32`, and `usize`.
-pub trait LenType:
-    private::Sealed
-    + Send
+pub trait Sealed:
+    Send
     + Sync
     + Copy
     + Display
@@ -61,6 +35,25 @@ pub trait LenType:
         self.try_into().unwrap()
     }
 }
+
+macro_rules! impl_lentype {
+    ($($(#[$meta:meta])* $LenT:ty),*) => {$(
+        $(#[$meta])*
+        impl Sealed for $LenT {
+            const ZERO: Self = 0;
+            const ONE: Self = 1;
+            const MAX: usize = Self::MAX as _;
+        }
+
+        $(#[$meta])*
+        impl LenType for $LenT {}
+    )*}
+}
+
+/// A sealed trait representing a valid type to use as a length for a container.
+///
+/// This cannot be implemented in user code, and is restricted to `u8`, `u16`, `u32`, and `usize`.
+pub trait LenType: Sealed {}
 
 impl_lentype!(
     u8,
