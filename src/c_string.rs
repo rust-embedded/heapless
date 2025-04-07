@@ -37,7 +37,7 @@ impl<const N: usize> CString<N> {
     /// // (counting the null terminator)
     /// let empty = CString::<10>::new();
     ///
-    /// assert_eq!(empty.as_cstr(), <&CStr>::default());
+    /// assert_eq!(empty.as_c_str(), <&CStr>::default());
     /// assert_eq!(empty.to_str(), Ok(""));
     /// ```
     pub fn new() -> Self {
