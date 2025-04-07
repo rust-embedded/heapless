@@ -14,7 +14,7 @@ pub struct CString<const N: usize> {
     buf: crate::Vec<u8, N>,
 }
 
-/// Naive implementation for memchr
+/// Naive implementation for `memchr`.
 ///
 /// The naive implementation is somewhat competitive to libc's memchr or BurntSushi's optimized
 /// implementation for tiny slices (as shown by https://gist.github.com/Alexhuszagh/f9929e7d8e0277aa1281f511a841a167),
