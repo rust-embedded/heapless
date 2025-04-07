@@ -9,17 +9,17 @@ use core::{
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
 /// It stores up to N-1 elements with a byte reserved for the terminating null byte.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CString<const N: usize> {
     vec: Vec<u8, N>,
 }
 
 /// Naive implementation for `memchr`.
 ///
-/// The naive implementation is somewhat competitive to libc's `memchr` or BurntSushi's optimized
-/// implementation for tiny slices (as shown by https://gist.github.com/Alexhuszagh/f9929e7d8e0277aa1281f511a841a167),
+/// The naive implementation is somewhat competitive to libc's `memchr` or `BurntSushi`'s optimized
+/// implementation for tiny slices (as shown by <https://gist.github.com/Alexhuszagh/f9929e7d8e0277aa1281f511a841a167>),
 /// which should be the average slice size for this crate due to its use case.
-/// But ideally we'd use at least BurntSushi's fallback implementation here.
+/// But ideally we'd use at least `BurntSushi`'s fallback implementation here.
 fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     haystack.iter().position(|&b| b == needle)
 }
@@ -120,7 +120,7 @@ impl<const N: usize> CString<N> {
     ///
     /// assert_eq!(copied.to_str(), Ok("Hello, world!"));
     /// ```
-    pub unsafe fn from_ptr<'a>(ptr: *const c_char) -> Result<Self, CapacityError> {
+    pub unsafe fn from_ptr(ptr: *const c_char) -> Result<Self, CapacityError> {
         let cstr = CStr::from_ptr(ptr).to_bytes_with_nul();
 
         Self::from_bytes_with_nul(cstr)
@@ -302,9 +302,9 @@ impl<const N: usize> CString<N> {
     ///
     /// # Safety
     ///
-    /// If `additional` is not null-terminated, the CString is left non null-terminated, which is
+    /// If `additional` is not null-terminated, the [`CString`] is left non null-terminated, which is
     /// an invalid state. Caller must ensure that either `additional` has a terminating null byte
-    /// or ensure to fix the CString after calling `extend_slice`.
+    /// or ensure to fix the [`CString`] after calling `extend_slice`.
     unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
         self.pop_terminator();
 
@@ -314,7 +314,7 @@ impl<const N: usize> CString<N> {
     #[inline]
     fn inner_without_nul(&self) -> &[u8] {
         // Assert our invariant: `self.vec` must be null-terminated
-        debug_assert!(self.vec.len() > 0);
+        debug_assert!(!self.vec.is_empty());
         debug_assert_eq!(self.vec.last().copied(), Some(0));
 
         &self.vec[..self.vec.len() - 1]
