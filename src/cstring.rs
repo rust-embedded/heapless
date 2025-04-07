@@ -67,9 +67,8 @@ impl<const N: usize> CString<N> {
     ///
     /// ```rust
     /// use heapless::CString;
-    /// let mut cstr: CString<5> = unsafe {
-    ///     CString::from_bytes_with_nul_unchecked(b"cstr\0").unwrap()
-    /// };
+    /// let mut cstr: CString<5> =
+    ///     unsafe { CString::from_bytes_with_nul_unchecked(b"cstr\0").unwrap() };
     ///
     /// assert_eq!(cstr.to_str(), Ok("cstr"));
     /// ```
@@ -110,17 +109,15 @@ impl<const N: usize> CString<N> {
     /// # Example
     ///
     /// ```rust
-    /// use std::ffi::{c_char, CStr};
     /// use heapless::CString;
+    /// use std::ffi::{c_char, CStr};
     ///
     /// const HELLO_PTR: *const c_char = {
     ///     const BYTES: &[u8] = b"Hello, world!\0";
     ///     BYTES.as_ptr().cast()
     /// };
     ///
-    /// let copied = unsafe {
-    ///     CString::<14>::from_ptr(HELLO_PTR)
-    /// }.unwrap();
+    /// let copied = unsafe { CString::<14>::from_ptr(HELLO_PTR) }.unwrap();
     ///
     /// assert_eq!(copied.to_str(), Ok("Hello, world!"));
     /// ```
@@ -148,8 +145,8 @@ impl<const N: usize> CString<N> {
     /// # Example
     ///
     /// ```rust
-    /// use std::ffi::{c_char, CStr};
     /// use heapless::CString;
+    /// use std::ffi::{c_char, CStr};
     ///
     /// // Length is one (null terminator only), capacity is 10
     /// let mut cstr = CString::<11>::new();
@@ -283,10 +280,7 @@ impl<const N: usize> CString<N> {
     /// let mut cstr: CString<10> = CString::new();
     /// cstr.push_bytes(b"heapless").unwrap();
     ///
-    /// assert_eq!(
-    ///     cstr.to_str(),
-    ///     Ok("heapless")
-    /// );
+    /// assert_eq!(cstr.to_str(), Ok("heapless"));
     /// ```
     pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
         core::str::from_utf8(self.inner_without_nil_terminator())
@@ -309,10 +303,7 @@ impl<const N: usize> CString<N> {
     /// let mut cstr: CString<10> = CString::new();
     /// cstr.push_bytes(b"heapless").unwrap();
     ///
-    /// assert_eq!(
-    ///     unsafe { cstr.as_str_unchecked() },
-    ///     "heapless",
-    /// );
+    /// assert_eq!(unsafe { cstr.as_str_unchecked() }, "heapless",);
     /// ```
     pub unsafe fn as_str_unchecked(&self) -> &str {
         core::str::from_utf8_unchecked(self.inner_without_nil_terminator())
@@ -351,10 +342,7 @@ impl<const N: usize> CString<N> {
     /// cstr.push_bytes(b"ab").unwrap();
     /// cstr.push_bytes(b"cd").unwrap();
     ///
-    /// assert_eq!(
-    ///     cstr.as_bytes_with_nul(),
-    ///     b"abcd\0"
-    /// );
+    /// assert_eq!(cstr.as_bytes_with_nul(), b"abcd\0");
     /// ```
     #[inline]
     pub fn as_bytes_with_nul(&self) -> &[u8] {
@@ -372,10 +360,7 @@ impl<const N: usize> CString<N> {
     /// cstr.push_bytes(b"ab").unwrap();
     /// cstr.push_bytes(b"cd").unwrap();
     ///
-    /// assert_eq!(
-    ///     cstr.as_bytes(),
-    ///     b"abcd"
-    /// );
+    /// assert_eq!(cstr.as_bytes(), b"abcd");
     /// ```
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
