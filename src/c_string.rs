@@ -164,27 +164,24 @@ impl<const N: usize> CString<N> {
         self.as_bytes_with_nul().len()
     }
 
-    /// Calculates the length `self.vec` would have if it appended `bytes`.
+    /// Calculates the length of `self.vec` would have if it appended `bytes`.
     fn size_if_appended_bytes(&self, bytes: &[u8]) -> Option<usize> {
         match bytes.last() {
+            None => None,
+            Some(0) if bytes.len() < 2 => None,
             Some(0) => {
                 // `bytes` is null-terminated and so is `self.vec`.
                 // Adding up both would account for 2 null bytes when only a single byte
-                // would end up in the resulting CString
+                // would end up in the resulting CString.
                 Some(self.vec.len() + bytes.len() - 1)
             }
             Some(_) => {
                 // No terminating null byte in `bytes` but there's one in
                 // `self.vec`, so the math lines up nicely.
                 //
-                // In the case that `bytes` has a null byte anywhere else we'd
-                // err after `memchr` is called, so there's no problem
+                // In the case that `bytes` has a null byte anywhere else, we would
+                // error after `memchr` is called. So there's no problem.
                 Some(self.vec.len() + bytes.len())
-            }
-            None => {
-                // Nothing to insert so there'd be no change in size
-
-                None
             }
         }
     }
@@ -392,7 +389,7 @@ mod tests {
     }
 
     #[test]
-    fn append_bytes_correctly() {
+    fn push_bytes() {
         let mut cstr = CString::<11>::new();
         assert_eq!(cstr.to_str(), Ok(""));
 
@@ -420,20 +417,30 @@ mod tests {
 
     #[test]
     fn calculate_appended_length() {
+        const ORIGINAL_BYTES: &[u8] = b"abc";
+
         let mut cstr = CString::<5>::new();
-        cstr.push_bytes(b"abcd").unwrap();
-        assert_eq!(cstr.len(), 5);
 
+        cstr.push_bytes(ORIGINAL_BYTES).unwrap();
+
+        assert_eq!(cstr.len(), 4);
+        assert_eq!(cstr.size_if_appended_bytes(b""), None);
+        assert_eq!(cstr.size_if_appended_bytes(b"\0"), None);
         assert_eq!(
-            cstr.size_if_appended_bytes(b"efgh"),
-            // 4 bytes for "abcd", 4 bytes for "efgh" and a byte for the null terminator
-            Some(4 + "efgh".len() + 1)
+            cstr.size_if_appended_bytes(b"d"),
+            Some(ORIGINAL_BYTES.len() + 2)
         );
-
         assert_eq!(
-            cstr.size_if_appended_bytes(b"efgh\0"),
-            // 4 bytes for "abcd", 4 bytes for "efgh" and a byte for the null terminator
-            Some(4 + "efgh".len() + 1)
+            cstr.size_if_appended_bytes(b"d\0"),
+            Some(ORIGINAL_BYTES.len() + 2)
+        );
+        assert_eq!(
+            cstr.size_if_appended_bytes(b"defg"),
+            Some(ORIGINAL_BYTES.len() + 5)
+        );
+        assert_eq!(
+            cstr.size_if_appended_bytes(b"defg\0"),
+            Some(ORIGINAL_BYTES.len() + 5)
         );
     }
 
