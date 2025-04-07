@@ -66,8 +66,7 @@ impl<const N: usize> CString<N> {
     ///
     /// ```rust
     /// use heapless::CString;
-    /// let mut cstr: CString<5> =
-    ///     unsafe { CString::from_bytes_with_nul_unchecked(b"cstr\0").unwrap() };
+    /// let mut cstr = unsafe { CString::<5>::from_bytes_with_nul_unchecked(b"cstr\0").unwrap() };
     ///
     /// assert_eq!(cstr.to_str(), Ok("cstr"));
     /// ```
@@ -247,7 +246,7 @@ impl<const N: usize> CString<N> {
     /// ```rust
     /// use heapless::CString;
     ///
-    /// let mut cstr: CString<10> = CString::new();
+    /// let mut cstr = CString::<10>::new();
     /// cstr.push_bytes(b"heapless").unwrap();
     ///
     /// assert_eq!(unsafe { cstr.as_str_unchecked() }, "heapless",);
