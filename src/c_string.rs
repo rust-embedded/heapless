@@ -236,7 +236,7 @@ impl<const N: usize> CString<N> {
     /// Converts a [`CString`] to a string slice without checking
     /// that the string contains valid UTF-8.
     ///
-    /// See the safe version, [`CString::to_str`], for more information.
+    /// See the safe version, [`CStr::to_str`], for more information.
     ///
     /// # Safety
     ///
