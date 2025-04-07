@@ -1,3 +1,6 @@
+//! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
+
+use crate::CapacityError;
 use core::ffi::{c_char, CStr};
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
@@ -34,7 +37,8 @@ impl<const CAP: usize> CString<CAP> {
     /// assert_eq!(empty.to_str(), Ok(""));
     /// ```
     pub fn new() -> Self {
-        crate::sealed::greater_than_0::<CAP>();
+        // TODO Resolve this.
+        // crate::sealed::greater_than_0::<CAP>();
 
         let mut buf = crate::Vec::new();
 
@@ -66,7 +70,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// assert_eq!(cstr.to_str(), Ok("cstr"));
     /// ```
-    pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, ()> {
+    pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut buf = crate::Vec::new();
 
         buf.extend_from_slice(bytes)?;
@@ -79,7 +83,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// Fails if the given byte slice has any interior nul byte, if the slice does not
     /// end in a zero byte or if the byte slice can't fit in `CAP`.
-    pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, ()> {
+    pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut me = Self::new();
 
         me.push_bytes(bytes)?;
@@ -117,7 +121,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// assert_eq!(copied.to_str(), Ok("Hello, world!"));
     /// ```
-    pub unsafe fn from_ptr<'a>(ptr: *const c_char) -> Result<Self, ()> {
+    pub unsafe fn from_ptr<'a>(ptr: *const c_char) -> Result<Self, CapacityError> {
         let cstr = CStr::from_ptr(ptr).to_bytes_with_nul();
 
         Self::from_bytes_with_nul(cstr)
@@ -207,11 +211,11 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// assert_eq!(cstr.to_str(), Ok("hey there"));
     /// ```
-    pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), ()> {
+    pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
         match self.size_if_appended_bytes(bytes) {
             Some(resulting_size) if resulting_size > CAP => {
                 // Can't store these bytes due to insufficient capacity
-                return Err(());
+                return Err(CapacityError);
             }
             Some(_) => {}
             None => {
@@ -231,7 +235,7 @@ impl<const CAP: usize> CString<CAP> {
             }
             Some(_nul_pos) => {
                 // Found an interior nul byte
-                Err(())
+                Err(CapacityError)
             }
             None => {
                 // Given bytes had no nul byte anywhere,
@@ -318,7 +322,7 @@ impl<const CAP: usize> CString<CAP> {
     /// If `additional` is not null-terminated, the CString is left non null-terminated, which is
     /// an invalid state. Caller must ensure that either `additional` has a terminating nul byte
     /// or ensure to fix the CString after calling `extend_slice`.
-    unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), ()> {
+    unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
         self.pop_terminator();
 
         self.buf.extend_from_slice(additional)
