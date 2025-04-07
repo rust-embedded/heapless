@@ -60,7 +60,7 @@ ufmt = "0.2"
 static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]
-features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
+features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section", "alloc"]
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
