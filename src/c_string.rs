@@ -39,8 +39,9 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(empty.to_str(), Ok(""));
     /// ```
     pub fn new() -> Self {
-        // TODO Resolve this.
-        // crate::sealed::greater_than_0::<N>();
+        const {
+            assert!(N > 0);
+        }
 
         let mut vec = Vec::new();
 
