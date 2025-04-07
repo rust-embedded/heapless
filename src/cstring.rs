@@ -10,8 +10,8 @@ use core::{
 ///
 /// Stores up to N-1 elements with a byte reserved for the terminating nil byte.
 #[derive(Clone)]
-pub struct CString<const CAP: usize> {
-    buf: crate::Vec<u8, CAP>,
+pub struct CString<const N: usize> {
+    buf: crate::Vec<u8, N>,
 }
 
 /// Naive implementation for memchr
