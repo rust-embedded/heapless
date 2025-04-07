@@ -228,29 +228,6 @@ impl<const N: usize> CString<N> {
         unsafe { self.vec.pop_unchecked() };
     }
 
-    /// Converts a [`CString`] to a string slice without checking
-    /// that the string contains valid UTF-8.
-    ///
-    /// See the safe version, [`CStr::to_str`], for more information.
-    ///
-    /// # Safety
-    ///
-    /// The bytes passed in must be valid UTF-8.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use heapless::CString;
-    ///
-    /// let mut cstr = CString::<10>::new();
-    /// cstr.push_bytes(b"heapless").unwrap();
-    ///
-    /// assert_eq!(unsafe { cstr.as_str_unchecked() }, "heapless",);
-    /// ```
-    pub unsafe fn as_str_unchecked(&self) -> &str {
-        str::from_utf8_unchecked(self.inner_without_nul())
-    }
-
     /// Removes the existing nul terminator and then extends `self` with the given bytes.
     ///
     /// # Safety
