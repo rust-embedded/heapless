@@ -1280,7 +1280,7 @@ impl<T, S: VecStorage<T> + ?Sized> Drop for VecInner<T, S> {
 #[cfg(feature = "alloc")]
 /// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
 impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
-    type Error = crate::CapacityError;
+    type Error = CapacityError;
 
     /// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
     ///
@@ -1292,7 +1292,7 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
 
         for e in alloc_vec {
             // Push each element individually to allow handling capacity errors.
-            vec.push(e)?;
+            vec.push(e).map_err(|_| CapacityError {})?;
         }
 
         Ok(vec)
@@ -2144,6 +2144,28 @@ mod tests {
         assert_eq!(v.as_slice(), &[1, 2, 3, 4]);
 
         assert!(v.spare_capacity_mut().is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn heapless_to_alloc() {
+        let mut hv: Vec<u8, 4> = Vec::new();
+        hv.push(0).unwrap();
+        hv.push(1).unwrap();
+
+        let av: alloc::vec::Vec<u8> = hv.clone().try_into().unwrap();
+        assert_eq!(av.as_slice(), hv.as_slice());
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn alloc_to_heapless() {
+        let mut av: alloc::vec::Vec<u8> = alloc::vec::Vec::new();
+        av.push(0);
+        av.push(1);
+
+        let hv: Vec<u8, 2> = av.clone().try_into().unwrap();
+        assert_eq!(hv.as_slice(), av.as_slice());
     }
 
     fn _test_variance<'a: 'b, 'b>(x: Vec<&'a (), 42>) -> Vec<&'b (), 42> {
