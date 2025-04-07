@@ -20,7 +20,7 @@ fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     haystack.iter().position(|&b| b == needle)
 }
 
-impl<const CAP: usize> CString<CAP> {
+impl<const N: usize> CString<N> {
     /// Constructs a new, "empty" `CString`.
     ///
     /// Stores the first nil byte as the first
@@ -213,7 +213,7 @@ impl<const CAP: usize> CString<CAP> {
     /// ```
     pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
         match self.size_if_appended_bytes(bytes) {
-            Some(resulting_size) if resulting_size > CAP => {
+            Some(resulting_size) if resulting_size > N => {
                 // Can't store these bytes due to insufficient capacity
                 return Err(CapacityError);
             }
