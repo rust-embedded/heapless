@@ -21,15 +21,15 @@ impl<const CAP: usize> CString<CAP> {
     /// Constructs a new, "empty" `CString`.
     ///
     /// Stores the first nil byte as the first
-    /// 
-    /// ```
+    ///
+    /// ```rust
     /// use heapless::CString;
-    /// use std::ffi::CStr;   
+    /// use std::ffi::CStr;
     ///
     /// // Fixed-size CString that can store up to 10 elements
     /// // (counting the nul terminator)
     /// let empty = CString::<10>::new();
-    /// 
+    ///
     /// assert_eq!(empty.as_cstr(), <&CStr>::default());
     /// assert_eq!(empty.to_str(), Ok(""));
     /// ```
@@ -58,7 +58,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use heapless::CString;
     /// let mut cstr: CString<5> = unsafe {
     ///     CString::from_bytes_with_nul_unchecked(b"cstr\0").unwrap()
@@ -76,7 +76,7 @@ impl<const CAP: usize> CString<CAP> {
 
     /// Instantiate a [`CString`] copying from the giving bytes, assuming it is
     /// null-terminated (ends with a single zero byte).
-    /// 
+    ///
     /// Fails if the given byte slice has any interior nul byte, if the slice does not
     /// end in a zero byte or if the byte slice can't fit in `CAP`.
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, ()> {
@@ -102,7 +102,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use std::ffi::{c_char, CStr};
     /// use heapless::CString;
     ///
@@ -140,7 +140,7 @@ impl<const CAP: usize> CString<CAP> {
     /// ends in a zero byte.
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use std::ffi::{c_char, CStr};
     /// use heapless::CString;
     ///
@@ -270,7 +270,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use heapless::CString;
     ///
     /// let mut cstr: CString<10> = CString::new();
@@ -296,7 +296,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use heapless::CString;
     ///
     /// let mut cstr: CString<10> = CString::new();
@@ -315,9 +315,9 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Safety
     ///
-    ///  If `additional` is not null-terminated, the CString is left non null-terminated, which is
-    ///  an invalid state. Caller must ensure that either `additional` has a terminating nul byte
-    ///  or ensure to fix the CString after calling `extend_slice`.
+    /// If `additional` is not null-terminated, the CString is left non null-terminated, which is
+    /// an invalid state. Caller must ensure that either `additional` has a terminating nul byte
+    /// or ensure to fix the CString after calling `extend_slice`.
     unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), ()> {
         self.pop_terminator();
 
@@ -337,7 +337,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use heapless::CString;
     ///
     /// let mut cstr = CString::<5>::new();
@@ -358,7 +358,7 @@ impl<const CAP: usize> CString<CAP> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```rust
     /// use heapless::CString;
     ///
     /// let mut cstr = CString::<5>::new();
