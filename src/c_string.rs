@@ -25,9 +25,7 @@ fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 }
 
 impl<const N: usize> CString<N> {
-    /// Constructs a new, "empty" `CString`.
-    ///
-    /// Stores the first null byte as the first.
+    /// Creates a new C-compatible string with a terminating null byte.
     ///
     /// ```rust
     /// use heapless::CString;
