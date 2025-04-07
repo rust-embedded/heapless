@@ -284,7 +284,7 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("heapless"));
     /// ```
     pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(self.inner_without_nil_terminator())
+        core::str::from_utf8(self.inner_without_nul())
     }
 
     /// Converts a [`CString`] to a string slice without checking
@@ -307,7 +307,7 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(unsafe { cstr.as_str_unchecked() }, "heapless",);
     /// ```
     pub unsafe fn as_str_unchecked(&self) -> &str {
-        core::str::from_utf8_unchecked(self.inner_without_nil_terminator())
+        core::str::from_utf8_unchecked(self.inner_without_nul())
     }
 
     /// Removes the existing null terminator and then extends `self` with the given bytes.
@@ -324,7 +324,7 @@ impl<const N: usize> CString<N> {
     }
 
     #[inline]
-    fn inner_without_nil_terminator(&self) -> &[u8] {
+    fn inner_without_nul(&self) -> &[u8] {
         // Assert our invariant: `self.buf` must be null-terminated
         debug_assert!(self.buf.len() > 0);
         debug_assert_eq!(self.buf.last().copied(), Some(0));
@@ -365,7 +365,7 @@ impl<const N: usize> CString<N> {
     /// ```
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
-        self.inner_without_nil_terminator()
+        self.inner_without_nul()
     }
 }
 
