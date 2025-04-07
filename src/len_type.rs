@@ -26,11 +26,13 @@ pub trait Sealed:
     const MAX: usize;
 
     /// An infallible conversion from `usize` to `LenT`.
+    #[inline]
     fn from_usize(val: usize) -> Self {
         val.try_into().unwrap()
     }
 
     /// An infallible conversion from `LenT` to `usize`.
+    #[inline]
     fn into_usize(self) -> usize {
         self.try_into().unwrap()
     }
