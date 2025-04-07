@@ -233,22 +233,6 @@ impl<const N: usize> CString<N> {
         }
     }
 
-    /// Converts this [`CString`] to a string slice if the [`CString`] represents valid UTF-8.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use heapless::CString;
-    ///
-    /// let mut cstr: CString<10> = CString::new();
-    /// cstr.push_bytes(b"heapless").unwrap();
-    ///
-    /// assert_eq!(cstr.to_str(), Ok("heapless"));
-    /// ```
-    pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(self.inner_without_nul())
-    }
-
     /// Converts a [`CString`] to a string slice without checking
     /// that the string contains valid UTF-8.
     ///
