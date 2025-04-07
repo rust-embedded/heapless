@@ -11,7 +11,7 @@ use core::{
 /// It stores up to `N - 1` non-nul characters with a trailing nul terminator.
 #[derive(Clone, Default)]
 pub struct CString<const N: usize> {
-    vec: Vec<u8, N>,
+    inner: Vec<u8, N>,
 }
 
 /// Naive implementation for `memchr`.
@@ -48,7 +48,7 @@ impl<const N: usize> CString<N> {
         // SAFETY: We just asserted that `N > 0`.
         unsafe { vec.push_unchecked(b'\0') };
 
-        Self { vec }
+        Self { inner: vec }
     }
 
     /// Unsafely creates a [`CString`] from a byte slice.
@@ -76,7 +76,7 @@ impl<const N: usize> CString<N> {
 
         vec.extend_from_slice(bytes)?;
 
-        Ok(Self { vec })
+        Ok(Self { inner: vec })
     }
 
     /// Instantiates a [`CString`] copying from the giving byte slice, assuming it is
@@ -128,9 +128,9 @@ impl<const N: usize> CString<N> {
 
     /// Converts the [`CString`] to a [`CStr`] slice. This always succeeds and is zero cost.
     pub fn as_c_str(&self) -> &CStr {
-        debug_assert!(CStr::from_bytes_with_nul(&self.vec).is_ok());
+        debug_assert!(CStr::from_bytes_with_nul(&self.inner).is_ok());
 
-        unsafe { CStr::from_bytes_with_nul_unchecked(&self.vec) }
+        unsafe { CStr::from_bytes_with_nul_unchecked(&self.inner) }
     }
 
     /// Calculates the length of `self.vec` would have if it appended `bytes`.
@@ -142,7 +142,7 @@ impl<const N: usize> CString<N> {
                 // `bytes` is nul-terminated and so is `self.vec`.
                 // Adding up both would account for 2 nul bytes when only a single byte
                 // would end up in the resulting CString.
-                Some(self.vec.len() + bytes.len() - 1)
+                Some(self.inner.len() + bytes.len() - 1)
             }
             Some(_) => {
                 // No terminating nul byte in `bytes` but there's one in
@@ -150,7 +150,7 @@ impl<const N: usize> CString<N> {
                 //
                 // In the case that `bytes` has a nul byte anywhere else, we would
                 // error after `memchr` is called. So there's no problem.
-                Some(self.vec.len() + bytes.len())
+                Some(self.inner.len() + bytes.len())
             }
         }
     }
@@ -207,7 +207,7 @@ impl<const N: usize> CString<N> {
                 unsafe { self.extend_slice(bytes) }.unwrap();
 
                 // Add the nul byte terminator
-                self.vec.push(0).unwrap();
+                self.inner.push(0).unwrap();
 
                 Ok(())
             }
@@ -221,10 +221,10 @@ impl<const N: usize> CString<N> {
     /// Callers must ensure to re-add the nul terminator after this function is called.
     #[inline]
     unsafe fn pop_terminator(&mut self) {
-        debug_assert_eq!(self.vec.last(), Some(&0));
+        debug_assert_eq!(self.inner.last(), Some(&0));
 
         // SAFETY: We always have the nul terminator at the end.
-        unsafe { self.vec.pop_unchecked() };
+        unsafe { self.inner.pop_unchecked() };
     }
 
     /// Removes the existing nul terminator and then extends `self` with the given bytes.
@@ -237,16 +237,16 @@ impl<const N: usize> CString<N> {
     unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
         self.pop_terminator();
 
-        self.vec.extend_from_slice(additional)
+        self.inner.extend_from_slice(additional)
     }
 
     #[inline]
     fn inner_without_nul(&self) -> &[u8] {
         // Assert our invariant: `self.vec` must be nul-terminated
-        debug_assert!(!self.vec.is_empty());
-        debug_assert_eq!(self.vec.last().copied(), Some(0));
+        debug_assert!(!self.inner.is_empty());
+        debug_assert_eq!(self.inner.last().copied(), Some(0));
 
-        &self.vec[..self.vec.len() - 1]
+        &self.inner[..self.inner.len() - 1]
     }
 
     /// Returns the underlying byte slice including the trailing nul terminator.
@@ -263,7 +263,7 @@ impl<const N: usize> CString<N> {
     /// ```
     #[inline]
     pub fn as_bytes_with_nul(&self) -> &[u8] {
-        &self.vec
+        &self.inner
     }
 
     /// Returns the underlying byte slice excluding the trailing nul terminator.
