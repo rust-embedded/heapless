@@ -322,9 +322,8 @@ mod tests {
 
     #[test]
     fn empty() {
-        let empty = CString::<5>::new();
+        let empty = CString::<1>::new();
 
-        // &CStr's Default impl points to a slice that only contains a single element: the nul byte terminator
         assert_eq!(empty.as_c_str(), <&CStr>::default());
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
@@ -347,7 +346,7 @@ mod tests {
 
         assert_eq!(cstr.to_str(), Ok("hello"));
 
-        // Call must fail since `w\0rld` contains an interior nul byteassert_eq!(empty.to_str(), Ok("hello"));
+        // Call must fail since `w\0rld` contains an interior nul byte.
         assert!(cstr.push_bytes(b"w\0rld").is_err());
 
         // However, the call above _must not_ have invalidated the state of our CString
@@ -367,30 +366,30 @@ mod tests {
 
     #[test]
     fn calculate_capacity_with_additional_bytes() {
-        const ORIGINAL_BYTES: &[u8] = b"abc";
+        const INITIAL_BYTES: &[u8] = b"abc";
 
         let mut cstr = CString::<5>::new();
 
-        cstr.push_bytes(ORIGINAL_BYTES).unwrap();
+        cstr.push_bytes(INITIAL_BYTES).unwrap();
 
         assert_eq!(cstr.to_bytes_with_nul().len(), 4);
         assert_eq!(cstr.capacity_with_bytes(b""), None);
         assert_eq!(cstr.capacity_with_bytes(b"\0"), None);
         assert_eq!(
             cstr.capacity_with_bytes(b"d"),
-            Some(ORIGINAL_BYTES.len() + 2)
+            Some(INITIAL_BYTES.len() + 2)
         );
         assert_eq!(
             cstr.capacity_with_bytes(b"d\0"),
-            Some(ORIGINAL_BYTES.len() + 2)
+            Some(INITIAL_BYTES.len() + 2)
         );
         assert_eq!(
             cstr.capacity_with_bytes(b"defg"),
-            Some(ORIGINAL_BYTES.len() + 5)
+            Some(INITIAL_BYTES.len() + 5)
         );
         assert_eq!(
             cstr.capacity_with_bytes(b"defg\0"),
-            Some(ORIGINAL_BYTES.len() + 5)
+            Some(INITIAL_BYTES.len() + 5)
         );
     }
 
