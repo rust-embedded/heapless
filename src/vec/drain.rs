@@ -14,15 +14,6 @@ use super::VecView;
 ///
 /// This `struct` is created by [`Vec::drain`](super::Vec::drain).
 /// See its documentation for more.
-///
-/// # Example
-///
-/// ```
-/// use heapless::{vec, Vec};
-///
-/// let mut v = Vec::<_, 4>::from_array([0, 1, 2]);
-/// let iter: vec::Drain<'_, _, _> = v.drain(..);
-/// ```
 pub struct Drain<'a, T: 'a, LenT: LenType> {
     /// Index of tail to preserve
     pub(super) tail_start: LenT,
