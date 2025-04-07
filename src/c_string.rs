@@ -223,13 +223,9 @@ impl<const N: usize> CString<N> {
     /// # Safety: caller must ensure to re-add the terminator after this function is called
     #[inline]
     unsafe fn pop_terminator(&mut self) {
-        if cfg!(debug_assertions) {
-            let popped = self.vec.pop();
+        debug_assert_eq!(self.vec.last(), Some(&0));
 
-            assert_eq!(popped, Some(0));
-        } else {
-            unsafe { self.vec.pop_unchecked() };
-        }
+        unsafe { self.vec.pop_unchecked() };
     }
 
     /// Converts a [`CString`] to a string slice without checking
