@@ -2166,6 +2166,9 @@ mod tests {
 
         let hv: Vec<u8, 2> = av.clone().try_into().unwrap();
         assert_eq!(hv.as_slice(), av.as_slice());
+
+        let _: crate::CapacityError =
+            <alloc::vec::Vec<u8> as TryInto<Vec<u8, 1>>>::try_into(av.clone()).unwrap_err();
     }
 
     fn _test_variance<'a: 'b, 'b>(x: Vec<&'a (), 42>) -> Vec<&'b (), 42> {
