@@ -116,11 +116,11 @@ impl<const N: usize> CString<N> {
     ///     BYTES.as_ptr().cast()
     /// };
     ///
-    /// let copied = unsafe { CString::<14>::from_ptr(HELLO_PTR) }.unwrap();
+    /// let copied = unsafe { CString::<14>::from_raw(HELLO_PTR) }.unwrap();
     ///
     /// assert_eq!(copied.to_str(), Ok("Hello, world!"));
     /// ```
-    pub unsafe fn from_ptr(ptr: *const c_char) -> Result<Self, CapacityError> {
+    pub unsafe fn from_raw(ptr: *const c_char) -> Result<Self, CapacityError> {
         let cstr = CStr::from_ptr(ptr).to_bytes_with_nul();
 
         Self::from_bytes_with_nul(cstr)
