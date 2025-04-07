@@ -186,8 +186,7 @@ impl<const N: usize> CString<N> {
 
         match memchr(0, bytes) {
             Some(nul_pos) if nul_pos + 1 == bytes.len() => {
-                // Safety: inserted bytes are nul-terminated so
-                //         the CString will be left in a valid state
+                // SAFETY: inserted bytes are nul-terminated so the CString will be left in a valid state.
                 unsafe { self.extend_slice(bytes) }?;
 
                 Ok(())
@@ -201,10 +200,10 @@ impl<const N: usize> CString<N> {
                 // so we'll insert them and then add the nul byte terminator.
 
                 // We've ensured above that we have enough space left to insert these bytes,
-                // so the operations below must succeed
+                // so the operations below must succeed.
 
-                // Safety: CString will not have a nul terminator after this call is done,
-                //         but we'll fix that right below
+                // SAFETY: CString will not have a nul terminator after this call is done,
+                //         but we'll fix that right below.
                 unsafe { self.extend_slice(bytes) }.unwrap();
 
                 // Add the nul byte terminator
@@ -224,7 +223,7 @@ impl<const N: usize> CString<N> {
     unsafe fn pop_terminator(&mut self) {
         debug_assert_eq!(self.vec.last(), Some(&0));
 
-        // Safety: We always have the nul terminator at the end.
+        // SAFETY: We always have the nul terminator at the end.
         unsafe { self.vec.pop_unchecked() };
     }
 
