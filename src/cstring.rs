@@ -1,7 +1,10 @@
 //! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 
 use crate::CapacityError;
-use core::ffi::{c_char, CStr};
+use core::{
+    ffi::{c_char, CStr},
+    ops::Deref,
+};
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
@@ -128,7 +131,7 @@ impl<const N: usize> CString<N> {
     }
 
     /// Converts the [`CString`] to a [`CStr`] slice. This always succeeds and is zero cost.
-    pub fn as_cstr(&self) -> &CStr {
+    pub fn as_c_str(&self) -> &CStr {
         if cfg!(debug_assertions) {
             // When in debug builds, ensure
             CStr::from_bytes_with_nul(&self.buf).unwrap()
@@ -378,30 +381,26 @@ impl<const N: usize> CString<N> {
     pub fn as_bytes(&self) -> &[u8] {
         self.inner_without_nil_terminator()
     }
+}
 
-    ///
-    pub fn as_ptr(&self) -> *const u8 {
-        self.buf.as_ptr()
-    }
+impl<const N: usize> Deref for CString<N> {
+    type Target = CStr;
 
-    /// TODO
-    pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.buf.as_mut_ptr()
+    fn deref(&self) -> &Self::Target {
+        self.as_c_str()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use core::ffi::CStr;
-
-    use super::CString;
+    use super::*;
 
     #[test]
     fn empty_cstring_is_valid() {
         let empty: CString<5> = CString::new();
 
         // &CStr's Default impl points to a slice that only contains a single element: the nul byte terminator
-        assert_eq!(empty.as_cstr(), <&CStr>::default());
+        assert_eq!(empty.as_c_str(), <&CStr>::default());
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
     }
@@ -450,5 +449,27 @@ mod tests {
             // 4 bytes for "abcd", 4 bytes for "efgh" and a byte for the nul terminator
             Some(4 + "efgh".len() + 1)
         );
+    }
+
+    #[test]
+    fn dereference_into_c_str() {
+        assert_eq!(CString::<1>::new().deref(), <&CStr>::default());
+        assert_eq!(CString::<2>::new().deref(), <&CStr>::default());
+        assert_eq!(CString::<3>::new().deref(), <&CStr>::default());
+
+        let mut string = CString::<2>::new();
+        string.push_bytes(&[65]).unwrap();
+
+        assert_eq!(string.deref(), c"A");
+
+        let mut string = CString::<3>::new();
+        string.push_bytes(&[65, 66]).unwrap();
+
+        assert_eq!(string.deref(), c"AB");
+
+        let mut string = CString::<4>::new();
+        string.push_bytes(&[65, 66, 67]).unwrap();
+
+        assert_eq!(string.deref(), c"ABC");
     }
 }
