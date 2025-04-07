@@ -154,7 +154,7 @@
 )]
 
 pub use binary_heap::BinaryHeap;
-pub use cstring::CString;
+pub use c_string::CString;
 pub use deque::Deque;
 pub use histbuf::{HistoryBuffer, OldestOrdered};
 pub use indexmap::{
@@ -172,7 +172,7 @@ pub use vec::{Vec, VecView};
 #[cfg(test)]
 mod test_helpers;
 
-pub mod cstring;
+pub mod c_string;
 pub mod deque;
 pub mod histbuf;
 mod indexmap;
