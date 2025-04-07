@@ -1,6 +1,6 @@
 //! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 
-use crate::CapacityError;
+use crate::{vec::Vec, CapacityError};
 use core::{
     ffi::{c_char, CStr},
     ops::Deref,
@@ -11,7 +11,7 @@ use core::{
 /// It stores up to N-1 elements with a byte reserved for the terminating null byte.
 #[derive(Clone)]
 pub struct CString<const N: usize> {
-    buf: crate::Vec<u8, N>,
+    vec: Vec<u8, N>,
 }
 
 /// Naive implementation for `memchr`.
@@ -44,12 +44,12 @@ impl<const N: usize> CString<N> {
         // TODO Resolve this.
         // crate::sealed::greater_than_0::<CAP>();
 
-        let mut buf = crate::Vec::new();
+        let mut vec = Vec::new();
 
         // Safety: will not fail since we const-assert that CAP > 0.
-        unsafe { buf.push(0).unwrap_unchecked() };
+        unsafe { vec.push(0).unwrap_unchecked() };
 
-        Self { buf }
+        Self { vec }
     }
 
     /// Unsafely creates a [`CString`] from a byte slice.
@@ -74,11 +74,11 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("cstr"));
     /// ```
     pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, CapacityError> {
-        let mut buf = crate::Vec::new();
+        let mut vec = Vec::new();
 
-        buf.extend_from_slice(bytes)?;
+        vec.extend_from_slice(bytes)?;
 
-        Ok(Self { buf })
+        Ok(Self { vec })
     }
 
     /// Instantiate a [`CString`] copying from the giving bytes, assuming it is
@@ -132,9 +132,9 @@ impl<const N: usize> CString<N> {
     pub fn as_c_str(&self) -> &CStr {
         if cfg!(debug_assertions) {
             // When in debug builds, ensure
-            CStr::from_bytes_with_nul(&self.buf).unwrap()
+            CStr::from_bytes_with_nul(&self.vec).unwrap()
         } else {
-            unsafe { CStr::from_bytes_with_nul_unchecked(&self.buf) }
+            unsafe { CStr::from_bytes_with_nul_unchecked(&self.vec) }
         }
     }
 
@@ -164,22 +164,22 @@ impl<const N: usize> CString<N> {
         self.as_bytes_with_nul().len()
     }
 
-    /// Calculates the length `self.buf` would have if it appended `bytes`
+    /// Calculates the length `self.vec` would have if it appended `bytes`.
     fn size_if_appended_bytes(&self, bytes: &[u8]) -> Option<usize> {
         match bytes.last() {
             Some(0) => {
-                // `bytes` is null-terminated and so is `self.buf`.
+                // `bytes` is null-terminated and so is `self.vec`.
                 // Adding up both would account for 2 null bytes when only a single byte
                 // would end up in the resulting CString
-                Some(self.buf.len() + bytes.len() - 1)
+                Some(self.vec.len() + bytes.len() - 1)
             }
             Some(_) => {
                 // No terminating null byte in `bytes` but there's one in
-                // `self.buf`, so the math lines up nicely.
+                // `self.vec`, so the math lines up nicely.
                 //
                 // In the case that `bytes` has a null byte anywhere else we'd
                 // err after `memchr` is called, so there's no problem
-                Some(self.buf.len() + bytes.len())
+                Some(self.vec.len() + bytes.len())
             }
             None => {
                 // Nothing to insert so there'd be no change in size
@@ -250,7 +250,7 @@ impl<const N: usize> CString<N> {
                 unsafe { self.extend_slice(bytes) }.unwrap();
 
                 // Add the null byte terminator
-                self.buf.push(0).map_err(|_| ()).unwrap();
+                self.vec.push(0).map_err(|_| ()).unwrap();
 
                 Ok(())
             }
@@ -263,11 +263,11 @@ impl<const N: usize> CString<N> {
     #[inline]
     unsafe fn pop_terminator(&mut self) {
         if cfg!(debug_assertions) {
-            let popped = self.buf.pop();
+            let popped = self.vec.pop();
 
             assert_eq!(popped, Some(0));
         } else {
-            unsafe { self.buf.pop_unchecked() };
+            unsafe { self.vec.pop_unchecked() };
         }
     }
 
@@ -320,16 +320,16 @@ impl<const N: usize> CString<N> {
     unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
         self.pop_terminator();
 
-        self.buf.extend_from_slice(additional)
+        self.vec.extend_from_slice(additional)
     }
 
     #[inline]
     fn inner_without_nul(&self) -> &[u8] {
-        // Assert our invariant: `self.buf` must be null-terminated
-        debug_assert!(self.buf.len() > 0);
-        debug_assert_eq!(self.buf.last().copied(), Some(0));
+        // Assert our invariant: `self.vec` must be null-terminated
+        debug_assert!(self.vec.len() > 0);
+        debug_assert_eq!(self.vec.last().copied(), Some(0));
 
-        &self.buf[..self.buf.len() - 1]
+        &self.vec[..self.vec.len() - 1]
     }
 
     /// Gets the underlying bytes written to this [`CString`] so far, without including the null terminator.
@@ -347,7 +347,7 @@ impl<const N: usize> CString<N> {
     /// ```
     #[inline]
     pub fn as_bytes_with_nul(&self) -> &[u8] {
-        &self.buf
+        &self.vec
     }
 
     /// Gets the underlying bytes written to this [`CString`] so far, without including the null terminator.
