@@ -320,7 +320,7 @@ impl<const N: usize> CString<N> {
         &self.vec[..self.vec.len() - 1]
     }
 
-    /// Gets the underlying bytes written to this [`CString`] so far, without including the null terminator.
+    /// Returns the underlying byte slice including the trailing null terminator.
     ///
     /// # Example
     ///
@@ -328,17 +328,16 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     ///
     /// let mut cstr = CString::<5>::new();
-    /// cstr.push_bytes(b"ab").unwrap();
-    /// cstr.push_bytes(b"cd").unwrap();
+    /// cstr.push_bytes(b"abc").unwrap();
     ///
-    /// assert_eq!(cstr.as_bytes_with_nul(), b"abcd\0");
+    /// assert_eq!(cstr.as_bytes_with_nul(), b"abc\0");
     /// ```
     #[inline]
     pub fn as_bytes_with_nul(&self) -> &[u8] {
         &self.vec
     }
 
-    /// Gets the underlying bytes written to this [`CString`] so far, without including the null terminator.
+    /// Returns the underlying byte slice excluding the trailing null terminator.
     ///
     /// # Example
     ///
@@ -346,10 +345,9 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     ///
     /// let mut cstr = CString::<5>::new();
-    /// cstr.push_bytes(b"ab").unwrap();
-    /// cstr.push_bytes(b"cd").unwrap();
+    /// cstr.push_bytes(b"abc").unwrap();
     ///
-    /// assert_eq!(cstr.as_bytes(), b"abcd");
+    /// assert_eq!(cstr.as_bytes(), b"abc");
     /// ```
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
