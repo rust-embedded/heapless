@@ -4,6 +4,7 @@ use crate::{vec::Vec, CapacityError};
 use core::{
     ffi::{c_char, CStr},
     ops::Deref,
+    str,
 };
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
@@ -84,11 +85,11 @@ impl<const N: usize> CString<N> {
     /// Fails if the given byte slice has any interior nul byte, if the slice does not
     /// end with a nul byte, or if the byte slice can't fit in `N`.
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
-        let mut me = Self::new();
+        let mut string = Self::new();
 
-        me.push_bytes(bytes)?;
+        string.push_bytes(bytes)?;
 
-        Ok(me)
+        Ok(string)
     }
 
     /// Builds a [`CString`] copying from a raw C string pointer.
@@ -211,7 +212,7 @@ impl<const N: usize> CString<N> {
                 unsafe { self.extend_slice(bytes) }.unwrap();
 
                 // Add the nul byte terminator
-                self.vec.push(0).map_err(|_| ()).unwrap();
+                self.vec.push(0).unwrap();
 
                 Ok(())
             }
@@ -248,7 +249,7 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(unsafe { cstr.as_str_unchecked() }, "heapless",);
     /// ```
     pub unsafe fn as_str_unchecked(&self) -> &str {
-        core::str::from_utf8_unchecked(self.inner_without_nul())
+        str::from_utf8_unchecked(self.inner_without_nul())
     }
 
     /// Removes the existing nul terminator and then extends `self` with the given bytes.
