@@ -160,7 +160,7 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("/etc/dconf"));
     /// ```
     pub fn len(&self) -> usize {
-        self.as_bytes_with_null().len()
+        self.as_bytes_with_nul().len()
     }
 
     /// Calculates the length `self.buf` would have if it appended `bytes`
@@ -349,12 +349,12 @@ impl<const N: usize> CString<N> {
     /// cstr.push_bytes(b"cd").unwrap();
     ///
     /// assert_eq!(
-    ///     cstr.as_bytes_with_null(),
+    ///     cstr.as_bytes_with_nul(),
     ///     b"abcd\0"
     /// );
     /// ```
     #[inline]
-    pub fn as_bytes_with_null(&self) -> &[u8] {
+    pub fn as_bytes_with_nul(&self) -> &[u8] {
         &self.buf
     }
 
