@@ -382,7 +382,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_cstring_is_valid() {
+    fn empty() {
         let empty = CString::<5>::new();
 
         // &CStr's Default impl points to a slice that only contains a single element: the null byte terminator
@@ -392,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn appends_bytes_correctly() {
+    fn append_bytes_correctly() {
         let mut cstr = CString::<11>::new();
         assert_eq!(cstr.to_str(), Ok(""));
 
@@ -419,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    fn correctly_calculates_appended_length() {
+    fn calculate_appended_length() {
         let mut cstr = CString::<5>::new();
         cstr.push_bytes(b"abcd").unwrap();
         assert_eq!(cstr.len(), 5);
