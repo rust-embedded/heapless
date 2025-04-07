@@ -4,7 +4,6 @@ use crate::{vec::Vec, CapacityError};
 use core::{
     ffi::{c_char, CStr},
     ops::Deref,
-    str,
 };
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
