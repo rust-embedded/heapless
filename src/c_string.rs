@@ -72,11 +72,11 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("cstr"));
     /// ```
     pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, CapacityError> {
-        let mut string = Self::new();
+        let mut vec = Vec::new();
 
-        string.push_bytes(bytes)?;
+        vec.extend_from_slice(bytes)?;
 
-        Ok(string)
+        Ok(Self { vec })
     }
 
     /// Instantiates a [`CString`] copying from the giving byte slice, assuming it is
