@@ -217,11 +217,14 @@ impl<const N: usize> CString<N> {
 
     /// Removes the nul byte terminator from the inner buffer.
     ///
-    /// # Safety: caller must ensure to re-add the terminator after this function is called
+    /// # Safety
+    ///
+    /// Callers must ensure to re-add the nul terminator after this function is called.
     #[inline]
     unsafe fn pop_terminator(&mut self) {
         debug_assert_eq!(self.vec.last(), Some(&0));
 
+        // Safety: We always have the nul terminator at the end.
         unsafe { self.vec.pop_unchecked() };
     }
 
