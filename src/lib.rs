@@ -181,7 +181,7 @@ pub mod storage;
 pub mod string;
 pub mod vec;
 
-// Workaround a compiler ICE in rust 1.83 to 1.86
+// FIXME: Workaround a compiler ICE in rust 1.83 to 1.86
 // https://github.com/rust-lang/rust/issues/138979#issuecomment-2760839948
 #[expect(dead_code)]
 fn dead_code_ice_workaround() {}
