@@ -210,17 +210,13 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("hey there"));
     /// ```
     pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
-        match self.size_if_appended_bytes(bytes) {
-            Some(resulting_size) if resulting_size > N => {
-                // Can't store these bytes due to insufficient capacity
-                return Err(CapacityError);
-            }
-            Some(_) => {}
-            None => {
-                // Nothing to insert
-                assert!(false);
-                return Ok(());
-            }
+        let Some(size) = self.size_if_appended_bytes(bytes) else {
+            return Ok(());
+        };
+
+        if size > N {
+            // Can't store these bytes due to insufficient capacity.
+            return Err(CapacityError);
         }
 
         match memchr(0, bytes) {
@@ -386,6 +382,14 @@ mod tests {
         assert_eq!(empty.as_c_str(), <&CStr>::default());
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
+    }
+
+    #[test]
+    fn push_no_bytes() {
+        let mut cstr = CString::<5>::new();
+        assert_eq!(cstr.to_str(), Ok(""));
+
+        cstr.push_bytes(b"").unwrap();
     }
 
     #[test]
