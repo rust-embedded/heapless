@@ -162,7 +162,7 @@ impl<const N: usize> CString<N> {
     }
 
     /// Calculates the length of `self.vec` would have if it appended `bytes`.
-    fn size_if_appended_bytes(&self, bytes: &[u8]) -> Option<usize> {
+    fn capacity_with_bytes(&self, bytes: &[u8]) -> Option<usize> {
         match bytes.last() {
             None => None,
             Some(0) if bytes.len() < 2 => None,
@@ -207,11 +207,11 @@ impl<const N: usize> CString<N> {
     /// assert_eq!(cstr.to_str(), Ok("hey there"));
     /// ```
     pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
-        let Some(size) = self.size_if_appended_bytes(bytes) else {
+        let Some(capacity) = self.capacity_with_bytes(bytes) else {
             return Ok(());
         };
 
-        if size > N {
+        if capacity > N {
             // Can't store these bytes due to insufficient capacity.
             return Err(CapacityError);
         }
@@ -417,7 +417,7 @@ mod tests {
     }
 
     #[test]
-    fn calculate_appended_length() {
+    fn calculate_capacity_with_additional_bytes() {
         const ORIGINAL_BYTES: &[u8] = b"abc";
 
         let mut cstr = CString::<5>::new();
@@ -425,22 +425,22 @@ mod tests {
         cstr.push_bytes(ORIGINAL_BYTES).unwrap();
 
         assert_eq!(cstr.len(), 4);
-        assert_eq!(cstr.size_if_appended_bytes(b""), None);
-        assert_eq!(cstr.size_if_appended_bytes(b"\0"), None);
+        assert_eq!(cstr.capacity_with_bytes(b""), None);
+        assert_eq!(cstr.capacity_with_bytes(b"\0"), None);
         assert_eq!(
-            cstr.size_if_appended_bytes(b"d"),
+            cstr.capacity_with_bytes(b"d"),
             Some(ORIGINAL_BYTES.len() + 2)
         );
         assert_eq!(
-            cstr.size_if_appended_bytes(b"d\0"),
+            cstr.capacity_with_bytes(b"d\0"),
             Some(ORIGINAL_BYTES.len() + 2)
         );
         assert_eq!(
-            cstr.size_if_appended_bytes(b"defg"),
+            cstr.capacity_with_bytes(b"defg"),
             Some(ORIGINAL_BYTES.len() + 5)
         );
         assert_eq!(
-            cstr.size_if_appended_bytes(b"defg\0"),
+            cstr.capacity_with_bytes(b"defg\0"),
             Some(ORIGINAL_BYTES.len() + 5)
         );
     }
