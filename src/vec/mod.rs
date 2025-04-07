@@ -1221,7 +1221,7 @@ impl<T, S: VecStorage<T> + ?Sized> Drop for VecInner<T, S> {
 #[cfg(feature = "alloc")]
 /// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
 impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
-    type Error = ();
+    type Error = crate::CapacityError;
 
     /// Converts the given `alloc::vec::Vec<T>` into a `Vec<T, N>`.
     ///
@@ -1233,7 +1233,7 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
 
         for e in alloc_vec {
             // Push each element individually to allow handling capacity errors.
-            vec.push(e).map_err(|_| ())?;
+            vec.push(e)?;
         }
 
         Ok(vec)
@@ -1243,7 +1243,7 @@ impl<T, const N: usize> TryFrom<alloc::vec::Vec<T>> for Vec<T, N> {
 #[cfg(feature = "alloc")]
 /// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
 impl<T, const N: usize> TryFrom<Vec<T, N>> for alloc::vec::Vec<T> {
-    type Error = ();
+    type Error = alloc::collections::TryReserveError;
 
     /// Converts the given `Vec<T, N>` into an `alloc::vec::Vec<T>`.
     ///
@@ -1255,7 +1255,7 @@ impl<T, const N: usize> TryFrom<Vec<T, N>> for alloc::vec::Vec<T> {
 
         // Allocate enough space for the elements, return an error if the
         // allocation fails.
-        alloc_vec.try_reserve(vec.len()).map_err(|_| ())?;
+        alloc_vec.try_reserve_exact(vec.len())?;
 
         // Transfer the elements, since we reserved enough space above, this
         // should not fail due to OOM.
