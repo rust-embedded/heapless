@@ -46,7 +46,7 @@ impl<const N: usize> CString<N> {
         let mut vec = Vec::new();
 
         // SAFETY: We just asserted that `N > 0`.
-        unsafe { vec.push(0).unwrap_unchecked() };
+        unsafe { vec.push_unchecked(b'\0') };
 
         Self { vec }
     }
