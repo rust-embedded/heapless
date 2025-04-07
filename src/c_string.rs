@@ -8,7 +8,7 @@ use core::{
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
-/// It stores up to `N - 1` elements with a byte reserved for the trailing nul terminator.
+/// It stores up to `N - 1` non-nul characters with a trailing nul terminator.
 #[derive(Clone, Default)]
 pub struct CString<const N: usize> {
     vec: Vec<u8, N>,
