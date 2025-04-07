@@ -8,7 +8,7 @@ use core::{
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
-/// It stores up to N-1 elements with a byte reserved for the terminating nul byte.
+/// It stores up to `N - 1` elements with a byte reserved for the trailing nul terminator.
 #[derive(Clone, Default)]
 pub struct CString<const N: usize> {
     vec: Vec<u8, N>,
@@ -21,7 +21,7 @@ pub struct CString<const N: usize> {
 /// which should be the average slice size for this crate due to its use case.
 /// But ideally we'd use at least `BurntSushi`'s fallback implementation here.
 fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    haystack.iter().position(|&b| b == needle)
+    haystack.iter().position(|&byte| byte == needle)
 }
 
 impl<const N: usize> CString<N> {
