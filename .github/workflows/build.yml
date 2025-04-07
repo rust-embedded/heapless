@@ -165,7 +165,7 @@ jobs:
         run: |
           cargo check --target=${{ matrix.target }}
           cargo check --target=${{ matrix.target }} --features="portable-atomic-critical-section"
-          cargo check --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large"
+          cargo check --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large alloc"
 
   doc:
     name: doc
@@ -208,7 +208,7 @@ jobs:
 
       - name: cargo rustdoc
         env: {"RUSTDOCFLAGS": "-D warnings --cfg docsrs"}
-        run: cargo rustdoc --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large portable-atomic-critical-section"
+        run: cargo rustdoc --target=${{ matrix.target }} --features="ufmt serde defmt-03 mpmc_large portable-atomic-critical-section alloc"
 
   # Run cpass tests
   testcpass:
