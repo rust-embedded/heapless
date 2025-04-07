@@ -130,12 +130,9 @@ impl<const N: usize> CString<N> {
 
     /// Converts the [`CString`] to a [`CStr`] slice. This always succeeds and is zero cost.
     pub fn as_c_str(&self) -> &CStr {
-        if cfg!(debug_assertions) {
-            // When in debug builds, ensure
-            CStr::from_bytes_with_nul(&self.vec).unwrap()
-        } else {
-            unsafe { CStr::from_bytes_with_nul_unchecked(&self.vec) }
-        }
+        debug_assert!(CStr::from_bytes_with_nul(&self.vec).is_ok());
+
+        unsafe { CStr::from_bytes_with_nul_unchecked(&self.vec) }
     }
 
     /// How many bytes were inserted to this [`CString`] so far, considering its
