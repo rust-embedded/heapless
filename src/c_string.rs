@@ -8,7 +8,7 @@ use core::{
 
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
-/// It stores up to N-1 elements with a byte reserved for the terminating null byte.
+/// It stores up to N-1 elements with a byte reserved for the terminating nul byte.
 #[derive(Clone, Default)]
 pub struct CString<const N: usize> {
     vec: Vec<u8, N>,
@@ -25,14 +25,14 @@ fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 }
 
 impl<const N: usize> CString<N> {
-    /// Creates a new C-compatible string with a terminating null byte.
+    /// Creates a new C-compatible string with a terminating nul byte.
     ///
     /// ```rust
     /// use heapless::CString;
     /// use std::ffi::CStr;
     ///
     /// // Fixed-size CString that can store up to 10 elements
-    /// // (counting the null terminator)
+    /// // (counting the nul terminator)
     /// let empty = CString::<10>::new();
     ///
     /// assert_eq!(empty.as_c_str(), <&CStr>::default());
@@ -60,7 +60,7 @@ impl<const N: usize> CString<N> {
     /// # Safety
     ///
     /// The provided slice **must** be nul-terminated and not contain any interior
-    /// null bytes.
+    /// nul bytes.
     ///
     /// # Examples
     ///
@@ -80,9 +80,9 @@ impl<const N: usize> CString<N> {
     }
 
     /// Instantiate a [`CString`] copying from the giving bytes, assuming it is
-    /// null-terminated (ends with a single zero byte).
+    /// nul-terminated (ends with a single zero byte).
     ///
-    /// Fails if the given byte slice has any interior null byte, if the slice does not
+    /// Fails if the given byte slice has any interior nul byte, if the slice does not
     /// end in a zero byte or if the byte slice can't fit in `N`.
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut me = Self::new();
@@ -96,14 +96,14 @@ impl<const N: usize> CString<N> {
     ///
     /// # Safety
     ///
-    /// * The memory pointed to by `ptr` must contain a valid null terminator at the
+    /// * The memory pointed to by `ptr` must contain a valid nul terminator at the
     ///   end of the string.
     ///
-    /// * `ptr` must be valid for reads of bytes up to and including the null terminator.
+    /// * `ptr` must be valid for reads of bytes up to and including the nul terminator.
     ///   This means in particular:
     ///
     ///     * The entire memory range of this `CStr` must be contained within a single allocated object!
-    ///     * `ptr` must be non-null even for a zero-length cstr.
+    ///     * `ptr` must be non-nul even for a zero-length cstr.
     ///
     /// # Example
     ///
@@ -134,7 +134,7 @@ impl<const N: usize> CString<N> {
     }
 
     /// How many bytes were inserted to this [`CString`] so far, considering its
-    /// null terminator.
+    /// nul terminator.
     ///
     /// Must always be bigger than zero, since even an empty [`CString`]
     /// ends in a zero byte.
@@ -144,12 +144,12 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     /// use std::ffi::{c_char, CStr};
     ///
-    /// // Length is one (null terminator only), capacity is 10
+    /// // Length is one (nul terminator only), capacity is 10
     /// let mut cstr = CString::<11>::new();
     ///
     /// // Insert 5 bytes to it
     /// cstr.push_bytes(b"/etc/").unwrap();
-    /// // Length is 6 (5 bytes inserted plus null terminator)
+    /// // Length is 6 (5 bytes inserted plus nul terminator)
     /// assert_eq!(cstr.len(), 6);
     /// cstr.push_bytes(b"dconf").unwrap();
     ///
@@ -165,16 +165,16 @@ impl<const N: usize> CString<N> {
             None => None,
             Some(0) if bytes.len() < 2 => None,
             Some(0) => {
-                // `bytes` is null-terminated and so is `self.vec`.
-                // Adding up both would account for 2 null bytes when only a single byte
+                // `bytes` is nul-terminated and so is `self.vec`.
+                // Adding up both would account for 2 nul bytes when only a single byte
                 // would end up in the resulting CString.
                 Some(self.vec.len() + bytes.len() - 1)
             }
             Some(_) => {
-                // No terminating null byte in `bytes` but there's one in
+                // No terminating nul byte in `bytes` but there's one in
                 // `self.vec`, so the math lines up nicely.
                 //
-                // In the case that `bytes` has a null byte anywhere else, we would
+                // In the case that `bytes` has a nul byte anywhere else, we would
                 // error after `memchr` is called. So there's no problem.
                 Some(self.vec.len() + bytes.len())
             }
@@ -188,9 +188,9 @@ impl<const N: usize> CString<N> {
     /// Extends the [`CString`] with the given bytes.
     ///
     /// This method fails if the [`CString`] would not have enough capacity to append the bytes or
-    /// if the bytes contain an interior null byte (a zero byte not at the buffer's final position).
+    /// if the bytes contain an interior nul byte (a zero byte not at the buffer's final position).
     ///
-    /// If there's a null byte at the end, however, the function does not fail.
+    /// If there's a nul byte at the end, however, the function does not fail.
     ///
     /// # Example
     ///
@@ -216,28 +216,28 @@ impl<const N: usize> CString<N> {
 
         match memchr(0, bytes) {
             Some(nul_pos) if nul_pos + 1 == bytes.len() => {
-                // Safety: inserted bytes are null-terminated so
+                // Safety: inserted bytes are nul-terminated so
                 //         the CString will be left in a valid state
                 unsafe { self.extend_slice(bytes) }?;
 
                 Ok(())
             }
             Some(_nul_pos) => {
-                // Found an interior null byte
+                // Found an interior nul byte
                 Err(CapacityError)
             }
             None => {
-                // Given bytes had no null byte anywhere,
-                // so we'll insert them and then add the null byte terminator.
+                // Given bytes had no nul byte anywhere,
+                // so we'll insert them and then add the nul byte terminator.
 
                 // We've ensured above that we have enough space left to insert these bytes,
                 // so the operations below must succeed
 
-                // Safety: CString will not have a null terminator after this call is done,
+                // Safety: CString will not have a nul terminator after this call is done,
                 //         but we'll fix that right below
                 unsafe { self.extend_slice(bytes) }.unwrap();
 
-                // Add the null byte terminator
+                // Add the nul byte terminator
                 self.vec.push(0).map_err(|_| ()).unwrap();
 
                 Ok(())
@@ -245,7 +245,7 @@ impl<const N: usize> CString<N> {
         }
     }
 
-    /// Removes the null byte terminator from the inner buffer.
+    /// Removes the nul byte terminator from the inner buffer.
     ///
     /// # Safety: caller must ensure to re-add the terminator after this function is called
     #[inline]
@@ -298,12 +298,12 @@ impl<const N: usize> CString<N> {
         core::str::from_utf8_unchecked(self.inner_without_nul())
     }
 
-    /// Removes the existing null terminator and then extends `self` with the given bytes.
+    /// Removes the existing nul terminator and then extends `self` with the given bytes.
     ///
     /// # Safety
     ///
-    /// If `additional` is not null-terminated, the [`CString`] is left non null-terminated, which is
-    /// an invalid state. Caller must ensure that either `additional` has a terminating null byte
+    /// If `additional` is not nul-terminated, the [`CString`] is left non nul-terminated, which is
+    /// an invalid state. Caller must ensure that either `additional` has a terminating nul byte
     /// or ensure to fix the [`CString`] after calling `extend_slice`.
     unsafe fn extend_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
         self.pop_terminator();
@@ -313,14 +313,14 @@ impl<const N: usize> CString<N> {
 
     #[inline]
     fn inner_without_nul(&self) -> &[u8] {
-        // Assert our invariant: `self.vec` must be null-terminated
+        // Assert our invariant: `self.vec` must be nul-terminated
         debug_assert!(!self.vec.is_empty());
         debug_assert_eq!(self.vec.last().copied(), Some(0));
 
         &self.vec[..self.vec.len() - 1]
     }
 
-    /// Returns the underlying byte slice including the trailing null terminator.
+    /// Returns the underlying byte slice including the trailing nul terminator.
     ///
     /// # Example
     ///
@@ -337,7 +337,7 @@ impl<const N: usize> CString<N> {
         &self.vec
     }
 
-    /// Returns the underlying byte slice excluding the trailing null terminator.
+    /// Returns the underlying byte slice excluding the trailing nul terminator.
     ///
     /// # Example
     ///
@@ -371,7 +371,7 @@ mod tests {
     fn empty() {
         let empty = CString::<5>::new();
 
-        // &CStr's Default impl points to a slice that only contains a single element: the null byte terminator
+        // &CStr's Default impl points to a slice that only contains a single element: the nul byte terminator
         assert_eq!(empty.as_c_str(), <&CStr>::default());
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
@@ -394,7 +394,7 @@ mod tests {
 
         assert_eq!(cstr.to_str(), Ok("hello"));
 
-        // Call must fail since `w\0rld` contains an interior null byteassert_eq!(empty.to_str(), Ok("hello"));
+        // Call must fail since `w\0rld` contains an interior nul byteassert_eq!(empty.to_str(), Ok("hello"));
         assert!(cstr.push_bytes(b"w\0rld").is_err());
 
         // However, the call above _must not_ have invalidated the state of our CString
@@ -404,7 +404,7 @@ mod tests {
         assert!(cstr.push_bytes(b" world").is_err());
 
         // Yet again, the call above must not have invalidated the state of our CString
-        // (as it would e.g. if we pushed the bytes but then failed to push the null terminator)
+        // (as it would e.g. if we pushed the bytes but then failed to push the nul terminator)
         assert_eq!(cstr.to_str(), Ok("hello"));
 
         assert!(cstr.push_bytes(b" Bill").is_ok());
