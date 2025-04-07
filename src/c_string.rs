@@ -155,10 +155,6 @@ impl<const N: usize> CString<N> {
         }
     }
 
-    // pub fn push(&mut self, byte: u8) -> Result<(), ()> {
-
-    // }
-
     /// Extends the [`CString`] with the given bytes.
     ///
     /// This method fails if the [`CString`] would not have enough capacity to append the bytes or
