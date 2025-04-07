@@ -79,11 +79,11 @@ impl<const N: usize> CString<N> {
         Ok(string)
     }
 
-    /// Instantiate a [`CString`] copying from the giving bytes, assuming it is
-    /// nul-terminated (ends with a single zero byte).
+    /// Instantiates a [`CString`] copying from the giving byte slice, assuming it is
+    /// nul-terminated.
     ///
     /// Fails if the given byte slice has any interior nul byte, if the slice does not
-    /// end in a zero byte or if the byte slice can't fit in `N`.
+    /// end with a nul byte, or if the byte slice can't fit in `N`.
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut me = Self::new();
 
