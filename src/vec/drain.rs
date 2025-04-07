@@ -73,7 +73,7 @@ impl<T> Iterator for Drain<'_, T> {
     fn next(&mut self) -> Option<T> {
         self.iter
             .next()
-            .map(|elt| unsafe { ptr::read(elt as *const _) })
+            .map(|elt| unsafe { ptr::read(core::ptr::from_ref(elt)) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -86,7 +86,7 @@ impl<T> DoubleEndedIterator for Drain<'_, T> {
     fn next_back(&mut self) -> Option<T> {
         self.iter
             .next_back()
-            .map(|elt| unsafe { ptr::read(elt as *const _) })
+            .map(|elt| unsafe { ptr::read(core::ptr::from_ref(elt)) })
     }
 }
 

@@ -152,8 +152,9 @@ impl<T, const N: usize> Deque<T, N> {
     /// static mut X: Deque<u8, 16> = Deque::new();
     /// ```
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
+        const {
+            assert!(N > 0);
+        }
 
         Self {
             phantom: PhantomData,
@@ -185,19 +186,19 @@ impl<T, const N: usize> Deque<T, N> {
             self.back - self.front
         }
     }
+}
 
+impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Get a reference to the `Deque`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &DequeView<T> {
-        self
+        S::as_deque_view(self)
     }
 
     /// Get a mutable reference to the `Deque`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut DequeView<T> {
-        self
+        S::as_deque_mut_view(self)
     }
-}
 
-impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// Returns the maximum number of elements the deque can hold.
     pub fn storage_capacity(&self) -> usize {
         self.buffer.borrow().len()
@@ -268,15 +269,15 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             } else if self.back <= self.front {
                 (
                     slice::from_raw_parts(
-                        self.buffer.borrow().as_ptr().add(self.front) as *const T,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
                         self.storage_capacity() - self.front,
                     ),
-                    slice::from_raw_parts(self.buffer.borrow().as_ptr() as *const T, self.back),
+                    slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts(
-                        self.buffer.borrow().as_ptr().add(self.front) as *const T,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &[],
@@ -296,15 +297,15 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             } else if self.back <= self.front {
                 (
                     slice::from_raw_parts_mut(
-                        ptr.add(self.front) as *mut T,
+                        ptr.add(self.front).cast::<T>(),
                         self.storage_capacity() - self.front,
                     ),
-                    slice::from_raw_parts_mut(ptr as *mut T, self.back),
+                    slice::from_raw_parts_mut(ptr.cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts_mut(
-                        ptr.add(self.front) as *mut T,
+                        ptr.add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &mut [],
@@ -895,7 +896,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for DequeInner<T, S> {
 }
 impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T, S> {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
-        self.extend(iter.into_iter().copied())
+        self.extend(iter.into_iter().copied());
     }
 }
 
@@ -946,7 +947,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut res = Deque::new();
+        let mut res = Self::new();
         for i in self {
             // safety: the original and new deques have the same capacity, so it can
             // not become full.

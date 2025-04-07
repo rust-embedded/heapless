@@ -97,7 +97,7 @@ pub struct Pos {
 
 impl Pos {
     fn new(index: usize, hash: HashValue) -> Self {
-        Pos {
+        Self {
             nz: unsafe {
                 NonZeroU32::new_unchecked(
                     ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1),
@@ -146,7 +146,7 @@ impl<K, V, const N: usize> CoreMap<K, V, N> {
     const fn new() -> Self {
         const INIT: Option<Pos> = None;
 
-        CoreMap {
+        Self {
             entries: Vec::new(),
             indices: [INIT; N],
         }
@@ -729,11 +729,12 @@ pub struct IndexMap<K, V, S, const N: usize> {
 impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexMap`.
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+        }
 
-        IndexMap {
+        Self {
             build_hasher: BuildHasherDefault::new(),
             core: CoreMap::new(),
         }
@@ -1084,6 +1085,77 @@ where
         }
     }
 
+    /// Returns a tuple of references to the key and the value corresponding to the index.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 16>::new();
+    /// map.insert(1, "a").unwrap();
+    /// assert_eq!(map.get_index(0), Some((&1, &"a")));
+    /// assert_eq!(map.get_index(1), None);
+    /// ```
+    pub fn get_index(&self, index: usize) -> Option<(&K, &V)> {
+        self.core
+            .entries
+            .get(index)
+            .map(|entry| (&entry.key, &entry.value))
+    }
+
+    /// Returns a tuple of references to the key and the mutable value corresponding to the index.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// if let Some((_, x)) = map.get_index_mut(0) {
+    ///     *x = "b";
+    /// }
+    /// assert_eq!(map[&1], "b");
+    /// ```
+    pub fn get_index_mut(&mut self, index: usize) -> Option<(&K, &mut V)> {
+        self.core
+            .entries
+            .get_mut(index)
+            .map(|entry| (&entry.key, &mut entry.value))
+    }
+
+    /// Returns the index of the key-value pair corresponding to the key.
+    ///
+    /// The key may be any borrowed form of the map's key type, but `Hash` and `Eq` on the borrowed
+    /// form *must* match those for the key type.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// map.insert(0, "b").unwrap();
+    /// assert_eq!(map.get_index_of(&0), Some(1));
+    /// assert_eq!(map.get_index_of(&1), Some(0));
+    /// assert_eq!(map.get_index_of(&2), None);
+    /// ```
+    pub fn get_index_of<Q>(&self, key: &Q) -> Option<usize>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(_, found)| found)
+    }
+
     /// Inserts a key-value pair into the map.
     ///
     /// If an equivalent key already exists in the map: the key remains and retains in its place in
@@ -1168,6 +1240,33 @@ where
         self.core.retain_in_order(move |k, v| f(k, v));
     }
 
+    /// Shortens the map, keeping the first `len` elements and dropping the rest.
+    ///
+    /// If `len` is greater than the map's current length, this has no effect.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// map.truncate(2);
+    /// assert_eq!(map.len(), 2);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&2, &"b")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn truncate(&mut self, len: usize) {
+        self.core.entries.truncate(len);
+    }
+
     /* Private API */
     /// Return probe (indices) and position (entries)
     fn find<Q>(&self, key: &Q) -> Option<(usize, usize)>
@@ -1236,26 +1335,27 @@ where
     S: Default,
 {
     fn default() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+        }
 
-        IndexMap {
+        Self {
             build_hasher: <_>::default(),
             core: CoreMap::new(),
         }
     }
 }
 
-impl<K, V, S, S2, const N: usize, const N2: usize> PartialEq<IndexMap<K, V, S2, N2>>
-    for IndexMap<K, V, S, N>
+impl<K, V1, V2, S1, S2, const N1: usize, const N2: usize> PartialEq<IndexMap<K, V2, S2, N2>>
+    for IndexMap<K, V1, S1, N1>
 where
     K: Eq + Hash,
-    V: Eq,
-    S: BuildHasher,
+    V1: PartialEq<V2>,
+    S1: BuildHasher,
     S2: BuildHasher,
 {
-    fn eq(&self, other: &IndexMap<K, V, S2, N2>) -> bool {
+    fn eq(&self, other: &IndexMap<K, V2, S2, N2>) -> bool {
         self.len() == other.len()
             && self
                 .iter()
@@ -1296,7 +1396,7 @@ where
     where
         I: IntoIterator<Item = (&'a K, &'a V)>,
     {
-        self.extend(iterable.into_iter().map(|(&key, &value)| (key, value)))
+        self.extend(iterable.into_iter().map(|(&key, &value)| (key, value)));
     }
 }
 
@@ -1309,7 +1409,7 @@ where
     where
         I: IntoIterator<Item = (K, V)>,
     {
-        let mut map = IndexMap::default();
+        let mut map = Self::default();
         map.extend(iterable);
         map
     }
@@ -1479,7 +1579,7 @@ mod tests {
                      mem::size_of::<u16>() // hash
                 ) + // buckets
                 mem::size_of::<usize>() // entries.length
-        )
+        );
     }
 
     #[test]
@@ -1671,7 +1771,7 @@ mod tests {
                 assert_eq!(value, *v.insert(value).unwrap());
             }
         };
-        assert_eq!(value, *src.get(&key).unwrap())
+        assert_eq!(value, *src.get(&key).unwrap());
     }
 
     #[test]
@@ -1691,7 +1791,7 @@ mod tests {
                 panic!("Entry not found");
             }
         };
-        assert_eq!(value2, *src.get(&key).unwrap())
+        assert_eq!(value2, *src.get(&key).unwrap());
     }
 
     #[test]
@@ -1849,5 +1949,12 @@ mod tests {
         for (&value, i) in map.values().zip(1..MAP_SLOTS) {
             assert_eq!(value, i + 1);
         }
+    }
+
+    #[test]
+    fn partial_eq_floats() {
+        // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
+        let map: FnvIndexMap<usize, f32, 4> = Default::default();
+        assert_eq!(map, map);
     }
 }

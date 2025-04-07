@@ -11,7 +11,8 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
+use crate::vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage};
+use crate::CapacityError;
 
 mod drain;
 pub use drain::Drain;
@@ -24,98 +25,120 @@ pub use drain::Drain;
 #[derive(Debug)]
 pub enum FromUtf16Error {
     /// The capacity of the `String` is too small for the given operation.
-    Capacity,
+    Capacity(CapacityError),
     /// Error decoding UTF-16.
-    DecodeUtf16Error(DecodeUtf16Error),
+    DecodeUtf16(DecodeUtf16Error),
 }
 
 impl fmt::Display for FromUtf16Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Capacity => "insufficient capacity".fmt(f),
-            Self::DecodeUtf16Error(e) => write!(f, "invalid UTF-16: {}", e),
+            Self::Capacity(err) => write!(f, "{err}"),
+            Self::DecodeUtf16(err) => write!(f, "invalid UTF-16: {err}"),
         }
     }
 }
 
-/// Base struct for [`String`] and [`StringView`], generic over the [`VecStorage`].
+impl core::error::Error for FromUtf16Error {}
+
+impl From<CapacityError> for FromUtf16Error {
+    fn from(e: CapacityError) -> Self {
+        Self::Capacity(e)
+    }
+}
+
+mod storage {
+    use super::{StringInner, StringView};
+    use crate::vec::{OwnedVecStorage, VecStorage, ViewVecStorage};
+
+    /// Trait defining how data for a String is stored.
+    ///
+    /// There's two implementations available:
+    ///
+    /// - [`OwnedStorage`]: stores the data in an array whose size is known at compile time.
+    /// - [`ViewStorage`]: stores the data in an unsized slice
+    ///
+    /// This allows [`String`] to be generic over either sized or unsized storage. The [`string`](super)
+    /// module contains a [`StringInner`] struct that's generic on [`StringStorage`],
+    /// and two type aliases for convenience:
+    ///
+    /// - [`String<N>`](crate::string::String) = `StringInner<OwnedStorage<u8, N>>`
+    /// - [`StringView<T>`](crate::string::StringView) = `StringInner<ViewStorage<u8>>`
+    ///
+    /// `String` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut String -> &mut StringView` or
+    /// `Box<String> -> Box<StringView>`, or explicitly with [`.as_view()`](crate::string::String::as_view) or [`.as_mut_view()`](crate::string::String::as_mut_view).
+    ///
+    /// This trait is sealed, so you cannot implement it for your own types. You can only use
+    /// the implementations provided by this crate.
+    ///
+    /// [`StringInner`]: super::StringInner
+    /// [`String`]: super::String
+    /// [`OwnedStorage`]: super::OwnedStorage
+    /// [`ViewStorage`]: super::ViewStorage
+    pub trait StringStorage: StringStorageSealed {}
+    pub trait StringStorageSealed: VecStorage<u8> {
+        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        where
+            Self: StringStorage;
+        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        where
+            Self: StringStorage;
+    }
+
+    impl<const N: usize> StringStorage for OwnedVecStorage<u8, N> {}
+    impl<const N: usize> StringStorageSealed for OwnedVecStorage<u8, N> {
+        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        where
+            Self: StringStorage,
+        {
+            this
+        }
+        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        where
+            Self: StringStorage,
+        {
+            this
+        }
+    }
+
+    impl StringStorage for ViewVecStorage<u8> {}
+
+    impl StringStorageSealed for ViewVecStorage<u8> {
+        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        where
+            Self: StringStorage,
+        {
+            this
+        }
+        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        where
+            Self: StringStorage,
+        {
+            this
+        }
+    }
+}
+
+pub use storage::StringStorage;
+
+/// Implementation of [`StringStorage`] that stores the data in an array whose size is known at compile time.
+pub type OwnedStorage<const N: usize> = OwnedVecStorage<u8, N>;
+/// Implementation of [`StringStorage`] that stores the data in an unsized slice.
+pub type ViewStorage = ViewVecStorage<u8>;
+
+/// Base struct for [`String`] and [`StringView`], generic over the [`StringStorage`].
 ///
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct StringInner<S: VecStorage<u8> + ?Sized> {
+pub struct StringInner<S: StringStorage + ?Sized> {
     vec: VecInner<u8, S>,
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type String<const N: usize> = StringInner<OwnedVecStorage<u8, N>>;
+pub type String<const N: usize> = StringInner<OwnedStorage<N>>;
 
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type StringView = StringInner<ViewVecStorage<u8>>;
-
-impl StringView {
-    /// Removes the specified range from the string in bulk, returning all
-    /// removed characters as an iterator.
-    ///
-    /// The returned iterator keeps a mutable borrow on the string to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point or end point do not lie on a [`char`]
-    /// boundary, or if they're out of bounds.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`core::mem::forget`], for example), the string may still contain a copy
-    /// of any drained characters, or may have lost characters arbitrarily,
-    /// including characters outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::String;
-    ///
-    /// let mut s = String::<32>::try_from("α is alpha, β is beta").unwrap();
-    /// let beta_offset = s.find('β').unwrap_or(s.len());
-    ///
-    /// // Remove the range up until the β from the string
-    /// let t: String<32> = s.drain(..beta_offset).collect();
-    /// assert_eq!(t, "α is alpha, ");
-    /// assert_eq!(s, "β is beta");
-    ///
-    /// // A full range clears the string, like `clear()` does
-    /// s.drain(..);
-    /// assert_eq!(s, "");
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_>
-    where
-        R: RangeBounds<usize>,
-    {
-        // Memory safety
-        //
-        // The `String` version of `Drain` does not have the memory safety issues
-        // of the `Vec` version. The data is just plain bytes.
-        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
-        // the removal will not happen.
-        let Range { start, end } = crate::slice::range(range, ..self.len());
-        assert!(self.is_char_boundary(start));
-        assert!(self.is_char_boundary(end));
-
-        // Take out two simultaneous borrows. The &mut String won't be accessed
-        // until iteration is over, in Drop.
-        let self_ptr = self as *mut _;
-        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
-        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
-
-        Drain {
-            start,
-            end,
-            iter: chars_iter,
-            string: self_ptr,
-        }
-    }
-}
+pub type StringView = StringInner<ViewStorage>;
 
 impl<const N: usize> String<N> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
@@ -164,10 +187,10 @@ impl<const N: usize> String<N> {
         for c in char::decode_utf16(v.iter().cloned()) {
             match c {
                 Ok(c) => {
-                    s.push(c).map_err(|_| FromUtf16Error::Capacity)?;
+                    s.push(c).map_err(|_| CapacityError)?;
                 }
                 Err(err) => {
-                    return Err(FromUtf16Error::DecodeUtf16Error(err));
+                    return Err(FromUtf16Error::DecodeUtf16(err));
                 }
             }
         }
@@ -253,55 +276,15 @@ impl<const N: usize> String<N> {
     /// assert!(b.len() == 2);
     ///
     /// assert_eq!(&[b'a', b'b'], &b[..]);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
     pub fn into_bytes(self) -> Vec<u8, N> {
         self.vec
     }
+}
 
-    /// Get a reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = s.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = &s;
-    /// ```
-    #[inline]
-    pub fn as_view(&self) -> &StringView {
-        self
-    }
-
-    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = s.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
-    ///
-    /// ```rust
-    /// # use heapless::string::{String, StringView};
-    /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = &mut s;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut StringView {
-        self
-    }
-
+impl<S: StringStorage + ?Sized> StringInner<S> {
     /// Removes the specified range from the string in bulk, returning all
     /// removed characters as an iterator.
     ///
@@ -341,11 +324,72 @@ impl<const N: usize> String<N> {
     where
         R: RangeBounds<usize>,
     {
-        self.as_mut_view().drain(range)
-    }
-}
+        // Memory safety
+        //
+        // The `String` version of `Drain` does not have the memory safety issues
+        // of the `Vec` version. The data is just plain bytes.
+        // Because the range removal happens in `Drop`, if the `Drain` iterator is leaked,
+        // the removal will not happen.
+        let Range { start, end } = crate::slice::range(range, ..self.len());
+        assert!(self.is_char_boundary(start));
+        assert!(self.is_char_boundary(end));
 
-impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
+        // Take out two simultaneous borrows. The &mut String won't be accessed
+        // until iteration is over, in Drop.
+        let self_ptr = self.as_mut_view() as *mut _;
+        // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
+        let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
+
+        Drain {
+            start,
+            end,
+            iter: chars_iter,
+            string: self_ptr,
+        }
+    }
+
+    /// Get a reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = s.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &StringView = &s;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &StringView {
+        S::as_string_view(self)
+    }
+
+    /// Get a mutable reference to the `String`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = s.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    ///
+    /// ```rust
+    /// # use heapless::string::{String, StringView};
+    /// let mut s: String<10> = String::try_from("hello").unwrap();
+    /// let view: &mut StringView = &mut s;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut StringView {
+        S::as_string_mut_view(self)
+    }
+
     /// Extracts a string slice containing the entire string.
     ///
     /// # Examples
@@ -360,7 +404,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     ///
     /// let _s = s.as_str();
     /// // s.push('c'); // <- cannot borrow `s` as mutable because it is also borrowed as immutable
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
     pub fn as_str(&self) -> &str {
@@ -379,7 +423,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// let mut s: String<4> = String::try_from("ab")?;
     /// let s = s.as_mut_str();
     /// s.make_ascii_uppercase();
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
     pub fn as_mut_str(&mut self) -> &mut str {
@@ -411,7 +455,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     ///     vec.reverse();
     /// }
     /// assert_eq!(s, "olleh");
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, S> {
         &mut self.vec
@@ -433,11 +477,10 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// assert_eq!("foobar", s);
     ///
     /// assert!(s.push_str("tender").is_err());
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push_str(&mut self, string: &str) -> Result<(), ()> {
+    pub fn push_str(&mut self, string: &str) -> Result<(), CapacityError> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
@@ -455,7 +498,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// ```
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.vec.storage_capacity()
+        self.vec.capacity()
     }
 
     /// Appends the given [`char`] to the end of this `String`.
@@ -476,13 +519,12 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// assert!("abc123" == s.as_str());
     ///
     /// assert_eq!("abc123", s);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
-    #[allow(clippy::result_unit_err)]
-    pub fn push(&mut self, c: char) -> Result<(), ()> {
+    pub fn push(&mut self, c: char) -> Result<(), CapacityError> {
         match c.len_utf8() {
-            1 => self.vec.push(c as u8).map_err(|_| {}),
+            1 => self.vec.push(c as u8).map_err(|_| CapacityError),
             _ => self
                 .vec
                 .extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
@@ -513,13 +555,13 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// s.truncate(2);
     ///
     /// assert_eq!("he", s);
-    /// # Ok::<(), ()>(())
+    /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
         if new_len <= self.len() {
             assert!(self.is_char_boundary(new_len));
-            self.vec.truncate(new_len)
+            self.vec.truncate(new_len);
         }
     }
 
@@ -541,7 +583,7 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// assert_eq!(s.pop(), Some('f'));
     ///
     /// assert_eq!(s.pop(), None);
-    /// Ok::<(), ()>(())
+    /// Ok::<(), heapless::CapacityError>(())
     /// ```
     pub fn pop(&mut self) -> Option<char> {
         let ch = self.chars().next_back()?;
@@ -581,10 +623,10 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// ```
     #[inline]
     pub fn remove(&mut self, index: usize) -> char {
-        let ch = match self[index..].chars().next() {
-            Some(ch) => ch,
-            None => panic!("cannot remove a char from the end of a string"),
-        };
+        let ch = self[index..]
+            .chars()
+            .next()
+            .unwrap_or_else(|| panic!("cannot remove a char from the end of a string"));
 
         let next = index + ch.len_utf8();
         let len = self.len();
@@ -615,11 +657,11 @@ impl<S: VecStorage<u8> + ?Sized> StringInner<S> {
     /// assert!(s.is_empty());
     /// assert_eq!(0, s.len());
     /// assert_eq!(8, s.capacity());
-    /// Ok::<(), ()>(())
+    /// Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
     pub fn clear(&mut self) {
-        self.vec.clear()
+        self.vec.clear();
     }
 }
 
@@ -630,19 +672,20 @@ impl<const N: usize> Default for String<N> {
 }
 
 impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
-    type Error = ();
+    type Error = CapacityError;
+
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        let mut new = String::new();
+        let mut new = Self::new();
         new.push_str(s)?;
         Ok(new)
     }
 }
 
 impl<const N: usize> str::FromStr for String<N> {
-    type Err = ();
+    type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut new = String::new();
+        let mut new = Self::new();
         new.push_str(s)?;
         Ok(new)
     }
@@ -650,7 +693,7 @@ impl<const N: usize> str::FromStr for String<N> {
 
 impl<const N: usize> iter::FromIterator<char> for String<N> {
     fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push(c).unwrap();
         }
@@ -660,7 +703,7 @@ impl<const N: usize> iter::FromIterator<char> for String<N> {
 
 impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
     fn from_iter<T: IntoIterator<Item = &'a char>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push(*c).unwrap();
         }
@@ -670,7 +713,7 @@ impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
 
 impl<'a, const N: usize> iter::FromIterator<&'a str> for String<N> {
     fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
-        let mut new = String::new();
+        let mut new = Self::new();
         for c in iter {
             new.push_str(c).unwrap();
         }
@@ -686,26 +729,26 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> fmt::Debug for StringInner<S> {
+impl<S: StringStorage + ?Sized> fmt::Debug for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> fmt::Display for StringInner<S> {
+impl<S: StringStorage + ?Sized> fmt::Display for StringInner<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> hash::Hash for StringInner<S> {
+impl<S: StringStorage + ?Sized> hash::Hash for StringInner<S> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
-        <str as hash::Hash>::hash(self, hasher)
+        <str as hash::Hash>::hash(self, hasher);
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> fmt::Write for StringInner<S> {
+impl<S: StringStorage + ?Sized> fmt::Write for StringInner<S> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -715,7 +758,7 @@ impl<S: VecStorage<u8> + ?Sized> fmt::Write for StringInner<S> {
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> ops::Deref for StringInner<S> {
+impl<S: StringStorage + ?Sized> ops::Deref for StringInner<S> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -723,38 +766,38 @@ impl<S: VecStorage<u8> + ?Sized> ops::Deref for StringInner<S> {
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> ops::DerefMut for StringInner<S> {
+impl<S: StringStorage + ?Sized> ops::DerefMut for StringInner<S> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> borrow::Borrow<str> for StringInner<S> {
+impl<S: StringStorage + ?Sized> borrow::Borrow<str> for StringInner<S> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
-impl<S: VecStorage<u8> + ?Sized> borrow::BorrowMut<str> for StringInner<S> {
+impl<S: StringStorage + ?Sized> borrow::BorrowMut<str> for StringInner<S> {
     fn borrow_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> AsRef<str> for StringInner<S> {
+impl<S: StringStorage + ?Sized> AsRef<str> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> AsRef<[u8]> for StringInner<S> {
+impl<S: StringStorage + ?Sized> AsRef<[u8]> for StringInner<S> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialEq<StringInner<S1>>
+impl<S1: StringStorage + ?Sized, S2: StringStorage + ?Sized> PartialEq<StringInner<S1>>
     for StringInner<S2>
 {
     fn eq(&self, rhs: &StringInner<S1>) -> bool {
@@ -763,7 +806,7 @@ impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialEq<StringI
 }
 
 // String<N> == str
-impl<S: VecStorage<u8> + ?Sized> PartialEq<str> for StringInner<S> {
+impl<S: StringStorage + ?Sized> PartialEq<str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(self, other)
@@ -771,7 +814,7 @@ impl<S: VecStorage<u8> + ?Sized> PartialEq<str> for StringInner<S> {
 }
 
 // String<N> == &'str
-impl<S: VecStorage<u8> + ?Sized> PartialEq<&str> for StringInner<S> {
+impl<S: StringStorage + ?Sized> PartialEq<&str> for StringInner<S> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(self, &other[..])
@@ -779,24 +822,24 @@ impl<S: VecStorage<u8> + ?Sized> PartialEq<&str> for StringInner<S> {
 }
 
 // str == String<N>
-impl<S: VecStorage<u8> + ?Sized> PartialEq<StringInner<S>> for str {
+impl<S: StringStorage + ?Sized> PartialEq<StringInner<S>> for str {
     #[inline]
     fn eq(&self, other: &StringInner<S>) -> bool {
-        str::eq(self, &other[..])
+        Self::eq(self, &other[..])
     }
 }
 
 // &'str == String<N>
-impl<S: VecStorage<u8> + ?Sized> PartialEq<StringInner<S>> for &str {
+impl<S: StringStorage + ?Sized> PartialEq<StringInner<S>> for &str {
     #[inline]
     fn eq(&self, other: &StringInner<S>) -> bool {
         str::eq(self, &other[..])
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> Eq for StringInner<S> {}
+impl<S: StringStorage + ?Sized> Eq for StringInner<S> {}
 
-impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialOrd<StringInner<S1>>
+impl<S1: StringStorage + ?Sized, S2: StringStorage + ?Sized> PartialOrd<StringInner<S1>>
     for StringInner<S2>
 {
     #[inline]
@@ -805,7 +848,7 @@ impl<S1: VecStorage<u8> + ?Sized, S2: VecStorage<u8> + ?Sized> PartialOrd<String
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> Ord for StringInner<S> {
+impl<S: StringStorage + ?Sized> Ord for StringInner<S> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)
@@ -912,7 +955,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{String, Vec};
+    use crate::{CapacityError, String, Vec};
 
     #[test]
     fn static_new() {
@@ -980,7 +1023,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let _: () = String::<2>::try_from("123").unwrap_err();
+        let _: CapacityError = String::<2>::try_from("123").unwrap_err();
     }
 
     #[test]
@@ -991,7 +1034,7 @@ mod tests {
         assert!(s.len() == 3);
         assert_eq!(s, "123");
 
-        let _: () = String::<2>::from_str("123").unwrap_err();
+        let _: CapacityError = String::<2>::from_str("123").unwrap_err();
     }
 
     #[test]
@@ -1153,26 +1196,26 @@ mod tests {
         let number = 5;
         let float = 3.12;
         let formatted = format!(15; "{:0>3} plus {float}", number).unwrap();
-        assert_eq!(formatted, "005 plus 3.12")
+        assert_eq!(formatted, "005 plus 3.12");
     }
     #[test]
     fn format_inferred_capacity() {
         let number = 5;
         let float = 3.12;
         let formatted: String<15> = format!("{:0>3} plus {float}", number).unwrap();
-        assert_eq!(formatted, "005 plus 3.12")
+        assert_eq!(formatted, "005 plus 3.12");
     }
 
     #[test]
     fn format_overflow() {
         let i = 1234567;
         let formatted = format!(4; "13{}", i);
-        assert_eq!(formatted, Err(core::fmt::Error))
+        assert_eq!(formatted, Err(core::fmt::Error));
     }
 
     #[test]
     fn format_plain_string_overflow() {
         let formatted = format!(2; "123");
-        assert_eq!(formatted, Err(core::fmt::Error))
+        assert_eq!(formatted, Err(core::fmt::Error));
     }
 }

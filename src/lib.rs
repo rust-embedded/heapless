@@ -13,7 +13,7 @@
 //!
 //! // on the stack
 //! let mut xs: Vec<u8, 8> = Vec::new(); // can hold up to 8 elements
-//! xs.push(42).unwrap();
+//! xs.push(42)?;
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in a `static` variable
@@ -21,13 +21,14 @@
 //!
 //! let xs = unsafe { &mut XS };
 //!
-//! xs.push(42);
+//! xs.push(42)?;
 //! assert_eq!(xs.pop(), Some(42));
 //!
 //! // in the heap (though kind of pointless because no reallocation)
 //! let mut ys: Box<Vec<u8, 8>> = Box::new(Vec::new());
-//! ys.push(42).unwrap();
+//! ys.push(42)?;
 //! assert_eq!(ys.pop(), Some(42));
+//! # Ok::<(), u8>(())
 //! ```
 //!
 //! Because they have fixed capacity `heapless` data structures don't implicitly reallocate. This
@@ -110,17 +111,17 @@
     ),
     doc = "- [Object](pool::object::Object) -- objects managed by an object pool"
 )]
-//! - [BinaryHeap] -- priority queue
+//! - [`BinaryHeap`] -- priority queue
 //! - [Deque] -- double-ended queue
-//! - [HistoryBuffer] -- similar to a write-only ring buffer
-//! - [IndexMap] -- hash table
-//! - [IndexSet] -- hash set
-//! - [LinearMap]
-//! - [sorted_linked_list::SortedLinkedList]
+//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
+//! - [`IndexMap`] -- hash table
+//! - [`IndexSet`] -- hash set
+//! - [`LinearMap`]
+//! - [`sorted_linked_list::SortedLinkedList`]
 //! - [String]
 //! - [Vec]
 //! - [`mpmc::Q*`](mpmc) -- multiple producer multiple consumer lock-free queue
-//! - [spsc] and [spsc::Queue] -- single producer single consumer lock-free queue
+//! - [spsc] and [`spsc::Queue`] -- single producer single consumer lock-free queue
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
@@ -139,6 +140,17 @@
         target_has_atomic = "128"
     ),
     feature(integer_atomics)
+)]
+#![warn(
+    clippy::use_self,
+    clippy::too_long_first_doc_paragraph,
+    clippy::redundant_pub_crate,
+    clippy::option_if_let_else,
+    clippy::ptr_as_ptr,
+    clippy::ref_as_ptr,
+    clippy::doc_markdown,
+    clippy::semicolon_if_nothing_returned,
+    clippy::if_not_else
 )]
 
 #[cfg(feature = "alloc")]
@@ -172,13 +184,20 @@ pub mod storage;
 pub mod string;
 pub mod vec;
 
+// Workaround a compiler ICE in rust 1.83 to 1.86
+// https://github.com/rust-lang/rust/issues/138979#issuecomment-2760839948
+#[expect(dead_code)]
+fn dead_code_ice_workaround() {}
+
 #[cfg(feature = "serde")]
 mod de;
 #[cfg(feature = "serde")]
 mod ser;
 
 pub mod binary_heap;
-#[cfg(feature = "defmt-03")]
+#[cfg(feature = "bytes")]
+mod bytes;
+#[cfg(feature = "defmt")]
 mod defmt;
 #[cfg(any(
     // assume we have all atomics available if we're using portable-atomic
@@ -218,11 +237,22 @@ pub mod spsc;
 #[cfg(feature = "ufmt")]
 mod ufmt;
 
-mod sealed;
-
 /// Implementation details for macros.
 /// Do not use. Used for macros only. Not covered by semver guarantees.
 #[doc(hidden)]
 pub mod _export {
     pub use crate::string::format;
 }
+
+/// The error type for fallible [`Vec`] and [`String`] methods.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct CapacityError;
+
+impl core::fmt::Display for CapacityError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("insufficient capacity")
+    }
+}
+
+impl core::error::Error for CapacityError {}

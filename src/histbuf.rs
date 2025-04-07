@@ -41,6 +41,8 @@ use core::slice;
 mod storage {
     use core::mem::MaybeUninit;
 
+    use super::{HistoryBufferInner, HistoryBufferView};
+
     /// Trait defining how data for a container is stored.
     ///
     /// There's two implementations available:
@@ -72,6 +74,14 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedHistBufStorage` besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>;
+        fn as_hist_buf_mut_view(
+            this: &mut HistoryBufferInner<T, Self>,
+        ) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -91,6 +101,18 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
         }
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
+        fn as_hist_buf_mut_view(this: &mut HistoryBufferInner<T, Self>) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
     }
     impl<T, const N: usize> HistBufStorage<T> for OwnedHistBufStorage<T, N> {}
 
@@ -100,6 +122,18 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
+        }
+        fn as_hist_buf_view(this: &HistoryBufferInner<T, Self>) -> &HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
+        }
+        fn as_hist_buf_mut_view(this: &mut HistoryBufferInner<T, Self>) -> &mut HistoryBufferView<T>
+        where
+            Self: HistBufStorage<T>,
+        {
+            this
         }
     }
     impl<T> HistBufStorage<T> for ViewHistBufStorage<T> {}
@@ -208,8 +242,9 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
     /// ```
     #[inline]
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_0::<N>();
+        const {
+            assert!(N > 0);
+        }
 
         Self {
             phantom: PhantomData,
@@ -219,18 +254,6 @@ impl<T, const N: usize> HistoryBuffer<T, N> {
             write_at: 0,
             filled: false,
         }
-    }
-
-    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
-    #[inline]
-    pub const fn as_view(&self) -> &HistoryBufferView<T> {
-        self
-    }
-
-    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
-        self
     }
 }
 
@@ -263,6 +286,17 @@ where
     }
 }
 impl<T: Copy, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
+    /// Get a reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub fn as_view(&self) -> &HistoryBufferView<T> {
+        S::as_hist_buf_view(self)
+    }
+
+    /// Get a mutable reference to the `HistoryBuffer`, erasing the `N` const-generic.
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut HistoryBufferView<T> {
+        S::as_hist_buf_mut_view(self)
+    }
     /// Clears the buffer, replacing every element with the given value.
     pub fn clear_with(&mut self, t: T) {
         // SAFETY: we reset the values just after
@@ -290,9 +324,9 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     unsafe fn drop_contents(&mut self) {
         unsafe {
             ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
-                self.data.borrow_mut().as_mut_ptr() as *mut T,
+                self.data.borrow_mut().as_mut_ptr().cast::<T>(),
                 self.len(),
-            ))
+            ));
         }
     }
 
@@ -445,7 +479,7 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr() as *const _, self.len()) }
+        unsafe { slice::from_raw_parts(self.data.borrow().as_ptr().cast(), self.len()) }
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the buffer.
@@ -463,10 +497,10 @@ impl<T, S: HistBufStorage<T> + ?Sized> HistoryBufferInner<T, S> {
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let buffer = self.as_slice();
 
-        if !self.filled {
-            (buffer, &[])
-        } else {
+        if self.filled {
             (&buffer[self.write_at..], &buffer[..self.write_at])
+        } else {
+            (buffer, &[])
         }
     }
 
@@ -513,7 +547,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -587,7 +621,8 @@ pub struct OldestOrderedInner<'a, T, S: HistBufStorage<T> + ?Sized> {
 }
 
 /// Double ended iterator on the underlying buffer ordered from the oldest data
-/// to the newest
+/// to the newest.
+///
 /// This type exists for backwards compatibility. It is always better to convert it to an [`OldestOrderedView`] with [`into_view`](OldestOrdered::into_view)
 pub type OldestOrdered<'a, T, const N: usize> =
     OldestOrderedInner<'a, T, OwnedHistBufStorage<T, N>>;
@@ -789,7 +824,7 @@ mod tests {
         assert_eq!(x.as_slice(), [5, 2, 3, 4]);
     }
 
-    /// Test whether .as_slices() behaves as expected.
+    /// Test whether `.as_slices()` behaves as expected.
     #[test]
     fn as_slices() {
         let mut buffer: HistoryBuffer<u8, 4> = HistoryBuffer::new();
@@ -805,7 +840,7 @@ mod tests {
         extend_then_assert(b"123456", (b"34", b"56"));
     }
 
-    /// Test whether .as_slices() and .oldest_ordered() produce elements in the same order.
+    /// Test whether `.as_slices()` and `.oldest_ordered()` produce elements in the same order.
     #[test]
     fn as_slices_equals_ordered() {
         let mut buffer: HistoryBuffer<u8, 6> = HistoryBuffer::new();
@@ -816,7 +851,7 @@ mod tests {
             assert_eq_iter(
                 [head, tail].iter().copied().flatten(),
                 buffer.oldest_ordered(),
-            )
+            );
         }
     }
 

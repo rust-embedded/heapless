@@ -34,7 +34,7 @@ use core::ops::{Deref, DerefMut};
 use core::ptr;
 
 mod storage {
-    use super::Node;
+    use super::{Node, SortedLinkedListIndex, SortedLinkedListInner, SortedLinkedListView};
 
     /// Trait defining how data for a container is stored.
     ///
@@ -66,6 +66,18 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedSortedLinkedListStorage` besides `Storage`
         fn borrow(&self) -> &[Node<T, Idx>];
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>];
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -88,6 +100,24 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
             &mut self.buffer
         }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
     }
     impl<T, Idx, const N: usize> SortedLinkedListStorage<T, Idx>
         for OwnedSortedLinkedListStorage<T, Idx, N>
@@ -100,6 +130,24 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
             &mut self.buffer
+        }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
         }
     }
     impl<T, Idx> SortedLinkedListStorage<T, Idx> for ViewSortedLinkedListStorage<T, Idx> {}
@@ -237,8 +285,9 @@ macro_rules! impl_index_and_const_new {
 
             /// Create a new linked list.
             pub const fn $new_name() -> Self {
-                // Const assert N < MAX
-                crate::sealed::smaller_than::<N, $max_val>();
+                const {
+                    assert!(N < $max_val);
+                }
 
                 let mut list = SortedLinkedList {
                     list: OwnedSortedLinkedListStorage {
@@ -272,26 +321,21 @@ impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
-impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
-where
-    Idx: SortedLinkedListIndex,
-{
-    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
-        self
-    }
-
-    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
-        self
-    }
-}
-
 impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
     S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
+    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+        S::as_view(self)
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+        S::as_mut_view(self)
+    }
+
     /// Internal access helper
     #[inline(always)]
     fn node_at(&self, index: usize) -> &Node<T, Idx> {
@@ -363,11 +407,8 @@ where
             if self
                 .read_data_in_node_at(head)
                 .cmp(self.read_data_in_node_at(new))
-                != K::ordering()
+                == K::ordering()
             {
-                self.node_at_mut(new).next = self.head;
-                self.head = Idx::new_unchecked(new);
-            } else {
                 // It's not head, search the list for the correct placement
                 let mut current = head;
 
@@ -385,6 +426,9 @@ where
 
                 self.node_at_mut(new).next = self.node_at(current).next;
                 self.node_at_mut(current).next = Idx::new_unchecked(new);
+            } else {
+                self.node_at_mut(new).next = self.head;
+                self.head = Idx::new_unchecked(new);
             }
         } else {
             self.node_at_mut(new).next = self.head;
@@ -416,11 +460,11 @@ where
     /// assert_eq!(ll.push(4), Err(4));
     /// ```
     pub fn push(&mut self, value: T) -> Result<(), T> {
-        if !self.is_full() {
+        if self.is_full() {
+            Err(value)
+        } else {
             unsafe { self.push_unchecked(value) }
             Ok(())
-        } else {
-            Err(value)
         }
     }
 
@@ -465,10 +509,10 @@ where
     /// *find += 1000;
     /// find.finish();
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutInner<'_, T, Idx, K, S>>
     where
@@ -566,16 +610,15 @@ where
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
     ///
-    /// assert_eq!(ll.pop(), Ok(2));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(2));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn pop(&mut self) -> Result<T, ()> {
-        if !self.is_empty() {
-            Ok(unsafe { self.pop_unchecked() })
+    pub fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
         } else {
-            Err(())
+            Some(unsafe { self.pop_unchecked() })
         }
     }
 
@@ -730,9 +773,9 @@ where
     /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
     /// find.pop();
     ///
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn pop(mut self) -> T {
@@ -763,14 +806,14 @@ where
     /// *find += 1000;
     /// find.finish(); // Will resort, we accessed (and updated) the value.
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn finish(self) {
-        drop(self)
+        drop(self);
     }
 }
 
@@ -925,14 +968,14 @@ mod tests {
         ll.push(2).unwrap();
         ll.push(3).unwrap();
 
-        assert!(ll.is_full())
+        assert!(ll.is_full());
     }
 
     #[test]
     fn test_empty() {
         let ll: SortedLinkedList<u32, LinkedIndexUsize, Max, 3> = SortedLinkedList::new_usize();
 
-        assert!(ll.is_empty())
+        assert!(ll.is_empty());
     }
 
     #[test]

@@ -11,10 +11,19 @@ use core::{
     slice,
 };
 
+use crate::CapacityError;
+
 mod drain;
 
 mod storage {
     use core::mem::MaybeUninit;
+
+    use crate::{
+        binary_heap::{BinaryHeapInner, BinaryHeapView},
+        deque::{DequeInner, DequeView},
+    };
+
+    use super::{VecInner, VecView};
 
     /// Trait defining how data for a container is stored.
     ///
@@ -46,6 +55,29 @@ mod storage {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedVecStorage` besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>;
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>;
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>;
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>;
+
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>;
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>;
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
@@ -65,6 +97,46 @@ mod storage {
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
         }
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
     }
     impl<T, const N: usize> VecStorage<T> for OwnedVecStorage<T, N> {}
 
@@ -74,6 +146,46 @@ mod storage {
         }
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>] {
             &mut self.buffer
+        }
+
+        fn as_vec_view(this: &VecInner<T, Self>) -> &VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_vec_mut_view(this: &mut VecInner<T, Self>) -> &mut VecView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+
+        fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_binary_heap_mut_view<K>(
+            this: &mut BinaryHeapInner<T, K, Self>,
+        ) -> &mut BinaryHeapView<T, K>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
+        }
+        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        where
+            Self: VecStorage<T>,
+        {
+            this
         }
     }
     impl<T> VecStorage<T> for ViewVecStorage<T> {}
@@ -192,12 +304,11 @@ impl<T, const N: usize> Vec<T, N> {
     /// let mut v: Vec<u8, 16> = Vec::new();
     /// v.extend_from_slice(&[1, 2, 3]).unwrap();
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn from_slice(other: &[T]) -> Result<Self, ()>
+    pub fn from_slice(other: &[T]) -> Result<Self, CapacityError>
     where
         T: Clone,
     {
-        let mut v = Vec::new();
+        let mut v = Self::new();
         v.extend_from_slice(other)?;
         Ok(v)
     }
@@ -211,10 +322,9 @@ impl<T, const N: usize> Vec<T, N> {
     /// If the length of the provided array is greater than the capacity of the
     /// vector a compile-time error will be produced.
     pub fn from_array<const M: usize>(src: [T; M]) -> Self {
-        // Const assert M >= 0
-        crate::sealed::greater_than_eq_0::<M>();
-        // Const assert N >= M
-        crate::sealed::greater_than_eq::<N, M>();
+        const {
+            assert!(N >= M);
+        }
 
         // We've got to copy `src`, but we're functionally moving it. Don't run
         // any Drop code for T.
@@ -229,7 +339,7 @@ impl<T, const N: usize> Vec<T, N> {
                 buffer: unsafe { mem::transmute_copy(&src) },
             }
         } else {
-            let mut v = Vec::<T, N>::new();
+            let mut v = Self::new();
 
             for (src_elem, dst_elem) in src.iter().zip(v.buffer.buffer.iter_mut()) {
                 // NOTE(unsafe) src element is not going to drop as src itself
@@ -256,7 +366,7 @@ impl<T, const N: usize> Vec<T, N> {
     pub fn into_array<const M: usize>(self) -> Result<[T; M], Self> {
         if self.len() == M {
             // This is how the unstable `MaybeUninit::array_assume_init` method does it
-            let array = unsafe { (&self.buffer as *const _ as *const [T; M]).read() };
+            let array = unsafe { (core::ptr::from_ref(&self.buffer).cast::<[T; M]>()).read() };
 
             // We don't want `self`'s destructor to be called because that would drop all the
             // items in the array
@@ -282,96 +392,9 @@ impl<T, const N: usize> Vec<T, N> {
         }
         new
     }
-
-    /// Get a reference to the `Vec`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &VecView<u8> = vec.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &VecView<u8> = &vec;
-    /// ```
-    #[inline]
-    pub const fn as_view(&self) -> &VecView<T> {
-        self
-    }
-
-    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &mut VecView<u8> = vec.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::{Vec, VecView};
-    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
-    /// let view: &mut VecView<u8> = &mut vec;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut VecView<T> {
-        self
-    }
-
-    /// Removes the specified range from the vector in bulk, returning all
-    /// removed elements as an iterator. If the iterator is dropped before
-    /// being fully consumed, it drops the remaining removed elements.
-    ///
-    /// The returned iterator keeps a mutable borrow on the vector to optimize
-    /// its implementation.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point is greater than the end point or if
-    /// the end point is greater than the length of the vector.
-    ///
-    /// # Leaking
-    ///
-    /// If the returned iterator goes out of scope without being dropped (due to
-    /// [`mem::forget`], for example), the vector may have lost and leaked
-    /// elements arbitrarily, including elements outside the range.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::Vec;
-    ///
-    /// let mut v = Vec::<_, 8>::from_array([1, 2, 3]);
-    /// let u: Vec<_, 8> = v.drain(1..).collect();
-    /// assert_eq!(v, &[1]);
-    /// assert_eq!(u, &[2, 3]);
-    ///
-    /// // A full range clears the vector, like `clear()` does.
-    /// v.drain(..);
-    /// assert_eq!(v, &[]);
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T>
-    where
-        R: RangeBounds<usize>,
-    {
-        self.as_mut_view().drain(range)
-    }
-
-    /// Returns the maximum number of elements the vector can hold.
-    ///
-    /// This method is not available on a `VecView`, use [`storage_len`](VecInner::storage_capacity) instead
-    pub const fn capacity(&self) -> usize {
-        self.buffer.buffer.len()
-    }
 }
 
-impl<T> VecView<T> {
+impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Removes the specified range from the vector in bulk, returning all
     /// removed elements as an iterator. If the iterator is dropped before
     /// being fully consumed, it drops the remaining removed elements.
@@ -424,7 +447,7 @@ impl<T> VecView<T> {
         unsafe {
             // Set `self.vec` length's to `start`, to be safe in case `Drain` is leaked.
             self.set_len(start);
-            let vec = NonNull::from(self);
+            let vec = NonNull::from(self.as_mut_view());
             let range_slice = slice::from_raw_parts(vec.as_ref().as_ptr().add(start), end - start);
             Drain {
                 tail_start: end,
@@ -434,17 +457,56 @@ impl<T> VecView<T> {
             }
         }
     }
-}
 
-impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
+    /// Get a reference to the `Vec`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<u8> = vec.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &VecView<u8> = &vec;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &VecView<T> {
+        S::as_vec_view(self)
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<u8> = vec.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::{Vec, VecView};
+    /// let mut vec: Vec<u8, 10> = Vec::from_slice(&[1, 2, 3, 4]).unwrap();
+    /// let view: &mut VecView<u8> = &mut vec;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut VecView<T> {
+        S::as_vec_mut_view(self)
+    }
+
     /// Returns a raw pointer to the vector’s buffer.
     pub fn as_ptr(&self) -> *const T {
-        self.buffer.borrow().as_ptr() as *const T
+        self.buffer.borrow().as_ptr().cast::<T>()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.borrow_mut().as_mut_ptr() as *mut T
+        self.buffer.borrow_mut().as_mut_ptr().cast::<T>()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -461,7 +523,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     pub fn as_slice(&self) -> &[T] {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &buffer[..self.len]
-        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr() as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.len) }
     }
 
     /// Extracts a mutable slice containing the entire vector.
@@ -481,12 +543,12 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         // NOTE(unsafe) avoid bound checks in the slicing operation
         // &mut buffer[..self.len]
         unsafe {
-            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr() as *mut T, self.len)
+            slice::from_raw_parts_mut(self.buffer.borrow_mut().as_mut_ptr().cast::<T>(), self.len)
         }
     }
 
     /// Returns the maximum number of elements the vector can hold.
-    pub fn storage_capacity(&self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.buffer.borrow().len()
     }
 
@@ -505,7 +567,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         I: IntoIterator<Item = T>,
     {
         for elem in iter {
-            self.push(elem).ok().unwrap()
+            self.push(elem).ok().unwrap();
         }
     }
 
@@ -524,8 +586,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// vec.extend_from_slice(&[2, 3, 4]).unwrap();
     /// assert_eq!(*vec, [1, 2, 3, 4]);
     /// ```
-    #[allow(clippy::result_unit_err)]
-    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), ()>
+    pub fn extend_from_slice(&mut self, other: &[T]) -> Result<(), CapacityError>
     where
         T: Clone,
     {
@@ -533,13 +594,13 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
             len: &mut usize,
             buf: &mut [MaybeUninit<T>],
             other: &[T],
-        ) -> Result<(), ()>
+        ) -> Result<(), CapacityError>
         where
             T: Clone,
         {
             if *len + other.len() > buf.len() {
                 // won't fit in the `Vec`; don't modify anything and return an error
-                Err(())
+                Err(CapacityError)
             } else {
                 for elem in other {
                     unsafe { *buf.get_unchecked_mut(*len) = MaybeUninit::new(elem.clone()) }
@@ -565,7 +626,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     ///
     /// Returns back the `item` if the vector is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len < self.storage_capacity() {
+        if self.len < self.capacity() {
             unsafe { self.push_unchecked(item) }
             Ok(())
         } else {
@@ -627,20 +688,19 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
         }
     }
 
-    /// Resizes the Vec in-place so that len is equal to new_len.
+    /// Resizes the Vec in-place so that len is equal to `new_len`.
     ///
-    /// If new_len is greater than len, the Vec is extended by the
+    /// If `new_len` is greater than len, the Vec is extended by the
     /// difference, with each additional slot filled with value. If
-    /// new_len is less than len, the Vec is simply truncated.
+    /// `new_len` is less than len, the Vec is simply truncated.
     ///
     /// See also [`resize_default`](Self::resize_default).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), ()>
+    pub fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
     where
         T: Clone,
     {
-        if new_len > self.storage_capacity() {
-            return Err(());
+        if new_len > self.capacity() {
+            return Err(CapacityError);
         }
 
         if new_len > self.len {
@@ -661,8 +721,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// If `new_len` is less than `len`, the `Vec` is simply truncated.
     ///
     /// See also [`resize`](Self::resize).
-    #[allow(clippy::result_unit_err)]
-    pub fn resize_default(&mut self, new_len: usize) -> Result<(), ()>
+    pub fn resize_default(&mut self, new_len: usize) -> Result<(), CapacityError>
     where
         T: Clone + Default,
     {
@@ -759,9 +818,9 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
     /// Normally, here, one would use [`clear`] instead to correctly drop
     /// the contents and thus not leak memory.
     pub unsafe fn set_len(&mut self, new_len: usize) {
-        debug_assert!(new_len <= self.storage_capacity());
+        debug_assert!(new_len <= self.capacity());
 
-        self.len = new_len
+        self.len = new_len;
     }
 
     /// Removes an element from the vector and returns it.
@@ -835,7 +894,7 @@ impl<T, S: VecStorage<T> + ?Sized> VecInner<T, S> {
 
     /// Returns true if the vec is full
     pub fn is_full(&self) -> bool {
-        self.len == self.storage_capacity()
+        self.len == self.capacity()
     }
 
     /// Returns true if the vec is empty
@@ -1266,10 +1325,10 @@ impl<T, const N: usize> TryFrom<Vec<T, N>> for alloc::vec::Vec<T> {
 }
 
 impl<'a, T: Clone, const N: usize> TryFrom<&'a [T]> for Vec<T, N> {
-    type Error = ();
+    type Error = CapacityError;
 
     fn try_from(slice: &'a [T]) -> Result<Self, Self::Error> {
-        Vec::from_slice(slice)
+        Self::from_slice(slice)
     }
 }
 
@@ -1278,7 +1337,7 @@ impl<T, S: VecStorage<T> + ?Sized> Extend<T> for VecInner<T, S> {
     where
         I: IntoIterator<Item = T>,
     {
-        self.extend(iter)
+        self.extend(iter);
     }
 }
 
@@ -1290,7 +1349,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned())
+        self.extend(iter.into_iter().cloned());
     }
 }
 
@@ -1299,7 +1358,7 @@ where
     T: core::hash::Hash,
 {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        <[T] as hash::Hash>::hash(self, state)
+        <[T] as hash::Hash>::hash(self, state);
     }
 }
 
@@ -1326,7 +1385,7 @@ impl<T, const N: usize> FromIterator<T> for Vec<T, N> {
     where
         I: IntoIterator<Item = T>,
     {
-        let mut vec = Vec::new();
+        let mut vec = Self::new();
         for i in iter {
             vec.push(i).ok().expect("Vec::from_iter overflow");
         }
@@ -1372,7 +1431,7 @@ where
         if self.next < self.vec.len() {
             let s = unsafe {
                 slice::from_raw_parts(
-                    (self.vec.buffer.buffer.as_ptr() as *const T).add(self.next),
+                    self.vec.buffer.buffer.as_ptr().cast::<T>().add(self.next),
                     self.vec.len() - self.next,
                 )
             };
@@ -1556,14 +1615,14 @@ impl<T, S: VecStorage<T> + ?Sized> borrow::BorrowMut<[T]> for VecInner<T, S> {
     }
 }
 
-impl<T, S: VecStorage<T> + ?Sized> AsRef<VecInner<T, S>> for VecInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> AsRef<Self> for VecInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T, S: VecStorage<T> + ?Sized> AsMut<VecInner<T, S>> for VecInner<T, S> {
+impl<T, S: VecStorage<T> + ?Sized> AsMut<Self> for VecInner<T, S> {
     #[inline]
     fn as_mut(&mut self) -> &mut Self {
         self

@@ -4,8 +4,8 @@ use crate::{
     binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
     deque::DequeInner,
     histbuf::{HistBufStorage, HistoryBufferInner},
-    linear_map::LinearMapInner,
-    string::StringInner,
+    linear_map::{LinearMapInner, LinearMapStorage},
+    string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     IndexMap, IndexSet,
 };
@@ -116,7 +116,7 @@ where
     }
 }
 
-impl<K, V, S: VecStorage<(K, V)> + ?Sized> Serialize for LinearMapInner<K, V, S>
+impl<K, V, S: LinearMapStorage<K, V> + ?Sized> Serialize for LinearMapInner<K, V, S>
 where
     K: Eq + Serialize,
     V: Serialize,
@@ -135,7 +135,7 @@ where
 
 // String containers
 
-impl<S: VecStorage<u8> + ?Sized> Serialize for StringInner<S> {
+impl<S: StringStorage + ?Sized> Serialize for StringInner<S> {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
         SER: Serializer,

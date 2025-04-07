@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Added `bytes::Buf` and `bytes::BufMut` implementations for `Vec`.
 - Added `format` macro.
 - Added `String::from_utf16`.
 - Added `is_full`, `recent_index`, `oldest`, and `oldest_index` to `HistoryBuffer`
@@ -44,10 +45,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `alloc` feature to enable `alloc`-Vec interoperability.
 - Added `TryFrom<alloc::vec::Vec>` impl for `Vec`.
 - Added `TryFrom<Vec>` impl for `alloc::vec::Vec`.
+- Added `truncate` to `IndexMap`.
+- Added `get_index` and `get_index_mut` to `IndexMap`.
+- Added `String::uDisplay`.
 
 ### Changed
 
+- Updated defmt from 0.3 to 1.0.1
+  - Changed the feature name from `defmt-03` to `defmt`.
+- Changed the error type of these methods from `()` to `CapacityError`.
+  - `String::push_str`
+  - `String::push`
+  - `Vec::extend_from_slice`
+  - `Vec::from_slice`
+  - `Vec::resize_default`
+  - `Vec::resize`
+- Renamed `FromUtf16Error::DecodeUtf16Error` to `FromUtf16Error::DecodeUtf16`.
 - Changed `stable_deref_trait` to a platform-dependent dependency.
+- Changed `SortedLinkedList::pop` return type from `Result<T, ()>` to `Option<T>` to match `std::vec::pop`.
+- `Vec::capacity` is no longer a `const` function.
+- Relaxed bounds on `PartialEq` for `IndexMap` from `V: Eq` to `V1: PartialEq<V2>`.
+- Relaxed bounds on `PartialEq` for `LinearMap` from `V: PartialEq` to `V1: PartialEq<V2>`.
 
 ### Fixed
 
@@ -57,6 +75,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `HistoryBuffer` and `SortedLinkedList` to the list.
 - Fixed `MpMcQueue` with `mpmc_large` feature.
 - Fix missing `Drop` for `MpMcQueue`
+
+### Removed
+
+- `Vec::storage_capacity` has been removed and `Vec::capacity` must be used instead.
 
 ## [v0.8.0] - 2023-11-07
 
@@ -93,6 +115,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `ufmt-impl` is now `ufmt`
   - `cas` is removed, atomic polyfilling is now opt-in via the `portable-atomic` feature.
 - `Vec::as_mut_slice` is now a public method.
+- `ufmt` functions are annotated with `inline`.
 
 ### Fixed
 

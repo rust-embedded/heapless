@@ -91,7 +91,7 @@ pub struct IndexSet<T, S, const N: usize> {
 impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexSet`
     pub const fn new() -> Self {
-        IndexSet {
+        Self {
             map: IndexMap::new(),
         }
     }
@@ -212,7 +212,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// assert!(v.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.map.clear()
+        self.map.clear();
     }
 }
 
@@ -533,7 +533,7 @@ where
     S: Default,
 {
     fn default() -> Self {
-        IndexSet {
+        Self {
             map: <_>::default(),
         }
     }
@@ -560,7 +560,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        self.map.extend(iterable.into_iter().map(|k| (k, ())))
+        self.map.extend(iterable.into_iter().map(|k| (k, ())));
     }
 }
 
@@ -573,7 +573,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iterable.into_iter().cloned())
+        self.extend(iterable.into_iter().cloned());
     }
 }
 
@@ -586,7 +586,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        let mut set = IndexSet::default();
+        let mut set = Self::default();
         set.extend(iter);
         set
     }
