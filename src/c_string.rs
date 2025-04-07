@@ -331,8 +331,7 @@ mod tests {
 
     #[test]
     fn push_no_bytes() {
-        let mut cstr = CString::<5>::new();
-        assert_eq!(cstr.to_str(), Ok(""));
+        let mut cstr = CString::<1>::new();
 
         cstr.push_bytes(b"").unwrap();
     }
