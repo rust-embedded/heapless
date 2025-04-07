@@ -1,8 +1,64 @@
+//! A fixed capacity double-ended queue.
+//!
+//! # Examples
+//!
+//! ```
+//! use heapless::Deque;
+//!
+//! // A deque with a fixed capacity of 8 elements allocated on the stack
+//! let mut deque = Deque::<_, 8>::new();
+//!
+//! // You can use it as a good old FIFO queue.
+//! deque.push_back(1);
+//! deque.push_back(2);
+//! assert_eq!(deque.len(), 2);
+//!
+//! assert_eq!(deque.pop_front(), Some(1));
+//! assert_eq!(deque.pop_front(), Some(2));
+//! assert_eq!(deque.len(), 0);
+//!
+//! // Deque is double-ended, you can push and pop from the front and back.
+//! deque.push_back(1);
+//! deque.push_front(2);
+//! deque.push_back(3);
+//! deque.push_front(4);
+//! assert_eq!(deque.pop_front(), Some(4));
+//! assert_eq!(deque.pop_front(), Some(2));
+//! assert_eq!(deque.pop_front(), Some(1));
+//! assert_eq!(deque.pop_front(), Some(3));
+//!
+//! // You can iterate it, yielding all the elements front-to-back.
+//! for x in &deque {
+//!     println!("{}", x);
+//! }
+//! ```
+
+use core::cmp::Ordering;
 use core::fmt;
 use core::iter::FusedIterator;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::{ptr, slice};
+
+use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
+
+/// Base struct for [`Deque`] and [`DequeView`], generic over the [`VecStorage`].
+///
+/// In most cases you should use [`Deque`] or [`DequeView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct DequeInner<T, S: VecStorage<T> + ?Sized> {
+    // This phantomdata is required because otherwise rustc thinks that `T` is not used
+    phantom: PhantomData<T>,
+    /// Front index. Always 0..=(N-1)
+    front: usize,
+    /// Back index. Always 0..=(N-1).
+    back: usize,
+
+    /// Used to distinguish "empty" and "full" cases when `front == back`.
+    /// May only be `true` if `front == back`, always `false` otherwise.
+    full: bool,
+    buffer: S,
+}
 
 /// A fixed capacity double-ended queue.
 ///
@@ -38,18 +94,46 @@ use core::{ptr, slice};
 ///     println!("{}", x);
 /// }
 /// ```
-pub struct Deque<T, const N: usize> {
-    buffer: [MaybeUninit<T>; N],
+pub type Deque<T, const N: usize> = DequeInner<T, OwnedVecStorage<T, N>>;
 
-    /// Front index. Always 0..=(N-1)
-    front: usize,
-    /// Back index. Always 0..=(N-1).
-    back: usize,
-
-    /// Used to distinguish "empty" and "full" cases when `front == back`.
-    /// May only be `true` if `front == back`, always `false` otherwise.
-    full: bool,
-}
+/// A double-ended queue with dynamic capacity.
+///
+/// # Examples
+///
+/// ```
+/// use heapless::deque::{Deque, DequeView};
+///
+/// // A deque with a fixed capacity of 8 elements allocated on the stack
+/// let mut deque_buf = Deque::<_, 8>::new();
+///
+/// // A DequeView can be obtained through unsized coercion of a `Deque`
+/// let deque: &mut DequeView<_> = &mut deque_buf;
+///
+/// // You can use it as a good old FIFO queue.
+/// deque.push_back(1);
+/// deque.push_back(2);
+/// assert_eq!(deque.storage_len(), 2);
+///
+/// assert_eq!(deque.pop_front(), Some(1));
+/// assert_eq!(deque.pop_front(), Some(2));
+/// assert_eq!(deque.storage_len(), 0);
+///
+/// // DequeView is double-ended, you can push and pop from the front and back.
+/// deque.push_back(1);
+/// deque.push_front(2);
+/// deque.push_back(3);
+/// deque.push_front(4);
+/// assert_eq!(deque.pop_front(), Some(4));
+/// assert_eq!(deque.pop_front(), Some(2));
+/// assert_eq!(deque.pop_front(), Some(1));
+/// assert_eq!(deque.pop_front(), Some(3));
+///
+/// // You can iterate it, yielding all the elements front-to-back.
+/// for x in deque {
+///     println!("{}", x);
+/// }
+/// ```
+pub type DequeView<T> = DequeInner<T, ViewVecStorage<T>>;
 
 impl<T, const N: usize> Deque<T, N> {
     const INIT: MaybeUninit<T> = MaybeUninit::uninit();
@@ -68,44 +152,80 @@ impl<T, const N: usize> Deque<T, N> {
     /// static mut X: Deque<u8, 16> = Deque::new();
     /// ```
     pub const fn new() -> Self {
-        // Const assert N > 0
-        crate::sealed::greater_than_0::<N>();
+        const {
+            assert!(N > 0);
+        }
 
         Self {
-            buffer: [Self::INIT; N],
+            phantom: PhantomData,
+            buffer: VecStorageInner {
+                buffer: [Self::INIT; N],
+            },
             front: 0,
             back: 0,
             full: false,
         }
     }
 
-    fn increment(i: usize) -> usize {
-        if i + 1 == N {
+    /// Returns the maximum number of elements the deque can hold.
+    ///
+    /// This method is not available on a `DequeView`, use [`storage_capacity`](DequeInner::storage_capacity) instead.
+    pub const fn capacity(&self) -> usize {
+        N
+    }
+
+    /// Returns the number of elements currently in the deque.
+    ///
+    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len) instead.
+    pub const fn len(&self) -> usize {
+        if self.full {
+            N
+        } else if self.back < self.front {
+            self.back + N - self.front
+        } else {
+            self.back - self.front
+        }
+    }
+}
+
+impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
+    /// Get a reference to the `Deque`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &DequeView<T> {
+        S::as_deque_view(self)
+    }
+
+    /// Get a mutable reference to the `Deque`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut DequeView<T> {
+        S::as_deque_mut_view(self)
+    }
+
+    /// Returns the maximum number of elements the deque can hold.
+    pub fn storage_capacity(&self) -> usize {
+        self.buffer.borrow().len()
+    }
+
+    fn increment(&self, i: usize) -> usize {
+        if i + 1 == self.storage_capacity() {
             0
         } else {
             i + 1
         }
     }
 
-    fn decrement(i: usize) -> usize {
+    fn decrement(&self, i: usize) -> usize {
         if i == 0 {
-            N - 1
+            self.storage_capacity() - 1
         } else {
             i - 1
         }
     }
 
-    /// Returns the maximum number of elements the deque can hold.
-    pub const fn capacity(&self) -> usize {
-        N
-    }
-
     /// Returns the number of elements currently in the deque.
-    pub const fn len(&self) -> usize {
+    pub fn storage_len(&self) -> usize {
         if self.full {
-            N
+            self.storage_capacity()
         } else if self.back < self.front {
-            self.back + N - self.front
+            self.back + self.storage_capacity() - self.front
         } else {
             self.back - self.front
         }
@@ -149,15 +269,15 @@ impl<T, const N: usize> Deque<T, N> {
             } else if self.back <= self.front {
                 (
                     slice::from_raw_parts(
-                        self.buffer.as_ptr().add(self.front) as *const T,
-                        N - self.front,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
+                        self.storage_capacity() - self.front,
                     ),
-                    slice::from_raw_parts(self.buffer.as_ptr() as *const T, self.back),
+                    slice::from_raw_parts(self.buffer.borrow().as_ptr().cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts(
-                        self.buffer.as_ptr().add(self.front) as *const T,
+                        self.buffer.borrow().as_ptr().add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &[],
@@ -168,7 +288,7 @@ impl<T, const N: usize> Deque<T, N> {
 
     /// Returns a pair of mutable slices which contain, in order, the contents of the `Deque`.
     pub fn as_mut_slices(&mut self) -> (&mut [T], &mut [T]) {
-        let ptr = self.buffer.as_mut_ptr();
+        let ptr = self.buffer.borrow_mut().as_mut_ptr();
 
         // NOTE(unsafe) avoid bound checks in the slicing operation
         unsafe {
@@ -176,13 +296,16 @@ impl<T, const N: usize> Deque<T, N> {
                 (&mut [], &mut [])
             } else if self.back <= self.front {
                 (
-                    slice::from_raw_parts_mut(ptr.add(self.front) as *mut T, N - self.front),
-                    slice::from_raw_parts_mut(ptr as *mut T, self.back),
+                    slice::from_raw_parts_mut(
+                        ptr.add(self.front).cast::<T>(),
+                        self.storage_capacity() - self.front,
+                    ),
+                    slice::from_raw_parts_mut(ptr.cast::<T>(), self.back),
                 )
             } else {
                 (
                     slice::from_raw_parts_mut(
-                        ptr.add(self.front) as *mut T,
+                        ptr.add(self.front).cast::<T>(),
                         self.back - self.front,
                     ),
                     &mut [],
@@ -191,12 +314,192 @@ impl<T, const N: usize> Deque<T, N> {
         }
     }
 
+    #[inline]
+    fn is_contiguous(&self) -> bool {
+        self.front <= self.storage_capacity() - self.storage_len()
+    }
+
+    /// Rearranges the internal storage of the [`Deque`] to make it into a contiguous slice,
+    /// which is returned.
+    ///
+    /// This does **not** change the order of the elements in the deque.
+    /// The returned slice can then be used to perform contiguous slice operations on the deque.
+    ///
+    /// After calling this method, subsequent [`as_slices`] and [`as_mut_slices`] calls will return
+    /// a single contiguous slice.
+    ///
+    /// [`as_slices`]: Deque::as_slices
+    /// [`as_mut_slices`]: Deque::as_mut_slices
+    ///
+    /// # Examples
+    /// Sorting a deque:
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut buf = Deque::<_, 4>::new();
+    /// buf.push_back(2).unwrap();
+    /// buf.push_back(1).unwrap();
+    /// buf.push_back(3).unwrap();
+    ///
+    /// // Sort the deque
+    /// buf.make_contiguous().sort();
+    /// assert_eq!(buf.as_slices(), (&[1, 2, 3][..], &[][..]));
+    ///
+    /// // Sort the deque in reverse
+    /// buf.make_contiguous().sort_by(|a, b| b.cmp(a));
+    /// assert_eq!(buf.as_slices(), (&[3, 2, 1][..], &[][..]));
+    /// ```
+    pub fn make_contiguous(&mut self) -> &mut [T] {
+        if self.is_contiguous() {
+            return unsafe {
+                slice::from_raw_parts_mut(
+                    self.buffer.borrow_mut().as_mut_ptr().add(self.front).cast(),
+                    self.storage_len(),
+                )
+            };
+        }
+
+        let buffer_ptr: *mut T = self.buffer.borrow_mut().as_mut_ptr().cast();
+
+        let len = self.storage_len();
+
+        let free = self.storage_capacity() - len;
+        let front_len = self.storage_capacity() - self.front;
+        let back = len - front_len;
+        let back_len = back;
+
+        if free >= front_len {
+            // there is enough free space to copy the head in one go,
+            // this means that we first shift the tail backwards, and then
+            // copy the head to the correct position.
+            //
+            // from: DEFGH....ABC
+            // to:   ABCDEFGH....
+            unsafe {
+                ptr::copy(buffer_ptr, buffer_ptr.add(front_len), back_len);
+                // ...DEFGH.ABC
+                ptr::copy_nonoverlapping(buffer_ptr.add(self.front), buffer_ptr, front_len);
+                // ABCDEFGH....
+            }
+
+            self.front = 0;
+            self.back = len;
+        } else if free >= back_len {
+            // there is enough free space to copy the tail in one go,
+            // this means that we first shift the head forwards, and then
+            // copy the tail to the correct position.
+            //
+            // from: FGH....ABCDE
+            // to:   ...ABCDEFGH.
+            unsafe {
+                ptr::copy(
+                    buffer_ptr.add(self.front),
+                    buffer_ptr.add(self.back),
+                    front_len,
+                );
+                // FGHABCDE....
+                ptr::copy_nonoverlapping(
+                    buffer_ptr,
+                    buffer_ptr.add(self.back + front_len),
+                    back_len,
+                );
+                // ...ABCDEFGH.
+            }
+
+            self.front = back;
+            self.back = 0;
+        } else {
+            // `free` is smaller than both `head_len` and `tail_len`.
+            // the general algorithm for this first moves the slices
+            // right next to each other and then uses `slice::rotate`
+            // to rotate them into place:
+            //
+            // initially:   HIJK..ABCDEFG
+            // step 1:      ..HIJKABCDEFG
+            // step 2:      ..ABCDEFGHIJK
+            //
+            // or:
+            //
+            // initially:   FGHIJK..ABCDE
+            // step 1:      FGHIJKABCDE..
+            // step 2:      ABCDEFGHIJK..
+
+            // pick the shorter of the 2 slices to reduce the amount
+            // of memory that needs to be moved around.
+            if front_len > back_len {
+                // tail is shorter, so:
+                //  1. copy tail forwards
+                //  2. rotate used part of the buffer
+                //  3. update head to point to the new beginning (which is just `free`)
+                unsafe {
+                    // if there is no free space in the buffer, then the slices are already
+                    // right next to each other and we don't need to move any memory.
+                    if free != 0 {
+                        // because we only move the tail forward as much as there's free space
+                        // behind it, we don't overwrite any elements of the head slice, and
+                        // the slices end up right next to each other.
+                        ptr::copy(buffer_ptr, buffer_ptr.add(free), back_len);
+                    }
+
+                    // We just copied the tail right next to the head slice,
+                    // so all of the elements in the range are initialized
+                    let slice: &mut [T] = slice::from_raw_parts_mut(
+                        buffer_ptr.add(free),
+                        self.storage_capacity() - free,
+                    );
+
+                    // because the deque wasn't contiguous, we know that `tail_len < self.len == slice.len()`,
+                    // so this will never panic.
+                    slice.rotate_left(back_len);
+
+                    // the used part of the buffer now is `free..self.capacity()`, so set
+                    // `head` to the beginning of that range.
+                    self.front = free;
+                    self.back = 0;
+                }
+            } else {
+                // head is shorter so:
+                //  1. copy head backwards
+                //  2. rotate used part of the buffer
+                //  3. update head to point to the new beginning (which is the beginning of the buffer)
+
+                unsafe {
+                    // if there is no free space in the buffer, then the slices are already
+                    // right next to each other and we don't need to move any memory.
+                    if free != 0 {
+                        // copy the head slice to lie right behind the tail slice.
+                        ptr::copy(
+                            buffer_ptr.add(self.front),
+                            buffer_ptr.add(back_len),
+                            front_len,
+                        );
+                    }
+
+                    // because we copied the head slice so that both slices lie right
+                    // next to each other, all the elements in the range are initialized.
+                    let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr, len);
+
+                    // because the deque wasn't contiguous, we know that `head_len < self.len == slice.len()`
+                    // so this will never panic.
+                    slice.rotate_right(front_len);
+
+                    // the used part of the buffer now is `0..self.len`, so set
+                    // `head` to the beginning of that range.
+                    self.front = 0;
+                    self.back = len;
+                }
+            }
+        }
+
+        unsafe { slice::from_raw_parts_mut(buffer_ptr.add(self.front), len) }
+    }
+
     /// Provides a reference to the front element, or None if the `Deque` is empty.
     pub fn front(&self) -> Option<&T> {
         if self.is_empty() {
             None
         } else {
-            Some(unsafe { &*self.buffer.get_unchecked(self.front).as_ptr() })
+            Some(unsafe { &*self.buffer.borrow().get_unchecked(self.front).as_ptr() })
         }
     }
 
@@ -205,7 +508,13 @@ impl<T, const N: usize> Deque<T, N> {
         if self.is_empty() {
             None
         } else {
-            Some(unsafe { &mut *self.buffer.get_unchecked_mut(self.front).as_mut_ptr() })
+            Some(unsafe {
+                &mut *self
+                    .buffer
+                    .borrow_mut()
+                    .get_unchecked_mut(self.front)
+                    .as_mut_ptr()
+            })
         }
     }
 
@@ -214,8 +523,8 @@ impl<T, const N: usize> Deque<T, N> {
         if self.is_empty() {
             None
         } else {
-            let index = Self::decrement(self.back);
-            Some(unsafe { &*self.buffer.get_unchecked(index).as_ptr() })
+            let index = self.decrement(self.back);
+            Some(unsafe { &*self.buffer.borrow().get_unchecked(index).as_ptr() })
         }
     }
 
@@ -224,8 +533,14 @@ impl<T, const N: usize> Deque<T, N> {
         if self.is_empty() {
             None
         } else {
-            let index = Self::decrement(self.back);
-            Some(unsafe { &mut *self.buffer.get_unchecked_mut(index).as_mut_ptr() })
+            let index = self.decrement(self.back);
+            Some(unsafe {
+                &mut *self
+                    .buffer
+                    .borrow_mut()
+                    .get_unchecked_mut(index)
+                    .as_mut_ptr()
+            })
         }
     }
 
@@ -282,8 +597,12 @@ impl<T, const N: usize> Deque<T, N> {
 
         let index = self.front;
         self.full = false;
-        self.front = Self::increment(self.front);
-        (self.buffer.get_unchecked_mut(index).as_ptr() as *const T).read()
+        self.front = self.increment(self.front);
+        self.buffer
+            .borrow_mut()
+            .get_unchecked_mut(index)
+            .as_ptr()
+            .read()
     }
 
     /// Removes an item from the back of the deque and returns it, without checking that the deque
@@ -296,8 +615,12 @@ impl<T, const N: usize> Deque<T, N> {
         debug_assert!(!self.is_empty());
 
         self.full = false;
-        self.back = Self::decrement(self.back);
-        (self.buffer.get_unchecked_mut(self.back).as_ptr() as *const T).read()
+        self.back = self.decrement(self.back);
+        self.buffer
+            .borrow_mut()
+            .get_unchecked_mut(self.back)
+            .as_ptr()
+            .read()
     }
 
     /// Appends an `item` to the front of the deque
@@ -308,10 +631,10 @@ impl<T, const N: usize> Deque<T, N> {
     pub unsafe fn push_front_unchecked(&mut self, item: T) {
         debug_assert!(!self.is_full());
 
-        let index = Self::decrement(self.front);
+        let index = self.decrement(self.front);
         // NOTE: the memory slot that we are about to write to is uninitialized. We assign
         // a `MaybeUninit` to avoid running `T`'s destructor on the uninitialized memory
-        *self.buffer.get_unchecked_mut(index) = MaybeUninit::new(item);
+        *self.buffer.borrow_mut().get_unchecked_mut(index) = MaybeUninit::new(item);
         self.front = index;
         if self.front == self.back {
             self.full = true;
@@ -328,37 +651,218 @@ impl<T, const N: usize> Deque<T, N> {
 
         // NOTE: the memory slot that we are about to write to is uninitialized. We assign
         // a `MaybeUninit` to avoid running `T`'s destructor on the uninitialized memory
-        *self.buffer.get_unchecked_mut(self.back) = MaybeUninit::new(item);
-        self.back = Self::increment(self.back);
+        *self.buffer.borrow_mut().get_unchecked_mut(self.back) = MaybeUninit::new(item);
+        self.back = self.increment(self.back);
         if self.front == self.back {
             self.full = true;
         }
     }
 
+    /// Returns a reference to the element at the given index.
+    ///
+    /// Index 0 is the front of the `Deque`.
+    pub fn get(&self, index: usize) -> Option<&T> {
+        if index < self.storage_len() {
+            let idx = self.to_physical_index(index);
+            Some(unsafe { self.buffer.borrow().get_unchecked(idx).assume_init_ref() })
+        } else {
+            None
+        }
+    }
+
+    /// Returns a mutable reference to the element at the given index.
+    ///
+    /// Index 0 is the front of the `Deque`.
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        if index < self.storage_len() {
+            let idx = self.to_physical_index(index);
+            Some(unsafe {
+                self.buffer
+                    .borrow_mut()
+                    .get_unchecked_mut(idx)
+                    .assume_init_mut()
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the element at the given index without checking if it exists.
+    ///
+    /// # Safety
+    ///
+    /// The element at the given `index` must exist (i.e. `index < self.len()`).
+    pub unsafe fn get_unchecked(&self, index: usize) -> &T {
+        debug_assert!(index < self.storage_len());
+
+        let idx = self.to_physical_index(index);
+        self.buffer.borrow().get_unchecked(idx).assume_init_ref()
+    }
+
+    /// Returns a mutable reference to the element at the given index without checking if it exists.
+    ///
+    /// # Safety
+    ///
+    /// The element at the given `index` must exist (i.e. `index < self.len()`).
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        debug_assert!(index < self.storage_len());
+
+        let idx = self.to_physical_index(index);
+        self.buffer
+            .borrow_mut()
+            .get_unchecked_mut(idx)
+            .assume_init_mut()
+    }
+
+    /// Swaps elements at indices `i` and `j`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either `i` or `j` are out of bounds.
+    pub fn swap(&mut self, i: usize, j: usize) {
+        let len = self.storage_len();
+        assert!(i < len);
+        assert!(j < len);
+        unsafe { self.swap_unchecked(i, j) }
+    }
+
+    /// Swaps elements at indices `i` and `j` without checking that they exist.
+    ///
+    /// # Safety
+    ///
+    /// Elements at indexes `i` and `j` must exist (i.e. `i < self.len()` and `j < self.len()`).
+    pub unsafe fn swap_unchecked(&mut self, i: usize, j: usize) {
+        debug_assert!(i < self.storage_len());
+        debug_assert!(j < self.storage_len());
+        let idx_i = self.to_physical_index(i);
+        let idx_j = self.to_physical_index(j);
+
+        let buffer = self.buffer.borrow_mut();
+        let buffer_ptr = buffer.as_mut_ptr();
+        let ptr_i = buffer_ptr.add(idx_i);
+        let ptr_j = buffer_ptr.add(idx_j);
+        ptr::swap(ptr_i, ptr_j);
+    }
+
+    /// Removes an element from anywhere in the deque and returns it, replacing it with the first
+    /// element.
+    ///
+    /// This does not preserve ordering, but is *O*(1).
+    ///
+    /// Returns `None` if `index` is out of bounds.
+    ///
+    /// Element at index 0 is the front of the queue.
+    pub fn swap_remove_front(&mut self, index: usize) -> Option<T> {
+        let len = self.storage_len();
+        if len > 0 && index < len {
+            Some(unsafe {
+                self.swap_unchecked(index, 0);
+                self.pop_front_unchecked()
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Removes an element from anywhere in the deque and returns it, replacing it with the last
+    /// element.
+    ///
+    /// This does not preserve ordering, but is *O*(1).
+    ///
+    /// Returns `None` if `index` is out of bounds.
+    ///
+    /// Element at index 0 is the front of the queue.
+    pub fn swap_remove_back(&mut self, index: usize) -> Option<T> {
+        let len = self.storage_len();
+        if len > 0 && index < len {
+            Some(unsafe {
+                self.swap_unchecked(index, len - 1);
+                self.pop_back_unchecked()
+            })
+        } else {
+            None
+        }
+    }
+
+    fn to_physical_index(&self, index: usize) -> usize {
+        let mut res = self.front + index;
+        if res >= self.storage_capacity() {
+            res -= self.storage_capacity();
+        }
+        res
+    }
+
     /// Returns an iterator over the deque.
-    pub fn iter(&self) -> Iter<'_, T, N> {
-        let done = self.is_empty();
+    pub fn iter(&self) -> Iter<'_, T> {
+        let (start, end) = self.as_slices();
         Iter {
-            _phantom: PhantomData,
-            buffer: &self.buffer as *const MaybeUninit<T>,
-            front: self.front,
-            back: self.back,
-            done,
+            inner: start.iter().chain(end),
         }
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMut<'_, T, N> {
-        let done = self.is_empty();
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        let (start, end) = self.as_mut_slices();
         IterMut {
-            _phantom: PhantomData,
-            buffer: &mut self.buffer as *mut _ as *mut MaybeUninit<T>,
-            front: self.front,
-            back: self.back,
-            done,
+            inner: start.iter_mut().chain(end),
         }
     }
 }
+
+/// Iterator over the contents of a [`Deque`]
+pub struct Iter<'a, T> {
+    inner: core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>,
+}
+
+/// Iterator over the contents of a [`Deque`]
+pub struct IterMut<'a, T> {
+    inner: core::iter::Chain<core::slice::IterMut<'a, T>, core::slice::IterMut<'a, T>>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<T> DoubleEndedIterator for Iter<'_, T> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
+impl<T> ExactSizeIterator for Iter<'_, T> {}
+impl<T> FusedIterator for Iter<'_, T> {}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<T> DoubleEndedIterator for IterMut<'_, T> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.next_back()
+    }
+}
+
+impl<T> ExactSizeIterator for IterMut<'_, T> {}
+impl<T> FusedIterator for IterMut<'_, T> {}
 
 // Trait implementations
 
@@ -368,7 +872,7 @@ impl<T, const N: usize> Default for Deque<T, N> {
     }
 }
 
-impl<T, const N: usize> Drop for Deque<T, N> {
+impl<T, S: VecStorage<T> + ?Sized> Drop for DequeInner<T, S> {
     fn drop(&mut self) {
         // safety: `self` is left in an inconsistent state but it doesn't matter since
         // it's getting dropped. Nothing should be able to observe `self` after drop.
@@ -376,16 +880,29 @@ impl<T, const N: usize> Drop for Deque<T, N> {
     }
 }
 
-impl<T: fmt::Debug, const N: usize> fmt::Debug for Deque<T, N> {
+impl<T: fmt::Debug, S: VecStorage<T> + ?Sized> fmt::Debug for DequeInner<T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self).finish()
+    }
+}
+
+/// As with the standard library's `VecDeque`, items are added via `push_back`.
+impl<T, S: VecStorage<T> + ?Sized> Extend<T> for DequeInner<T, S> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push_back(item).ok().unwrap();
+        }
+    }
+}
+impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T, S> {
+    fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
+        self.extend(iter.into_iter().copied());
     }
 }
 
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
-///
 #[derive(Clone)]
 pub struct IntoIter<T, const N: usize> {
     deque: Deque<T, N>,
@@ -407,131 +924,18 @@ impl<T, const N: usize> IntoIterator for Deque<T, N> {
     }
 }
 
-/// An iterator over the elements of a [`Deque`].
-///
-/// This struct is created by calling the `iter` method.
-#[derive(Clone)]
-pub struct Iter<'a, T, const N: usize> {
-    buffer: *const MaybeUninit<T>,
-    _phantom: PhantomData<&'a T>,
-    front: usize,
-    back: usize,
-    done: bool,
-}
-
-impl<'a, T, const N: usize> Iterator for Iter<'a, T, N> {
+impl<'a, T, S: VecStorage<T> + ?Sized> IntoIterator for &'a DequeInner<T, S> {
     type Item = &'a T;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            None
-        } else {
-            let index = self.front;
-            self.front = Deque::<T, N>::increment(self.front);
-            if self.front == self.back {
-                self.done = true;
-            }
-            Some(unsafe { &*(self.buffer.add(index) as *const T) })
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = if self.done {
-            0
-        } else if self.back <= self.front {
-            self.back + N - self.front
-        } else {
-            self.back - self.front
-        };
-
-        (len, Some(len))
-    }
-}
-
-impl<'a, T, const N: usize> DoubleEndedIterator for Iter<'a, T, N> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.done {
-            None
-        } else {
-            self.back = Deque::<T, N>::decrement(self.back);
-            if self.front == self.back {
-                self.done = true;
-            }
-            Some(unsafe { &*(self.buffer.add(self.back) as *const T) })
-        }
-    }
-}
-
-impl<'a, T, const N: usize> ExactSizeIterator for Iter<'a, T, N> {}
-impl<'a, T, const N: usize> FusedIterator for Iter<'a, T, N> {}
-
-/// An iterator over the elements of a [`Deque`].
-///
-/// This struct is created by calling the `iter` method.
-pub struct IterMut<'a, T, const N: usize> {
-    buffer: *mut MaybeUninit<T>,
-    _phantom: PhantomData<&'a mut T>,
-    front: usize,
-    back: usize,
-    done: bool,
-}
-
-impl<'a, T, const N: usize> Iterator for IterMut<'a, T, N> {
-    type Item = &'a mut T;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            None
-        } else {
-            let index = self.front;
-            self.front = Deque::<T, N>::increment(self.front);
-            if self.front == self.back {
-                self.done = true;
-            }
-            Some(unsafe { &mut *(self.buffer.add(index) as *mut T) })
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = if self.done {
-            0
-        } else if self.back <= self.front {
-            self.back + N - self.front
-        } else {
-            self.back - self.front
-        };
-
-        (len, Some(len))
-    }
-}
-
-impl<'a, T, const N: usize> DoubleEndedIterator for IterMut<'a, T, N> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.done {
-            None
-        } else {
-            self.back = Deque::<T, N>::decrement(self.back);
-            if self.front == self.back {
-                self.done = true;
-            }
-            Some(unsafe { &mut *(self.buffer.add(self.back) as *mut T) })
-        }
-    }
-}
-
-impl<'a, T, const N: usize> ExactSizeIterator for IterMut<'a, T, N> {}
-impl<'a, T, const N: usize> FusedIterator for IterMut<'a, T, N> {}
-
-impl<'a, T, const N: usize> IntoIterator for &'a Deque<T, N> {
-    type Item = &'a T;
-    type IntoIter = Iter<'a, T, N>;
+    type IntoIter = Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, T, const N: usize> IntoIterator for &'a mut Deque<T, N> {
+impl<'a, T, S: VecStorage<T> + ?Sized> IntoIterator for &'a mut DequeInner<T, S> {
     type Item = &'a mut T;
-    type IntoIter = IterMut<'a, T, N>;
+    type IntoIter = IterMut<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -543,7 +947,7 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut res = Deque::new();
+        let mut res = Self::new();
         for i in self {
             // safety: the original and new deques have the same capacity, so it can
             // not become full.
@@ -553,9 +957,56 @@ where
     }
 }
 
+impl<T: PartialEq, const N: usize> PartialEq for Deque<T, N> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        let (sa, sb) = self.as_slices();
+        let (oa, ob) = other.as_slices();
+        match sa.len().cmp(&oa.len()) {
+            Ordering::Equal => sa == oa && sb == ob,
+            Ordering::Less => {
+                // Always divisible in three sections, for example:
+                // self:  [a b c|d e f]
+                // other: [0 1 2 3|4 5]
+                // front = 3, mid = 1,
+                // [a b c] == [0 1 2] && [d] == [3] && [e f] == [4 5]
+                let front = sa.len();
+                let mid = oa.len() - front;
+
+                let (oa_front, oa_mid) = oa.split_at(front);
+                let (sb_mid, sb_back) = sb.split_at(mid);
+                debug_assert_eq!(sa.len(), oa_front.len());
+                debug_assert_eq!(sb_mid.len(), oa_mid.len());
+                debug_assert_eq!(sb_back.len(), ob.len());
+                sa == oa_front && sb_mid == oa_mid && sb_back == ob
+            }
+            Ordering::Greater => {
+                let front = oa.len();
+                let mid = sa.len() - front;
+
+                let (sa_front, sa_mid) = sa.split_at(front);
+                let (ob_mid, ob_back) = ob.split_at(mid);
+                debug_assert_eq!(sa_front.len(), oa.len());
+                debug_assert_eq!(sa_mid.len(), ob_mid.len());
+                debug_assert_eq!(sb.len(), ob_back.len());
+                sa_front == oa && sa_mid == ob_mid && sb == ob_back
+            }
+        }
+    }
+}
+
+impl<T: Eq, const N: usize> Eq for Deque<T, N> {}
+
 #[cfg(test)]
 mod tests {
-    use crate::Deque;
+    use static_assertions::assert_not_impl_any;
+
+    use super::Deque;
+
+    // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Deque<*const (), 4>: Send);
 
     #[test]
     fn static_new() {
@@ -660,6 +1111,31 @@ mod tests {
         assert_eq!(v.front_mut(), None);
         assert_eq!(v.back(), None);
         assert_eq!(v.back_mut(), None);
+    }
+
+    #[test]
+    fn extend() {
+        let mut v: Deque<i32, 4> = Deque::new();
+        v.extend(&[1, 2, 3]);
+        assert_eq!(v.pop_front().unwrap(), 1);
+        assert_eq!(v.pop_front().unwrap(), 2);
+        assert_eq!(*v.front().unwrap(), 3);
+
+        v.push_back(4).unwrap();
+        v.extend(&[5, 6]);
+        assert_eq!(v.pop_front().unwrap(), 3);
+        assert_eq!(v.pop_front().unwrap(), 4);
+        assert_eq!(v.pop_front().unwrap(), 5);
+        assert_eq!(v.pop_front().unwrap(), 6);
+        assert!(v.pop_front().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn extend_panic() {
+        let mut v: Deque<i32, 4> = Deque::new();
+        // Is too many elements -> should panic
+        v.extend(&[1, 2, 3, 4, 5]);
     }
 
     #[test]
@@ -827,5 +1303,246 @@ mod tests {
 
         q.push_back(0).unwrap();
         assert_eq!(q.len(), 1);
+    }
+
+    #[test]
+    fn make_contiguous() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.len(), 0);
+
+        q.push_back(0).unwrap();
+        q.push_back(1).unwrap();
+        q.push_back(2).unwrap();
+        q.push_back(3).unwrap();
+
+        // Deque contains: 0, 1, 2, 3
+        assert_eq!(q.pop_front(), Some(0));
+        assert_eq!(q.pop_front(), Some(1));
+
+        // Deque contains: ., ., 2, 3
+        q.push_back(4).unwrap();
+
+        // Deque contains: 4, ., 2, 3
+        assert_eq!(q.as_slices(), ([2, 3].as_slice(), [4].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[2, 3, 4]);
+
+        // Deque contains: ., 2, 3, 4
+        assert_eq!(q.as_slices(), ([2, 3, 4].as_slice(), [].as_slice()));
+
+        assert_eq!(q.pop_front(), Some(2));
+        assert_eq!(q.pop_front(), Some(3));
+        q.push_back(5).unwrap();
+        q.push_back(6).unwrap();
+
+        // Deque contains: 5, 6, ., 4
+        assert_eq!(q.as_slices(), ([4].as_slice(), [5, 6].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[4, 5, 6]);
+
+        // Deque contains: 4, 5, 6, .
+        assert_eq!(q.as_slices(), ([4, 5, 6].as_slice(), [].as_slice()));
+
+        assert_eq!(q.pop_front(), Some(4));
+        q.push_back(7).unwrap();
+        q.push_back(8).unwrap();
+
+        // Deque contains: 8, 5, 6, 7
+        assert_eq!(q.as_slices(), ([5, 6, 7].as_slice(), [8].as_slice()));
+
+        assert_eq!(q.make_contiguous(), &[5, 6, 7, 8]);
+
+        // Deque contains: 5, 6, 7, 8
+        assert_eq!(q.as_slices(), ([5, 6, 7, 8].as_slice(), [].as_slice()));
+    }
+
+    #[test]
+    fn get() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.get(0), None);
+
+        q.push_back(0).unwrap();
+        assert_eq!(q.get(0), Some(&0));
+        assert_eq!(q.get(1), None);
+
+        q.push_back(1).unwrap();
+        assert_eq!(q.get(0), Some(&0));
+        assert_eq!(q.get(1), Some(&1));
+        assert_eq!(q.get(2), None);
+
+        q.pop_front().unwrap();
+        assert_eq!(q.get(0), Some(&1));
+        assert_eq!(q.get(1), None);
+
+        q.push_back(2).unwrap();
+        q.push_back(3).unwrap();
+        q.push_back(4).unwrap();
+        assert_eq!(q.get(0), Some(&1));
+        assert_eq!(q.get(1), Some(&2));
+        assert_eq!(q.get(2), Some(&3));
+        assert_eq!(q.get(3), Some(&4));
+    }
+
+    #[test]
+    fn get_mut() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        assert_eq!(q.get(0), None);
+
+        q.push_back(0).unwrap();
+        assert_eq!(q.get_mut(0), Some(&mut 0));
+        assert_eq!(q.get_mut(1), None);
+
+        q.push_back(1).unwrap();
+        assert_eq!(q.get_mut(0), Some(&mut 0));
+        assert_eq!(q.get_mut(1), Some(&mut 1));
+        assert_eq!(q.get_mut(2), None);
+        *q.get_mut(0).unwrap() = 42;
+        *q.get_mut(1).unwrap() = 43;
+
+        assert_eq!(q.pop_front(), Some(42));
+        assert_eq!(q.pop_front(), Some(43));
+        assert_eq!(q.pop_front(), None);
+    }
+
+    #[test]
+    fn swap() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.push_back(43).unwrap();
+        assert_eq!(*q.get(0).unwrap(), 41);
+        assert_eq!(*q.get(1).unwrap(), 42);
+        assert_eq!(*q.get(2).unwrap(), 43);
+
+        q.swap(0, 1);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 41);
+        assert_eq!(*q.get(2).unwrap(), 43);
+
+        q.swap(1, 2);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 43);
+        assert_eq!(*q.get(2).unwrap(), 41);
+
+        q.swap(1, 1);
+        assert_eq!(*q.get(0).unwrap(), 42);
+        assert_eq!(*q.get(1).unwrap(), 43);
+        assert_eq!(*q.get(2).unwrap(), 41);
+    }
+
+    #[test]
+    fn swap_remove_front() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.push_back(43).unwrap();
+
+        assert_eq!(q.swap_remove_front(2), Some(42));
+        assert_eq!(q.swap_remove_front(1), Some(40));
+        assert_eq!(q.swap_remove_front(0), Some(41));
+        assert_eq!(q.swap_remove_front(1), None);
+        assert_eq!(q.swap_remove_front(4), None);
+        assert_eq!(q.swap_remove_front(6), None);
+        assert_eq!(q.swap_remove_front(0), Some(43));
+    }
+
+    #[test]
+    fn swap_remove_back() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.push_back(43).unwrap();
+        q.pop_front().unwrap();
+        q.push_back(44).unwrap();
+
+        assert_eq!(q.swap_remove_back(1), Some(42));
+        assert_eq!(q.swap_remove_front(1), Some(44));
+        assert_eq!(q.swap_remove_front(0), Some(41));
+        assert_eq!(q.swap_remove_front(1), None);
+        assert_eq!(q.swap_remove_front(4), None);
+        assert_eq!(q.swap_remove_front(6), None);
+        assert_eq!(q.swap_remove_front(0), Some(43));
+    }
+
+    #[test]
+    #[should_panic = "i < len"]
+    fn swap_i_out_of_bounds() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.swap(2, 0);
+    }
+
+    #[test]
+    #[should_panic = "j < len"]
+    fn swap_j_out_of_bounds() {
+        let mut q: Deque<i32, 4> = Deque::new();
+        q.push_back(40).unwrap();
+        q.push_back(41).unwrap();
+        q.push_back(42).unwrap();
+        q.pop_front().unwrap();
+        q.swap(0, 2);
+    }
+
+    #[test]
+    fn equality() {
+        let mut a: Deque<i32, 7> = Deque::new();
+        let mut b: Deque<i32, 7> = Deque::new();
+
+        assert_eq!(a, b);
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+
+        assert_ne!(a, b);
+
+        b.push_back(1).unwrap();
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+
+        assert_eq!(a, b);
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+
+        assert_ne!(a, b);
+
+        b.push_front(3).unwrap();
+        b.push_front(2).unwrap();
+        b.push_front(1).unwrap();
+
+        assert_eq!(a, b);
+
+        a.push_back(4).unwrap();
+        b.push_back(4).unwrap();
+
+        assert_eq!(a, b);
+
+        a.clear();
+        b.clear();
+
+        a.push_back(1).unwrap();
+        a.push_back(2).unwrap();
+        a.push_back(3).unwrap();
+        a.push_front(3).unwrap();
+        a.push_front(2).unwrap();
+        a.push_front(1).unwrap();
+
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+        b.push_back(1).unwrap();
+        b.push_back(2).unwrap();
+        b.push_back(3).unwrap();
+        b.push_front(1).unwrap();
+
+        assert_eq!(a, b);
     }
 }

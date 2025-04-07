@@ -1,16 +1,17 @@
-use crate::indexmap::{self, IndexMap};
 use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
-    iter::FromIterator,
 };
+
 use hash32::{BuildHasherDefault, FnvHasher};
 
-/// A [`heapless::IndexSet`](./struct.IndexSet.html) using the
-/// default FNV hasher.
+use crate::indexmap::{self, IndexMap};
+
+/// An [`IndexSet`] using the default FNV hasher.
+///
 /// A list of all Methods and Traits available for `FnvIndexSet` can be found in
-/// the [`heapless::IndexSet`](./struct.IndexSet.html) documentation.
+/// the [`IndexSet`] documentation.
 ///
 /// # Examples
 /// ```
@@ -27,8 +28,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 ///
 /// // Check for a specific one.
 /// if !books.contains("The Winds of Winter") {
-///     println!("We have {} books, but The Winds of Winter ain't one.",
-///              books.len());
+///     println!(
+///         "We have {} books, but The Winds of Winter ain't one.",
+///         books.len()
+///     );
 /// }
 ///
 /// // Remove a book.
@@ -41,10 +44,10 @@ use hash32::{BuildHasherDefault, FnvHasher};
 /// ```
 pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHasher>, N>;
 
-/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/1/indexmap/set/struct.IndexSet.html).
+/// Fixed capacity [`IndexSet`](https://docs.rs/indexmap/2/indexmap/set/struct.IndexSet.html).
 ///
 /// Note that you cannot use `IndexSet` directly, since it is generic around the hashing algorithm
-/// in use. Pick a concrete instantiation like [`FnvIndexSet`](./type.FnvIndexSet.html) instead
+/// in use. Pick a concrete instantiation like [`FnvIndexSet`] instead
 /// or create your own.
 ///
 /// Note that the capacity of the `IndexSet` must be a power of 2.
@@ -67,8 +70,10 @@ pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHash
 ///
 /// // Check for a specific one.
 /// if !books.contains("The Winds of Winter") {
-///     println!("We have {} books, but The Winds of Winter ain't one.",
-///              books.len());
+///     println!(
+///         "We have {} books, but The Winds of Winter ain't one.",
+///         books.len()
+///     );
 /// }
 ///
 /// // Remove a book.
@@ -86,7 +91,7 @@ pub struct IndexSet<T, S, const N: usize> {
 impl<T, S, const N: usize> IndexSet<T, BuildHasherDefault<S>, N> {
     /// Creates an empty `IndexSet`
     pub const fn new() -> Self {
-        IndexSet {
+        Self {
             map: IndexMap::new(),
         }
     }
@@ -131,14 +136,14 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
 
     /// Get the first value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn first(&self) -> Option<&T> {
         self.map.first().map(|(k, _v)| k)
     }
 
     /// Get the last value
     ///
-    /// Computes in **O(1)** time
+    /// Computes in *O*(1) time
     pub fn last(&self) -> Option<&T> {
         self.map.last().map(|(k, _v)| k)
     }
@@ -175,6 +180,25 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
         self.map.is_empty()
     }
 
+    /// Returns `true` if the set is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::FnvIndexSet;
+    ///
+    /// let mut v: FnvIndexSet<_, 4> = FnvIndexSet::new();
+    /// assert!(!v.is_full());
+    /// v.insert(1).unwrap();
+    /// v.insert(2).unwrap();
+    /// v.insert(3).unwrap();
+    /// v.insert(4).unwrap();
+    /// assert!(v.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.map.is_full()
+    }
+
     /// Clears the set, removing all values.
     ///
     /// # Examples
@@ -188,7 +212,7 @@ impl<T, S, const N: usize> IndexSet<T, S, N> {
     /// assert!(v.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.map.clear()
+        self.map.clear();
     }
 }
 
@@ -509,7 +533,7 @@ where
     S: Default,
 {
     fn default() -> Self {
-        IndexSet {
+        Self {
             map: <_>::default(),
         }
     }
@@ -536,7 +560,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        self.map.extend(iterable.into_iter().map(|k| (k, ())))
+        self.map.extend(iterable.into_iter().map(|k| (k, ())));
     }
 }
 
@@ -549,7 +573,7 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iterable.into_iter().cloned())
+        self.extend(iterable.into_iter().cloned());
     }
 }
 
@@ -562,7 +586,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        let mut set = IndexSet::default();
+        let mut set = Self::default();
         set.extend(iter);
         set
     }
@@ -597,7 +621,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
-impl<'a, T> Clone for Iter<'a, T> {
+impl<T> Clone for Iter<'_, T> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
@@ -655,4 +679,14 @@ where
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use static_assertions::assert_not_impl_any;
+
+    use super::{BuildHasherDefault, IndexSet};
+
+    // Ensure a `IndexSet` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(IndexSet<*const (), BuildHasherDefault<()>, 4>: Send);
 }

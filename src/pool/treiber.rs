@@ -1,6 +1,6 @@
 use core::mem::ManuallyDrop;
 
-#[cfg_attr(target_arch = "x86", path = "treiber/cas.rs")]
+#[cfg_attr(not(arm_llsc), path = "treiber/cas.rs")]
 #[cfg_attr(arm_llsc, path = "treiber/llsc.rs")]
 mod impl_;
 
@@ -27,7 +27,7 @@ where
     /// - `node` must be a valid pointer
     /// - aliasing rules must be enforced by the caller. e.g, the same `node` may not be pushed more than once
     pub unsafe fn push(&self, node: NonNullPtr<N>) {
-        impl_::push(self, node)
+        impl_::push(self, node);
     }
 
     pub fn try_pop(&self) -> Option<NonNullPtr<N>> {
@@ -39,6 +39,8 @@ pub trait Node: Sized {
     type Data;
 
     fn next(&self) -> &AtomicPtr<Self>;
+
+    #[allow(dead_code)] // used conditionally
     fn next_mut(&mut self) -> &mut AtomicPtr<Self>;
 }
 

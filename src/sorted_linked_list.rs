@@ -1,12 +1,13 @@
 //! A fixed sorted priority linked list, similar to [`BinaryHeap`] but with different properties
 //! on `push`, `pop`, etc.
+//!
 //! For example, the sorting of the list will never `memcpy` the underlying value, so having large
 //! objects in the list will not cause a performance hit.
 //!
 //! # Examples
 //!
 //! ```
-//! use heapless::sorted_linked_list::{SortedLinkedList, Max};
+//! use heapless::sorted_linked_list::{Max, SortedLinkedList};
 //! let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
 //!
 //! // The largest value will always be first
@@ -31,6 +32,129 @@ use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
+
+mod storage {
+    use super::{Node, SortedLinkedListIndex, SortedLinkedListInner, SortedLinkedListView};
+
+    /// Trait defining how data for a container is stored.
+    ///
+    /// There's two implementations available:
+    ///
+    /// - [`OwnedSortedLinkedListStorage`]: stores the data in an array `[T; N]` whose size is known at compile time.
+    /// - [`ViewSortedLinkedListStorage`]: stores the data in an unsized `[T]`.
+    ///
+    /// This allows [`SortedLinkedList`] to be generic over either sized or unsized storage. The [`sorted_linked_list`](super)
+    /// module contains a [`SortedLinkedListInner`] struct that's generic on [`SortedLinkedListStorage`],
+    /// and two type aliases for convenience:
+    ///
+    /// - [`SortedLinkedList<T, Idx, N>`](super::SortedLinkedList) = `SortedLinkedListInner<T, OwnedSortedLinkedListStorage<T, Idx, N>>`
+    /// - [`SortedLinkedListView<T, Idx>`](super::SortedLinkedListView) = `SortedLinkedListInner<T, ViewSortedLinkedListStorage<T, Idx>>`
+    ///
+    /// `SortedLinkedList` can be unsized into `SortedLinkedListView`, either by unsizing coercions such as `&mut SortedLinkedList -> &mut SortedLinkedListView` or
+    /// `Box<SortedLinkedList> -> Box<SortedLinkedListView>`, or explicitly with [`.as_view()`](super::SortedLinkedList::as_view) or [`.as_mut_view()`](super::SortedLinkedList::as_mut_view).
+    ///
+    /// This trait is sealed, so you cannot implement it for your own types. You can only use
+    /// the implementations provided by this crate.
+    ///
+    /// [`SortedLinkedListInner`]: super::SortedLinkedListInner
+    /// [`SortedLinkedList`]: super::SortedLinkedList
+    /// [`SortedLinkedListView`]: super::SortedLinkedListView
+    #[allow(private_bounds)]
+    pub trait SortedLinkedListStorage<T, Idx>: SortedLinkedListSealedStorage<T, Idx> {}
+
+    pub trait SortedLinkedListSealedStorage<T, Idx> {
+        // part of the sealed trait so that no trait is publicly implemented by `OwnedSortedLinkedListStorage` besides `Storage`
+        fn borrow(&self) -> &[Node<T, Idx>];
+        fn borrow_mut(&mut self) -> &mut [Node<T, Idx>];
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Idx: SortedLinkedListIndex,
+            Self: SortedLinkedListStorage<T, Idx>;
+    }
+
+    // One sealed layer of indirection to hide the internal details (The MaybeUninit).
+    pub struct SortedLinkedListStorageInner<T: ?Sized> {
+        pub(crate) buffer: T,
+    }
+
+    /// Implementation of [`SortedLinkedListStorage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+    pub type OwnedSortedLinkedListStorage<T, Idx, const N: usize> =
+        SortedLinkedListStorageInner<[Node<T, Idx>; N]>;
+    /// Implementation of [`SortedLinkedListStorage`] that stores the data in an unsized `[T]`.
+    pub type ViewSortedLinkedListStorage<T, Idx> = SortedLinkedListStorageInner<[Node<T, Idx>]>;
+
+    impl<T, Idx, const N: usize> SortedLinkedListSealedStorage<T, Idx>
+        for OwnedSortedLinkedListStorage<T, Idx, N>
+    {
+        fn borrow(&self) -> &[Node<T, Idx>] {
+            &self.buffer
+        }
+        fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
+            &mut self.buffer
+        }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+    }
+    impl<T, Idx, const N: usize> SortedLinkedListStorage<T, Idx>
+        for OwnedSortedLinkedListStorage<T, Idx, N>
+    {
+    }
+
+    impl<T, Idx> SortedLinkedListSealedStorage<T, Idx> for ViewSortedLinkedListStorage<T, Idx> {
+        fn borrow(&self) -> &[Node<T, Idx>] {
+            &self.buffer
+        }
+        fn borrow_mut(&mut self) -> &mut [Node<T, Idx>] {
+            &mut self.buffer
+        }
+        fn as_view<K>(
+            this: &SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+        fn as_mut_view<K>(
+            this: &mut SortedLinkedListInner<T, Idx, K, Self>,
+        ) -> &mut SortedLinkedListView<T, Idx, K>
+        where
+            Self: SortedLinkedListStorage<T, Idx>,
+            Idx: SortedLinkedListIndex,
+        {
+            this
+        }
+    }
+    impl<T, Idx> SortedLinkedListStorage<T, Idx> for ViewSortedLinkedListStorage<T, Idx> {}
+}
+pub use storage::{
+    OwnedSortedLinkedListStorage, SortedLinkedListStorage, ViewSortedLinkedListStorage,
+};
 
 /// Trait for defining an index for the linked list, never implemented by users.
 pub trait SortedLinkedListIndex: Copy {
@@ -82,16 +206,28 @@ pub struct Node<T, Idx> {
     next: Idx,
 }
 
-/// The linked list.
-pub struct SortedLinkedList<T, Idx, K, const N: usize>
+/// Base struct for [`SortedLinkedList`] and [`SortedLinkedListView`], generic over the [`SortedLinkedListStorage`].
+///
+/// In most cases you should use [`SortedLinkedList`] or [`SortedLinkedListView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
-    list: [Node<T, Idx>; N],
     head: Idx,
     free: Idx,
-    _kind: PhantomData<K>,
+    phantom: PhantomData<(K, T)>,
+    list: S,
 }
+
+/// The linked list.
+pub type SortedLinkedList<T, Idx, K, const N: usize> =
+    SortedLinkedListInner<T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
+
+/// The linked list.
+pub type SortedLinkedListView<T, Idx, K> =
+    SortedLinkedListInner<T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
 
 // Internal macro for generating indexes for the linkedlist and const new for the linked list
 macro_rules! impl_index_and_const_new {
@@ -149,14 +285,17 @@ macro_rules! impl_index_and_const_new {
 
             /// Create a new linked list.
             pub const fn $new_name() -> Self {
-                // Const assert N < MAX
-                crate::sealed::smaller_than::<N, $max_val>();
+                const {
+                    assert!(N < $max_val);
+                }
 
                 let mut list = SortedLinkedList {
-                    list: [Self::UNINIT; N],
+                    list: OwnedSortedLinkedListStorage {
+                        buffer: [Self::UNINIT; N],
+                    },
                     head: $name::none(),
                     free: unsafe { $name::new_unchecked(0) },
-                    _kind: PhantomData,
+                    phantom: PhantomData,
                 };
 
                 if N == 0 {
@@ -168,7 +307,7 @@ macro_rules! impl_index_and_const_new {
 
                 // Initialize indexes
                 while free < N - 1 {
-                    list.list[free].next = unsafe { $name::new_unchecked(free as $ty + 1) };
+                    list.list.buffer[free].next = unsafe { $name::new_unchecked(free as $ty + 1) };
                     free += 1;
                 }
 
@@ -182,22 +321,33 @@ impl_index_and_const_new!(LinkedIndexU8, u8, new_u8, { u8::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexU16, u16, new_u16, { u16::MAX as usize - 1 });
 impl_index_and_const_new!(LinkedIndexUsize, usize, new_usize, { usize::MAX - 1 });
 
-impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
+    /// Get a reference to the `SortedLinkedList`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &SortedLinkedListView<T, Idx, K> {
+        S::as_view(self)
+    }
+
+    /// Get a mutable reference to the `Vec`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut SortedLinkedListView<T, Idx, K> {
+        S::as_mut_view(self)
+    }
+
     /// Internal access helper
     #[inline(always)]
     fn node_at(&self, index: usize) -> &Node<T, Idx> {
         // Safety: The entire `self.list` is initialized in `new`, which makes this safe.
-        unsafe { self.list.get_unchecked(index) }
+        unsafe { self.list.borrow().get_unchecked(index) }
     }
 
     /// Internal access helper
     #[inline(always)]
     fn node_at_mut(&mut self, index: usize) -> &mut Node<T, Idx> {
         // Safety: The entire `self.list` is initialized in `new`, which makes this safe.
-        unsafe { self.list.get_unchecked_mut(index) }
+        unsafe { self.list.borrow_mut().get_unchecked_mut(index) }
     }
 
     /// Internal access helper
@@ -231,15 +381,16 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     /// Pushes a value onto the list without checking if the list is full.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Safety
     ///
@@ -256,11 +407,8 @@ where
             if self
                 .read_data_in_node_at(head)
                 .cmp(self.read_data_in_node_at(new))
-                != K::ordering()
+                == K::ordering()
             {
-                self.node_at_mut(new).next = self.head;
-                self.head = Idx::new_unchecked(new);
-            } else {
                 // It's not head, search the list for the correct placement
                 let mut current = head;
 
@@ -278,6 +426,9 @@ where
 
                 self.node_at_mut(new).next = self.node_at(current).next;
                 self.node_at_mut(current).next = Idx::new_unchecked(new);
+            } else {
+                self.node_at_mut(new).next = self.head;
+                self.head = Idx::new_unchecked(new);
             }
         } else {
             self.node_at_mut(new).next = self.head;
@@ -287,12 +438,12 @@ where
 
     /// Pushes an element to the linked list and sorts it into place.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// // The largest value will always be first
@@ -309,10 +460,11 @@ where
     /// assert_eq!(ll.push(4), Err(4));
     /// ```
     pub fn push(&mut self, value: T) -> Result<(), T> {
-        if !self.is_full() {
-            Ok(unsafe { self.push_unchecked(value) })
-        } else {
+        if self.is_full() {
             Err(value)
+        } else {
+            unsafe { self.push_unchecked(value) }
+            Ok(())
         }
     }
 
@@ -321,7 +473,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -333,8 +485,8 @@ where
     /// assert_eq!(iter.next(), Some(&1));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn iter(&self) -> Iter<'_, T, Idx, K, N> {
-        Iter {
+    pub fn iter(&self) -> IterInner<'_, T, Idx, K, S> {
+        IterInner {
             list: self,
             index: self.head,
         }
@@ -345,7 +497,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -357,12 +509,12 @@ where
     /// *find += 1000;
     /// find.finish();
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
-    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMut<'_, T, Idx, K, N>>
+    pub fn find_mut<F>(&mut self, mut f: F) -> Option<FindMutInner<'_, T, Idx, K, S>>
     where
         F: FnMut(&T) -> bool,
     {
@@ -370,7 +522,7 @@ where
 
         // Special-case, first element
         if f(self.read_data_in_node_at(head)) {
-            return Some(FindMut {
+            return Some(FindMutInner {
                 is_head: true,
                 prev_index: Idx::none(),
                 index: self.head,
@@ -383,7 +535,7 @@ where
 
         while let Some(next) = self.node_at(current).next.option() {
             if f(self.read_data_in_node_at(next)) {
-                return Some(FindMut {
+                return Some(FindMutInner {
                     is_head: false,
                     prev_index: unsafe { Idx::new_unchecked(current) },
                     index: unsafe { Idx::new_unchecked(next) },
@@ -403,7 +555,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max, Min};
+    /// use heapless::sorted_linked_list::{Max, Min, SortedLinkedList};
     /// let mut ll_max: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// // The largest value will always be first
@@ -447,26 +599,26 @@ where
 
     /// Pops the first element in the list.
     ///
-    /// Complexity is worst-case `O(1)`.
+    /// Complexity is worst-case *O*(1).
     ///
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
     ///
-    /// assert_eq!(ll.pop(), Ok(2));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(2));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
-    pub fn pop(&mut self) -> Result<T, ()> {
-        if !self.is_empty() {
-            Ok(unsafe { self.pop_unchecked() })
+    pub fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
         } else {
-            Err(())
+            Some(unsafe { self.pop_unchecked() })
         }
     }
 
@@ -475,7 +627,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// assert_eq!(ll.is_full(), false);
@@ -497,7 +649,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// assert_eq!(ll.is_empty(), true);
@@ -511,22 +663,33 @@ where
     }
 }
 
-/// Iterator for the linked list.
-pub struct Iter<'a, T, Idx, K, const N: usize>
+/// Base struct for [`Iter`] and [`IterView`], generic over the [`SortedLinkedListStorage`].
+///
+/// In most cases you should use [`Iter`] or [`IterView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct IterInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
-    list: &'a SortedLinkedList<T, Idx, K, N>,
+    list: &'a SortedLinkedListInner<T, Idx, K, S>,
     index: Idx,
 }
 
-impl<'a, T, Idx, K, const N: usize> Iterator for Iter<'a, T, Idx, K, N>
+/// Iterator for the linked list.
+pub type Iter<'a, T, Idx, K, const N: usize> =
+    IterInner<'a, T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
+/// Iterator for the linked list.
+pub type IterView<'a, T, Idx, K> = IterInner<'a, T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
+
+impl<'a, T, Idx, K, S> Iterator for IterInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     type Item = &'a T;
 
@@ -540,25 +703,37 @@ where
     }
 }
 
-/// Comes from [`SortedLinkedList::find_mut`].
-pub struct FindMut<'a, T, Idx, K, const N: usize>
+/// Base struct for [`FindMut`] and [`FindMutView`], generic over the [`SortedLinkedListStorage`].
+///
+/// In most cases you should use [`FindMut`] or [`FindMutView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct FindMutInner<'a, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
-    list: &'a mut SortedLinkedList<T, Idx, K, N>,
+    list: &'a mut SortedLinkedListInner<T, Idx, K, S>,
     is_head: bool,
     prev_index: Idx,
     index: Idx,
     maybe_changed: bool,
 }
 
-impl<'a, T, Idx, K, const N: usize> FindMut<'a, T, Idx, K, N>
+/// Comes from [`SortedLinkedList::find_mut`].
+pub type FindMut<'a, T, Idx, K, const N: usize> =
+    FindMutInner<'a, T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
+/// Comes from [`SortedLinkedList::find_mut`].
+pub type FindMutView<'a, T, Idx, K, const N: usize> =
+    FindMutInner<'a, T, Idx, K, ViewSortedLinkedListStorage<T, Idx>>;
+
+impl<T, Idx, K, S> FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn pop_internal(&mut self) -> T {
         if self.is_head {
@@ -582,12 +757,12 @@ where
 
     /// This will pop the element from the list.
     ///
-    /// Complexity is worst-case `O(1)`.
+    /// Complexity is worst-case *O*(1).
     ///
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -598,9 +773,9 @@ where
     /// let mut find = ll.find_mut(|v| *v == 2).unwrap();
     /// find.pop();
     ///
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn pop(mut self) -> T {
@@ -612,12 +787,12 @@ where
     ///
     /// Same as calling `drop`.
     ///
-    /// Complexity is worst-case `O(N)`.
+    /// Complexity is worst-case *O*(n).
     ///
     /// # Example
     ///
     /// ```
-    /// use heapless::sorted_linked_list::{SortedLinkedList, Max};
+    /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
     /// let mut ll: SortedLinkedList<_, _, Max, 3> = SortedLinkedList::new_usize();
     ///
     /// ll.push(1).unwrap();
@@ -631,22 +806,23 @@ where
     /// *find += 1000;
     /// find.finish(); // Will resort, we accessed (and updated) the value.
     ///
-    /// assert_eq!(ll.pop(), Ok(1002));
-    /// assert_eq!(ll.pop(), Ok(3));
-    /// assert_eq!(ll.pop(), Ok(1));
-    /// assert_eq!(ll.pop(), Err(()));
+    /// assert_eq!(ll.pop(), Some(1002));
+    /// assert_eq!(ll.pop(), Some(3));
+    /// assert_eq!(ll.pop(), Some(1));
+    /// assert_eq!(ll.pop(), None);
     /// ```
     #[inline]
     pub fn finish(self) {
-        drop(self)
+        drop(self);
     }
 }
 
-impl<T, Idx, K, const N: usize> Drop for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> Drop for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn drop(&mut self) {
         // Only resort the list if the element has changed
@@ -657,11 +833,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> Deref for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> Deref for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     type Target = T;
 
@@ -671,11 +848,12 @@ where
     }
 }
 
-impl<T, Idx, K, const N: usize> DerefMut for FindMut<'_, T, Idx, K, N>
+impl<T, Idx, K, S> DerefMut for FindMutInner<'_, T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.maybe_changed = true;
@@ -709,20 +887,22 @@ where
 //     }
 // }
 
-impl<T, Idx, K, const N: usize> fmt::Debug for SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> fmt::Debug for SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<T, Idx, K, const N: usize> Drop for SortedLinkedList<T, Idx, K, N>
+impl<T, Idx, K, S> Drop for SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: SortedLinkedListIndex,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     fn drop(&mut self) {
         let mut index = self.head;
@@ -740,7 +920,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use static_assertions::assert_not_impl_any;
+
     use super::*;
+
+    // Ensure a `SortedLinkedList` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(SortedLinkedList<*const (), LinkedIndexU8, (), 4>: Send);
 
     #[test]
     fn const_new() {
@@ -783,14 +968,14 @@ mod tests {
         ll.push(2).unwrap();
         ll.push(3).unwrap();
 
-        assert!(ll.is_full())
+        assert!(ll.is_full());
     }
 
     #[test]
     fn test_empty() {
         let ll: SortedLinkedList<u32, LinkedIndexUsize, Max, 3> = SortedLinkedList::new_usize();
 
-        assert!(ll.is_empty())
+        assert!(ll.is_empty());
     }
 
     #[test]
@@ -862,5 +1047,16 @@ mod tests {
         find.finish();
 
         assert_eq!(ll.peek().unwrap(), &1001);
+    }
+
+    fn _test_variance<'a: 'b, 'b>(
+        x: SortedLinkedList<&'a (), LinkedIndexUsize, Max, 42>,
+    ) -> SortedLinkedList<&'b (), LinkedIndexUsize, Max, 42> {
+        x
+    }
+    fn _test_variance_view<'a: 'b, 'b, 'c>(
+        x: &'c SortedLinkedListView<&'a (), LinkedIndexUsize, Max>,
+    ) -> &'c SortedLinkedListView<&'b (), LinkedIndexUsize, Max> {
+        x
     }
 }

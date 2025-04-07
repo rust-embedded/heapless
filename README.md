@@ -5,7 +5,9 @@
 
 > `static` friendly data structures that don't require dynamic memory allocation
 
-## [Documentation](https://japaric.github.io/heapless/heapless/index.html)
+This project is developed and maintained by the [libs team].
+
+## [Documentation](https://docs.rs/heapless/latest/heapless)
 
 ## [Change log](CHANGELOG.md)
 
@@ -35,3 +37,5 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+[libs team]: https://github.com/rust-embedded/wg#the-libs-team

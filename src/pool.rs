@@ -2,10 +2,10 @@
 //!
 //! # Target support
 //!
-//! This module / API is only available on these compilation targets:
+//! This module/API is only available on these compilation targets:
 //!
 //! - ARM architectures which instruction set include the LDREX, CLREX and STREX instructions, e.g.
-//! `thumbv7m-none-eabi` but not `thumbv6m-none-eabi`
+//!   `thumbv7m-none-eabi` but not `thumbv6m-none-eabi`
 //! - 32-bit x86, e.g. `i686-unknown-linux-gnu`
 //!
 //! # Benchmarks
@@ -19,13 +19,13 @@
 //!
 //! - test program:
 //!
-//! ``` no_run
+//! ```no_run
 //! use heapless::box_pool;
 //!
-//! box_pool!(P: ()); // or `arc_pool!` or `object_pool!`
+//! box_pool!(MyBoxPool: ()); // or `arc_pool!` or `object_pool!`
 //!
 //! bkpt();
-//! let res = P.alloc(());
+//! let res = MyBoxPool.alloc(());
 //! bkpt();
 //!
 //! if let Ok(boxed) = res {
@@ -37,8 +37,8 @@
 //! ```
 //!
 //! - measurement method: the cycle counter (CYCCNT) register was sampled each time a breakpoint
-//! (`bkpt`) was hit. the difference between the "after" and the "before" value of CYCCNT yields the
-//! execution time in clock cycles.
+//!   (`bkpt`) was hit. the difference between the "after" and the "before" value of CYCCNT yields the
+//!   execution time in clock cycles.
 //!
 //! | API                          | clock cycles |
 //! |------------------------------|--------------|
