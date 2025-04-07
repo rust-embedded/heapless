@@ -133,32 +133,6 @@ impl<const N: usize> CString<N> {
         unsafe { CStr::from_bytes_with_nul_unchecked(&self.vec) }
     }
 
-    /// How many bytes were inserted to this [`CString`] so far, considering its
-    /// nul terminator.
-    ///
-    /// Must always be bigger than zero, since even an empty [`CString`]
-    /// ends in a zero byte.
-    /// # Example
-    ///
-    /// ```rust
-    /// use heapless::CString;
-    /// use std::ffi::{c_char, CStr};
-    ///
-    /// // Length is one (nul terminator only), capacity is 10
-    /// let mut cstr = CString::<11>::new();
-    ///
-    /// // Insert 5 bytes to it
-    /// cstr.push_bytes(b"/etc/").unwrap();
-    /// // Length is 6 (5 bytes inserted plus nul terminator)
-    /// assert_eq!(cstr.len(), 6);
-    /// cstr.push_bytes(b"dconf").unwrap();
-    ///
-    /// assert_eq!(cstr.to_str(), Ok("/etc/dconf"));
-    /// ```
-    pub fn len(&self) -> usize {
-        self.as_bytes_with_nul().len()
-    }
-
     /// Calculates the length of `self.vec` would have if it appended `bytes`.
     fn capacity_with_bytes(&self, bytes: &[u8]) -> Option<usize> {
         match bytes.last() {
@@ -420,7 +394,7 @@ mod tests {
 
         cstr.push_bytes(ORIGINAL_BYTES).unwrap();
 
-        assert_eq!(cstr.len(), 4);
+        assert_eq!(cstr.to_bytes_with_nul().len(), 4);
         assert_eq!(cstr.capacity_with_bytes(b""), None);
         assert_eq!(cstr.capacity_with_bytes(b"\0"), None);
         assert_eq!(
