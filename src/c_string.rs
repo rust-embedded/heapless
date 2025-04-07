@@ -40,11 +40,11 @@ impl<const N: usize> CString<N> {
     /// ```
     pub fn new() -> Self {
         // TODO Resolve this.
-        // crate::sealed::greater_than_0::<CAP>();
+        // crate::sealed::greater_than_0::<N>();
 
         let mut vec = Vec::new();
 
-        // Safety: will not fail since we const-assert that CAP > 0.
+        // Safety: will not fail since we const-assert that N > 0.
         unsafe { vec.push(0).unwrap_unchecked() };
 
         Self { vec }
@@ -55,7 +55,7 @@ impl<const N: usize> CString<N> {
     /// This function will copy the provided `bytes` to a [`CString`] without
     /// performing any sanity checks.
     ///
-    /// The function will fail if `bytes.len() > CAP`.
+    /// The function will fail if `bytes.len() > N`.
     ///
     /// # Safety
     ///
@@ -83,7 +83,7 @@ impl<const N: usize> CString<N> {
     /// null-terminated (ends with a single zero byte).
     ///
     /// Fails if the given byte slice has any interior null byte, if the slice does not
-    /// end in a zero byte or if the byte slice can't fit in `CAP`.
+    /// end in a zero byte or if the byte slice can't fit in `N`.
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut me = Self::new();
 
