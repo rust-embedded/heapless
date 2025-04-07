@@ -1,5 +1,5 @@
 use crate::{
-    cstring::CString,
+    c_string::CString,
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     CapacityError,
