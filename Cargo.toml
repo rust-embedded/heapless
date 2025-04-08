@@ -41,6 +41,9 @@ defmt = ["dep:defmt"]
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Implement some alloc Vec interoperability
+alloc = []
+
 nightly = []
 
 [dependencies]
@@ -67,6 +70,7 @@ features = [
   "defmt",
   "mpmc_large",
   "portable-atomic-critical-section",
+  "alloc",
 ]
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]

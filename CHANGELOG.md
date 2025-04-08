@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `Deque::{swap, swap_unchecked, swap_remove_front, swap_remove_back}`.
 - Make `String::from_utf8_unchecked` const.
 - Implemented `PartialEq` and `Eq` for `Deque`.
+- Added `alloc` feature to enable `alloc`-Vec interoperability.
+- Added `TryFrom<alloc::vec::Vec>` impl for `Vec`.
+- Added `TryFrom<Vec>` impl for `alloc::vec::Vec`.
 - Added `truncate` to `IndexMap`.
 - Added `get_index` and `get_index_mut` to `IndexMap`.
 - Added `String::uDisplay`.
