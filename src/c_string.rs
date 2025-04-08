@@ -292,6 +292,14 @@ impl<const N: usize> Deref for CString<N> {
     }
 }
 
+impl<const N: usize, const M: usize> PartialEq<CString<M>> for CString<N> {
+    fn eq(&self, rhs: &CString<M>) -> bool {
+        self.as_c_str() == rhs.as_c_str()
+    }
+}
+
+impl<const N: usize> Eq for CString<N> {}
+
 /// An error to extend [`CString`] with bytes.
 #[derive(Debug)]
 pub enum ExtendError {
@@ -329,6 +337,11 @@ mod tests {
         assert_eq!(empty.as_c_str(), <&CStr>::default());
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
+    }
+
+    #[test]
+    fn create_with_capacity_error() {
+        assert!(CString::<1>::from_bytes_with_nul(b"a\0").is_err())
     }
 
     #[test]
@@ -428,5 +441,37 @@ mod tests {
         let mut string = CString::<4>::new();
         string.extend_from_bytes(b"foo").unwrap();
         assert_eq!(Borrow::<CStr>::borrow(&string), c"foo");
+    }
+
+    #[test]
+    fn equal() {
+        // Empty strings
+        assert!(CString::<1>::new() == CString::<1>::new());
+        assert!(CString::<1>::new() == CString::<2>::new());
+        assert!(CString::<1>::from_bytes_with_nul(b"\0").unwrap() == CString::<3>::new());
+
+        // Single character
+        assert!(
+            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                == CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+        );
+        assert!(
+            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                == CString::<3>::from_bytes_with_nul(b"a\0").unwrap()
+        );
+        assert!(
+            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                != CString::<2>::from_bytes_with_nul(b"b\0").unwrap()
+        );
+
+        // Multiple characters
+        assert!(
+            CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+                == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+        );
+        assert!(
+            CString::<3>::from_bytes_with_nul(b"ab\0").unwrap()
+                != CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+        );
     }
 }
