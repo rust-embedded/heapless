@@ -394,19 +394,25 @@ mod tests {
         assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since `w\0rld` contains an interior nul byte.
-        assert!(c_string.extend_from_bytes(b"w\0rld").is_err());
+        assert!(matches!(
+            c_string.extend_from_bytes(b"w\0rld"),
+            Err(ExtendError::InteriorNulByte(1))
+        ));
 
         // However, the call above _must not_ have invalidated the state of our CString
         assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since we can't store "hello world\0" in 11 bytes
-        assert!(c_string.extend_from_bytes(b" world").is_err());
+        assert!(matches!(
+            c_string.extend_from_bytes(b" world"),
+            Err(ExtendError::Capacity(CapacityError))
+        ));
 
         // Yet again, the call above must not have invalidated the state of our CString
         // (as it would e.g. if we pushed the bytes but then failed to push the nul terminator)
         assert_eq!(c_string.to_str(), Ok("hello"));
 
-        assert!(c_string.extend_from_bytes(b" Bill").is_ok());
+        c_string.extend_from_bytes(b" Bill").unwrap();
 
         assert_eq!(c_string.to_str(), Ok("hello Bill"));
     }
