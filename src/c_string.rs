@@ -88,7 +88,7 @@ impl<const N: usize> CString<N> {
     pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, ExtendError> {
         let mut string = Self::new();
 
-        string.push_bytes(bytes)?;
+        string.extend_from_bytes(bytes)?;
 
         Ok(string)
     }
@@ -165,12 +165,12 @@ impl<const N: usize> CString<N> {
     ///
     /// let mut c_string = CString::<10>::new();
     ///
-    /// c_string.push_bytes(b"hey").unwrap();
-    /// c_string.push_bytes(b" there\0").unwrap();
+    /// c_string.extend_from_bytes(b"hey").unwrap();
+    /// c_string.extend_from_bytes(b" there\0").unwrap();
     ///
     /// assert_eq!(c_string.to_str(), Ok("hey there"));
     /// ```
-    pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), ExtendError> {
+    pub fn extend_from_bytes(&mut self, bytes: &[u8]) -> Result<(), ExtendError> {
         let Some(capacity) = self.capacity_with_bytes(bytes) else {
             return Ok(());
         };
@@ -183,7 +183,7 @@ impl<const N: usize> CString<N> {
         match memchr(0, bytes) {
             Some(index) if index + 1 == bytes.len() => {
                 // SAFETY: A string is left in a valid state because appended bytes are nul-terminated.
-                unsafe { self.extend_from_slice(bytes) }?;
+                unsafe { self.extend_from_bytes_unchecked(bytes) }?;
 
                 Ok(())
             }
@@ -197,7 +197,7 @@ impl<const N: usize> CString<N> {
                 //
                 // SAFETY: We append a missing nul terminator right below.
                 unsafe {
-                    self.extend_from_slice(bytes).unwrap();
+                    self.extend_from_bytes_unchecked(bytes).unwrap();
                     self.inner.push_unchecked(0);
                 };
 
@@ -226,7 +226,10 @@ impl<const N: usize> CString<N> {
     /// If `additional` is not nul-terminated, the [`CString`] is left non nul-terminated, which is
     /// an invalid state. Caller must ensure that either `additional` has a terminating nul byte
     /// or ensure to append a trailing null terminator.
-    unsafe fn extend_from_slice(&mut self, additional: &[u8]) -> Result<(), CapacityError> {
+    unsafe fn extend_from_bytes_unchecked(
+        &mut self,
+        additional: &[u8],
+    ) -> Result<(), CapacityError> {
         self.pop_terminator();
 
         self.inner.extend_from_slice(additional)
@@ -240,7 +243,7 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     ///
     /// let mut c_string = CString::<5>::new();
-    /// c_string.push_bytes(b"abc").unwrap();
+    /// c_string.extend_from_bytes(b"abc").unwrap();
     ///
     /// assert_eq!(c_string.as_bytes_with_nul(), b"abc\0");
     /// ```
@@ -257,7 +260,7 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     ///
     /// let mut c_string = CString::<5>::new();
-    /// c_string.push_bytes(b"abc").unwrap();
+    /// c_string.extend_from_bytes(b"abc").unwrap();
     ///
     /// assert_eq!(c_string.as_bytes(), b"abc");
     /// ```
@@ -320,32 +323,32 @@ mod tests {
     fn push_no_bytes() {
         let mut c_string = CString::<1>::new();
 
-        c_string.push_bytes(b"").unwrap();
+        c_string.extend_from_bytes(b"").unwrap();
     }
 
     #[test]
-    fn push_bytes() {
+    fn extend_from_bytes() {
         let mut c_string = CString::<11>::new();
         assert_eq!(c_string.to_str(), Ok(""));
 
-        c_string.push_bytes(b"hello").unwrap();
+        c_string.extend_from_bytes(b"hello").unwrap();
 
         assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since `w\0rld` contains an interior nul byte.
-        assert!(c_string.push_bytes(b"w\0rld").is_err());
+        assert!(c_string.extend_from_bytes(b"w\0rld").is_err());
 
         // However, the call above _must not_ have invalidated the state of our CString
         assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since we can't store "hello world\0" in 11 bytes
-        assert!(c_string.push_bytes(b" world").is_err());
+        assert!(c_string.extend_from_bytes(b" world").is_err());
 
         // Yet again, the call above must not have invalidated the state of our CString
         // (as it would e.g. if we pushed the bytes but then failed to push the nul terminator)
         assert_eq!(c_string.to_str(), Ok("hello"));
 
-        assert!(c_string.push_bytes(b" Bill").is_ok());
+        assert!(c_string.extend_from_bytes(b" Bill").is_ok());
 
         assert_eq!(c_string.to_str(), Ok("hello Bill"));
     }
@@ -356,7 +359,7 @@ mod tests {
 
         let mut c_string = CString::<5>::new();
 
-        c_string.push_bytes(INITIAL_BYTES).unwrap();
+        c_string.extend_from_bytes(INITIAL_BYTES).unwrap();
 
         assert_eq!(c_string.to_bytes_with_nul().len(), 4);
         assert_eq!(c_string.capacity_with_bytes(b""), None);
@@ -386,17 +389,17 @@ mod tests {
         assert_eq!(CString::<3>::new().deref(), <&CStr>::default());
 
         let mut string = CString::<2>::new();
-        string.push_bytes(&[65]).unwrap();
+        string.extend_from_bytes(&[65]).unwrap();
 
         assert_eq!(string.deref(), c"A");
 
         let mut string = CString::<3>::new();
-        string.push_bytes(&[65, 66]).unwrap();
+        string.extend_from_bytes(&[65, 66]).unwrap();
 
         assert_eq!(string.deref(), c"AB");
 
         let mut string = CString::<4>::new();
-        string.push_bytes(&[65, 66, 67]).unwrap();
+        string.extend_from_bytes(&[65, 66, 67]).unwrap();
 
         assert_eq!(string.deref(), c"ABC");
     }
