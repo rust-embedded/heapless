@@ -319,18 +319,6 @@ impl<const N: usize, T: AsRef<CStr>> PartialOrd<T> for CString<N> {
     }
 }
 
-impl<const N: usize> PartialOrd<CString<N>> for CStr {
-    fn partial_cmp(&self, rhs: &CString<N>) -> Option<Ordering> {
-        self.as_ref().partial_cmp(rhs.as_c_str())
-    }
-}
-
-impl<const N: usize> PartialOrd<CString<N>> for &CStr {
-    fn partial_cmp(&self, rhs: &CString<N>) -> Option<Ordering> {
-        self.as_ref().partial_cmp(rhs.as_c_str())
-    }
-}
-
 impl<const N: usize> Ord for CString<N> {
     fn cmp(&self, rhs: &Self) -> Ordering {
         self.as_c_str().cmp(rhs.as_c_str())
@@ -567,6 +555,16 @@ mod tests {
                 CString::<2>::from_bytes_with_nul(b"b\0")
                     .unwrap()
                     .partial_cmp(&c"a"),
+                Some(Ordering::Greater)
+            );
+
+            assert_eq!(c"".partial_cmp(&CString::<1>::new()), Some(Ordering::Equal));
+            assert_eq!(
+                c"a".partial_cmp(&CString::<2>::from_bytes_with_nul(b"b\0").unwrap()),
+                Some(Ordering::Less)
+            );
+            assert_eq!(
+                c"b".partial_cmp(&CString::<2>::from_bytes_with_nul(b"a\0").unwrap()),
                 Some(Ordering::Greater)
             );
         }
