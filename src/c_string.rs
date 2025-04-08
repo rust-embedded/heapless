@@ -2,6 +2,7 @@
 
 use crate::{vec::Vec, CapacityError};
 use core::{
+    borrow::Borrow,
     error::Error,
     ffi::{c_char, CStr},
     fmt,
@@ -271,6 +272,18 @@ impl<const N: usize> CString<N> {
     }
 }
 
+impl<const N: usize> Borrow<CStr> for CString<N> {
+    fn borrow(&self) -> &CStr {
+        self.as_c_str()
+    }
+}
+
+impl<const N: usize> AsRef<CStr> for CString<N> {
+    fn as_ref(&self) -> &CStr {
+        self.as_c_str()
+    }
+}
+
 impl<const N: usize> Deref for CString<N> {
     type Target = CStr;
 
@@ -401,5 +414,19 @@ mod tests {
         string.extend_from_bytes(&[65, 66, 67]).unwrap();
 
         assert_eq!(string.deref(), c"ABC");
+    }
+
+    #[test]
+    fn as_ref() {
+        let mut string = CString::<4>::new();
+        string.extend_from_bytes(b"foo").unwrap();
+        assert_eq!(string.as_ref(), c"foo");
+    }
+
+    #[test]
+    fn borrow() {
+        let mut string = CString::<4>::new();
+        string.extend_from_bytes(b"foo").unwrap();
+        assert_eq!(Borrow::<CStr>::borrow(&string), c"foo");
     }
 }
