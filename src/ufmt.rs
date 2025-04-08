@@ -40,7 +40,7 @@ impl<const N: usize> uWrite for CString<N> {
 
     #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
-        self.push_bytes(s.as_bytes())
+        self.extend_from_bytes(s.as_bytes())
     }
 }
 
