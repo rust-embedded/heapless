@@ -13,7 +13,7 @@ use core::{
 /// A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 ///
 /// It stores up to `N - 1` non-nul characters with a trailing nul terminator.
-#[derive(Clone, Default, Hash)]
+#[derive(Clone, Hash)]
 pub struct CString<const N: usize> {
     inner: Vec<u8, N>,
 }
@@ -273,6 +273,13 @@ impl<const N: usize> CString<N> {
     }
 }
 
+impl<const N: usize> Default for CString<N> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const N: usize> Borrow<CStr> for CString<N> {
     #[inline]
     fn borrow(&self) -> &CStr {
@@ -444,6 +451,10 @@ mod tests {
             c_string.capacity_with_bytes(b"defg\0"),
             Some(INITIAL_BYTES.len() + 5)
         );
+    }
+    #[test]
+    fn default() {
+        assert_eq!(CString::<1>::default().as_c_str(), <&CStr>::default());
     }
 
     #[test]
