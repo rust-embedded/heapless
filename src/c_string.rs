@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn dereference_into_c_str() {
+    fn deref() {
         assert_eq!(CString::<1>::new().deref(), <&CStr>::default());
         assert_eq!(CString::<2>::new().deref(), <&CStr>::default());
         assert_eq!(CString::<3>::new().deref(), <&CStr>::default());
