@@ -67,8 +67,7 @@ impl<const N: usize> CString<N> {
     ///
     /// ```rust
     /// use heapless::CString;
-    /// let mut c_string =
-    ///     unsafe { CString::<7>::from_bytes_with_nul_unchecked(b"string\0").unwrap() };
+    /// let mut c_string = unsafe { CString::<7>::from_bytes_with_nul_unchecked(b"string\0").unwrap() };
     ///
     /// assert_eq!(c_string.to_str(), Ok("string"));
     /// ```
