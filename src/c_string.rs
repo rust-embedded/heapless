@@ -2,7 +2,9 @@
 
 use crate::{vec::Vec, CapacityError};
 use core::{
+    error::Error,
     ffi::{c_char, CStr},
+    fmt,
     ops::Deref,
 };
 
@@ -83,7 +85,7 @@ impl<const N: usize> CString<N> {
     ///
     /// Fails if the given byte slice has any interior nul byte, if the slice does not
     /// end with a nul byte, or if the byte slice can't fit in `N`.
-    pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, CapacityError> {
+    pub fn from_bytes_with_nul(bytes: &[u8]) -> Result<Self, ExtendError> {
         let mut string = Self::new();
 
         string.push_bytes(bytes)?;
@@ -117,7 +119,7 @@ impl<const N: usize> CString<N> {
     ///
     /// assert_eq!(copied.to_str(), Ok("Hello, world!"));
     /// ```
-    pub unsafe fn from_raw(ptr: *const c_char) -> Result<Self, CapacityError> {
+    pub unsafe fn from_raw(ptr: *const c_char) -> Result<Self, ExtendError> {
         // SAFETY: The given pointer to a string is assumed to be nul-terminated.
         Self::from_bytes_with_nul(unsafe { CStr::from_ptr(ptr).to_bytes_with_nul() })
     }
@@ -168,14 +170,14 @@ impl<const N: usize> CString<N> {
     ///
     /// assert_eq!(c_string.to_str(), Ok("hey there"));
     /// ```
-    pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
+    pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), ExtendError> {
         let Some(capacity) = self.capacity_with_bytes(bytes) else {
             return Ok(());
         };
 
         if capacity > N {
             // Cannot store these bytes due to an insufficient capacity.
-            return Err(CapacityError);
+            return Err(CapacityError.into());
         }
 
         match memchr(0, bytes) {
@@ -185,10 +187,7 @@ impl<const N: usize> CString<N> {
 
                 Ok(())
             }
-            Some(_) => {
-                // Found an interior nul byte
-                Err(CapacityError)
-            }
+            Some(index) => Err(ExtendError::InteriorNulByte(index)),
             None => {
                 // Because given bytes has no nul byte anywhere, we insert the bytes and
                 // then add the nul byte terminator.
@@ -275,6 +274,32 @@ impl<const N: usize> Deref for CString<N> {
 
     fn deref(&self) -> &Self::Target {
         self.as_c_str()
+    }
+}
+
+/// An error to extend [`CString`] with bytes.
+#[derive(Debug)]
+pub enum ExtendError {
+    /// The capacity of the [`CString`] is too small.
+    Capacity(CapacityError),
+    /// An invalid interior nul byte found in a given byte slice.
+    InteriorNulByte(usize),
+}
+
+impl Error for ExtendError {}
+
+impl fmt::Display for ExtendError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Capacity(error) => write!(f, "{error}"),
+            Self::InteriorNulByte(index) => write!(f, "interior nul byte at {index}"),
+        }
+    }
+}
+
+impl From<CapacityError> for ExtendError {
+    fn from(error: CapacityError) -> Self {
+        Self::Capacity(error)
     }
 }
 
