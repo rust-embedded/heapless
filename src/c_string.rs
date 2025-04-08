@@ -3,6 +3,7 @@
 use crate::{vec::Vec, CapacityError};
 use core::{
     borrow::Borrow,
+    cmp::Ordering,
     error::Error,
     ffi::{c_char, CStr},
     fmt,
@@ -292,21 +293,9 @@ impl<const N: usize> Deref for CString<N> {
     }
 }
 
-impl<const N: usize, const M: usize> PartialEq<CString<M>> for CString<N> {
-    fn eq(&self, rhs: &CString<M>) -> bool {
-        self.as_c_str() == rhs.as_c_str()
-    }
-}
-
-impl<const N: usize> PartialEq<CStr> for CString<N> {
-    fn eq(&self, rhs: &CStr) -> bool {
-        self.as_c_str() == rhs
-    }
-}
-
-impl<const N: usize> PartialEq<&CStr> for CString<N> {
-    fn eq(&self, rhs: &&CStr) -> bool {
-        self.as_c_str() == *rhs
+impl<const N: usize, T: AsRef<CStr>> PartialEq<T> for CString<N> {
+    fn eq(&self, rhs: &T) -> bool {
+        self.as_c_str() == rhs.as_ref()
     }
 }
 
@@ -323,6 +312,30 @@ impl<const N: usize> PartialEq<CString<N>> for &CStr {
 }
 
 impl<const N: usize> Eq for CString<N> {}
+
+impl<const N: usize, T: AsRef<CStr>> PartialOrd<T> for CString<N> {
+    fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
+        self.as_c_str().partial_cmp(rhs.as_ref())
+    }
+}
+
+impl<const N: usize> PartialOrd<CString<N>> for CStr {
+    fn partial_cmp(&self, rhs: &CString<N>) -> Option<Ordering> {
+        self.as_ref().partial_cmp(rhs.as_c_str())
+    }
+}
+
+impl<const N: usize> PartialOrd<CString<N>> for &CStr {
+    fn partial_cmp(&self, rhs: &CString<N>) -> Option<Ordering> {
+        self.as_ref().partial_cmp(rhs.as_c_str())
+    }
+}
+
+impl<const N: usize> Ord for CString<N> {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        self.as_c_str().cmp(rhs.as_c_str())
+    }
+}
 
 /// An error to extend [`CString`] with bytes.
 #[derive(Debug)]
@@ -467,50 +480,95 @@ mod tests {
         assert_eq!(Borrow::<CStr>::borrow(&string), c"foo");
     }
 
-    #[test]
-    fn equal() {
-        // Empty strings
-        assert!(CString::<1>::new() == CString::<1>::new());
-        assert!(CString::<1>::new() == CString::<2>::new());
-        assert!(CString::<1>::from_bytes_with_nul(b"\0").unwrap() == CString::<3>::new());
+    mod equality {
+        use super::*;
 
-        // Single character
-        assert!(
-            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
-                == CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
-        );
-        assert!(
-            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
-                == CString::<3>::from_bytes_with_nul(b"a\0").unwrap()
-        );
-        assert!(
-            CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
-                != CString::<2>::from_bytes_with_nul(b"b\0").unwrap()
-        );
+        #[test]
+        fn c_string() {
+            // Empty strings
+            assert!(CString::<1>::new() == CString::<1>::new());
+            assert!(CString::<1>::new() == CString::<2>::new());
+            assert!(CString::<1>::from_bytes_with_nul(b"\0").unwrap() == CString::<3>::new());
 
-        // Multiple characters
-        assert!(
-            CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
-                == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
-        );
-        assert!(
-            CString::<3>::from_bytes_with_nul(b"ab\0").unwrap()
-                != CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
-        );
+            // Single character
+            assert!(
+                CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                    == CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+            );
+            assert!(
+                CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                    == CString::<3>::from_bytes_with_nul(b"a\0").unwrap()
+            );
+            assert!(
+                CString::<2>::from_bytes_with_nul(b"a\0").unwrap()
+                    != CString::<2>::from_bytes_with_nul(b"b\0").unwrap()
+            );
+
+            // Multiple characters
+            assert!(
+                CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+                    == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+            );
+            assert!(
+                CString::<3>::from_bytes_with_nul(b"ab\0").unwrap()
+                    != CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
+            );
+        }
+
+        #[test]
+        fn c_str() {
+            // Empty strings
+            assert!(CString::<1>::new() == c"");
+            assert!(c"" == CString::<1>::new());
+
+            // Single character
+            assert!(CString::<2>::from_bytes_with_nul(b"a\0").unwrap() == c"a");
+            assert!(c"a" == CString::<2>::from_bytes_with_nul(b"a\0").unwrap());
+
+            // Multiple characters
+            assert!(CString::<4>::from_bytes_with_nul(b"abc\0").unwrap() == c"abc");
+            assert!(c"abc" == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap());
+        }
     }
 
-    #[test]
-    fn equal_with_c_str() {
-        // Empty strings
-        assert!(CString::<1>::new() == c"");
-        assert!(c"" == CString::<1>::new());
+    mod ordering {
+        use super::*;
 
-        // Single character
-        assert!(CString::<2>::from_bytes_with_nul(b"a\0").unwrap() == c"a");
-        assert!(c"a" == CString::<2>::from_bytes_with_nul(b"a\0").unwrap());
+        #[test]
+        fn c_string() {
+            assert_eq!(
+                CString::<1>::new().partial_cmp(&CString::<1>::new()),
+                Some(Ordering::Equal)
+            );
+            assert_eq!(
+                CString::<2>::from_bytes_with_nul(b"a\0")
+                    .unwrap()
+                    .partial_cmp(&CString::<2>::from_bytes_with_nul(b"b\0").unwrap()),
+                Some(Ordering::Less)
+            );
+            assert_eq!(
+                CString::<2>::from_bytes_with_nul(b"b\0")
+                    .unwrap()
+                    .partial_cmp(&CString::<2>::from_bytes_with_nul(b"a\0").unwrap()),
+                Some(Ordering::Greater)
+            );
+        }
 
-        // Multiple characters
-        assert!(CString::<4>::from_bytes_with_nul(b"abc\0").unwrap() == c"abc");
-        assert!(c"abc" == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap());
+        #[test]
+        fn c_str() {
+            assert_eq!(CString::<1>::new().partial_cmp(&c""), Some(Ordering::Equal));
+            assert_eq!(
+                CString::<2>::from_bytes_with_nul(b"a\0")
+                    .unwrap()
+                    .partial_cmp(&c"b"),
+                Some(Ordering::Less)
+            );
+            assert_eq!(
+                CString::<2>::from_bytes_with_nul(b"b\0")
+                    .unwrap()
+                    .partial_cmp(&c"a"),
+                Some(Ordering::Greater)
+            );
+        }
     }
 }
