@@ -274,12 +274,14 @@ impl<const N: usize> CString<N> {
 }
 
 impl<const N: usize> Borrow<CStr> for CString<N> {
+    #[inline]
     fn borrow(&self) -> &CStr {
         self.as_c_str()
     }
 }
 
 impl<const N: usize> AsRef<CStr> for CString<N> {
+    #[inline]
     fn as_ref(&self) -> &CStr {
         self.as_c_str()
     }
@@ -288,24 +290,28 @@ impl<const N: usize> AsRef<CStr> for CString<N> {
 impl<const N: usize> Deref for CString<N> {
     type Target = CStr;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_c_str()
     }
 }
 
 impl<const N: usize, T: AsRef<CStr>> PartialEq<T> for CString<N> {
+    #[inline]
     fn eq(&self, rhs: &T) -> bool {
         self.as_c_str() == rhs.as_ref()
     }
 }
 
 impl<const N: usize> PartialEq<CString<N>> for CStr {
+    #[inline]
     fn eq(&self, rhs: &CString<N>) -> bool {
         self == rhs.as_c_str()
     }
 }
 
 impl<const N: usize> PartialEq<CString<N>> for &CStr {
+    #[inline]
     fn eq(&self, rhs: &CString<N>) -> bool {
         *self == rhs.as_c_str()
     }
@@ -314,12 +320,14 @@ impl<const N: usize> PartialEq<CString<N>> for &CStr {
 impl<const N: usize> Eq for CString<N> {}
 
 impl<const N: usize, T: AsRef<CStr>> PartialOrd<T> for CString<N> {
+    #[inline]
     fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
         self.as_c_str().partial_cmp(rhs.as_ref())
     }
 }
 
 impl<const N: usize> Ord for CString<N> {
+    #[inline]
     fn cmp(&self, rhs: &Self) -> Ordering {
         self.as_c_str().cmp(rhs.as_c_str())
     }
