@@ -65,9 +65,10 @@ impl<const N: usize> CString<N> {
     ///
     /// ```rust
     /// use heapless::CString;
-    /// let mut cstr = unsafe { CString::<5>::from_bytes_with_nul_unchecked(b"cstr\0").unwrap() };
+    /// let mut c_string =
+    ///     unsafe { CString::<5>::from_bytes_with_nul_unchecked(b"c_string\0").unwrap() };
     ///
-    /// assert_eq!(cstr.to_str(), Ok("cstr"));
+    /// assert_eq!(c_string.to_str(), Ok("c_string"));
     /// ```
     pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut inner = Vec::new();
@@ -160,12 +161,12 @@ impl<const N: usize> CString<N> {
     /// ```rust
     /// use heapless::CString;
     ///
-    /// let mut cstr = CString::<10>::new();
+    /// let mut c_string = CString::<10>::new();
     ///
-    /// cstr.push_bytes(b"hey").unwrap();
-    /// cstr.push_bytes(b" there\0").unwrap();
+    /// c_string.push_bytes(b"hey").unwrap();
+    /// c_string.push_bytes(b" there\0").unwrap();
     ///
-    /// assert_eq!(cstr.to_str(), Ok("hey there"));
+    /// assert_eq!(c_string.to_str(), Ok("hey there"));
     /// ```
     pub fn push_bytes(&mut self, bytes: &[u8]) -> Result<(), CapacityError> {
         let Some(capacity) = self.capacity_with_bytes(bytes) else {
@@ -239,10 +240,10 @@ impl<const N: usize> CString<N> {
     /// ```rust
     /// use heapless::CString;
     ///
-    /// let mut cstr = CString::<5>::new();
-    /// cstr.push_bytes(b"abc").unwrap();
+    /// let mut c_string = CString::<5>::new();
+    /// c_string.push_bytes(b"abc").unwrap();
     ///
-    /// assert_eq!(cstr.as_bytes_with_nul(), b"abc\0");
+    /// assert_eq!(c_string.as_bytes_with_nul(), b"abc\0");
     /// ```
     #[inline]
     pub fn as_bytes_with_nul(&self) -> &[u8] {
@@ -256,10 +257,10 @@ impl<const N: usize> CString<N> {
     /// ```rust
     /// use heapless::CString;
     ///
-    /// let mut cstr = CString::<5>::new();
-    /// cstr.push_bytes(b"abc").unwrap();
+    /// let mut c_string = CString::<5>::new();
+    /// c_string.push_bytes(b"abc").unwrap();
     ///
-    /// assert_eq!(cstr.as_bytes(), b"abc");
+    /// assert_eq!(c_string.as_bytes(), b"abc");
     /// ```
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
@@ -292,63 +293,63 @@ mod tests {
 
     #[test]
     fn push_no_bytes() {
-        let mut cstr = CString::<1>::new();
+        let mut c_string = CString::<1>::new();
 
-        cstr.push_bytes(b"").unwrap();
+        c_string.push_bytes(b"").unwrap();
     }
 
     #[test]
     fn push_bytes() {
-        let mut cstr = CString::<11>::new();
-        assert_eq!(cstr.to_str(), Ok(""));
+        let mut c_string = CString::<11>::new();
+        assert_eq!(c_string.to_str(), Ok(""));
 
-        cstr.push_bytes(b"hello").unwrap();
+        c_string.push_bytes(b"hello").unwrap();
 
-        assert_eq!(cstr.to_str(), Ok("hello"));
+        assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since `w\0rld` contains an interior nul byte.
-        assert!(cstr.push_bytes(b"w\0rld").is_err());
+        assert!(c_string.push_bytes(b"w\0rld").is_err());
 
         // However, the call above _must not_ have invalidated the state of our CString
-        assert_eq!(cstr.to_str(), Ok("hello"));
+        assert_eq!(c_string.to_str(), Ok("hello"));
 
         // Call must fail since we can't store "hello world\0" in 11 bytes
-        assert!(cstr.push_bytes(b" world").is_err());
+        assert!(c_string.push_bytes(b" world").is_err());
 
         // Yet again, the call above must not have invalidated the state of our CString
         // (as it would e.g. if we pushed the bytes but then failed to push the nul terminator)
-        assert_eq!(cstr.to_str(), Ok("hello"));
+        assert_eq!(c_string.to_str(), Ok("hello"));
 
-        assert!(cstr.push_bytes(b" Bill").is_ok());
+        assert!(c_string.push_bytes(b" Bill").is_ok());
 
-        assert_eq!(cstr.to_str(), Ok("hello Bill"));
+        assert_eq!(c_string.to_str(), Ok("hello Bill"));
     }
 
     #[test]
     fn calculate_capacity_with_additional_bytes() {
         const INITIAL_BYTES: &[u8] = b"abc";
 
-        let mut cstr = CString::<5>::new();
+        let mut c_string = CString::<5>::new();
 
-        cstr.push_bytes(INITIAL_BYTES).unwrap();
+        c_string.push_bytes(INITIAL_BYTES).unwrap();
 
-        assert_eq!(cstr.to_bytes_with_nul().len(), 4);
-        assert_eq!(cstr.capacity_with_bytes(b""), None);
-        assert_eq!(cstr.capacity_with_bytes(b"\0"), None);
+        assert_eq!(c_string.to_bytes_with_nul().len(), 4);
+        assert_eq!(c_string.capacity_with_bytes(b""), None);
+        assert_eq!(c_string.capacity_with_bytes(b"\0"), None);
         assert_eq!(
-            cstr.capacity_with_bytes(b"d"),
+            c_string.capacity_with_bytes(b"d"),
             Some(INITIAL_BYTES.len() + 2)
         );
         assert_eq!(
-            cstr.capacity_with_bytes(b"d\0"),
+            c_string.capacity_with_bytes(b"d\0"),
             Some(INITIAL_BYTES.len() + 2)
         );
         assert_eq!(
-            cstr.capacity_with_bytes(b"defg"),
+            c_string.capacity_with_bytes(b"defg"),
             Some(INITIAL_BYTES.len() + 5)
         );
         assert_eq!(
-            cstr.capacity_with_bytes(b"defg\0"),
+            c_string.capacity_with_bytes(b"defg\0"),
             Some(INITIAL_BYTES.len() + 5)
         );
     }
