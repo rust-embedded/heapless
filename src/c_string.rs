@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn create_with_capacity_error() {
-        assert!(CString::<1>::from_bytes_with_nul(b"a\0").is_err())
+        assert!(CString::<1>::from_bytes_with_nul(b"a\0").is_err());
     }
 
     #[test]
