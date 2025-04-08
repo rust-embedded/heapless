@@ -224,7 +224,7 @@ impl<const N: usize> CString<N> {
     ///
     /// If `additional` is not nul-terminated, the [`CString`] is left non nul-terminated, which is
     /// an invalid state. Caller must ensure that either `additional` has a terminating nul byte
-    /// or ensure to append a trailing null terminator.
+    /// or ensure to append a trailing nul terminator.
     unsafe fn extend_from_bytes_unchecked(
         &mut self,
         additional: &[u8],
