@@ -1,5 +1,5 @@
 use crate::{
-    c_string::CString,
+    c_string::{self, CString},
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     CapacityError,
@@ -36,7 +36,7 @@ impl<S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, S> {
 }
 
 impl<const N: usize> uWrite for CString<N> {
-    type Error = CapacityError;
+    type Error = c_string::ExtendError;
 
     #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
