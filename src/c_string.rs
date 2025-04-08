@@ -273,10 +273,10 @@ impl<const N: usize> CString<N> {
     }
 }
 
-impl<const N: usize> Default for CString<N> {
+impl<const N: usize> AsRef<CStr> for CString<N> {
     #[inline]
-    fn default() -> Self {
-        Self::new()
+    fn as_ref(&self) -> &CStr {
+        self.as_c_str()
     }
 }
 
@@ -287,10 +287,10 @@ impl<const N: usize> Borrow<CStr> for CString<N> {
     }
 }
 
-impl<const N: usize> AsRef<CStr> for CString<N> {
+impl<const N: usize> Default for CString<N> {
     #[inline]
-    fn as_ref(&self) -> &CStr {
-        self.as_c_str()
+    fn default() -> Self {
+        Self::new()
     }
 }
 
