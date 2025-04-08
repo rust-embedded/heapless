@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn push_no_bytes() {
+    fn extend_no_byte() {
         let mut c_string = CString::<1>::new();
 
         c_string.extend_from_bytes(b"").unwrap();
