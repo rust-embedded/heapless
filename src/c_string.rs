@@ -298,6 +298,30 @@ impl<const N: usize, const M: usize> PartialEq<CString<M>> for CString<N> {
     }
 }
 
+impl<const N: usize> PartialEq<CStr> for CString<N> {
+    fn eq(&self, rhs: &CStr) -> bool {
+        self.as_c_str() == rhs
+    }
+}
+
+impl<const N: usize> PartialEq<&CStr> for CString<N> {
+    fn eq(&self, rhs: &&CStr) -> bool {
+        self.as_c_str() == *rhs
+    }
+}
+
+impl<const N: usize> PartialEq<CString<N>> for CStr {
+    fn eq(&self, rhs: &CString<N>) -> bool {
+        self == rhs.as_c_str()
+    }
+}
+
+impl<const N: usize> PartialEq<CString<N>> for &CStr {
+    fn eq(&self, rhs: &CString<N>) -> bool {
+        *self == rhs.as_c_str()
+    }
+}
+
 impl<const N: usize> Eq for CString<N> {}
 
 /// An error to extend [`CString`] with bytes.
@@ -473,5 +497,20 @@ mod tests {
             CString::<3>::from_bytes_with_nul(b"ab\0").unwrap()
                 != CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
         );
+    }
+
+    #[test]
+    fn equal_with_c_str() {
+        // Empty strings
+        assert!(CString::<1>::new() == c"");
+        assert!(c"" == CString::<1>::new());
+
+        // Single character
+        assert!(CString::<2>::from_bytes_with_nul(b"a\0").unwrap() == c"a");
+        assert!(c"a" == CString::<2>::from_bytes_with_nul(b"a\0").unwrap());
+
+        // Multiple characters
+        assert!(CString::<4>::from_bytes_with_nul(b"abc\0").unwrap() == c"abc");
+        assert!(c"abc" == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap());
     }
 }
