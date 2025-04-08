@@ -68,9 +68,9 @@ impl<const N: usize> CString<N> {
     /// ```rust
     /// use heapless::CString;
     /// let mut c_string =
-    ///     unsafe { CString::<5>::from_bytes_with_nul_unchecked(b"c_string\0").unwrap() };
+    ///     unsafe { CString::<7>::from_bytes_with_nul_unchecked(b"string\0").unwrap() };
     ///
-    /// assert_eq!(c_string.to_str(), Ok("c_string"));
+    /// assert_eq!(c_string.to_str(), Ok("string"));
     /// ```
     pub unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> Result<Self, CapacityError> {
         let mut inner = Vec::new();
