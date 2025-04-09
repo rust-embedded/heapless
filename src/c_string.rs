@@ -5,7 +5,7 @@ use core::{
     borrow::Borrow,
     cmp::Ordering,
     error::Error,
-    ffi::{c_char, CStr},
+    ffi::{c_char, CStr, FromBytesWithNulError},
     fmt,
     ops::Deref,
 };
@@ -16,14 +16,6 @@ use core::{
 #[derive(Clone, Hash)]
 pub struct CString<const N: usize> {
     inner: Vec<u8, N>,
-}
-
-/// Naive implementation for `memchr`.
-///
-/// TODO Consider using [the `memchr` crate](https://github.com/BurntSushi/memchr), which
-/// provides a heavily optimized `memchr` function.
-fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    haystack.iter().position(|&byte| byte == needle)
 }
 
 impl<const N: usize> CString<N> {
@@ -181,15 +173,17 @@ impl<const N: usize> CString<N> {
             return Err(CapacityError.into());
         }
 
-        match memchr(0, bytes) {
-            Some(index) if index + 1 == bytes.len() => {
+        match CStr::from_bytes_with_nul(bytes) {
+            Ok(_) => {
                 // SAFETY: A string is left in a valid state because appended bytes are nul-terminated.
                 unsafe { self.extend_from_bytes_unchecked(bytes) }?;
 
                 Ok(())
             }
-            Some(index) => Err(ExtendError::InteriorNulByte(index)),
-            None => {
+            Err(FromBytesWithNulError::InteriorNul { position }) => {
+                Err(ExtendError::InteriorNul { position })
+            }
+            Err(FromBytesWithNulError::NotNulTerminated) => {
                 // Because given bytes has no nul byte anywhere, we insert the bytes and
                 // then add the nul byte terminator.
                 //
@@ -346,7 +340,7 @@ pub enum ExtendError {
     /// The capacity of the [`CString`] is too small.
     Capacity(CapacityError),
     /// An invalid interior nul byte found in a given byte slice.
-    InteriorNulByte(usize),
+    InteriorNul { position: usize },
 }
 
 impl Error for ExtendError {}
@@ -355,7 +349,7 @@ impl fmt::Display for ExtendError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Capacity(error) => write!(f, "{error}"),
-            Self::InteriorNulByte(index) => write!(f, "interior nul byte at {index}"),
+            Self::InteriorNul { position } => write!(f, "interior nul byte at {position}"),
         }
     }
 }
@@ -403,7 +397,7 @@ mod tests {
         // Call must fail since `w\0rld` contains an interior nul byte.
         assert!(matches!(
             c_string.extend_from_bytes(b"w\0rld"),
-            Err(ExtendError::InteriorNulByte(1))
+            Err(ExtendError::InteriorNul(1))
         ));
 
         // However, the call above _must not_ have invalidated the state of our CString
