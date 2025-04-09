@@ -340,7 +340,10 @@ pub enum ExtendError {
     /// The capacity of the [`CString`] is too small.
     Capacity(CapacityError),
     /// An invalid interior nul byte found in a given byte slice.
-    InteriorNul { position: usize },
+    InteriorNul {
+        /// A position of a nul byte.
+        position: usize,
+    },
 }
 
 impl Error for ExtendError {}
@@ -397,7 +400,7 @@ mod tests {
         // Call must fail since `w\0rld` contains an interior nul byte.
         assert!(matches!(
             c_string.extend_from_bytes(b"w\0rld"),
-            Err(ExtendError::InteriorNul(1))
+            Err(ExtendError::InteriorNul { position: 1 })
         ));
 
         // However, the call above _must not_ have invalidated the state of our CString
