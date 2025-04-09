@@ -153,6 +153,9 @@
     clippy::if_not_else
 )]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub use binary_heap::BinaryHeap;
 pub use c_string::CString;
 pub use deque::Deque;
