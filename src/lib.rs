@@ -165,6 +165,7 @@ pub use indexmap::{
     ValuesMut as IndexMapValuesMut,
 };
 pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
+pub use len_type::LenType;
 pub use linear_map::LinearMap;
 pub use string::String;
 
@@ -178,6 +179,7 @@ pub mod deque;
 pub mod histbuf;
 mod indexmap;
 mod indexset;
+mod len_type;
 pub mod linear_map;
 mod slice;
 pub mod storage;

@@ -4,6 +4,7 @@ use crate::{
     binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
     deque::DequeInner,
     histbuf::{HistBufStorage, HistoryBufferInner},
+    len_type::LenType,
     linear_map::{LinearMapInner, LinearMapStorage},
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
@@ -48,7 +49,7 @@ where
     }
 }
 
-impl<T, St: VecStorage<T> + ?Sized> Serialize for VecInner<T, St>
+impl<T, LenT: LenType, St: VecStorage<T>> Serialize for VecInner<T, LenT, St>
 where
     T: Serialize,
 {
