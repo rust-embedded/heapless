@@ -581,11 +581,12 @@ where
     }
 }
 
-impl<T, Idx, K> SortedLinkedListView<T, Idx, K>
+impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
 {
     /// Get an iterator over the sorted list.
     ///
@@ -606,7 +607,7 @@ where
     /// ```
     pub fn iter(&self) -> IterView<'_, T, Idx, K> {
         IterView {
-            list: self,
+            list: S::as_view(self),
             index: self.head,
         }
     }
@@ -645,7 +646,7 @@ where
                 is_head: true,
                 prev_index: Idx::none(),
                 index: self.head,
-                list: self,
+                list: S::as_mut_view(self),
                 maybe_changed: false,
             });
         }
@@ -658,7 +659,7 @@ where
                     is_head: false,
                     prev_index: unsafe { Idx::new_unchecked(current) },
                     index: unsafe { Idx::new_unchecked(next) },
-                    list: self,
+                    list: S::as_mut_view(self),
                     maybe_changed: false,
                 });
             }
@@ -868,11 +869,12 @@ where
 //     }
 // }
 
-impl<T, Idx, K> fmt::Debug for SortedLinkedListView<T, Idx, K>
+impl<T, Idx, K, S> fmt::Debug for SortedLinkedListInner<T, Idx, K, S>
 where
     T: Ord + core::fmt::Debug,
     Idx: SortedLinkedListIndex,
     K: Kind,
+    S: ?Sized + SortedLinkedListStorage<T, Idx>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
