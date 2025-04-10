@@ -294,33 +294,19 @@ impl<const N: usize> Deref for CString<N> {
     }
 }
 
-impl<const N: usize, T: AsRef<CStr>> PartialEq<T> for CString<N> {
+impl<const N: usize, const M: usize> PartialEq<CString<M>> for CString<N> {
     #[inline]
-    fn eq(&self, rhs: &T) -> bool {
-        self.as_c_str() == rhs.as_ref()
-    }
-}
-
-impl<const N: usize> PartialEq<CString<N>> for CStr {
-    #[inline]
-    fn eq(&self, rhs: &CString<N>) -> bool {
-        self == rhs.as_c_str()
-    }
-}
-
-impl<const N: usize> PartialEq<CString<N>> for &CStr {
-    #[inline]
-    fn eq(&self, rhs: &CString<N>) -> bool {
-        *self == rhs.as_c_str()
+    fn eq(&self, rhs: &CString<M>) -> bool {
+        self.as_c_str() == rhs.as_c_str()
     }
 }
 
 impl<const N: usize> Eq for CString<N> {}
 
-impl<const N: usize, T: AsRef<CStr>> PartialOrd<T> for CString<N> {
+impl<const N: usize, const M: usize> PartialOrd<CString<M>> for CString<N> {
     #[inline]
-    fn partial_cmp(&self, rhs: &T) -> Option<Ordering> {
-        self.as_c_str().partial_cmp(rhs.as_ref())
+    fn partial_cmp(&self, rhs: &CString<M>) -> Option<Ordering> {
+        self.as_c_str().partial_cmp(rhs.as_c_str())
     }
 }
 
