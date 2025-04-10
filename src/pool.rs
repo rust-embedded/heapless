@@ -54,6 +54,7 @@
 
 mod treiber;
 
+#[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr"))]
 pub mod arc;
 pub mod boxed;
 pub mod object;
