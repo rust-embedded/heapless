@@ -118,6 +118,7 @@ impl<const N: usize> CString<N> {
     }
 
     /// Converts the [`CString`] to a [`CStr`] slice.
+    #[inline]
     pub fn as_c_str(&self) -> &CStr {
         debug_assert!(CStr::from_bytes_with_nul(&self.inner).is_ok());
 
