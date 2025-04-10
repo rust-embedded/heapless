@@ -22,7 +22,6 @@ impl<const N: usize> CString<N> {
     /// Creates a new C-compatible string with a terminating nul byte.
     ///
     /// ```rust
-    /// use core::ffi::CStr;
     /// use heapless::CString;
     ///
     /// // A fixed-size `CString` that can store up to 10 characters
