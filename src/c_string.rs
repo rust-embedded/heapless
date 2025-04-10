@@ -26,7 +26,7 @@ impl<const N: usize> CString<N> {
     /// use heapless::CString;
     ///
     /// // A fixed-size `CString` that can store up to 10 characters
-    /// // including the nul terminator
+    /// // including the nul terminator.
     /// let empty = CString::<10>::new();
     ///
     /// assert_eq!(empty.as_c_str(), <&CStr>::default());
