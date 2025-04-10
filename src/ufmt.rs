@@ -1,4 +1,5 @@
 use crate::{
+    c_string::{self, CString},
     len_type::LenType,
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
@@ -19,6 +20,7 @@ impl<S: StringStorage + ?Sized> uDisplay for StringInner<S> {
 
 impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
     type Error = CapacityError;
+
     #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.push_str(s)
@@ -27,9 +29,19 @@ impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
 
 impl<LenT: LenType, S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, LenT, S> {
     type Error = CapacityError;
+
     #[inline]
     fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
         self.extend_from_slice(s.as_bytes())
+    }
+}
+
+impl<const N: usize, LenT: LenType> uWrite for CString<N, LenT> {
+    type Error = c_string::ExtendError;
+
+    #[inline]
+    fn write_str(&mut self, s: &str) -> Result<(), Self::Error> {
+        self.extend_from_bytes(s.as_bytes())
     }
 }
 
