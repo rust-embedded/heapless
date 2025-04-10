@@ -36,7 +36,7 @@ impl<LenT: LenType, S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, LenT, S>
     }
 }
 
-impl<const N: usize> uWrite for CString<N> {
+impl<const N: usize, LenT: LenType> uWrite for CString<N, LenT> {
     type Error = c_string::ExtendError;
 
     #[inline]
