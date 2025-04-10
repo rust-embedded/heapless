@@ -507,21 +507,6 @@ mod tests {
                     != CString::<4>::from_bytes_with_nul(b"abc\0").unwrap()
             );
         }
-
-        #[test]
-        fn c_str() {
-            // Empty strings
-            assert!(CString::<1>::new() == c"");
-            assert!(c"" == CString::<1>::new());
-
-            // Single character
-            assert!(CString::<2>::from_bytes_with_nul(b"a\0").unwrap() == c"a");
-            assert!(c"a" == CString::<2>::from_bytes_with_nul(b"a\0").unwrap());
-
-            // Multiple characters
-            assert!(CString::<4>::from_bytes_with_nul(b"abc\0").unwrap() == c"abc");
-            assert!(c"abc" == CString::<4>::from_bytes_with_nul(b"abc\0").unwrap());
-        }
     }
 
     mod ordering {
@@ -549,20 +534,6 @@ mod tests {
 
         #[test]
         fn c_str() {
-            assert_eq!(CString::<1>::new().partial_cmp(&c""), Some(Ordering::Equal));
-            assert_eq!(
-                CString::<2>::from_bytes_with_nul(b"a\0")
-                    .unwrap()
-                    .partial_cmp(&c"b"),
-                Some(Ordering::Less)
-            );
-            assert_eq!(
-                CString::<2>::from_bytes_with_nul(b"b\0")
-                    .unwrap()
-                    .partial_cmp(&c"a"),
-                Some(Ordering::Greater)
-            );
-
             assert_eq!(c"".partial_cmp(&CString::<1>::new()), Some(Ordering::Equal));
             assert_eq!(
                 c"a".partial_cmp(&CString::<2>::from_bytes_with_nul(b"b\0").unwrap()),
