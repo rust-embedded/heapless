@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Vec::capacity` is no longer a `const` function.
 - Relaxed bounds on `PartialEq` for `IndexMap` from `V: Eq` to `V1: PartialEq<V2>`.
 - Relaxed bounds on `PartialEq` for `LinearMap` from `V: PartialEq` to `V1: PartialEq<V2>`.
+- Changed `Queue::split` to be `const`.
 
 ### Fixed
 
