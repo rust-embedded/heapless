@@ -14,7 +14,7 @@ use crate::spsc;
     all(feature = "mpmc_large", target_has_atomic = "ptr"),
     all(not(feature = "mpmc_large"), target_has_atomic = "8")
 ))]
-use crate::mpmc::{MpMcQueue, MpMcQueueInner, MpMcQueueView};
+use crate::mpmc;
 
 pub(crate) trait SealedStorage {
     type Buffer<T>: ?Sized + Borrow<[T]> + BorrowMut<[T]>;
@@ -30,7 +30,7 @@ pub(crate) trait SealedStorage {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_view<T>(this: &MpMcQueueInner<T, Self>) -> &MpMcQueueView<T>
+    fn as_mpmc_view<T>(this: &mpmc::QueueInner<T, Self>) -> &mpmc::QueueView<T>
     where
         Self: Storage + Sized;
     #[cfg(any(
@@ -38,7 +38,7 @@ pub(crate) trait SealedStorage {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_mut_view<T>(this: &mut MpMcQueueInner<T, Self>) -> &mut MpMcQueueView<T>
+    fn as_mpmc_mut_view<T>(this: &mut mpmc::QueueInner<T, Self>) -> &mut mpmc::QueueView<T>
     where
         Self: Storage + Sized;
 
@@ -100,7 +100,7 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_view<T>(this: &MpMcQueue<T, N>) -> &MpMcQueueView<T>
+    fn as_mpmc_view<T>(this: &mpmc::Queue<T, N>) -> &mpmc::QueueView<T>
     where
         Self: Storage + Sized,
     {
@@ -112,7 +112,7 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_mut_view<T>(this: &mut MpMcQueue<T, N>) -> &mut MpMcQueueView<T>
+    fn as_mpmc_mut_view<T>(this: &mut mpmc::Queue<T, N>) -> &mut mpmc::QueueView<T>
     where
         Self: Storage + Sized,
     {
@@ -165,7 +165,7 @@ impl SealedStorage for ViewStorage {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_view<T>(this: &MpMcQueueInner<T, Self>) -> &MpMcQueueView<T>
+    fn as_mpmc_view<T>(this: &mpmc::QueueInner<T, Self>) -> &mpmc::QueueView<T>
     where
         Self: Storage + Sized,
     {
@@ -177,7 +177,7 @@ impl SealedStorage for ViewStorage {
         all(feature = "mpmc_large", target_has_atomic = "ptr"),
         all(not(feature = "mpmc_large"), target_has_atomic = "8")
     ))]
-    fn as_mpmc_mut_view<T>(this: &mut MpMcQueueInner<T, Self>) -> &mut MpMcQueueView<T>
+    fn as_mpmc_mut_view<T>(this: &mut mpmc::QueueInner<T, Self>) -> &mut mpmc::QueueView<T>
     where
         Self: Storage + Sized,
     {

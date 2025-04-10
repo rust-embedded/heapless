@@ -1,5 +1,5 @@
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, len_type::LenType, BinaryHeap, Deque, HistoryBuffer,
+    binary_heap::Kind as BinaryHeapKind, len_type::LenType, BinaryHeap, Deque, HistoryBuf,
     IndexMap, IndexSet, LinearMap, String, Vec,
 };
 use core::{
@@ -174,7 +174,7 @@ where
     }
 }
 
-impl<'de, T, const N: usize> Deserialize<'de> for HistoryBuffer<T, N>
+impl<'de, T, const N: usize> Deserialize<'de> for HistoryBuf<T, N>
 where
     T: Deserialize<'de>,
 {
@@ -188,7 +188,7 @@ where
         where
             T: Deserialize<'de>,
         {
-            type Value = HistoryBuffer<T, N>;
+            type Value = HistoryBuf<T, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -198,7 +198,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = HistoryBuffer::new();
+                let mut values = HistoryBuf::new();
 
                 while let Some(value) = seq.next_element()? {
                     values.write(value);

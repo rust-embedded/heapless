@@ -17,9 +17,9 @@
 //! use cortex_m::{asm, peripheral::syst::SystClkSource};
 //! use cortex_m_rt::{entry, exception};
 //! use cortex_m_semihosting::hprintln;
-//! use heapless::mpmc::Q2;
+//! use heapless::mpmc::Queue::<_, 2>;
 //!
-//! static Q: Q2<u8> = Q2::new();
+//! static Q: Queue::<_, 2><u8> = Q2::new();
 //!
 //! #[entry]
 //! fn main() -> ! {
@@ -112,29 +112,11 @@ type IntSize = isize;
 #[cfg(not(feature = "mpmc_large"))]
 type IntSize = i8;
 
-/// MPMC queue with a capability for 2 elements.
-pub type Q2<T> = MpMcQueue<T, 2>;
-
-/// MPMC queue with a capability for 4 elements.
-pub type Q4<T> = MpMcQueue<T, 4>;
-
-/// MPMC queue with a capability for 8 elements.
-pub type Q8<T> = MpMcQueue<T, 8>;
-
-/// MPMC queue with a capability for 16 elements.
-pub type Q16<T> = MpMcQueue<T, 16>;
-
-/// MPMC queue with a capability for 32 elements.
-pub type Q32<T> = MpMcQueue<T, 32>;
-
-/// MPMC queue with a capability for 64 elements.
-pub type Q64<T> = MpMcQueue<T, 64>;
-
-/// Base struct for [`MpMcQueue`] and [`MpMcQueueView`], generic over the [`Storage`].
+/// Base struct for [`Queue`] and [`QueueView`], generic over the [`Storage`].
 ///
-/// In most cases you should use [`MpMcQueue`] or [`MpMcQueueView`] directly. Only use this
+/// In most cases you should use [`Queue`] or [`QueueView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct MpMcQueueInner<T, S: Storage> {
+pub struct QueueInner<T, S: Storage> {
     dequeue_pos: AtomicTargetSize,
     enqueue_pos: AtomicTargetSize,
     buffer: UnsafeCell<S::Buffer<Cell<T>>>,
@@ -143,14 +125,14 @@ pub struct MpMcQueueInner<T, S: Storage> {
 /// MPMC queue with a capacity for N elements
 /// N must be a power of 2
 /// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
-pub type MpMcQueue<T, const N: usize> = MpMcQueueInner<T, OwnedStorage<N>>;
+pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
 /// MPMC queue with a capacity for N elements
 /// N must be a power of 2
 /// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
-pub type MpMcQueueView<T> = MpMcQueueInner<T, ViewStorage>;
+pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
-impl<T, const N: usize> MpMcQueue<T, N> {
+impl<T, const N: usize> Queue<T, N> {
     /// Creates an empty queue
     pub const fn new() -> Self {
         const {
@@ -175,54 +157,54 @@ impl<T, const N: usize> MpMcQueue<T, N> {
     }
 
     /// Used in `Storage` implementation
-    pub(crate) fn as_view_private(&self) -> &MpMcQueueView<T> {
+    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
         self
     }
     /// Used in `Storage` implementation
-    pub(crate) fn as_view_mut_private(&mut self) -> &mut MpMcQueueView<T> {
+    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
         self
     }
 }
 
-impl<T, S: Storage> MpMcQueueInner<T, S> {
-    /// Get a reference to the `MpMcQueue`, erasing the `N` const-generic.
+impl<T, S: Storage> QueueInner<T, S> {
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
     ///
     ///
     /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &MpMcQueueView<u8> = queue.as_view();
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = queue.as_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueueView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
     ///
     /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &MpMcQueueView<u8> = &queue;
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = &queue;
     /// ```
     #[inline]
-    pub fn as_view(&self) -> &MpMcQueueView<T> {
+    pub fn as_view(&self) -> &QueueView<T> {
         S::as_mpmc_view(self)
     }
 
-    /// Get a mutable reference to the `MpMcQueue`, erasing the `N` const-generic.
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
     ///
     /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let mut queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &mut MpMcQueueView<u8> = queue.as_mut_view();
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = queue.as_mut_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueueView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
     ///
     /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let mut queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &mut MpMcQueueView<u8> = &mut queue;
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = &mut queue;
     /// ```
     #[inline]
-    pub fn as_mut_view(&mut self) -> &mut MpMcQueueView<T> {
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
         S::as_mpmc_mut_view(self)
     }
 
@@ -250,20 +232,20 @@ impl<T, S: Storage> MpMcQueueInner<T, S> {
     }
 }
 
-impl<T, const N: usize> Default for MpMcQueue<T, N> {
+impl<T, const N: usize> Default for Queue<T, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, S: Storage> Drop for MpMcQueueInner<T, S> {
+impl<T, S: Storage> Drop for QueueInner<T, S> {
     fn drop(&mut self) {
         // drop all contents currently in the queue
         while self.dequeue().is_some() {}
     }
 }
 
-unsafe impl<T, S: Storage> Sync for MpMcQueueInner<T, S> where T: Send {}
+unsafe impl<T, S: Storage> Sync for QueueInner<T, S> where T: Send {}
 
 struct Cell<T> {
     data: MaybeUninit<T>,
@@ -370,16 +352,16 @@ unsafe fn enqueue<T>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::{MpMcQueue, Q2};
+    use super::Queue;
 
-    // Ensure a `MpMcQueue` containing `!Send` values stays `!Send` itself.
-    assert_not_impl_any!(MpMcQueue<*const (), 4>: Send);
+    // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Queue<*const (), 4>: Send);
 
     #[test]
     fn memory_leak() {
         droppable!();
 
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
         drop(q);
@@ -389,7 +371,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         q.enqueue(0).unwrap();
         q.enqueue(1).unwrap();
         assert!(q.enqueue(2).is_err());
@@ -401,7 +383,7 @@ mod tests {
 
     #[test]
     fn drain_at_pos255() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         for _ in 0..255 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
@@ -413,7 +395,7 @@ mod tests {
 
     #[test]
     fn full_at_wrapped_pos0() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         for _ in 0..254 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
@@ -432,7 +414,7 @@ mod tests {
         #[cfg(feature = "mpmc_large")]
         const CAPACITY: usize = 256;
 
-        let q: MpMcQueue<u8, CAPACITY> = MpMcQueue::new();
+        let q: Queue<u8, CAPACITY> = Queue::new();
 
         for _ in 0..CAPACITY {
             q.enqueue(0xAA).unwrap();

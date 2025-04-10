@@ -113,7 +113,7 @@
 )]
 //! - [`BinaryHeap`] -- priority queue
 //! - [Deque] -- double-ended queue
-//! - [`HistoryBuffer`] -- similar to a write-only ring buffer
+//! - [`HistoryBuf`] -- similar to a write-only ring buffer
 //! - [`IndexMap`] -- hash table
 //! - [`IndexSet`] -- hash set
 //! - [`LinearMap`]
@@ -158,13 +158,9 @@ extern crate alloc;
 
 pub use binary_heap::BinaryHeap;
 pub use deque::Deque;
-pub use histbuf::{HistoryBuffer, OldestOrdered};
-pub use indexmap::{
-    Bucket, Entry, FnvIndexMap, IndexMap, Iter as IndexMapIter, IterMut as IndexMapIterMut,
-    Keys as IndexMapKeys, OccupiedEntry, Pos, VacantEntry, Values as IndexMapValues,
-    ValuesMut as IndexMapValuesMut,
-};
-pub use indexset::{FnvIndexSet, IndexSet, Iter as IndexSetIter};
+pub use history_buf::{HistoryBuf, OldestOrdered};
+pub use index_map::IndexMap;
+pub use index_set::IndexSet;
 pub use len_type::LenType;
 pub use linear_map::LinearMap;
 pub use string::String;
@@ -176,9 +172,9 @@ pub use vec::{Vec, VecView};
 mod test_helpers;
 
 pub mod deque;
-pub mod histbuf;
-mod indexmap;
-mod indexset;
+pub mod history_buf;
+pub mod index_map;
+pub mod index_set;
 mod len_type;
 pub mod linear_map;
 mod slice;

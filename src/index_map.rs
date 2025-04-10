@@ -1,3 +1,4 @@
+//! A fixed-capacity hash table where the iteration order is independent of the hash of the keys.
 use core::{
     borrow::Borrow,
     fmt,
@@ -18,7 +19,7 @@ use crate::Vec;
 ///
 /// # Examples
 /// ```
-/// use heapless::FnvIndexMap;
+/// use heapless::index_map::FnvIndexMap;
 ///
 /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -396,7 +397,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
     /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -424,7 +425,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
     /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -457,7 +458,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
     /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -483,7 +484,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
     /// let mut book_reviews = FnvIndexMap::<&str, &str, 16>::new();
@@ -507,7 +508,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
     /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -544,7 +545,7 @@ where
     ///
     /// ```
     /// # fn main() {
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut book_reviews = FnvIndexMap::<&str, Option<&str>, 16>::new();
     ///
@@ -677,7 +678,7 @@ where
 /// for this example.
 ///
 /// ```
-/// use heapless::FnvIndexMap;
+/// use heapless::index_map::FnvIndexMap;
 ///
 /// // A hash map with a capacity of 16 key-value pairs allocated on the stack
 /// let mut book_reviews = FnvIndexMap::<_, _, 16>::new();
@@ -750,7 +751,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Return an iterator over the keys of the map, in insertion order
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
@@ -770,7 +771,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Return an iterator over the values of the map, in insertion order
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
@@ -790,7 +791,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Return an iterator over mutable references to the the values of the map, in insertion order
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
@@ -814,7 +815,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Return an iterator over the key-value pairs of the map, in insertion order
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
@@ -834,7 +835,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Return an iterator over the key-value pairs of the map, in insertion order
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert("a", 1).unwrap();
@@ -900,7 +901,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Computes in *O*(1) time.
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// assert_eq!(a.len(), 0);
@@ -916,7 +917,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Computes in *O*(1) time.
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// assert!(a.is_empty());
@@ -932,7 +933,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Computes in *O*(1) time.
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut a = FnvIndexMap::<_, _, 4>::new();
     /// assert!(!a.is_full());
@@ -951,7 +952,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// Computes in *O*(n) time.
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut a = FnvIndexMap::<_, _, 16>::new();
     /// a.insert(1, "a");
@@ -974,8 +975,8 @@ where
     /* Public API */
     /// Returns an entry for the corresponding key
     /// ```
-    /// use heapless::Entry;
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::Entry;
+    /// use heapless::index_map::FnvIndexMap;
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// if let Entry::Vacant(v) = map.entry("a") {
     ///     v.insert(1).unwrap();
@@ -1013,7 +1014,7 @@ where
     /// Computes in *O*(1) time (average).
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert(1, "a").unwrap();
@@ -1039,7 +1040,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
@@ -1064,7 +1065,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
@@ -1092,7 +1093,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 16>::new();
     /// map.insert(1, "a").unwrap();
@@ -1113,7 +1114,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
@@ -1139,7 +1140,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
@@ -1173,7 +1174,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// assert_eq!(map.insert(37, "a"), Ok(None));
@@ -1198,7 +1199,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(1, "a").unwrap();
@@ -1249,7 +1250,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use heapless::FnvIndexMap;
+    /// use heapless::index_map::FnvIndexMap;
     ///
     /// let mut map = FnvIndexMap::<_, _, 8>::new();
     /// map.insert(3, "a").unwrap();
@@ -1415,6 +1416,23 @@ where
     }
 }
 
+/// An owning iterator over the entries of an `IndexMap`.
+///
+/// This `struct` is created by the [`into_iter`] method on [`IndexMap`]
+/// (provided by the [`IntoIterator`] trait). See its documentation for more.
+///
+/// [`into_iter`]: IntoIterator::into_iter
+///
+/// # Example
+///
+/// ```
+/// use heapless::index_map::FnvIndexMap;
+///
+/// let mut map = FnvIndexMap::<_, _, 16>::new();
+/// map.insert("a", 1).unwrap();
+///
+/// let iter = map.into_iter();
+/// ```
 #[derive(Clone)]
 pub struct IntoIter<K, V, const N: usize> {
     entries: Vec<Bucket<K, V>, N, usize>,
