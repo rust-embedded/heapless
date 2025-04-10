@@ -354,7 +354,7 @@ mod tests {
     fn empty() {
         let empty = CString::<1>::new();
 
-        assert_eq!(empty.as_c_str(), <&CStr>::default());
+        assert_eq!(empty.as_c_str(), c"");
         assert_eq!(empty.as_bytes(), &[]);
         assert_eq!(empty.to_str(), Ok(""));
     }
@@ -434,14 +434,14 @@ mod tests {
     }
     #[test]
     fn default() {
-        assert_eq!(CString::<1>::default().as_c_str(), <&CStr>::default());
+        assert_eq!(CString::<1>::default().as_c_str(), c"");
     }
 
     #[test]
     fn deref() {
-        assert_eq!(CString::<1>::new().deref(), <&CStr>::default());
-        assert_eq!(CString::<2>::new().deref(), <&CStr>::default());
-        assert_eq!(CString::<3>::new().deref(), <&CStr>::default());
+        assert_eq!(CString::<1>::new().deref(), c"");
+        assert_eq!(CString::<2>::new().deref(), c"");
+        assert_eq!(CString::<3>::new().deref(), c"");
 
         let mut string = CString::<2>::new();
         string.extend_from_bytes(&[65]).unwrap();
