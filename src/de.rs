@@ -1,6 +1,6 @@
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, HistoryBuffer, IndexMap, IndexSet,
-    LinearMap, String, Vec,
+    binary_heap::Kind as BinaryHeapKind, len_type::LenType, BinaryHeap, Deque, HistoryBuffer,
+    IndexMap, IndexSet, LinearMap, String, Vec,
 };
 use core::{
     fmt,
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<'de, T, const N: usize> Deserialize<'de> for Vec<T, N>
+impl<'de, T, LenT: LenType, const N: usize> Deserialize<'de> for Vec<T, N, LenT>
 where
     T: Deserialize<'de>,
 {
@@ -103,13 +103,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, T, const N: usize>(PhantomData<(&'de (), T)>);
+        struct ValueVisitor<'de, T, LenT: LenType, const N: usize>(PhantomData<(&'de (), T, LenT)>);
 
-        impl<'de, T, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, N>
+        impl<'de, T, LenT, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, LenT, N>
         where
             T: Deserialize<'de>,
+            LenT: LenType,
         {
-            type Value = Vec<T, N>;
+            type Value = Vec<T, N, LenT>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")

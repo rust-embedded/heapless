@@ -1,5 +1,6 @@
 use crate::{
     c_string::{self, CString},
+    len_type::LenType,
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     CapacityError,
@@ -26,7 +27,7 @@ impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
     }
 }
 
-impl<S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, S> {
+impl<LenT: LenType, S: VecStorage<u8> + ?Sized> uWrite for VecInner<u8, LenT, S> {
     type Error = CapacityError;
 
     #[inline]

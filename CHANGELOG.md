@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `get_index` and `get_index_mut` to `IndexMap`.
 - Added `String::uDisplay`.
 - Added `CString`.
+- Added `LenT` generic to `Vec<T, N>` and `VecView<T>` to save memory when using a sane capacity value.
 
 ### Changed
 
@@ -80,6 +81,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 - `Vec::storage_capacity` has been removed and `Vec::capacity` must be used instead.
+- Removed `sorted_linked_list::Iter` and `sorted_linked_list::IterInner`.
+- Removed `sorted_linked_list::FindMut` and `sorted_linked_list::FindMutInner`.
 
 ## [v0.8.0] - 2023-11-07
 

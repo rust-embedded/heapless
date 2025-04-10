@@ -138,7 +138,7 @@ macro_rules! probe_loop {
 }
 
 struct CoreMap<K, V, const N: usize> {
-    entries: Vec<Bucket<K, V>, N>,
+    entries: Vec<Bucket<K, V>, N, usize>,
     indices: [Option<Pos>; N],
 }
 
@@ -1417,7 +1417,7 @@ where
 
 #[derive(Clone)]
 pub struct IntoIter<K, V, const N: usize> {
-    entries: Vec<Bucket<K, V>, N>,
+    entries: Vec<Bucket<K, V>, N, usize>,
 }
 
 impl<K, V, const N: usize> Iterator for IntoIter<K, V, N> {

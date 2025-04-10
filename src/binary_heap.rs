@@ -57,7 +57,7 @@ impl private::Sealed for Min {}
 /// struct if you want to write code that's generic over both.
 pub struct BinaryHeapInner<T, K, S: VecStorage<T> + ?Sized> {
     pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: VecInner<T, S>,
+    pub(crate) data: VecInner<T, usize, S>,
 }
 
 /// A priority queue implemented with a binary heap.
@@ -181,7 +181,7 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
-    pub fn into_vec(self) -> Vec<T, N> {
+    pub fn into_vec(self) -> Vec<T, N, usize> {
         self.data
     }
 }
