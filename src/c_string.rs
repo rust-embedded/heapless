@@ -1,6 +1,6 @@
 //! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 
-use crate::{vec::Vec, CapacityError};
+use crate::{len_type::DefaultLenType, vec::Vec, CapacityError, LenType};
 use core::{
     borrow::Borrow,
     cmp::Ordering,
@@ -14,11 +14,11 @@ use core::{
 ///
 /// It stores up to `N - 1` non-nul characters with a trailing nul terminator.
 #[derive(Clone, Hash)]
-pub struct CString<const N: usize> {
-    inner: Vec<u8, N>,
+pub struct CString<const N: usize, LenT: LenType = DefaultLenType<N>> {
+    inner: Vec<u8, N, LenT>,
 }
 
-impl<const N: usize> CString<N> {
+impl<const N: usize, LenT: LenType> CString<N, LenT> {
     /// Creates a new C-compatible string with a terminating nul byte.
     ///
     /// ```rust
@@ -264,28 +264,28 @@ impl<const N: usize> CString<N> {
     }
 }
 
-impl<const N: usize> AsRef<CStr> for CString<N> {
+impl<const N: usize, LenT: LenType> AsRef<CStr> for CString<N, LenT> {
     #[inline]
     fn as_ref(&self) -> &CStr {
         self.as_c_str()
     }
 }
 
-impl<const N: usize> Borrow<CStr> for CString<N> {
+impl<const N: usize, LenT: LenType> Borrow<CStr> for CString<N, LenT> {
     #[inline]
     fn borrow(&self) -> &CStr {
         self.as_c_str()
     }
 }
 
-impl<const N: usize> Default for CString<N> {
+impl<const N: usize, LenT: LenType> Default for CString<N, LenT> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> Deref for CString<N> {
+impl<const N: usize, LenT: LenType> Deref for CString<N, LenT> {
     type Target = CStr;
 
     #[inline]
@@ -294,23 +294,27 @@ impl<const N: usize> Deref for CString<N> {
     }
 }
 
-impl<const N: usize, const M: usize> PartialEq<CString<M>> for CString<N> {
+impl<const N: usize, const M: usize, LenT1: LenType, LenT2: LenType> PartialEq<CString<M, LenT2>>
+    for CString<N, LenT1>
+{
     #[inline]
-    fn eq(&self, rhs: &CString<M>) -> bool {
+    fn eq(&self, rhs: &CString<M, LenT2>) -> bool {
         self.as_c_str() == rhs.as_c_str()
     }
 }
 
-impl<const N: usize> Eq for CString<N> {}
+impl<const N: usize, LenT: LenType> Eq for CString<N, LenT> {}
 
-impl<const N: usize, const M: usize> PartialOrd<CString<M>> for CString<N> {
+impl<const N: usize, const M: usize, LenT1: LenType, LenT2: LenType> PartialOrd<CString<M, LenT2>>
+    for CString<N, LenT1>
+{
     #[inline]
-    fn partial_cmp(&self, rhs: &CString<M>) -> Option<Ordering> {
+    fn partial_cmp(&self, rhs: &CString<M, LenT2>) -> Option<Ordering> {
         self.as_c_str().partial_cmp(rhs.as_c_str())
     }
 }
 
-impl<const N: usize> Ord for CString<N> {
+impl<const N: usize, LenT: LenType> Ord for CString<N, LenT> {
     #[inline]
     fn cmp(&self, rhs: &Self) -> Ordering {
         self.as_c_str().cmp(rhs.as_c_str())
