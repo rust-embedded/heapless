@@ -223,7 +223,8 @@ impl<const N: usize> CString<N> {
         &mut self,
         additional: &[u8],
     ) -> Result<(), CapacityError> {
-        self.pop_terminator();
+        // SAFETY: A caller is responsible for adding a nul terminator back to the inner buffer.
+        unsafe { self.pop_terminator() }
 
         self.inner.extend_from_slice(additional)
     }
