@@ -22,8 +22,10 @@ pub trait Sealed:
     const ZERO: Self;
     /// The one value of the integer type.
     const ONE: Self;
+    /// The maximum value of this type.
+    const MAX: Self;
     /// The maximum value of this type, as a `usize`.
-    const MAX: usize;
+    const MAX_USIZE: usize;
 
     /// An infallible conversion from `usize` to `LenT`.
     #[inline]
@@ -36,6 +38,16 @@ pub trait Sealed:
     fn into_usize(self) -> usize {
         self.try_into().unwrap()
     }
+
+    /// Converts `LenT` into `Some(usize)`, unless it's `Self::MAX`, where it returns `None`.
+    #[inline]
+    fn option(self) -> Option<usize> {
+        if self == Self::MAX {
+            None
+        } else {
+            Some(self.into_usize())
+        }
+    }
 }
 
 macro_rules! impl_lentype {
@@ -44,7 +56,8 @@ macro_rules! impl_lentype {
         impl Sealed for $LenT {
             const ZERO: Self = 0;
             const ONE: Self = 1;
-            const MAX: usize = Self::MAX as _;
+            const MAX: Self = Self::MAX;
+            const MAX_USIZE: usize = Self::MAX as _;
         }
 
         $(#[$meta])*
@@ -103,5 +116,5 @@ impl_lentodefault!(u16: 256, 300, 400, 500, 512, 600, 700, 800, 900, 1000, 1024,
 impl_lentodefault!(u32: 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648);
 
 pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
-    assert!(LenT::MAX >= N, "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity");
+    assert!(LenT::MAX_USIZE >= N, "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity");
 }

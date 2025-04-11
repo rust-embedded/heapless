@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `LenT` generic to `Vec<T, N>` and `VecView<T>` to save memory when using a sane capacity value.
 - Added the `index_set` module.
 - Added the `index_map` module.
+- Migrated `Idx` generic for `SortedLinkedList` to use the new `LenType` trait, allowing for `Idx` inference.
 
 ### Changed
 
