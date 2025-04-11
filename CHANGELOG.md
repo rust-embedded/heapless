@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added the `index_set` module.
 - Added the `index_map` module.
 - Migrated `Idx` generic for `SortedLinkedList` to use the new `LenType` trait, allowing for `Idx` inference.
+- Added similar `LenT` generic to `String`.
 
 ### Changed
 

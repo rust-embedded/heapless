@@ -12,14 +12,11 @@ where
     T: defmt::Format,
 {
     fn format(&self, fmt: Formatter<'_>) {
-        defmt::write!(fmt, "{=[?]}", self.as_slice())
+        defmt::write!(fmt, "{=[?]}", self.as_slice());
     }
 }
 
-impl<S: StringStorage + ?Sized> defmt::Format for StringInner<S>
-where
-    u8: defmt::Format,
-{
+impl<LenT: LenType, S: StringStorage + ?Sized> defmt::Format for StringInner<LenT, S> {
     fn format(&self, fmt: Formatter<'_>) {
         defmt::write!(fmt, "{=str}", self.as_str());
     }

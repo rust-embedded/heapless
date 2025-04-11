@@ -136,11 +136,11 @@ where
 
 // String containers
 
-impl<S: StringStorage + ?Sized> Serialize for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> Serialize for StringInner<LenT, S> {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
         SER: Serializer,
     {
-        serializer.serialize_str(&*self)
+        serializer.serialize_str(self)
     }
 }

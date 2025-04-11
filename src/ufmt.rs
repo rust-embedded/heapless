@@ -8,17 +8,17 @@ use crate::{
 use ufmt::uDisplay;
 use ufmt_write::uWrite;
 
-impl<S: StringStorage + ?Sized> uDisplay for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> uDisplay for StringInner<LenT, S> {
     #[inline]
     fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
     where
         W: uWrite + ?Sized,
     {
-        f.write_str(&self.as_str())
+        f.write_str(self.as_str())
     }
 }
 
-impl<S: StringStorage + ?Sized> uWrite for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> uWrite for StringInner<LenT, S> {
     type Error = CapacityError;
 
     #[inline]
