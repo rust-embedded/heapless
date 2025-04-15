@@ -157,6 +157,7 @@
 extern crate alloc;
 
 pub use binary_heap::BinaryHeap;
+pub use c_string::CString;
 pub use deque::Deque;
 pub use history_buf::{HistoryBuf, OldestOrdered};
 pub use index_map::IndexMap;
@@ -171,6 +172,7 @@ pub use vec::{Vec, VecView};
 #[cfg(test)]
 mod test_helpers;
 
+pub mod c_string;
 pub mod deque;
 pub mod history_buf;
 pub mod index_map;

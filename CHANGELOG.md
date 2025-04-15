@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `truncate` to `IndexMap`.
 - Added `get_index` and `get_index_mut` to `IndexMap`.
 - Added `String::uDisplay`.
+- Added `CString`.
 - Added `LenT` generic to `Vec<T, N>` and `VecView<T>` to save memory when using a sane capacity value.
 - Added the `index_set` module.
 - Added the `index_map` module.
