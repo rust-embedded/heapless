@@ -41,7 +41,7 @@ pub trait Sealed:
 
     /// Converts `LenT` into `Some(usize)`, unless it's `Self::MAX`, where it returns `None`.
     #[inline]
-    fn option(self) -> Option<usize> {
+    fn to_non_max(self) -> Option<usize> {
         if self == Self::MAX {
             None
         } else {

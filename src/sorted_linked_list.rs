@@ -349,7 +349,7 @@ where
         self.write_data_in_node_at(new, value);
         self.free = self.node_at(new).next;
 
-        if let Some(head) = self.head.option() {
+        if let Some(head) = self.head.to_non_max() {
             // Check if we need to replace head
             if self
                 .read_data_in_node_at(head)
@@ -359,7 +359,7 @@ where
                 // It's not head, search the list for the correct placement
                 let mut current = head;
 
-                while let Some(next) = self.node_at(current).next.option() {
+                while let Some(next) = self.node_at(current).next.to_non_max() {
                     if self
                         .read_data_in_node_at(next)
                         .cmp(self.read_data_in_node_at(new))
@@ -443,7 +443,7 @@ where
     /// ```
     pub fn peek(&self) -> Option<&T> {
         self.head
-            .option()
+            .to_non_max()
             .map(|head| self.read_data_in_node_at(head))
     }
 
@@ -506,7 +506,7 @@ where
     /// ```
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.free.option().is_none()
+        self.free.to_non_max().is_none()
     }
 
     /// Checks if the linked list is empty.
@@ -524,7 +524,7 @@ where
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.head.option().is_none()
+        self.head.to_non_max().is_none()
     }
 }
 
@@ -585,7 +585,7 @@ where
     where
         F: FnMut(&T) -> bool,
     {
-        let head = self.head.option()?;
+        let head = self.head.to_non_max()?;
 
         // Special-case, first element
         if f(self.read_data_in_node_at(head)) {
@@ -600,7 +600,7 @@ where
 
         let mut current = head;
 
-        while let Some(next) = self.node_at(current).next.option() {
+        while let Some(next) = self.node_at(current).next.to_non_max() {
             if f(self.read_data_in_node_at(next)) {
                 return Some(FindMutView {
                     is_head: false,
@@ -638,7 +638,7 @@ where
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index.option()?;
+        let index = self.index.to_non_max()?;
 
         let node = self.list.node_at(index);
         self.index = node.next;
@@ -798,17 +798,17 @@ where
 // {
 //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //         f.debug_struct("FindMut")
-//             .field("prev_index", &self.prev_index.option())
-//             .field("index", &self.index.option())
+//             .field("prev_index", &self.prev_index.to_non_max())
+//             .field("index", &self.index.to_non_max())
 //             .field(
 //                 "prev_value",
 //                 &self
 //                     .list
-//                     .read_data_in_node_at(self.prev_index.option().unwrap()),
+//                     .read_data_in_node_at(self.prev_index.to_non_max().unwrap()),
 //             )
 //             .field(
 //                 "value",
-//                 &self.list.read_data_in_node_at(self.index.option().unwrap()),
+//                 &self.list.read_data_in_node_at(self.index.to_non_max().unwrap()),
 //             )
 //             .finish()
 //     }
@@ -834,7 +834,7 @@ where
     fn drop(&mut self) {
         let mut index = self.head;
 
-        while let Some(i) = index.option() {
+        while let Some(i) = index.to_non_max() {
             let node = self.node_at_mut(i);
             index = node.next;
 
