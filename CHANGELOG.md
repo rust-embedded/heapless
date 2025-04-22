@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.9.0] - 2025-04-28
+
 ### Added
 
 - Added `bytes::Buf` and `bytes::BufMut` implementations for `Vec`.
@@ -673,7 +675,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.0...HEAD
+[v0.9.0]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
 [v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/rust-embedded/heapless/compare/v0.7.14...v0.7.15
