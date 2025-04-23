@@ -647,7 +647,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
                     unsafe {
                         *buf.get_unchecked_mut(len.into_usize()) = MaybeUninit::new(elem.clone());
                     }
-                    *len += LenT::ONE;
+                    *len += LenT::one();
                 }
                 Ok(())
             }
@@ -685,7 +685,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub unsafe fn pop_unchecked(&mut self) -> T {
         debug_assert!(!self.is_empty());
 
-        self.len -= LenT::ONE;
+        self.len -= LenT::one();
         self.buffer
             .borrow_mut()
             .get_unchecked_mut(self.len.into_usize())
@@ -708,7 +708,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
             .borrow_mut()
             .get_unchecked_mut(self.len.into_usize()) = MaybeUninit::new(item);
 
-        self.len += LenT::ONE;
+        self.len += LenT::one();
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
@@ -934,7 +934,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         let value = ptr::read(self.as_ptr().add(index));
         let base_ptr = self.as_mut_ptr();
         ptr::copy(base_ptr.add(length - 1), base_ptr.add(index), 1);
-        self.len -= LenT::ONE;
+        self.len -= LenT::one();
         value
     }
 
@@ -1218,8 +1218,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
                 let cur = unsafe { &mut *p.add(g.processed_len.into_usize()) };
                 if !f(cur) {
                     // Advance early to avoid double drop if `drop_in_place` panicked.
-                    g.processed_len += LenT::ONE;
-                    g.deleted_cnt += LenT::ONE;
+                    g.processed_len += LenT::one();
+                    g.deleted_cnt += LenT::one();
                     // SAFETY: We never touch this element again after dropped.
                     unsafe { ptr::drop_in_place(cur) };
                     // We already advanced the counter.
@@ -1237,7 +1237,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
                         ptr::copy_nonoverlapping(cur, hole_slot, 1);
                     }
                 }
-                g.processed_len += LenT::ONE;
+                g.processed_len += LenT::one();
             }
         }
 
@@ -1462,7 +1462,7 @@ impl<T, LenT: LenType, const N: usize> Iterator for IntoIter<T, N, LenT> {
                     .as_ptr()
                     .read()
             };
-            self.next += LenT::ONE;
+            self.next += LenT::one();
             Some(item)
         } else {
             None
@@ -2204,6 +2204,9 @@ mod tests {
 
         // Validate full
         assert!(v.is_full());
+
+        // Size of vector with zero capacity should be 0 bytes because of `ZeroLenType` optimization
+        assert_eq!(core::mem::size_of_val(&v), 0);
     }
 
     #[test]

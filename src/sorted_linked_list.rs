@@ -905,7 +905,7 @@ mod tests {
 
     #[test]
     fn test_zero_size() {
-        let ll: SortedLinkedList<u32, Max, 0> = SortedLinkedList::new_u8();
+        let ll: SortedLinkedList<u32, Max, 0, u8> = SortedLinkedList::new_u8();
 
         assert!(ll.is_empty());
         assert!(ll.is_full());
