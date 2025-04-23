@@ -11,7 +11,7 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::CapacityError;
+use crate::{len_type::DefaultLenType, CapacityError};
 use crate::{
     len_type::LenType,
     vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage},
@@ -52,7 +52,10 @@ impl From<CapacityError> for FromUtf16Error {
 
 mod storage {
     use super::{StringInner, StringView};
-    use crate::vec::{OwnedVecStorage, VecStorage, ViewVecStorage};
+    use crate::{
+        vec::{OwnedVecStorage, VecStorage, ViewVecStorage},
+        LenType,
+    };
 
     /// Trait defining how data for a String is stored.
     ///
@@ -80,23 +83,27 @@ mod storage {
     /// [`ViewStorage`]: super::ViewStorage
     pub trait StringStorage: StringStorageSealed {}
     pub trait StringStorageSealed: VecStorage<u8> {
-        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        fn as_string_view<LenT: LenType>(this: &StringInner<LenT, Self>) -> &StringView<LenT>
         where
             Self: StringStorage;
-        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        fn as_string_mut_view<LenT: LenType>(
+            this: &mut StringInner<LenT, Self>,
+        ) -> &mut StringView<LenT>
         where
             Self: StringStorage;
     }
 
     impl<const N: usize> StringStorage for OwnedVecStorage<u8, N> {}
     impl<const N: usize> StringStorageSealed for OwnedVecStorage<u8, N> {
-        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        fn as_string_view<LenT: LenType>(this: &StringInner<LenT, Self>) -> &StringView<LenT>
         where
             Self: StringStorage,
         {
             this
         }
-        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        fn as_string_mut_view<LenT: LenType>(
+            this: &mut StringInner<LenT, Self>,
+        ) -> &mut StringView<LenT>
         where
             Self: StringStorage,
         {
@@ -107,13 +114,15 @@ mod storage {
     impl StringStorage for ViewVecStorage<u8> {}
 
     impl StringStorageSealed for ViewVecStorage<u8> {
-        fn as_string_view(this: &StringInner<Self>) -> &StringView
+        fn as_string_view<LenT: LenType>(this: &StringInner<LenT, Self>) -> &StringView<LenT>
         where
             Self: StringStorage,
         {
             this
         }
-        fn as_string_mut_view(this: &mut StringInner<Self>) -> &mut StringView
+        fn as_string_mut_view<LenT: LenType>(
+            this: &mut StringInner<LenT, Self>,
+        ) -> &mut StringView<LenT>
         where
             Self: StringStorage,
         {
@@ -133,17 +142,17 @@ pub type ViewStorage = ViewVecStorage<u8>;
 ///
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct StringInner<S: StringStorage + ?Sized> {
-    vec: VecInner<u8, usize, S>,
+pub struct StringInner<LenT: LenType, S: StringStorage + ?Sized> {
+    vec: VecInner<u8, LenT, S>,
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type String<const N: usize> = StringInner<OwnedStorage<N>>;
+pub type String<const N: usize, LenT = DefaultLenType<N>> = StringInner<LenT, OwnedStorage<N>>;
 
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type StringView = StringInner<ViewStorage>;
+pub type StringView<LenT> = StringInner<LenT, ViewStorage>;
 
-impl<const N: usize> String<N> {
+impl<LenT: LenType, const N: usize> String<N, LenT> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
     ///
     /// # Examples
@@ -232,7 +241,7 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), core::str::Utf8Error>(())
     /// ```
     #[inline]
-    pub fn from_utf8<LenT: LenType>(vec: Vec<u8, N, LenT>) -> Result<Self, Utf8Error> {
+    pub fn from_utf8(vec: Vec<u8, N, LenT>) -> Result<Self, Utf8Error> {
         core::str::from_utf8(&vec)?;
 
         // SAFETY: UTF-8 invariant has just been checked by `str::from_utf8`.
@@ -261,10 +270,8 @@ impl<const N: usize> String<N> {
     /// assert_eq!("💖", sparkle_heart);
     /// ```
     #[inline]
-    pub unsafe fn from_utf8_unchecked<LenT: LenType>(vec: Vec<u8, N, LenT>) -> Self {
-        Self {
-            vec: vec.cast_len_type(),
-        }
+    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N, LenT>) -> Self {
+        Self { vec }
     }
 
     /// Converts a `String` into a byte vector.
@@ -286,12 +293,12 @@ impl<const N: usize> String<N> {
     /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, N, usize> {
+    pub fn into_bytes(self) -> Vec<u8, N, LenT> {
         self.vec
     }
 }
 
-impl<S: StringStorage + ?Sized> StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// Removes the specified range from the string in bulk, returning all
     /// removed characters as an iterator.
     ///
@@ -327,7 +334,7 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     /// s.drain(..);
     /// assert_eq!(s, "");
     /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_>
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, LenT>
     where
         R: RangeBounds<usize>,
     {
@@ -348,8 +355,8 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
         let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
 
         Drain {
-            start,
-            end,
+            start: LenT::from_usize(start),
+            end: LenT::from_usize(end),
             iter: chars_iter,
             string: self_ptr,
         }
@@ -360,19 +367,19 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     ///
     /// ```rust
     /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = s.as_view();
+    /// let s: String<10, _> = String::try_from("hello").unwrap();
+    /// let view: &StringView<u8> = s.as_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
     ///
     /// ```rust
     /// # use heapless::string::{String, StringView};
-    /// let s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &StringView = &s;
+    /// let s: String<10, _> = String::try_from("hello").unwrap();
+    /// let view: &StringView<u8> = &s;
     /// ```
     #[inline]
-    pub fn as_view(&self) -> &StringView {
+    pub fn as_view(&self) -> &StringView<LenT> {
         S::as_string_view(self)
     }
 
@@ -382,7 +389,7 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = s.as_mut_view();
+    /// let view: &mut StringView<_> = s.as_mut_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
@@ -390,10 +397,10 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView = &mut s;
+    /// let view: &mut StringView<_> = &mut s;
     /// ```
     #[inline]
-    pub fn as_mut_view(&mut self) -> &mut StringView {
+    pub fn as_mut_view(&mut self) -> &mut StringView<LenT> {
         S::as_string_mut_view(self)
     }
 
@@ -464,7 +471,7 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     /// assert_eq!(s, "olleh");
     /// # Ok::<(), heapless::CapacityError>(())
     /// ```
-    pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, usize, S> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut VecInner<u8, LenT, S> {
         &mut self.vec
     }
 
@@ -672,13 +679,13 @@ impl<S: StringStorage + ?Sized> StringInner<S> {
     }
 }
 
-impl<const N: usize> Default for String<N> {
+impl<LenT: LenType, const N: usize> Default for String<N, LenT> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
+impl<'a, LenT: LenType, const N: usize> TryFrom<&'a str> for String<N, LenT> {
     type Error = CapacityError;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
@@ -688,7 +695,7 @@ impl<'a, const N: usize> TryFrom<&'a str> for String<N> {
     }
 }
 
-impl<const N: usize> str::FromStr for String<N> {
+impl<LenT: LenType, const N: usize> str::FromStr for String<N, LenT> {
     type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -698,7 +705,7 @@ impl<const N: usize> str::FromStr for String<N> {
     }
 }
 
-impl<const N: usize> iter::FromIterator<char> for String<N> {
+impl<LenT: LenType, const N: usize> iter::FromIterator<char> for String<N, LenT> {
     fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
         let mut new = Self::new();
         for c in iter {
@@ -708,7 +715,7 @@ impl<const N: usize> iter::FromIterator<char> for String<N> {
     }
 }
 
-impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
+impl<'a, LenT: LenType, const N: usize> iter::FromIterator<&'a char> for String<N, LenT> {
     fn from_iter<T: IntoIterator<Item = &'a char>>(iter: T) -> Self {
         let mut new = Self::new();
         for c in iter {
@@ -718,7 +725,7 @@ impl<'a, const N: usize> iter::FromIterator<&'a char> for String<N> {
     }
 }
 
-impl<'a, const N: usize> iter::FromIterator<&'a str> for String<N> {
+impl<'a, LenT: LenType, const N: usize> iter::FromIterator<&'a str> for String<N, LenT> {
     fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
         let mut new = Self::new();
         for c in iter {
@@ -728,7 +735,7 @@ impl<'a, const N: usize> iter::FromIterator<&'a str> for String<N> {
     }
 }
 
-impl<const N: usize> Clone for String<N> {
+impl<LenT: LenType, const N: usize> Clone for String<N, LenT> {
     fn clone(&self) -> Self {
         Self {
             vec: self.vec.clone(),
@@ -736,26 +743,26 @@ impl<const N: usize> Clone for String<N> {
     }
 }
 
-impl<S: StringStorage + ?Sized> fmt::Debug for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> fmt::Debug for StringInner<LenT, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Debug>::fmt(self, f)
     }
 }
 
-impl<S: StringStorage + ?Sized> fmt::Display for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> fmt::Display for StringInner<LenT, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <str as fmt::Display>::fmt(self, f)
     }
 }
 
-impl<S: StringStorage + ?Sized> hash::Hash for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> hash::Hash for StringInner<LenT, S> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         <str as hash::Hash>::hash(self, hasher);
     }
 }
 
-impl<S: StringStorage + ?Sized> fmt::Write for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> fmt::Write for StringInner<LenT, S> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         self.push_str(s).map_err(|_| fmt::Error)
     }
@@ -765,7 +772,7 @@ impl<S: StringStorage + ?Sized> fmt::Write for StringInner<S> {
     }
 }
 
-impl<S: StringStorage + ?Sized> ops::Deref for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> ops::Deref for StringInner<LenT, S> {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -773,47 +780,47 @@ impl<S: StringStorage + ?Sized> ops::Deref for StringInner<S> {
     }
 }
 
-impl<S: StringStorage + ?Sized> ops::DerefMut for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> ops::DerefMut for StringInner<LenT, S> {
     fn deref_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: StringStorage + ?Sized> borrow::Borrow<str> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> borrow::Borrow<str> for StringInner<LenT, S> {
     fn borrow(&self) -> &str {
         self.as_str()
     }
 }
-impl<S: StringStorage + ?Sized> borrow::BorrowMut<str> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> borrow::BorrowMut<str> for StringInner<LenT, S> {
     fn borrow_mut(&mut self) -> &mut str {
         self.as_mut_str()
     }
 }
 
-impl<S: StringStorage + ?Sized> AsRef<str> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> AsRef<str> for StringInner<LenT, S> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<S: StringStorage + ?Sized> AsRef<[u8]> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> AsRef<[u8]> for StringInner<LenT, S> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl<S1: StringStorage + ?Sized, S2: StringStorage + ?Sized> PartialEq<StringInner<S1>>
-    for StringInner<S2>
+impl<LenT1: LenType, LenT2: LenType, S1: StringStorage + ?Sized, S2: StringStorage + ?Sized>
+    PartialEq<StringInner<LenT1, S1>> for StringInner<LenT2, S2>
 {
-    fn eq(&self, rhs: &StringInner<S1>) -> bool {
+    fn eq(&self, rhs: &StringInner<LenT1, S1>) -> bool {
         str::eq(&**self, &**rhs)
     }
 }
 
 // String<N> == str
-impl<S: StringStorage + ?Sized> PartialEq<str> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> PartialEq<str> for StringInner<LenT, S> {
     #[inline]
     fn eq(&self, other: &str) -> bool {
         str::eq(self, other)
@@ -821,7 +828,7 @@ impl<S: StringStorage + ?Sized> PartialEq<str> for StringInner<S> {
 }
 
 // String<N> == &'str
-impl<S: StringStorage + ?Sized> PartialEq<&str> for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> PartialEq<&str> for StringInner<LenT, S> {
     #[inline]
     fn eq(&self, other: &&str) -> bool {
         str::eq(self, &other[..])
@@ -829,33 +836,33 @@ impl<S: StringStorage + ?Sized> PartialEq<&str> for StringInner<S> {
 }
 
 // str == String<N>
-impl<S: StringStorage + ?Sized> PartialEq<StringInner<S>> for str {
+impl<LenT: LenType, S: StringStorage + ?Sized> PartialEq<StringInner<LenT, S>> for str {
     #[inline]
-    fn eq(&self, other: &StringInner<S>) -> bool {
+    fn eq(&self, other: &StringInner<LenT, S>) -> bool {
         Self::eq(self, &other[..])
     }
 }
 
 // &'str == String<N>
-impl<S: StringStorage + ?Sized> PartialEq<StringInner<S>> for &str {
+impl<LenT: LenType, S: StringStorage + ?Sized> PartialEq<StringInner<LenT, S>> for &str {
     #[inline]
-    fn eq(&self, other: &StringInner<S>) -> bool {
+    fn eq(&self, other: &StringInner<LenT, S>) -> bool {
         str::eq(self, &other[..])
     }
 }
 
-impl<S: StringStorage + ?Sized> Eq for StringInner<S> {}
+impl<LenT: LenType, S: StringStorage + ?Sized> Eq for StringInner<LenT, S> {}
 
-impl<S1: StringStorage + ?Sized, S2: StringStorage + ?Sized> PartialOrd<StringInner<S1>>
-    for StringInner<S2>
+impl<LenT1: LenType, LenT2: LenType, S1: StringStorage + ?Sized, S2: StringStorage + ?Sized>
+    PartialOrd<StringInner<LenT1, S1>> for StringInner<LenT2, S2>
 {
     #[inline]
-    fn partial_cmp(&self, other: &StringInner<S1>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &StringInner<LenT1, S1>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<S: StringStorage + ?Sized> Ord for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> Ord for StringInner<LenT, S> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)
@@ -877,8 +884,12 @@ impl<S: StringStorage + ?Sized> Ord for StringInner<S> {
 ///
 /// [`format!`]: crate::format!
 #[doc(hidden)]
-pub fn format<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
-    fn format_inner<const N: usize>(args: Arguments<'_>) -> Result<String<N>, fmt::Error> {
+pub fn format<const N: usize, LenT: LenType>(
+    args: Arguments<'_>,
+) -> Result<String<N, LenT>, fmt::Error> {
+    fn format_inner<const N: usize, LenT: LenType>(
+        args: Arguments<'_>,
+    ) -> Result<String<N, LenT>, fmt::Error> {
         let mut output = String::new();
         output.write_fmt(args)?;
         Ok(output)
@@ -928,7 +939,7 @@ macro_rules! format {
     // Without semicolon as separator to disambiguate between arms, Rust just
     // chooses the first so that the format string would land in $max.
     ($max:expr; $($arg:tt)*) => {{
-        let res = $crate::_export::format::<$max>(core::format_args!($($arg)*));
+        let res = $crate::_export::format::<$max, $crate::_export::DefaultLenType<$max>>(core::format_args!($($arg)*));
         res
     }};
     ($($arg:tt)*) => {{
@@ -939,7 +950,7 @@ macro_rules! format {
 
 macro_rules! impl_try_from_num {
     ($num:ty, $size:expr) => {
-        impl<const N: usize> core::convert::TryFrom<$num> for String<N> {
+        impl<LenT: LenType, const N: usize> core::convert::TryFrom<$num> for String<N, LenT> {
             type Error = ();
             fn try_from(s: $num) -> Result<Self, Self::Error> {
                 let mut new = String::new();
@@ -1075,7 +1086,7 @@ mod tests {
     #[test]
     fn into_bytes() {
         let s: String<4> = String::try_from("ab").unwrap();
-        let b: Vec<u8, 4, usize> = s.into_bytes();
+        let b: Vec<u8, 4> = s.into_bytes();
         assert_eq!(b.len(), 2);
         assert_eq!(b"ab", &b[..]);
     }

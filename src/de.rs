@@ -299,15 +299,15 @@ where
 
 // String containers
 
-impl<'de, const N: usize> Deserialize<'de> for String<N> {
+impl<'de, LenT: LenType, const N: usize> Deserialize<'de> for String<N, LenT> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, const N: usize>(PhantomData<&'de ()>);
+        struct ValueVisitor<'de, LenT: LenType, const N: usize>(PhantomData<(&'de (), LenT)>);
 
-        impl<'de, const N: usize> de::Visitor<'de> for ValueVisitor<'de, N> {
-            type Value = String<N>;
+        impl<'de, LenT: LenType, const N: usize> de::Visitor<'de> for ValueVisitor<'de, LenT, N> {
+            type Value = String<N, LenT>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(formatter, "a string no more than {} bytes long", N as u64)
@@ -339,6 +339,6 @@ impl<'de, const N: usize> Deserialize<'de> for String<N> {
             }
         }
 
-        deserializer.deserialize_str(ValueVisitor::<'de, N>(PhantomData))
+        deserializer.deserialize_str(ValueVisitor(PhantomData))
     }
 }
