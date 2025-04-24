@@ -322,7 +322,18 @@ where
 
         Some((bucket.key, bucket.value))
     }
+    
+    fn shift_remove_found(&mut self, _probe: usize, found: usize) -> (K, V)
+    {
+        let entry = self.entries.remove(found);
 
+        self.after_removal(); /* Todo: pass probe if this starts taking an index parameter */
+
+        (entry.key, entry.value)
+    }
+
+    // Todo: Should this take in a parameter to allow it to only process the moved
+    // elements?
     fn after_removal(&mut self)
     {
         const INIT: Option<Pos> = None;
@@ -1251,8 +1262,9 @@ where
 
     /// Remove the key-value pair at position `index` and return them.
     ///
-    /// Like `Vec::remove`, the pair is removed by shifting all remaining items. This maintains
-    /// the remaining elements' insertion order, but is a more expensive operation
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation
     ///
     /// Return `None` if `index` is not in 0..len().
     ///
@@ -1280,6 +1292,121 @@ where
     {
         self.core.shift_remove_index(index)
     }
+
+    /// Remove the key-value pair equivalent to `key` and return it and
+    /// the index it had.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation
+    ///
+    /// Return `None` if `key` is not in map.
+    ///
+    /// Computes in **O(n)** time (average).
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_full(&2);
+    /// assert_eq!(removed, Some((1, 2, "b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_full(&2), None);
+    /// 
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ``` 
+    pub fn shift_remove_full<Q>(&mut self, key: &Q) -> Option<(usize, K, V)>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(probe, found)| {
+            let (k,v) = self.core.shift_remove_found(probe, found);
+            (found, k, v)
+        })
+    }
+
+    /// Remove and return the key-value pair equivalent to `key`.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation
+    ///
+    /// Return `None` if `key` is not in map.
+    ///
+    /// Computes in **O(n)** time (average).
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_entry(&2);
+    /// assert_eq!(removed, Some((2, "b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_entry(&2), None);
+    /// 
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ``` 
+    pub fn shift_remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.shift_remove_full(key).map(|(_idx, k,v)| (k,v))
+    }
+
+    /// Remove the key-value pair equivalent to `key` and return
+    /// its value.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all of the
+    /// elements that follow it, preserving their relative order.
+    /// **This perturbs the index of all of those elements!**
+    ///
+    /// Return `None` if `key` is not in map.
+    ///
+    /// Computes in **O(n)** time (average).
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove(&2);
+    /// assert_eq!(removed, Some(("b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove(&2), None);
+    /// 
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ``` 
+    pub fn shift_remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.shift_remove_full(key).map(|(_idx, _k, v)| v)
+    }
+
 
     /// Retains only the elements specified by the predicate.
     ///
