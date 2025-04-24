@@ -306,7 +306,7 @@ where
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
-            self.after_removal()
+            self.after_removal();
         }
     }
 
@@ -1266,7 +1266,7 @@ where
     /// remaining items. This maintains the remaining elements' relative
     /// insertion order, but is a more expensive operation
     ///
-    /// Return `None` if `index` is not in 0..len().
+    /// Return `None` if `index` is not in `0..len()`.
     ///
     /// Computes in *O*(n) time (average).
     ///
