@@ -1236,4 +1236,29 @@ mod tests {
         let formatted = format!(2; "123");
         assert_eq!(formatted, Err(core::fmt::Error));
     }
+
+    #[test]
+    fn zero_capacity() {
+        let mut s: String<0> = String::new();
+        // Validate capacity
+        assert_eq!(s.capacity(), 0);
+
+        // Make sure there is no capacity
+        assert!(s.push('a').is_err());
+
+        // Validate length
+        assert_eq!(s.len(), 0);
+
+        // Validate pop
+        assert_eq!(s.pop(), None);
+
+        // Validate slice
+        assert_eq!(s.as_str(), "");
+
+        // Validate empty
+        assert!(s.is_empty());
+
+        // Size of string with zero capacity should be 0 bytes because of `ZeroLenType` optimization
+        assert_eq!(core::mem::size_of_val(&s), 0);
+    }
 }
