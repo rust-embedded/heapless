@@ -302,43 +302,61 @@ where
     where
         F: FnMut(&mut K, &mut V) -> bool,
     {
-        const INIT: Option<Pos> = None;
-
         self.entries
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
-            for index in self.indices.iter_mut() {
-                *index = INIT;
-            }
+            self.after_removal()
+        }
+    }
 
-            for (index, entry) in self.entries.iter().enumerate() {
-                let mut probe = entry.hash.desired_pos(Self::mask());
-                let mut dist = 0;
+    fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)>
+    {
+        if index >= self.entries.len() {
+            return None;
+        }
 
-                probe_loop!(probe < self.indices.len(), {
-                    let pos = &mut self.indices[probe];
+        let bucket = self.entries.remove(index);
 
-                    if let Some(pos) = *pos {
-                        let entry_hash = pos.hash();
+        self.after_removal();
 
-                        // robin hood: steal the spot if it's better for us
-                        let their_dist = entry_hash.probe_distance(Self::mask(), probe);
-                        if their_dist < dist {
-                            Self::insert_phase_2(
-                                &mut self.indices,
-                                probe,
-                                Pos::new(index, entry.hash),
-                            );
-                            break;
-                        }
-                    } else {
-                        *pos = Some(Pos::new(index, entry.hash));
+        Some((bucket.key, bucket.value))
+    }
+
+    fn after_removal(&mut self)
+    {
+        const INIT: Option<Pos> = None;
+
+        for index in self.indices.iter_mut() {
+            *index = INIT;
+        }
+
+        for (index, entry) in self.entries.iter().enumerate() {
+            let mut probe = entry.hash.desired_pos(Self::mask());
+            let mut dist = 0;
+
+            probe_loop!(probe < self.indices.len(), {
+                let pos = &mut self.indices[probe];
+
+                if let Some(pos) = *pos {
+                    let entry_hash = pos.hash();
+
+                    // robin hood: steal the spot if it's better for us
+                    let their_dist = entry_hash.probe_distance(Self::mask(), probe);
+                    if their_dist < dist {
+                        Self::insert_phase_2(
+                            &mut self.indices,
+                            probe,
+                            Pos::new(index, entry.hash),
+                        );
                         break;
                     }
-                    dist += 1;
-                });
-            }
+                } else {
+                    *pos = Some(Pos::new(index, entry.hash));
+                    break;
+                }
+                dist += 1;
+            });
         }
     }
 
@@ -1229,6 +1247,38 @@ where
     {
         self.find(key)
             .map(|(probe, found)| self.core.remove_found(probe, found).1)
+    }
+
+    /// Remove the key-value pair at position `index` and return them.
+    ///
+    /// Like `Vec::remove`, the pair is removed by shifting all remaining items. This maintains
+    /// the remaining elements' insertion order, but is a more expensive operation
+    ///
+    /// Return `None` if `index` is not in 0..len().
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_index(1);
+    /// assert_eq!(removed, Some((2, "b")));
+    /// assert_eq!(map.len(), 2);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn shift_remove_index(&mut self, index: usize) -> Option<(K,V)>
+    {
+        self.core.shift_remove_index(index)
     }
 
     /// Retains only the elements specified by the predicate.
