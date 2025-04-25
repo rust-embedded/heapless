@@ -306,60 +306,72 @@ where
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
-            self.after_removal();
-        }
-    }
+            const INIT: Option<Pos> = None;
 
-    fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)> {
-        if index >= self.entries.len() {
-            return None;
-        }
-
-        let bucket = self.entries.remove(index);
-
-        self.after_removal();
-
-        Some((bucket.key, bucket.value))
-    }
-
-    fn shift_remove_found(&mut self, _probe: usize, found: usize) -> (K, V) {
-        let entry = self.entries.remove(found);
-
-        self.after_removal();
-
-        (entry.key, entry.value)
-    }
-
-    fn after_removal(&mut self) {
-        const INIT: Option<Pos> = None;
-
-        for index in self.indices.iter_mut() {
-            *index = INIT;
-        }
-
-        for (index, entry) in self.entries.iter().enumerate() {
-            let mut probe = entry.hash.desired_pos(Self::mask());
-            let mut dist = 0;
-
-            probe_loop!(probe < self.indices.len(), {
-                let pos = &mut self.indices[probe];
-
-                if let Some(pos) = *pos {
-                    let entry_hash = pos.hash();
-
-                    // robin hood: steal the spot if it's better for us
-                    let their_dist = entry_hash.probe_distance(Self::mask(), probe);
-                    if their_dist < dist {
-                        Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, entry.hash));
+            for index in self.indices.iter_mut() {
+                *index = INIT;
+            }
+    
+            for (index, entry) in self.entries.iter().enumerate() {
+                let mut probe = entry.hash.desired_pos(Self::mask());
+                let mut dist = 0;
+    
+                probe_loop!(probe < self.indices.len(), {
+                    let pos = &mut self.indices[probe];
+    
+                    if let Some(pos) = *pos {
+                        let entry_hash = pos.hash();
+    
+                        // robin hood: steal the spot if it's better for us
+                        let their_dist = entry_hash.probe_distance(Self::mask(), probe);
+                        if their_dist < dist {
+                            Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, entry.hash));
+                            break;
+                        }
+                    } else {
+                        *pos = Some(Pos::new(index, entry.hash));
                         break;
                     }
-                } else {
-                    *pos = Some(Pos::new(index, entry.hash));
-                    break;
+                    dist += 1;
+                });
+            }
+        }
+    }
+    
+    fn shift_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
+        self.indices[probe] = None;
+        let entry = self.entries.remove(found);
+
+        // correct index that points to the entry that had to swap places
+        if let Some(entry) = self.entries.get(found) {
+            // was not last element
+            // examine new element in `found` and find it in indices
+            let mut probe = entry.hash.desired_pos(Self::mask());
+
+            probe_loop!(probe < self.indices.len(), {
+                if let Some(pos) = self.indices[probe] {
+                    if pos.index() >= self.entries.len() {
+                        // found it
+                        self.indices[probe] = Some(Pos::new(found, entry.hash));
+                        break;
+                    }
                 }
-                dist += 1;
             });
         }
+
+        // Re-write the indexes for all elements that moved
+        for index in self.indices.iter_mut() {
+            if let Some(pos) = index {
+                if pos.index() > found {
+                    *index = Some(Pos::new(pos.index()-1, pos.hash()));
+                }
+            }
+        }
+
+        self.backward_shift_after_removal(probe);
+
+        (entry.key, entry.value)
+
     }
 
     fn backward_shift_after_removal(&mut self, probe_at_remove: usize) {
@@ -1280,7 +1292,12 @@ where
     /// assert_eq!(iter.next(), None);
     /// ```
     pub fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)> {
-        self.core.shift_remove_index(index)
+        if index > self.len() {
+            return None;
+        }
+        self.find(&self.core.entries[index].key).map(|(probe, found)| {
+            self.core.shift_remove_found(probe, found)
+        })
     }
 
     /// Removes the key-value pair equivalent to `key` and returns it and
