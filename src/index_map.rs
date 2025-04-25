@@ -306,7 +306,7 @@ where
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
-            self.after_removal(0);
+            self.after_removal();
         }
     }
 
@@ -317,7 +317,7 @@ where
 
         let bucket = self.entries.remove(index);
 
-        self.after_removal(index);
+        self.after_removal();
 
         Some((bucket.key, bucket.value))
     }
@@ -325,19 +325,19 @@ where
     fn shift_remove_found(&mut self, _probe: usize, found: usize) -> (K, V) {
         let entry = self.entries.remove(found);
 
-        self.after_removal(found);
+        self.after_removal();
 
         (entry.key, entry.value)
     }
 
-    fn after_removal(&mut self, first_modified: usize) {
+    fn after_removal(&mut self) {
         const INIT: Option<Pos> = None;
 
         for index in self.indices.iter_mut() {
             *index = INIT;
         }
 
-        for (index, entry) in self.entries.iter().skip(first_modified).enumerate() {
+        for (index, entry) in self.entries.iter().enumerate() {
             let mut probe = entry.hash.desired_pos(Self::mask());
             let mut dist = 0;
 
@@ -2022,9 +2022,12 @@ mod tests {
     fn shift_remove_index() {
         const REMOVED_KEY: usize = 7;
         let mut map = almost_filled_map();
-        assert_eq!(map.shift_remove_index(REMOVED_KEY-1), Some((REMOVED_KEY, REMOVED_KEY)));
+        assert_eq!(
+            map.shift_remove_index(REMOVED_KEY - 1),
+            Some((REMOVED_KEY, REMOVED_KEY))
+        );
         // Verify all other elements can still be looked up after removing the entry
-        for x in 1..MAP_SLOTS-1 {
+        for x in 1..MAP_SLOTS - 1 {
             if x == REMOVED_KEY {
                 continue;
             }
