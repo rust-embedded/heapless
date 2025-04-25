@@ -311,21 +311,25 @@ where
             for index in self.indices.iter_mut() {
                 *index = INIT;
             }
-    
+
             for (index, entry) in self.entries.iter().enumerate() {
                 let mut probe = entry.hash.desired_pos(Self::mask());
                 let mut dist = 0;
-    
+
                 probe_loop!(probe < self.indices.len(), {
                     let pos = &mut self.indices[probe];
-    
+
                     if let Some(pos) = *pos {
                         let entry_hash = pos.hash();
-    
+
                         // robin hood: steal the spot if it's better for us
                         let their_dist = entry_hash.probe_distance(Self::mask(), probe);
                         if their_dist < dist {
-                            Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, entry.hash));
+                            Self::insert_phase_2(
+                                &mut self.indices,
+                                probe,
+                                Pos::new(index, entry.hash),
+                            );
                             break;
                         }
                     } else {
@@ -337,7 +341,7 @@ where
             }
         }
     }
-    
+
     fn shift_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
         self.indices[probe] = None;
         let entry = self.entries.remove(found);
@@ -363,7 +367,7 @@ where
         for index in self.indices.iter_mut() {
             if let Some(pos) = index {
                 if pos.index() > found {
-                    *index = Some(Pos::new(pos.index()-1, pos.hash()));
+                    *index = Some(Pos::new(pos.index() - 1, pos.hash()));
                 }
             }
         }
@@ -371,7 +375,6 @@ where
         self.backward_shift_after_removal(probe);
 
         (entry.key, entry.value)
-
     }
 
     fn backward_shift_after_removal(&mut self, probe_at_remove: usize) {
@@ -1295,9 +1298,8 @@ where
         if index > self.len() {
             return None;
         }
-        self.find(&self.core.entries[index].key).map(|(probe, found)| {
-            self.core.shift_remove_found(probe, found)
-        })
+        self.find(&self.core.entries[index].key)
+            .map(|(probe, found)| self.core.shift_remove_found(probe, found))
     }
 
     /// Removes the key-value pair equivalent to `key` and returns it and
