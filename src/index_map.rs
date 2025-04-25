@@ -1245,7 +1245,7 @@ where
     ///
     /// If `len` is greater than the map's current length, this has no effect.
     ///
-    /// Computes in *O*(1) time (average).
+    /// Computes in *O*(n) time (average).
     ///
     /// # Examples
     ///
@@ -1267,6 +1267,15 @@ where
     /// ```
     pub fn truncate(&mut self, len: usize) {
         self.core.entries.truncate(len);
+
+        if self.core.indices.len() > self.core.entries.len() {
+            for index in self.core.indices.iter_mut() {
+                match index {
+                    Some(pos) if pos.index() >= len => *index = None,
+                    _ => (),
+                }
+            }
+        }
     }
 
     /* Private API */
