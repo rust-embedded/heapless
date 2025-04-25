@@ -2019,6 +2019,20 @@ mod tests {
     }
 
     #[test]
+    fn shift_remove_index() {
+        const REMOVED_KEY: usize = 7;
+        let mut map = almost_filled_map();
+        assert_eq!(map.shift_remove_index(REMOVED_KEY-1), Some((REMOVED_KEY, REMOVED_KEY)));
+        // Verify all other elements can still be looked up after removing the entry
+        for x in 1..MAP_SLOTS-1 {
+            if x == REMOVED_KEY {
+                continue;
+            }
+            assert!(map.contains_key(&x));
+        }
+    }
+
+    #[test]
     fn retain() {
         let mut none = almost_filled_map();
         none.retain(|_, _| false);
