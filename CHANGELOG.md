@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Added `shift_remove`, `shift_remove_entry`, `shift_remove_full`, `shift_remove_index` to `IndexMap`
+- Added `shift_remove`, `shift_remove_entry`, `shift_remove_full`, `shift_remove_index` to `IndexMap`.
 - Added `bytes::Buf` and `bytes::BufMut` implementations for `Vec`.
 - Added `format` macro.
 - Added `String::from_utf16`.

@@ -1290,11 +1290,12 @@ where
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all
     /// remaining items. This maintains the remaining elements' relative
-    /// insertion order, but is a more expensive operation
+    /// insertion order, but is a more expensive operation.
     ///
     /// Return `None` if `key` is not in map.
     ///
-    /// Computes in **O(n)** time (average).
+    /// Computes in *O*(n) time (average).
+    ///
     /// # Examples
     ///
     /// ```
@@ -1329,11 +1330,12 @@ where
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all
     /// remaining items. This maintains the remaining elements' relative
-    /// insertion order, but is a more expensive operation
+    /// insertion order, but is a more expensive operation.
     ///
     /// Return `None` if `key` is not in map.
     ///
-    /// Computes in **O(n)** time (average).
+    /// Computes in *O*(n) time (average).
+    ///
     /// # Examples
     ///
     /// ```
@@ -1370,7 +1372,7 @@ where
     ///
     /// Return `None` if `key` is not in map.
     ///
-    /// Computes in **O(n)** time (average).
+    /// Computes in *O*(n) time (average).
     ///
     /// # Examples
     ///
