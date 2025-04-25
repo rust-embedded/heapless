@@ -1288,6 +1288,8 @@ where
     /// let removed = map.shift_remove_index(1);
     /// assert_eq!(removed, Some((2, "b")));
     /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_index(2), None);
+    /// assert_eq!(map.shift_remove_index(3), None);
     ///
     /// let mut iter = map.iter();
     /// assert_eq!(iter.next(), Some((&3, &"a")));
@@ -1295,7 +1297,7 @@ where
     /// assert_eq!(iter.next(), None);
     /// ```
     pub fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)> {
-        if index > self.len() {
+        if index >= self.len() {
             return None;
         }
         self.find(&self.core.entries[index].key)
