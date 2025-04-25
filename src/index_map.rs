@@ -1251,13 +1251,13 @@ where
             .map(|(probe, found)| self.core.remove_found(probe, found).1)
     }
 
-    /// Remove the key-value pair at position `index` and return them.
+    /// Removes the key-value pair at position `index` and returns it.
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all
     /// remaining items. This maintains the remaining elements' relative
     /// insertion order, but is a more expensive operation
     ///
-    /// Return `None` if `index` is not in `0..len()`.
+    /// Returns `None` if `index` is not in `0..len()`.
     ///
     /// Computes in *O*(n) time (average).
     ///
@@ -1283,14 +1283,14 @@ where
         self.core.shift_remove_index(index)
     }
 
-    /// Remove the key-value pair equivalent to `key` and return it and
+    /// Removes the key-value pair equivalent to `key` and returns it and
     /// the index it had.
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all
     /// remaining items. This maintains the remaining elements' relative
     /// insertion order, but is a more expensive operation.
     ///
-    /// Return `None` if `key` is not in map.
+    /// Returns `None` if `key` is not in map.
     ///
     /// Computes in *O*(n) time (average).
     ///
@@ -1366,9 +1366,8 @@ where
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all of the
     /// elements that follow it, preserving their relative order.
-    /// **This perturbs the index of all of those elements!**
     ///
-    /// Return `None` if `key` is not in map.
+    /// Returns `None` if `key` is not in map.
     ///
     /// Computes in *O*(n) time (average).
     ///
