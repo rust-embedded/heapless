@@ -306,7 +306,7 @@ where
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
-            self.after_removal();
+            self.after_removal(0);
         }
     }
 
@@ -317,7 +317,7 @@ where
 
         let bucket = self.entries.remove(index);
 
-        self.after_removal();
+        self.after_removal(index);
 
         Some((bucket.key, bucket.value))
     }
@@ -325,21 +325,19 @@ where
     fn shift_remove_found(&mut self, _probe: usize, found: usize) -> (K, V) {
         let entry = self.entries.remove(found);
 
-        self.after_removal(); /* Todo: pass probe if this starts taking an index parameter */
+        self.after_removal(found);
 
         (entry.key, entry.value)
     }
 
-    // Todo: Should this take in a parameter to allow it to only process the moved
-    // elements?
-    fn after_removal(&mut self) {
+    fn after_removal(&mut self, first_modified: usize) {
         const INIT: Option<Pos> = None;
 
         for index in self.indices.iter_mut() {
             *index = INIT;
         }
 
-        for (index, entry) in self.entries.iter().enumerate() {
+        for (index, entry) in self.entries.iter().skip(first_modified).enumerate() {
             let mut probe = entry.hash.desired_pos(Self::mask());
             let mut dist = 0;
 
