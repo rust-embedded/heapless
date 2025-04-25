@@ -1258,6 +1258,7 @@ where
     /// map.insert(1, "c").unwrap();
     /// map.truncate(2);
     /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.get(&1), None);
     ///
     /// let mut iter = map.iter();
     /// assert_eq!(iter.next(), Some((&3, &"a")));
