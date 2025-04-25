@@ -1324,13 +1324,13 @@ where
         })
     }
 
-    /// Remove and return the key-value pair equivalent to `key`.
+    /// Removes and returns the key-value pair equivalent to `key`.
     ///
     /// Like [`Vec::remove`], the pair is removed by shifting all
     /// remaining items. This maintains the remaining elements' relative
     /// insertion order, but is a more expensive operation.
     ///
-    /// Return `None` if `key` is not in map.
+    /// Returns `None` if `key` is not in map.
     ///
     /// Computes in *O*(n) time (average).
     ///
