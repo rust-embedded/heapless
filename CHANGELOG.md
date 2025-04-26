@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Implement `Default` for `CapacityError`.
 - Implement `defmt::Format` for `CapacityError`.
+- Updated `hash32` from `0.3.0` to `1.0.0`.
 
 ## [v0.9.1] - 2025-08-19
 
