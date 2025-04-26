@@ -355,23 +355,6 @@ where
         self.indices[probe] = None;
         let entry = self.entries.remove(found);
 
-        // correct index that points to the entry that had to swap places
-        if let Some(entry) = self.entries.get(found) {
-            // was not last element
-            // examine new element in `found` and find it in indices
-            let mut probe = entry.hash.desired_pos(Self::mask());
-
-            probe_loop!(probe < self.indices.len(), {
-                if let Some(pos) = self.indices[probe] {
-                    if pos.index() >= self.entries.len() {
-                        // found it
-                        self.indices[probe] = Some(Pos::new(found, entry.hash));
-                        break;
-                    }
-                }
-            });
-        }
-
         // Re-write the indexes for all elements that moved
         for index in self.indices.iter_mut() {
             if let Some(pos) = index {
@@ -2084,6 +2067,27 @@ mod tests {
     }
 
     #[test]
+    fn shift_remove_full() {
+        const REMOVED_KEY: usize = 7;
+        let mut map = almost_filled_map();
+        map.assert_internally_consistent();
+        assert_eq!(
+            map.shift_remove_full(&REMOVED_KEY),
+            Some((REMOVED_KEY - 1, REMOVED_KEY, REMOVED_KEY))
+        );
+        // Verify all other elements can still be looked up after removing the entry
+        for x in 1..MAP_SLOTS - 1 {
+            if x == REMOVED_KEY {
+                continue;
+            }
+            assert!(map.contains_key(&x));
+        }
+        // Make sure we can't any entry for the one we removed
+        assert_eq!(map.get(&REMOVED_KEY), None);
+        map.assert_internally_consistent();
+    }
+
+    #[test]
     fn shift_remove_index() {
         const REMOVED_KEY: usize = 7;
         let mut map = almost_filled_map();
@@ -2099,6 +2103,8 @@ mod tests {
             }
             assert!(map.contains_key(&x));
         }
+        // Make sure we can't find any entry for the one we removed
+        assert_eq!(map.get(&REMOVED_KEY), None);
         map.assert_internally_consistent();
     }
 
