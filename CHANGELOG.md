@@ -66,7 +66,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - `Vec::extend_from_slice`
   - `Vec::from_slice`
   - `Vec::resize_default`
->     * [ ]  Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
   - `Vec::resize`
 - Renamed `FromUtf16Error::DecodeUtf16Error` to `FromUtf16Error::DecodeUtf16`.
 - Changed `stable_deref_trait` to a platform-dependent dependency.
@@ -96,6 +95,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - The `MpMcQueue` type has been renamed to `Queue`. 
 - The `MpMcQueueView` type has been renamed to `QueueView`. 
 - The `MpMcQueueInner` type has been renamed to `QueueInner`. 
+- Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
 - Changed `Queue::split` to be `const`.
 
 ### Fixed
