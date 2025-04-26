@@ -65,7 +65,7 @@ use crate::Vec;
 /// ```
 pub type FnvIndexMap<K, V, const N: usize> = IndexMap<K, V, BuildHasherDefault<FnvHasher>, N>;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct HashValue(u16);
 
 impl HashValue {
@@ -113,6 +113,15 @@ impl Pos {
 
     fn index(&self) -> usize {
         self.nz.get().wrapping_sub(1) as u16 as usize
+    }
+}
+
+impl fmt::Debug for Pos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Pos")
+            .field("index", &self.index())
+            .field("hash", &self.hash().0)
+            .finish()
     }
 }
 
@@ -1469,6 +1478,42 @@ where
         let h = hash_with(key, &self.build_hasher);
         self.core.find(h, key)
     }
+
+    #[cfg(test)]
+    fn assert_internally_consistent(&mut self) {
+        // For every entry
+        for (index, bucket) in self.core.entries.iter().enumerate() {
+            let found = self.find(&bucket.key);
+            // We must be able to find it
+            assert!(found.is_some(), "Entry couldn't be found");
+            let (probe, found_index) = found.unwrap();
+            // In the right place
+            assert_eq!(found_index, index, "Found a different entry");
+            // For the right reason
+            assert_eq!(
+                self.core.indices.get(probe),
+                Some(&Some(Pos::new(index, bucket.hash))),
+                "Found hash mismatch"
+            );
+        }
+
+        // For every non-empty index
+        let mut used_index_count = 0;
+        for pos in self.core.indices.iter().filter_map(|p| p.as_ref()) {
+            let entry = self.core.entries.get(pos.index());
+            // It must point to an entry
+            assert!(entry.is_some(), "Dangling reference");
+            // With a matching hash
+            assert_eq!(pos.hash(), entry.unwrap().hash, "Index hash mismatch");
+            used_index_count += 1;
+        }
+
+        assert_eq!(
+            self.core.entries.len(),
+            used_index_count,
+            "Entry/index count mismatch"
+        )
+    }
 }
 
 impl<K, Q, V, S, const N: usize> ops::Index<&Q> for IndexMap<K, V, S, N>
@@ -2042,6 +2087,7 @@ mod tests {
     fn shift_remove_index() {
         const REMOVED_KEY: usize = 7;
         let mut map = almost_filled_map();
+        map.assert_internally_consistent();
         assert_eq!(
             map.shift_remove_index(REMOVED_KEY - 1),
             Some((REMOVED_KEY, REMOVED_KEY))
@@ -2053,6 +2099,7 @@ mod tests {
             }
             assert!(map.contains_key(&x));
         }
+        map.assert_internally_consistent();
     }
 
     #[test]
@@ -2060,10 +2107,12 @@ mod tests {
         let mut none = almost_filled_map();
         none.retain(|_, _| false);
         assert!(none.is_empty());
+        none.assert_internally_consistent();
 
         let mut all = almost_filled_map();
         all.retain(|_, _| true);
         assert_eq!(all.len(), MAP_SLOTS - 1);
+        all.assert_internally_consistent();
 
         let mut even = almost_filled_map();
         even.retain(|_, &mut v| v % 2 == 0);
@@ -2071,6 +2120,7 @@ mod tests {
         for &v in even.values() {
             assert_eq!(v % 2, 0);
         }
+        even.assert_internally_consistent();
 
         let mut odd = almost_filled_map();
         odd.retain(|_, &mut v| v % 2 != 0);
@@ -2080,6 +2130,7 @@ mod tests {
         }
         assert_eq!(odd.insert(2, 2), Ok(None));
         assert_eq!(odd.len(), (MAP_SLOTS / 2) + 1);
+        odd.assert_internally_consistent();
     }
 
     #[test]
