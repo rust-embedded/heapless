@@ -1495,7 +1495,7 @@ where
             self.core.entries.len(),
             used_index_count,
             "Entry/index count mismatch"
-        )
+        );
     }
 }
 
