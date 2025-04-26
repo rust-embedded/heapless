@@ -2082,7 +2082,7 @@ mod tests {
             }
             assert!(map.contains_key(&x));
         }
-        // Make sure we can't any entry for the one we removed
+        // Make sure we can't find any entry for the one we removed
         assert_eq!(map.get(&REMOVED_KEY), None);
         map.assert_internally_consistent();
     }
