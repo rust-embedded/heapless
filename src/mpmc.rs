@@ -1,4 +1,4 @@
-//! A fixed capacity multiple-producer, multiple-consumer (MPMC) lock-free queue.
+//! A lock-free multi-producer, multi-consumer (MPMC) queue with fixed capacity.
 //!
 //! **Note:** This module requires atomic compare-and-swap (CAS) instructions. On
 //! targets where they're not natively available, they are emulated by the

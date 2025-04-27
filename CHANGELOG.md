@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Added `mpmc` and `spsc` features.
 - Added `bytes::Buf` and `bytes::BufMut` implementations for `Vec`.
 - Added `format` macro.
 - Added `String::from_utf16`.
@@ -98,6 +99,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - The `MpMcQueueView` type has been renamed to `QueueView`. 
 - The `MpMcQueueInner` type has been renamed to `QueueInner`. 
 - Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
+- The `HistoryBuffer` type has been renamed to `HistoryBuf`.
+- The `HistoryBufferView` type has been renamed to `HistoryBufView`.
+- The `OwnedHistBufStorage` type has been renamed to `OwnedHistoryBufStorage`.
+- The `ViewHistBufStorage` type has been renamed to `ViewHistoryBufStorage`.
+- The `MpMcQueue` type has been renamed to `Queue`.
+- The `MpMcQueueView` type has been renamed to `QueueView`.
+- The `MpMcQueueInner` type has been renamed to `QueueInner`.
 - Changed `Queue::split` to be `const`.
 
 ### Fixed
@@ -443,7 +451,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - The `pool!` macro now accepts attributes.
 
-- `mpmc::Q*` a family of fixed capacity multiple-producer multiple-consumer
+- `mpmc::Q*` a family of fixed capacity multi-producer multi-consumer
   lock-free queues.
 
 ### Changed
