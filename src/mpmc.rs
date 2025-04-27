@@ -1,90 +1,72 @@
-//! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue.
+//! A fixed capacity multiple-producer, multiple-consumer (MPMC) lock-free queue.
 //!
-//! NOTE: This module requires atomic CAS operations. On targets where they're not natively available,
-//! they are emulated by the [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
+//! **Note:** This module requires atomic compare-and-swap (CAS) instructions. On
+//! targets where they're not natively available, they are emulated by the
+//! [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
 //!
 //! # Example
 //!
-//! This queue can be constructed in "const context". Placing it in a `static` variable lets *all*
-//! contexts (interrupts/threads/`main`) safely enqueue and dequeue items from it.
+//! This queue can be constructed in `const` context. Placing it in a `static` variable lets *all*
+//! contexts (interrupts/threads/`main`) safely enqueue and dequeue items.
 //!
-//! ``` ignore
-//! #![no_main]
-//! #![no_std]
+//! ```
+//! use core::sync::atomic::{AtomicU8, Ordering};
 //!
-//! use panic_semihosting as _;
+//! use heapless::mpmc::Queue;
 //!
-//! use cortex_m::{asm, peripheral::syst::SystClkSource};
-//! use cortex_m_rt::{entry, exception};
-//! use cortex_m_semihosting::hprintln;
-//! use heapless::mpmc::Queue::<_, 2>;
+//! static Q: Queue<u8, 2> = Queue::new();
 //!
-//! static Q: Queue::<_, 2><u8> = Q2::new();
-//!
-//! #[entry]
-//! fn main() -> ! {
-//!     if let Some(p) = cortex_m::Peripherals::take() {
-//!         let mut syst = p.SYST;
-//!
-//!         // configures the system timer to trigger a SysTick exception every second
-//!         syst.set_clock_source(SystClkSource::Core);
-//!         syst.set_reload(12_000_000);
-//!         syst.enable_counter();
-//!         syst.enable_interrupt();
-//!     }
+//! fn main() {
+//!     // Configure systick interrupt.
 //!
 //!     loop {
 //!         if let Some(x) = Q.dequeue() {
-//!             hprintln!("{}", x).ok();
+//!             println!("{}", x);
 //!         } else {
-//!             asm::wfi();
+//!             // Wait for interrupt.
 //!         }
+//! #       break
 //!     }
 //! }
 //!
-//! #[exception]
-//! fn SysTick() {
-//!     static mut COUNT: u8 = 0;
+//! fn systick() {
+//!     static COUNT: AtomicU8 = AtomicU8::new(0);
+//!     let count = COUNT.fetch_add(1, Ordering::SeqCst);
 //!
-//!     Q.enqueue(*COUNT).ok();
-//!     *COUNT += 1;
+//! #   let _ =
+//!     Q.enqueue(count);
 //! }
 //! ```
 //!
 //! # Benchmark
 //!
-//! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles
+//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled with `-C opt-level=z`:
 //!
-//! N| `Q8::<u8>::enqueue().ok()` (`z`) | `Q8::<u8>::dequeue()` (`z`) |
-//! -|----------------------------------|-----------------------------|
-//! 0|34                                |35                           |
-//! 1|52                                |53                           |
-//! 2|69                                |71                           |
+//! | Method                      | Time | N  |
+//! |:----------------------------|-----:|---:|
+//! | `Queue::<u8, 8>::enqueue()` |   34 |  0 |
+//! | `Queue::<u8, 8>::enqueue()` |   52 |  1 |
+//! | `Queue::<u8, 8>::enqueue()` |   69 |  2 |
+//! | `Queue::<u8, 8>::dequeue()` |   35 |  0 |
+//! | `Queue::<u8, 8>::dequeue()` |   53 |  1 |
+//! | `Queue::<u8, 8>::dequeue()` |   71 |  2 |
 //!
-//! - `N` denotes the number of *interruptions*. On Cortex-M, an interruption consists of an
+//! - N denotes the number of interruptions. On Cortex-M, an interruption consists of an
 //!   interrupt handler preempting the would-be atomic section of the `enqueue`/`dequeue`
 //!   operation. Note that it does *not* matter if the higher priority handler uses the queue or
 //!   not.
-//! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
-//! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
-//!   `memcpy(T)` in their successful path.
-//! - The optimization level is indicated in parentheses.
-//! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
-//!   and `Ok` is returned by `enqueue`).
-//!
-//! # Portability
-//!
-//! This module requires CAS atomic instructions which are not available on all architectures
-//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
-//! emulated however with [`portable-atomic`](https://crates.io/crates/portable-atomic), which is
-//! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
-//! targets.
+//! - All execution times are in clock cycles (1 clock cycle = 125 ns).
+//! - Execution time is *dependent* on `mem::size_of::<T>()`, as both operations include
+//!   `ptr::read::<T>()` or `ptr::write::<T>()` in their successful path.
+//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
+//!   and `enqueue` returning `Ok`.
 //!
 //! # References
 //!
-//! This is an implementation of Dmitry Vyukov's ["Bounded MPMC queue"][0] minus the cache padding.
+//! This is an implementation of Dmitry Vyukov's [bounded MPMC queue], minus the
+//! cache padding.
 //!
-//! [0]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+//! [bounded MPMC queue]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
@@ -122,18 +104,24 @@ pub struct QueueInner<T, S: Storage> {
     buffer: UnsafeCell<S::Buffer<Cell<T>>>,
 }
 
-/// MPMC queue with a capacity for N elements
-/// N must be a power of 2
-/// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
+/// A statically allocated multi-producer, multi-consumer queue with a capacity of `N` elements.
+///
+/// <div class="warning">
+///
+/// `N` must be a power of 2.
+///
+/// </div>
+///
+/// The maximum value of `N` is 128 if the `mpmc_large` feature is not enabled.
 pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
-/// MPMC queue with a capacity for N elements
-/// N must be a power of 2
-/// The max value of N is `u8::MAX` - 1 if `mpmc_large` feature is not enabled.
+/// A [`Queue`] with dynamic capacity.
+///
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
-    /// Creates an empty queue
+    /// Creates an empty queue.
     pub const fn new() -> Self {
         const {
             assert!(N > 1);
@@ -156,17 +144,23 @@ impl<T, const N: usize> Queue<T, N> {
         }
     }
 
-    /// Used in `Storage` implementation
+    /// Used in `Storage` implementation.
     pub(crate) fn as_view_private(&self) -> &QueueView<T> {
         self
     }
-    /// Used in `Storage` implementation
+    /// Used in `Storage` implementation.
     pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
         self
     }
 }
 
 impl<T, S: Storage> QueueInner<T, S> {
+    /// Returns the maximum number of elements the queue can hold.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        S::len(self.buffer.get())
+    }
+
     /// Get a reference to the `Queue`, erasing the `N` const-generic.
     ///
     ///
@@ -212,14 +206,14 @@ impl<T, S: Storage> QueueInner<T, S> {
         (S::len(self.buffer.get()) - 1) as _
     }
 
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    /// Returns the item in the front of the queue, or `None` if the queue is empty.
     pub fn dequeue(&self) -> Option<T> {
         unsafe { dequeue(S::as_ptr(self.buffer.get()), &self.dequeue_pos, self.mask()) }
     }
 
-    /// Adds an `item` to the end of the queue
+    /// Adds an `item` to the end of the queue.
     ///
-    /// Returns back the `item` if the queue is full
+    /// Returns back the `item` if the queue is full.
     pub fn enqueue(&self, item: T) -> Result<(), T> {
         unsafe {
             enqueue(
@@ -240,7 +234,7 @@ impl<T, const N: usize> Default for Queue<T, N> {
 
 impl<T, S: Storage> Drop for QueueInner<T, S> {
     fn drop(&mut self) {
-        // drop all contents currently in the queue
+        // Drop all elements currently in the queue.
         while self.dequeue().is_some() {}
     }
 }
@@ -415,6 +409,8 @@ mod tests {
         const CAPACITY: usize = 256;
 
         let q: Queue<u8, CAPACITY> = Queue::new();
+
+        assert_eq!(q.capacity(), CAPACITY);
 
         for _ in 0..CAPACITY {
             q.enqueue(0xAA).unwrap();
