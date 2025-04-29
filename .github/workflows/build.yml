@@ -164,8 +164,13 @@ jobs:
       - name: cargo check
         run: |
           cargo check --target=${{ matrix.target }}
+          cargo check --target=${{ matrix.target }} --features="alloc"
+          cargo check --target=${{ matrix.target }} --features="bytes"
+          cargo check --target=${{ matrix.target }} --features="defmt"
+          cargo check --target=${{ matrix.target }} --features="mpmc_large"
           cargo check --target=${{ matrix.target }} --features="portable-atomic-critical-section"
-          cargo check --target=${{ matrix.target }} --features="ufmt serde defmt mpmc_large alloc"
+          cargo check --target=${{ matrix.target }} --features="serde"
+          cargo check --target=${{ matrix.target }} --features="ufmt"
 
   doc:
     name: doc
@@ -208,7 +213,7 @@ jobs:
 
       - name: cargo rustdoc
         env: {"RUSTDOCFLAGS": "-D warnings --cfg docsrs"}
-        run: cargo rustdoc --target=${{ matrix.target }} --features="ufmt serde defmt mpmc_large portable-atomic-critical-section alloc"
+        run: cargo rustdoc --target=${{ matrix.target }} --features="alloc bytes defmt mpmc_large portable-atomic-critical-section serde ufmt"
 
   # Run cpass tests
   testcpass:
@@ -255,7 +260,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: cargo test
-        run: cargo test --test cpass --target=${{ matrix.target }} --features=serde ${{ matrix.buildtype }}
+        run: cargo test --test cpass --target=${{ matrix.target }} ${{ matrix.buildtype }}
 
   # Run test suite for UI
   testtsan:
