@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `bytes::BufMut` is now implemented on `VecInner`.
+
+### Fixed
+
+- CI now uses flags specified in `Cargo.toml` for `rustdoc` tests.
+
+### Removed
+
+- Removed invalid `bytes::Buf` implementation.
+
 ## [v0.9.0] - 2025-04-28
 
 ### Added
@@ -90,13 +102,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - The `IndexMapValues` type is now inside the `index_map` module and has been renamed to `Values`.
 - The `IndexMapValuesMut` type is now inside the `index_map` module and has been renamed to `ValuesMut`.
 - The `histbuf` module has been renamed to `history_buf`.
-- The `HistoryBuffer` type has been renamed to `HistoryBuf`. 
-- The `HistoryBufferView` type has been renamed to `HistoryBufView`. 
-- The `OwnedHistBufStorage` type has been renamed to `OwnedHistoryBufStorage`. 
-- The `ViewHistBufStorage` type has been renamed to `ViewHistoryBufStorage`. 
-- The `MpMcQueue` type has been renamed to `Queue`. 
-- The `MpMcQueueView` type has been renamed to `QueueView`. 
-- The `MpMcQueueInner` type has been renamed to `QueueInner`. 
+- The `HistoryBuffer` type has been renamed to `HistoryBuf`.
+- The `HistoryBufferView` type has been renamed to `HistoryBufView`.
+- The `OwnedHistBufStorage` type has been renamed to `OwnedHistoryBufStorage`.
+- The `ViewHistBufStorage` type has been renamed to `ViewHistoryBufStorage`.
+- The `MpMcQueue` type has been renamed to `Queue`.
+- The `MpMcQueueView` type has been renamed to `QueueView`.
+- The `MpMcQueueInner` type has been renamed to `QueueInner`.
 - Remove `Q*` type aliases for `MpMcQueue`, and rename it to just `Queue`
 - Changed `Queue::split` to be `const`.
 
