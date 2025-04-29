@@ -163,14 +163,21 @@ jobs:
 
       - name: cargo check
         run: |
-          cargo check --target=${{ matrix.target }}
-          cargo check --target=${{ matrix.target }} --features="alloc"
-          cargo check --target=${{ matrix.target }} --features="bytes"
-          cargo check --target=${{ matrix.target }} --features="defmt"
-          cargo check --target=${{ matrix.target }} --features="mpmc_large"
-          cargo check --target=${{ matrix.target }} --features="portable-atomic-critical-section"
-          cargo check --target=${{ matrix.target }} --features="serde"
-          cargo check --target=${{ matrix.target }} --features="ufmt"
+          cargo check --target="${target}"
+          cargo check --target="${target}" --features="alloc"
+
+          # Needs native atomics, since `bytes` doesn't support `portable-atomic`.
+          if [ "${target}" != "riscv32imc-unknown-none-elf" ] && [ "${target}" != "thumbv6m-none-eabi" ]; then
+            cargo check --target="${target}" --features="bytes"
+          fi
+
+          cargo check --target="${target}" --features="defmt"
+          cargo check --target="${target}" --features="mpmc_large"
+          cargo check --target="${target}" --features="portable-atomic-critical-section"
+          cargo check --target="${target}" --features="serde"
+          cargo check --target="${target}" --features="ufmt"
+        env:
+          target: ${{ matrix.target }}
 
   doc:
     name: doc
