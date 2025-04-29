@@ -117,11 +117,11 @@
 //! - [`IndexMap`]: A hash table.
 //! - [`IndexSet`]: A hash set.
 //! - [`LinearMap`]: A linear map.
+//! - [`mpmc::Queue`](mpmc): A lock-free multi-producer, multi-consumer queue.
+//! - [`spsc::Queue`](spsc): A lock-free single-producer, single-consumer queue.
 //! - [`SortedLinkedList`](sorted_linked_list::SortedLinkedList): A sorted linked list.
 //! - [`String`]: A string.
 //! - [`Vec`]: A vector.
-//! - [`mpmc::MpMcQueue`](mpmc): A lock-free multiple-producer, multiple-consumer queue.
-//! - [`spsc::Queue`](spsc): A lock-free single-producer, single-consumer queue.
 //!
 //! # Minimum Supported Rust Version (MSRV)
 //!
@@ -199,12 +199,15 @@ pub mod binary_heap;
 mod bytes;
 #[cfg(feature = "defmt")]
 mod defmt;
-#[cfg(any(
-    // assume we have all atomics available if we're using portable-atomic
-    feature = "portable-atomic",
-    // target has native atomic CAS (mpmc_large requires usize, otherwise just u8)
-    all(feature = "mpmc_large", target_has_atomic = "ptr"),
-    all(not(feature = "mpmc_large"), target_has_atomic = "8")
+#[cfg(all(
+    feature = "mpmc",
+    any(
+        // Assume all atomics are available if we're using `portable-atomic`.
+        feature = "portable-atomic",
+        // Target has native atomic CAS (`mpmc_large` requires `usize`, otherwise just `u8`).
+        all(feature = "mpmc_large", target_has_atomic = "ptr"),
+        all(not(feature = "mpmc_large"), target_has_atomic = "8"),
+    )
 ))]
 pub mod mpmc;
 #[cfg(any(
@@ -223,14 +226,17 @@ pub mod mpmc;
 ))]
 pub mod pool;
 pub mod sorted_linked_list;
-#[cfg(any(
-    // assume we have all atomics available if we're using portable-atomic
-    feature = "portable-atomic",
-    // target has native atomic CAS. Note this is too restrictive, spsc requires load/store only, not CAS.
-    // This should be `cfg(target_has_atomic_load_store)`, but that's not stable yet.
-    target_has_atomic = "ptr",
-    // or the current target is in a list in build.rs of targets known to have load/store but no CAS.
-    has_atomic_load_store
+#[cfg(all(
+    feature = "spsc",
+    any(
+        // Assume all atomics are available if we're using `portable-atomic`.
+        feature = "portable-atomic",
+        // Target has native atomic CAS. This is too restrictive since `spsc` only requires
+        // load/store, but `cfg(target_has_atomic_load_store = "ptr")` is not stable yet.
+        target_has_atomic = "ptr",
+        // The current target is in a list in `build.rs` known to have load/store but no CAS.
+        has_atomic_load_store,
+    )
 ))]
 pub mod spsc;
 
