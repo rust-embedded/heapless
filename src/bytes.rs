@@ -1,36 +1,9 @@
 //! Bytes implementations for heapless types
 
-use crate::Vec;
-use bytes::{buf::UninitSlice, Buf, BufMut};
+use crate::{len_type::LenType, Vec};
+use bytes::{buf::UninitSlice, BufMut};
 
-unsafe impl<const N: usize> Buf for Vec<u8, N> {
-    #[inline]
-    fn remaining(&self) -> usize {
-        self.len()
-    }
-
-    #[inline]
-    fn chunk(&mut self) -> &[u8] {
-        self.as_slice()
-    }
-
-    #[inline]
-    unsafe fn advance(&mut self, cnt: usize) {
-        assert!(
-            cnt <= self.remaining(),
-            "cannot advance past `remaining`: {:?} <= {:?}",
-            cnt,
-            self.remaining(),
-        );
-        unsafe {
-            // SAFETY: We've checked that `cnt` <= `self.remaining()` and we know that
-            // `self.remaining()` <= `self.cap`.
-            self.advance_unchecked(cnt);
-        }
-    }
-}
-
-unsafe impl<const N: usize> BufMut for Vec<u8, N> {
+unsafe impl<const N: usize, LenT: LenType> BufMut for Vec<u8, N, LenT> {
     #[inline]
     fn remaining_mut(&self) -> usize {
         N - self.len()
@@ -58,29 +31,6 @@ unsafe impl<const N: usize> BufMut for Vec<u8, N> {
 mod tests {
     use crate::Vec;
     use bytes::BufMut;
-
-    #[test]
-    #[should_panic]
-    fn buf_advance_out_of_bounds() {
-        let mut vec: Vec<u8, 8> = Vec::new();
-        vec.advance(9)
-    }
-
-    #[test]
-    fn buf_remaining() {
-        let mut vec: Vec<u8, 8> = Vec::new();
-        assert_eq!(vec.remaining(), 8);
-        vec.push(42).unwrap();
-        assert_eq!(vec.remaining(), 7);
-    }
-
-    #[test]
-    fn buf_chunk() {
-        let mut vec: Vec<u8, 8> = Vec::new();
-        assert_eq!(vec.chunk().len(), 8);
-        unsafe { vec.advance_mut(1) };
-        assert_eq!(vec.chunk().len(), 7);
-    }
 
     #[test]
     #[should_panic]
