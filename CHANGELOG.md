@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - `bytes::BufMut` is now implemented on `VecInner`.
+- Removed generic from `history_buf::OldestOrdered`.
 
 ### Fixed
 
