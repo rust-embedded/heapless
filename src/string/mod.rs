@@ -11,7 +11,7 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::{len_type::DefaultLenType, CapacityError};
+use crate::CapacityError;
 use crate::{
     len_type::LenType,
     vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage},
@@ -147,10 +147,10 @@ pub struct StringInner<LenT: LenType, S: StringStorage + ?Sized> {
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type String<const N: usize, LenT = DefaultLenType<N>> = StringInner<LenT, OwnedStorage<N>>;
+pub type String<const N: usize, LenT = usize> = StringInner<LenT, OwnedStorage<N>>;
 
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type StringView<LenT> = StringInner<LenT, ViewStorage>;
+pub type StringView<LenT = usize> = StringInner<LenT, ViewStorage>;
 
 impl<LenT: LenType, const N: usize> String<N, LenT> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
@@ -938,8 +938,12 @@ pub fn format<const N: usize, LenT: LenType>(
 macro_rules! format {
     // Without semicolon as separator to disambiguate between arms, Rust just
     // chooses the first so that the format string would land in $max.
+    ($max:expr; $lenT:path; $($arg:tt)*) => {{
+        let res = $crate::_export::format::<$max, $lenT>(core::format_args!($($arg)*));
+        res
+    }};
     ($max:expr; $($arg:tt)*) => {{
-        let res = $crate::_export::format::<$max, $crate::_export::DefaultLenType<$max>>(core::format_args!($($arg)*));
+        let res = $crate::_export::format::<$max, usize>(core::format_args!($($arg)*));
         res
     }};
     ($($arg:tt)*) => {{
@@ -973,7 +977,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{CapacityError, String, Vec};
+    use crate::{len_type::ZeroLenType, CapacityError, String, Vec};
 
     #[test]
     fn static_new() {
@@ -1239,7 +1243,7 @@ mod tests {
 
     #[test]
     fn zero_capacity() {
-        let mut s: String<0> = String::new();
+        let mut s: String<0, ZeroLenType> = String::new();
         // Validate capacity
         assert_eq!(s.capacity(), 0);
 

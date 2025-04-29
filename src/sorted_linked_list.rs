@@ -8,7 +8,7 @@
 //!
 //! ```
 //! use heapless::sorted_linked_list::{Max, SortedLinkedList};
-//! let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+//! let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
 //!
 //! // The largest value will always be first
 //! ll.push(1).unwrap();
@@ -156,7 +156,7 @@ pub use storage::{
     OwnedSortedLinkedListStorage, SortedLinkedListStorage, ViewSortedLinkedListStorage,
 };
 
-use crate::len_type::{DefaultLenType, LenType};
+use crate::len_type::LenType;
 
 /// Marker for Min sorted [`SortedLinkedList`].
 pub struct Min;
@@ -212,7 +212,7 @@ where
 }
 
 /// The linked list.
-pub type SortedLinkedList<T, K, const N: usize, Idx = DefaultLenType<N>> =
+pub type SortedLinkedList<T, K, const N: usize, Idx = usize> =
     SortedLinkedListInner<T, Idx, K, OwnedSortedLinkedListStorage<T, Idx, N>>;
 
 /// The linked list.
@@ -391,7 +391,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// // The largest value will always be first
     /// ll.push(1).unwrap();
@@ -421,7 +421,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, Min, SortedLinkedList};
-    /// let mut ll_max: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll_max: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// // The largest value will always be first
     /// ll_max.push(1).unwrap();
@@ -431,7 +431,7 @@ where
     /// ll_max.push(3).unwrap();
     /// assert_eq!(ll_max.peek(), Some(&3));
     ///
-    /// let mut ll_min: SortedLinkedList<_, Min, 3> = SortedLinkedList::new_u8();
+    /// let mut ll_min: SortedLinkedList<_, Min, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// // The Smallest value will always be first
     /// ll_min.push(3).unwrap();
@@ -470,7 +470,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
@@ -493,7 +493,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// assert_eq!(ll.is_full(), false);
     ///
@@ -515,7 +515,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// assert_eq!(ll.is_empty(), true);
     ///
@@ -541,7 +541,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
@@ -565,7 +565,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
@@ -695,7 +695,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
@@ -725,7 +725,7 @@ where
     ///
     /// ```
     /// use heapless::sorted_linked_list::{Max, SortedLinkedList};
-    /// let mut ll: SortedLinkedList<_, Max, 3> = SortedLinkedList::new_u8();
+    /// let mut ll: SortedLinkedList<_, Max, 3, u8> = SortedLinkedList::new_u8();
     ///
     /// ll.push(1).unwrap();
     /// ll.push(2).unwrap();
@@ -863,7 +863,7 @@ mod tests {
 
     #[test]
     fn test_peek() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
 
         ll.push(1).unwrap();
         assert_eq!(ll.peek().unwrap(), &1);
@@ -874,7 +874,7 @@ mod tests {
         ll.push(3).unwrap();
         assert_eq!(ll.peek().unwrap(), &3);
 
-        let mut ll: SortedLinkedList<u32, Min, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Min, 3, u8> = SortedLinkedList::new_u8();
 
         ll.push(2).unwrap();
         assert_eq!(ll.peek().unwrap(), &2);
@@ -888,7 +888,7 @@ mod tests {
 
     #[test]
     fn test_full() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
         ll.push(1).unwrap();
         ll.push(2).unwrap();
         ll.push(3).unwrap();
@@ -898,7 +898,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
 
         assert!(ll.is_empty());
     }
@@ -913,7 +913,7 @@ mod tests {
 
     #[test]
     fn test_rejected_push() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
         ll.push(1).unwrap();
         ll.push(2).unwrap();
         ll.push(3).unwrap();
@@ -926,7 +926,7 @@ mod tests {
 
     #[test]
     fn test_updating() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
         ll.push(1).unwrap();
         ll.push(2).unwrap();
         ll.push(3).unwrap();
@@ -953,7 +953,7 @@ mod tests {
 
     #[test]
     fn test_updating_1() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
         ll.push(1).unwrap();
 
         let v = ll.pop().unwrap();
@@ -963,7 +963,7 @@ mod tests {
 
     #[test]
     fn test_updating_2() {
-        let mut ll: SortedLinkedList<u32, Max, 3> = SortedLinkedList::new_u8();
+        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
         ll.push(1).unwrap();
 
         let mut find = ll.find_mut(|v| *v == 1).unwrap();
