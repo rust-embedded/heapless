@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Removed invalid `bytes::Buf` implementation.
 
-## [v0.9.0] - 2025-04-28
+## [v0.9.0] - 2025-04-28 [YANKED]
 
 ### Added
 
