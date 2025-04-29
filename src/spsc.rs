@@ -62,7 +62,7 @@
 //! }
 //!
 //! // This is a different execution context that can preempt `main`.
-//! fn interrupt_handler(producer: &mut Producer<'static, Event, 4>) {
+//! fn interrupt_handler(producer: &mut Producer<'static, Event>) {
 //! #   let condition = true;
 //!
 //!     // ..
@@ -218,19 +218,19 @@ impl<T, S: Storage> QueueInner<T, S> {
     }
 
     /// Iterates from the front of the queue to the back.
-    pub fn iter(&self) -> IterInner<'_, T, S> {
-        IterInner {
-            rb: self,
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            rb: self.as_view(),
             index: 0,
             len: self.len(),
         }
     }
 
     /// Returns an iterator that allows modifying each value.
-    pub fn iter_mut(&mut self) -> IterMutInner<'_, T, S> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         let len = self.len();
-        IterMutInner {
-            rb: self,
+        IterMut {
+            rb: self.as_view(),
             index: 0,
             len,
         }
@@ -363,6 +363,30 @@ impl<T, S: Storage> QueueInner<T, S> {
 
     /// Splits a queue into producer and consumer endpoints.
     ///
+    /// If you need this function in a `const` context, check out [`Queue::split_const`] and [`QueueView::split_const`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use heapless::spsc::Queue;
+    /// let mut queue: Queue<(), 4> = Queue::new();
+    /// let (mut producer, mut consumer) = queue.split();
+    /// producer.enqueue(()).unwrap();
+    /// assert_eq!(consumer.dequeue(), Some(()));
+    /// ```
+    pub fn split(&mut self) -> (Producer<'_, T>, Consumer<'_, T>) {
+        (
+            Producer { rb: self.as_view() },
+            Consumer { rb: self.as_view() },
+        )
+    }
+}
+
+impl<T, const N: usize> Queue<T, N> {
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// Unlike [`Queue::split`](), this method can be used in a `const` context
+    ///
     /// # Examples
     ///
     /// Create a queue at compile time, split it at runtime,
@@ -373,12 +397,11 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// use critical_section::Mutex;
     /// use heapless::spsc::{Producer, Queue};
     ///
-    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, (), 4>>>> =
-    ///     Mutex::new(RefCell::new(None));
+    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, ()>>>> = Mutex::new(RefCell::new(None));
     ///
     /// fn interrupt() {
     ///     let mut producer = {
-    ///         static mut P: Option<Producer<'static, (), 4>> = None;
+    ///         static mut P: Option<Producer<'static, ()>> = None;
     ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
     ///         // and `interrupt` cannot be called directly or preempt itself.
     ///         unsafe { &mut P }
@@ -427,13 +450,13 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// use heapless::spsc::{Consumer, Producer, Queue};
     ///
     /// static PC: (
-    ///     Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
-    ///     Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+    ///     Mutex<RefCell<Option<Producer<'_, ()>>>>,
+    ///     Mutex<RefCell<Option<Consumer<'_, ()>>>>,
     /// ) = {
     ///     static mut Q: Queue<(), 4> = Queue::new();
     ///     // SAFETY: `Q` is only accessible in this scope.
     ///     #[allow(static_mut_refs)]
-    ///     let (p, c) = unsafe { Q.split() };
+    ///     let (p, c) = unsafe { Q.split_const() };
     ///
     ///     (
     ///         Mutex::new(RefCell::new(Some(p))),
@@ -443,7 +466,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     ///
     /// fn interrupt() {
     ///     let mut producer = {
-    ///         static mut P: Option<Producer<'_, (), 4>> = None;
+    ///         static mut P: Option<Producer<'_, ()>> = None;
     ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
     ///         // and `interrupt` cannot be called directly or preempt itself.
     ///         unsafe { &mut P }
@@ -464,8 +487,118 @@ impl<T, S: Storage> QueueInner<T, S> {
     ///     consumer.dequeue().unwrap();
     /// }
     /// ```
-    pub const fn split(&mut self) -> (ProducerInner<'_, T, S>, ConsumerInner<'_, T, S>) {
-        (ProducerInner { rb: self }, ConsumerInner { rb: self })
+    pub const fn split_const(&mut self) -> (Producer<'_, T>, Consumer<'_, T>) {
+        (Producer { rb: self }, Consumer { rb: self })
+    }
+}
+
+impl<T> QueueView<T> {
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// Unlike [`Queue::split`](), this method can be used in a `const` context
+    ///
+    /// # Examples
+    ///
+    /// Create a queue at compile time, split it at runtime,
+    /// and pass it to an interrupt handler via a mutex.
+    ///
+    /// ```
+    /// use core::cell::RefCell;
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Producer, Queue};
+    ///
+    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, ()>>>> = Mutex::new(RefCell::new(None));
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'static, ()>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PRODUCER.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = {
+    ///         let (p, c) = {
+    ///             static mut Q: Queue<(), 4> = Queue::new();
+    ///             // SAFETY: `Q` is only accessible in this scope
+    ///             // and `main` is only called once.
+    ///             #[allow(static_mut_refs)]
+    ///             unsafe {
+    ///                 Q.split()
+    ///             }
+    ///         };
+    ///
+    ///         critical_section::with(move |cs| {
+    ///             let mut producer = PRODUCER.borrow_ref_mut(cs);
+    ///             *producer = Some(p);
+    ///         });
+    ///
+    ///         c
+    ///     };
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    ///
+    /// Create and split a queue at compile time, and pass it to the main
+    /// function and an interrupt handler via a mutex at runtime.
+    ///
+    /// ```
+    /// use core::cell::RefCell;
+    ///
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Consumer, Producer, Queue};
+    ///
+    /// static PC: (
+    ///     Mutex<RefCell<Option<Producer<'_, ()>>>>,
+    ///     Mutex<RefCell<Option<Consumer<'_, ()>>>>,
+    /// ) = {
+    ///     static mut Q: Queue<(), 4> = Queue::new();
+    ///     // SAFETY: `Q` is only accessible in this scope.
+    ///     #[allow(static_mut_refs)]
+    ///     let (p, c) = unsafe { Q.split_const() };
+    ///
+    ///     (
+    ///         Mutex::new(RefCell::new(Some(p))),
+    ///         Mutex::new(RefCell::new(Some(c))),
+    ///     )
+    /// };
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'_, ()>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    pub const fn split_const(&mut self) -> (Producer<'_, T>, Consumer<'_, T>) {
+        (Producer { rb: self }, Consumer { rb: self })
     }
 }
 
@@ -507,23 +640,14 @@ where
 
 impl<T, S: Storage> Eq for QueueInner<T, S> where T: Eq {}
 
-/// Base struct for [`Iter`] and [`IterView`], generic over the [`Storage`].
-///
-/// In most cases you should use [`Iter`] or [`IterView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct IterInner<'a, T, S: Storage> {
-    rb: &'a QueueInner<T, S>,
+/// An iterator over the items of a queue.
+pub struct Iter<'a, T> {
+    rb: &'a QueueView<T>,
     index: usize,
     len: usize,
 }
 
-/// An iterator over the items of a queue.
-pub type Iter<'a, T, const N: usize> = IterInner<'a, T, OwnedStorage<N>>;
-
-/// An iterator over the items of a queue.
-pub type IterView<'a, T> = IterInner<'a, T, ViewStorage>;
-
-impl<T, const N: usize> Clone for Iter<'_, T, N> {
+impl<T> Clone for Iter<'_, T> {
     fn clone(&self) -> Self {
         Self {
             rb: self.rb,
@@ -533,23 +657,13 @@ impl<T, const N: usize> Clone for Iter<'_, T, N> {
     }
 }
 
-/// Base struct for [`IterMut`] and [`IterMutView`], generic over the [`Storage`].
-///
-/// In most cases you should use [`IterMut`] or [`IterMutView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct IterMutInner<'a, T, S: Storage> {
-    rb: &'a QueueInner<T, S>,
+/// An iterator over the items of a queue.
+pub struct IterMut<'a, T> {
+    rb: &'a QueueView<T>,
     index: usize,
     len: usize,
 }
-
-/// An iterator over the items of a queue.
-pub type IterMut<'a, T, const N: usize> = IterMutInner<'a, T, OwnedStorage<N>>;
-
-/// An iterator over the items of a queue.
-pub type IterMutView<'a, T> = IterMutInner<'a, T, ViewStorage>;
-
-impl<'a, T, S: Storage> Iterator for IterInner<'a, T, S> {
+impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -566,7 +680,7 @@ impl<'a, T, S: Storage> Iterator for IterInner<'a, T, S> {
     }
 }
 
-impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
+impl<'a, T> Iterator for IterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -583,7 +697,7 @@ impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
     }
 }
 
-impl<T, S: Storage> DoubleEndedIterator for IterInner<'_, T, S> {
+impl<T> DoubleEndedIterator for Iter<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
@@ -598,7 +712,7 @@ impl<T, S: Storage> DoubleEndedIterator for IterInner<'_, T, S> {
     }
 }
 
-impl<T, S: Storage> DoubleEndedIterator for IterMutInner<'_, T, S> {
+impl<T> DoubleEndedIterator for IterMut<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
@@ -648,7 +762,7 @@ where
 
 impl<'a, T, S: Storage> IntoIterator for &'a QueueInner<T, S> {
     type Item = &'a T;
-    type IntoIter = IterInner<'a, T, S>;
+    type IntoIter = Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -657,54 +771,32 @@ impl<'a, T, S: Storage> IntoIterator for &'a QueueInner<T, S> {
 
 impl<'a, T, S: Storage> IntoIterator for &'a mut QueueInner<T, S> {
     type Item = &'a mut T;
-    type IntoIter = IterMutInner<'a, T, S>;
+    type IntoIter = IterMut<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
 }
 
-/// Base struct for [`Consumer`] and [`ConsumerView`], generic over the [`Storage`].
-///
-/// In most cases you should use [`Consumer`] or [`ConsumerView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct ConsumerInner<'a, T, S: Storage> {
-    rb: &'a QueueInner<T, S>,
-}
-
 /// A consumer; it can dequeue items from the queue.
 ///
 /// **Note:** The consumer semantically owns the `head` pointer of the queue.
-pub type Consumer<'a, T, const N: usize> = ConsumerInner<'a, T, OwnedStorage<N>>;
-
-/// A consumer; it can dequeue items from the queue.
-///
-/// **Note:** The consumer semantically owns the `head` pointer of the queue.
-pub type ConsumerView<'a, T> = ConsumerInner<'a, T, ViewStorage>;
-
-unsafe impl<T, S: Storage> Send for ConsumerInner<'_, T, S> where T: Send {}
-
-/// Base struct for [`Producer`] and [`ProducerView`], generic over the [`Storage`].
-///
-/// In most cases you should use [`Producer`] or [`ProducerView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct ProducerInner<'a, T, S: Storage> {
-    rb: &'a QueueInner<T, S>,
+pub struct Consumer<'a, T> {
+    rb: &'a QueueView<T>,
 }
+
+unsafe impl<T> Send for Consumer<'_, T> where T: Send {}
 
 /// A producer; it can enqueue items into the queue.
 ///
 /// **Note:** The producer semantically owns the `tail` pointer of the queue.
-pub type Producer<'a, T, const N: usize> = ProducerInner<'a, T, OwnedStorage<N>>;
+pub struct Producer<'a, T> {
+    rb: &'a QueueView<T>,
+}
 
-/// A producer; it can enqueue items into the queue.
-///
-/// **Note:** The producer semantically owns the `tail` pointer of the queue.
-pub type ProducerView<'a, T> = ProducerInner<'a, T, ViewStorage>;
+unsafe impl<T> Send for Producer<'_, T> where T: Send {}
 
-unsafe impl<T, S: Storage> Send for ProducerInner<'_, T, S> where T: Send {}
-
-impl<T, S: Storage> ConsumerInner<'_, T, S> {
+impl<T> Consumer<'_, T> {
     /// Returns the item in the front of the queue, or `None` if the queue is empty.
     #[inline]
     pub fn dequeue(&mut self) -> Option<T> {
@@ -779,7 +871,7 @@ impl<T, S: Storage> ConsumerInner<'_, T, S> {
     }
 }
 
-impl<T, S: Storage> ProducerInner<'_, T, S> {
+impl<T> Producer<'_, T> {
     /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full.
     #[inline]
     pub fn enqueue(&mut self, item: T) -> Result<(), T> {
@@ -844,10 +936,10 @@ mod tests {
     assert_not_impl_any!(Queue<*const (), 4>: Send);
 
     // Ensure a `Producer` containing `!Send` values stays `!Send` itself.
-    assert_not_impl_any!(Producer<*const (), 4>: Send);
+    assert_not_impl_any!(Producer<*const ()>: Send);
 
     // Ensure a `Consumer` containing `!Send` values stays `!Send` itself.
-    assert_not_impl_any!(Consumer<*const (), 4>: Send);
+    assert_not_impl_any!(Consumer<*const ()>: Send);
 
     #[test]
     fn const_split() {
@@ -858,13 +950,13 @@ mod tests {
 
         #[allow(clippy::type_complexity)]
         static PC: (
-            Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
-            Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+            Mutex<RefCell<Option<Producer<'_, ()>>>>,
+            Mutex<RefCell<Option<Consumer<'_, ()>>>>,
         ) = {
             static mut Q: Queue<(), 4> = Queue::new();
             // SAFETY: `Q` is only accessible in this scope.
             #[allow(static_mut_refs)]
-            let (p, c) = unsafe { Q.split() };
+            let (p, c) = unsafe { Q.split_const() };
 
             (
                 Mutex::new(RefCell::new(Some(p))),
@@ -874,8 +966,8 @@ mod tests {
         let producer = critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap());
         let consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
 
-        let mut producer: Producer<'static, (), 4> = producer;
-        let mut consumer: Consumer<'static, (), 4> = consumer;
+        let mut producer: Producer<'static, ()> = producer;
+        let mut consumer: Consumer<'static, ()> = consumer;
 
         assert_eq!(producer.enqueue(()), Ok(()));
         assert_eq!(consumer.dequeue(), Some(()));
