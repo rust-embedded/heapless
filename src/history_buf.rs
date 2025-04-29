@@ -520,10 +520,9 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     ///     assert_eq!(x, y)
     /// }
     /// ```
-    pub fn oldest_ordered(&self) -> OldestOrderedInner<'_, T, S> {
+    pub fn oldest_ordered(&self) -> OldestOrdered<'_, T> {
         let (old, new) = self.as_slices();
-        OldestOrderedInner {
-            phantom: PhantomData,
+        OldestOrdered {
             inner: old.iter().chain(new),
         }
     }
@@ -612,62 +611,21 @@ where
     }
 }
 
-/// Base struct for [`OldestOrdered`] and [`OldestOrderedView`], generic over the [`HistoryBufStorage`].
-///
-/// In most cases you should use [`OldestOrdered`] or [`OldestOrderedView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct OldestOrderedInner<'a, T, S: HistoryBufStorage<T> + ?Sized> {
-    phantom: PhantomData<S>,
+/// Double ended iterator on the underlying buffer ordered from the oldest data
+/// to the newest.
+pub struct OldestOrdered<'a, T> {
     inner: core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>,
 }
 
-/// Double ended iterator on the underlying buffer ordered from the oldest data
-/// to the newest.
-///
-/// This type exists for backwards compatibility. It is always better to convert it to an [`OldestOrderedView`] with [`into_view`](OldestOrdered::into_view)
-pub type OldestOrdered<'a, T, const N: usize> =
-    OldestOrderedInner<'a, T, OwnedHistoryBufStorage<T, N>>;
-
-/// Double ended iterator on the underlying buffer ordered from the oldest data
-/// to the newest
-pub type OldestOrderedView<'a, T> = OldestOrderedInner<'a, T, ViewHistoryBufStorage<T>>;
-
-impl<'a, T, const N: usize> OldestOrdered<'a, T, N> {
-    /// Remove the `N` const-generic parameter from the iterator
-    ///
-    /// For the opposite operation, see [`into_legacy_iter`](OldestOrderedView::into_legacy_iter)
-    pub fn into_view(self) -> OldestOrderedView<'a, T> {
-        OldestOrderedView {
-            phantom: PhantomData,
-            inner: self.inner,
-        }
-    }
-}
-
-impl<'a, T> OldestOrderedView<'a, T> {
-    /// Add back the `N` const-generic parameter to use it with APIs expecting the legacy type
-    ///
-    /// You probably do not need this
-    ///
-    /// For the opposite operation, see [`into_view`](OldestOrdered::into_view)
-    pub fn into_legacy_iter<const N: usize>(self) -> OldestOrdered<'a, T, N> {
-        OldestOrdered {
-            phantom: PhantomData,
-            inner: self.inner,
-        }
-    }
-}
-
-impl<T, S: HistoryBufStorage<T> + ?Sized> Clone for OldestOrderedInner<'_, T, S> {
+impl<T> Clone for OldestOrdered<'_, T> {
     fn clone(&self) -> Self {
         Self {
-            phantom: PhantomData,
             inner: self.inner.clone(),
         }
     }
 }
 
-impl<'a, T, S: HistoryBufStorage<T> + ?Sized> Iterator for OldestOrderedInner<'a, T, S> {
+impl<'a, T> Iterator for OldestOrdered<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
@@ -679,7 +637,7 @@ impl<'a, T, S: HistoryBufStorage<T> + ?Sized> Iterator for OldestOrderedInner<'a
     }
 }
 
-impl<T, const N: usize> DoubleEndedIterator for OldestOrdered<'_, T, N> {
+impl<T> DoubleEndedIterator for OldestOrdered<'_, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner.next_back()
     }
