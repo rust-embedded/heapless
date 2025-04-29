@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 - Removed invalid `bytes::Buf` implementation.
+- Removed `DefaultLenType` struct.
 
 ## [v0.9.0] - 2025-04-28 [YANKED]
 

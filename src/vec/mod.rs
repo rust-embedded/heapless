@@ -1737,8 +1737,6 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use crate::len_type::ZeroLenType;
-
     use super::{Vec, VecView};
 
     // Ensure a `Vec` containing `!Send` values stays `!Send` itself.
@@ -2180,34 +2178,6 @@ mod tests {
         assert!(!v.ends_with(b"abc"));
         assert!(!v.ends_with(b"ba"));
         assert!(!v.ends_with(b"a"));
-    }
-
-    #[test]
-    fn zero_capacity() {
-        let mut v: Vec<u8, 0, ZeroLenType> = Vec::new();
-        // Validate capacity
-        assert_eq!(v.capacity(), 0);
-
-        // Make sure there is no capacity
-        assert!(v.push(1).is_err());
-
-        // Validate length
-        assert_eq!(v.len(), 0);
-
-        // Validate pop
-        assert_eq!(v.pop(), None);
-
-        // Validate slice
-        assert_eq!(v.as_slice(), &[]);
-
-        // Validate empty
-        assert!(v.is_empty());
-
-        // Validate full
-        assert!(v.is_full());
-
-        // Size of vector with zero capacity should be 0 bytes because of `ZeroLenType` optimization
-        assert_eq!(core::mem::size_of_val(&v), 0);
     }
 
     #[test]

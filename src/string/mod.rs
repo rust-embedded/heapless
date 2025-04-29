@@ -977,7 +977,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{len_type::ZeroLenType, CapacityError, String, Vec};
+    use crate::{CapacityError, String, Vec};
 
     #[test]
     fn static_new() {
@@ -1239,30 +1239,5 @@ mod tests {
     fn format_plain_string_overflow() {
         let formatted = format!(2; "123");
         assert_eq!(formatted, Err(core::fmt::Error));
-    }
-
-    #[test]
-    fn zero_capacity() {
-        let mut s: String<0, ZeroLenType> = String::new();
-        // Validate capacity
-        assert_eq!(s.capacity(), 0);
-
-        // Make sure there is no capacity
-        assert!(s.push('a').is_err());
-
-        // Validate length
-        assert_eq!(s.len(), 0);
-
-        // Validate pop
-        assert_eq!(s.pop(), None);
-
-        // Validate slice
-        assert_eq!(s.as_str(), "");
-
-        // Validate empty
-        assert!(s.is_empty());
-
-        // Size of string with zero capacity should be 0 bytes because of `ZeroLenType` optimization
-        assert_eq!(core::mem::size_of_val(&s), 0);
     }
 }
