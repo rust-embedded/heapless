@@ -368,7 +368,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let s: String<10, _> = String::try_from("hello").unwrap();
-    /// let view: &StringView<u8> = s.as_view();
+    /// let view: &StringView = s.as_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
@@ -376,7 +376,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let s: String<10, _> = String::try_from("hello").unwrap();
-    /// let view: &StringView<u8> = &s;
+    /// let view: &StringView = &s;
     /// ```
     #[inline]
     pub fn as_view(&self) -> &StringView<LenT> {
@@ -389,7 +389,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView<_> = s.as_mut_view();
+    /// let view: &mut StringView = s.as_mut_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
@@ -397,7 +397,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView<_> = &mut s;
+    /// let view: &mut StringView = &mut s;
     /// ```
     #[inline]
     pub fn as_mut_view(&mut self) -> &mut StringView<LenT> {

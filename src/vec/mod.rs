@@ -1805,7 +1805,7 @@ mod tests {
         {
             let v: Vec<Droppable, 2> = Vec::new();
             let v: Box<Vec<Droppable, 2>> = Box::new(v);
-            let mut v: Box<VecView<Droppable, usize>> = v;
+            let mut v: Box<VecView<Droppable>> = v;
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             assert_eq!(Droppable::count(), 2);
@@ -1818,7 +1818,7 @@ mod tests {
         {
             let v: Vec<Droppable, 2> = Vec::new();
             let v: Box<Vec<Droppable, 2>> = Box::new(v);
-            let mut v: Box<VecView<Droppable, usize>> = v;
+            let mut v: Box<VecView<Droppable>> = v;
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             assert_eq!(Droppable::count(), 2);
