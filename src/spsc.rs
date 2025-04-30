@@ -367,6 +367,8 @@ impl<T, S: Storage> QueueInner<T, S> {
     ///
     /// # Examples
     ///
+    /// Create a queue and split it at runtime
+    ///
     /// ```
     /// # use heapless::spsc::Queue;
     /// let mut queue: Queue<(), 4> = Queue::new();
@@ -374,20 +376,6 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// producer.enqueue(()).unwrap();
     /// assert_eq!(consumer.dequeue(), Some(()));
     /// ```
-    pub fn split(&mut self) -> (Producer<'_, T>, Consumer<'_, T>) {
-        (
-            Producer { rb: self.as_view() },
-            Consumer { rb: self.as_view() },
-        )
-    }
-}
-
-impl<T, const N: usize> Queue<T, N> {
-    /// Splits a queue into producer and consumer endpoints.
-    ///
-    /// Unlike [`Queue::split`](), this method can be used in a `const` context
-    ///
-    /// # Examples
     ///
     /// Create a queue at compile time, split it at runtime,
     /// and pass it to an interrupt handler via a mutex.
@@ -439,6 +427,20 @@ impl<T, const N: usize> Queue<T, N> {
     ///     consumer.dequeue().unwrap();
     /// }
     /// ```
+    pub fn split(&mut self) -> (Producer<'_, T>, Consumer<'_, T>) {
+        (
+            Producer { rb: self.as_view() },
+            Consumer { rb: self.as_view() },
+        )
+    }
+}
+
+impl<T, const N: usize> Queue<T, N> {
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// Unlike [`Queue::split`](), this method can be used in a `const` context
+    ///
+    /// # Example
     ///
     /// Create and split a queue at compile time, and pass it to the main
     /// function and an interrupt handler via a mutex at runtime.
@@ -497,58 +499,7 @@ impl<T> QueueView<T> {
     ///
     /// Unlike [`Queue::split`](), this method can be used in a `const` context
     ///
-    /// # Examples
-    ///
-    /// Create a queue at compile time, split it at runtime,
-    /// and pass it to an interrupt handler via a mutex.
-    ///
-    /// ```
-    /// use core::cell::RefCell;
-    /// use critical_section::Mutex;
-    /// use heapless::spsc::{Producer, Queue};
-    ///
-    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, ()>>>> = Mutex::new(RefCell::new(None));
-    ///
-    /// fn interrupt() {
-    ///     let mut producer = {
-    ///         static mut P: Option<Producer<'static, ()>> = None;
-    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
-    ///         // and `interrupt` cannot be called directly or preempt itself.
-    ///         unsafe { &mut P }
-    ///     }
-    ///     .get_or_insert_with(|| {
-    ///         critical_section::with(|cs| PRODUCER.borrow_ref_mut(cs).take().unwrap())
-    ///     });
-    ///
-    ///     producer.enqueue(()).unwrap();
-    /// }
-    ///
-    /// fn main() {
-    ///     let mut consumer = {
-    ///         let (p, c) = {
-    ///             static mut Q: Queue<(), 4> = Queue::new();
-    ///             // SAFETY: `Q` is only accessible in this scope
-    ///             // and `main` is only called once.
-    ///             #[allow(static_mut_refs)]
-    ///             unsafe {
-    ///                 Q.split()
-    ///             }
-    ///         };
-    ///
-    ///         critical_section::with(move |cs| {
-    ///             let mut producer = PRODUCER.borrow_ref_mut(cs);
-    ///             *producer = Some(p);
-    ///         });
-    ///
-    ///         c
-    ///     };
-    ///
-    ///     // Interrupt occurs.
-    /// #   interrupt();
-    ///
-    ///     consumer.dequeue().unwrap();
-    /// }
-    /// ```
+    /// # Example
     ///
     /// Create and split a queue at compile time, and pass it to the main
     /// function and an interrupt handler via a mutex at runtime.
@@ -557,13 +508,13 @@ impl<T> QueueView<T> {
     /// use core::cell::RefCell;
     ///
     /// use critical_section::Mutex;
-    /// use heapless::spsc::{Consumer, Producer, Queue};
+    /// use heapless::spsc::{Consumer, Producer, Queue, QueueView};
     ///
     /// static PC: (
     ///     Mutex<RefCell<Option<Producer<'_, ()>>>>,
     ///     Mutex<RefCell<Option<Consumer<'_, ()>>>>,
     /// ) = {
-    ///     static mut Q: Queue<(), 4> = Queue::new();
+    ///     static mut Q: &mut QueueView<()> = &mut Queue::<(), 4>::new();
     ///     // SAFETY: `Q` is only accessible in this scope.
     ///     #[allow(static_mut_refs)]
     ///     let (p, c) = unsafe { Q.split_const() };
