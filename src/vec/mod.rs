@@ -11,7 +11,7 @@ use core::{
     slice,
 };
 
-use crate::len_type::{check_capacity_fits, DefaultLenType, LenType};
+use crate::len_type::{check_capacity_fits, LenType};
 use crate::CapacityError;
 
 mod drain;
@@ -255,8 +255,7 @@ pub struct VecInner<T, LenT: LenType, S: VecStorage<T> + ?Sized> {
 /// For uncommmon capacity values, or in generic scenarios, you may have to provide the `LenT` generic yourself.
 ///
 /// This should be the smallest unsigned integer type that your capacity fits in, or `usize` if you don't want to consider this.
-pub type Vec<T, const N: usize, LenT = DefaultLenType<N>> =
-    VecInner<T, LenT, OwnedVecStorage<T, N>>;
+pub type Vec<T, const N: usize, LenT = usize> = VecInner<T, LenT, OwnedVecStorage<T, N>>;
 
 /// A [`Vec`] with dynamic capacity
 ///
@@ -1806,7 +1805,7 @@ mod tests {
         {
             let v: Vec<Droppable, 2> = Vec::new();
             let v: Box<Vec<Droppable, 2>> = Box::new(v);
-            let mut v: Box<VecView<Droppable, u8>> = v;
+            let mut v: Box<VecView<Droppable>> = v;
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             assert_eq!(Droppable::count(), 2);
@@ -1819,7 +1818,7 @@ mod tests {
         {
             let v: Vec<Droppable, 2> = Vec::new();
             let v: Box<Vec<Droppable, 2>> = Box::new(v);
-            let mut v: Box<VecView<Droppable, u8>> = v;
+            let mut v: Box<VecView<Droppable>> = v;
             v.push(Droppable::new()).ok().unwrap();
             v.push(Droppable::new()).ok().unwrap();
             assert_eq!(Droppable::count(), 2);
@@ -2179,34 +2178,6 @@ mod tests {
         assert!(!v.ends_with(b"abc"));
         assert!(!v.ends_with(b"ba"));
         assert!(!v.ends_with(b"a"));
-    }
-
-    #[test]
-    fn zero_capacity() {
-        let mut v: Vec<u8, 0> = Vec::new();
-        // Validate capacity
-        assert_eq!(v.capacity(), 0);
-
-        // Make sure there is no capacity
-        assert!(v.push(1).is_err());
-
-        // Validate length
-        assert_eq!(v.len(), 0);
-
-        // Validate pop
-        assert_eq!(v.pop(), None);
-
-        // Validate slice
-        assert_eq!(v.as_slice(), &[]);
-
-        // Validate empty
-        assert!(v.is_empty());
-
-        // Validate full
-        assert!(v.is_full());
-
-        // Size of vector with zero capacity should be 0 bytes because of `ZeroLenType` optimization
-        assert_eq!(core::mem::size_of_val(&v), 0);
     }
 
     #[test]

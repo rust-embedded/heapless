@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - `bytes::BufMut` is now implemented on `VecInner`.
 - Removed generic from `history_buf::OldestOrdered`.
+- Made `LenType` opt-in.
 
 ### Fixed
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 - Removed invalid `bytes::Buf` implementation.
+- Removed `DefaultLenType` struct.
 
 ## [v0.9.0] - 2025-04-28 [YANKED]
 

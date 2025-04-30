@@ -11,7 +11,7 @@ use core::{
     str::{self, Utf8Error},
 };
 
-use crate::{len_type::DefaultLenType, CapacityError};
+use crate::CapacityError;
 use crate::{
     len_type::LenType,
     vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage},
@@ -147,10 +147,10 @@ pub struct StringInner<LenT: LenType, S: StringStorage + ?Sized> {
 }
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type String<const N: usize, LenT = DefaultLenType<N>> = StringInner<LenT, OwnedStorage<N>>;
+pub type String<const N: usize, LenT = usize> = StringInner<LenT, OwnedStorage<N>>;
 
 /// A dynamic capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html).
-pub type StringView<LenT> = StringInner<LenT, ViewStorage>;
+pub type StringView<LenT = usize> = StringInner<LenT, ViewStorage>;
 
 impl<LenT: LenType, const N: usize> String<N, LenT> {
     /// Constructs a new, empty `String` with a fixed capacity of `N` bytes.
@@ -368,7 +368,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let s: String<10, _> = String::try_from("hello").unwrap();
-    /// let view: &StringView<u8> = s.as_view();
+    /// let view: &StringView = s.as_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
@@ -376,7 +376,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let s: String<10, _> = String::try_from("hello").unwrap();
-    /// let view: &StringView<u8> = &s;
+    /// let view: &StringView = &s;
     /// ```
     #[inline]
     pub fn as_view(&self) -> &StringView<LenT> {
@@ -389,7 +389,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView<_> = s.as_mut_view();
+    /// let view: &mut StringView = s.as_mut_view();
     /// ```
     ///
     /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
@@ -397,7 +397,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// ```rust
     /// # use heapless::string::{String, StringView};
     /// let mut s: String<10> = String::try_from("hello").unwrap();
-    /// let view: &mut StringView<_> = &mut s;
+    /// let view: &mut StringView = &mut s;
     /// ```
     #[inline]
     pub fn as_mut_view(&mut self) -> &mut StringView<LenT> {
@@ -938,8 +938,12 @@ pub fn format<const N: usize, LenT: LenType>(
 macro_rules! format {
     // Without semicolon as separator to disambiguate between arms, Rust just
     // chooses the first so that the format string would land in $max.
+    ($max:expr; $lenT:path; $($arg:tt)*) => {{
+        let res = $crate::_export::format::<$max, $lenT>(core::format_args!($($arg)*));
+        res
+    }};
     ($max:expr; $($arg:tt)*) => {{
-        let res = $crate::_export::format::<$max, $crate::_export::DefaultLenType<$max>>(core::format_args!($($arg)*));
+        let res = $crate::_export::format::<$max, usize>(core::format_args!($($arg)*));
         res
     }};
     ($($arg:tt)*) => {{
@@ -1235,30 +1239,5 @@ mod tests {
     fn format_plain_string_overflow() {
         let formatted = format!(2; "123");
         assert_eq!(formatted, Err(core::fmt::Error));
-    }
-
-    #[test]
-    fn zero_capacity() {
-        let mut s: String<0> = String::new();
-        // Validate capacity
-        assert_eq!(s.capacity(), 0);
-
-        // Make sure there is no capacity
-        assert!(s.push('a').is_err());
-
-        // Validate length
-        assert_eq!(s.len(), 0);
-
-        // Validate pop
-        assert_eq!(s.pop(), None);
-
-        // Validate slice
-        assert_eq!(s.as_str(), "");
-
-        // Validate empty
-        assert!(s.is_empty());
-
-        // Size of string with zero capacity should be 0 bytes because of `ZeroLenType` optimization
-        assert_eq!(core::mem::size_of_val(&s), 0);
     }
 }

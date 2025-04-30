@@ -241,7 +241,6 @@ mod ufmt;
 /// Do not use. Used for macros only. Not covered by semver guarantees.
 #[doc(hidden)]
 pub mod _export {
-    pub use crate::len_type::DefaultLenType;
     pub use crate::string::format;
 }
 
