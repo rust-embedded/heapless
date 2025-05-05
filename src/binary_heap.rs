@@ -191,14 +191,14 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     pub fn from_vec(vec: Vec<T, N, usize>) -> Self
     where
         T: Ord,
-        K: Kind
+        K: Kind,
     {
         let mut heap = Self {
             _kind: PhantomData,
             data: vec,
         };
         let len = heap.len();
-        for i in (0..len/2).rev() {
+        for i in (0..len / 2).rev() {
             heap.sift_down_to_bottom(i, len);
         }
         heap
@@ -954,7 +954,10 @@ mod tests {
         let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from_vec(src);
         assert_eq!(heap.len(), 13);
         assert_eq!(heap.capacity(), 16);
-        assert_eq!(&heap.into_vec(), &[0, 1, 3, 6, 2, 4, 12, 8, 9, 7, 5, 11, 10]);
+        assert_eq!(
+            &heap.into_vec(),
+            &[0, 1, 3, 6, 2, 4, 12, 8, 9, 7, 5, 11, 10]
+        );
     }
 
     #[test]
