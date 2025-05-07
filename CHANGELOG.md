@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - `bytes::BufMut` is now implemented on `VecInner`.
 - Removed generic from `history_buf::OldestOrdered`.
+- Removed generic from `spsc::Consumer`, `spsc::Producer` and `spsc::Iter`.
 
 ### Fixed
 
