@@ -4,10 +4,9 @@ use crate::{
 };
 use core::{
     fmt,
-    hash::{Hash, Hasher},
+    hash::{BuildHasherDefault, Hash, Hasher},
     marker::PhantomData,
 };
-use hash32::BuildHasherDefault;
 use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 // Sequential containers
