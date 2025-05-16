@@ -1,6 +1,6 @@
-//! A fixed capacity single-producer, single-consumer (SPSC) lock-free queue.
+//! A lock-free single-producer, single-consumer (SPSC) queue with fixed capacity.
 //!
-//! *Note:* This module requires atomic load and store instructions. On
+//! **Note:** This module requires atomic load and store instructions. On
 //! targets where they're not natively available, they are emulated by the
 //! [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
 //!
