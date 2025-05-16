@@ -1,6 +1,6 @@
 //! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 
-use crate::{len_type::DefaultLenType, vec::Vec, CapacityError, LenType};
+use crate::{vec::Vec, CapacityError, LenType};
 use core::{
     borrow::Borrow,
     cmp::Ordering,
@@ -14,7 +14,7 @@ use core::{
 ///
 /// It stores up to `N - 1` non-nul characters with a trailing nul terminator.
 #[derive(Clone, Hash)]
-pub struct CString<const N: usize, LenT: LenType = DefaultLenType<N>> {
+pub struct CString<const N: usize, LenT: LenType = usize> {
     inner: Vec<u8, N, LenT>,
 }
 
