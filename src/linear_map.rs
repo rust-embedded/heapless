@@ -509,6 +509,16 @@ where
             }),
         }
     }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)` returns `false`.
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&K, &mut V) -> bool,
+    {
+        self.buffer.retain_mut(|(k, v)| f(k, v));
+    }
 }
 
 impl<K, V, Q, S: LinearMapStorage<K, V> + ?Sized> ops::Index<&'_ Q> for LinearMapInner<K, V, S>
@@ -958,6 +968,30 @@ mod test {
         *v = 500;
         let v = src.get(&10).unwrap();
         assert_eq!(*v, 500);
+    }
+
+    #[test]
+    fn retain() {
+        let mut src = almost_filled_map();
+        src.retain(|k, _v| k % 2 == 0);
+        src.retain(|k, _v| k % 3 == 0);
+
+        for (k, v) in src.iter() {
+            assert_eq!(k, v);
+            assert_eq!(k % 2, 0);
+            assert_eq!(k % 3, 0);
+        }
+
+        let mut src = almost_filled_map();
+        src.retain(|_k, _v| false);
+        assert!(src.is_empty());
+
+        let mut src = almost_filled_map();
+        src.retain(|_k, _v| true);
+        assert_eq!(src.len(), MAP_SLOTS - 1);
+        src.insert(0, 0).unwrap();
+        src.retain(|_k, _v| true);
+        assert_eq!(src.len(), MAP_SLOTS);
     }
 
     #[test]
