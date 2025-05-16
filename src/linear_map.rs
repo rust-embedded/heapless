@@ -930,6 +930,37 @@ mod test {
     }
 
     #[test]
+    fn remove() {
+        let mut src = almost_filled_map();
+        // key doesn't exist
+        let k = 0;
+        let r = src.remove(&k);
+        assert!(r.is_none());
+
+        let k = 5;
+        let v = 5;
+        let r = src.remove(&k);
+        assert_eq!(r, Some(v));
+        let r = src.remove(&k);
+        assert!(r.is_none());
+        assert_eq!(src.len(), MAP_SLOTS - 2);
+    }
+
+    #[test]
+    fn replace() {
+        let mut src = almost_filled_map();
+        src.insert(10, 1000).unwrap();
+        let v = src.get(&10).unwrap();
+        assert_eq!(*v, 1000);
+
+        let mut src = almost_filled_map();
+        let v = src.get_mut(&10).unwrap();
+        *v = 500;
+        let v = src.get(&10).unwrap();
+        assert_eq!(*v, 500);
+    }
+
+    #[test]
     fn entry_find() {
         let key = 0;
         let value = 0;
@@ -978,6 +1009,31 @@ mod test {
     }
 
     #[test]
+    fn entry_vacant_full_insert() {
+        let mut src = almost_filled_map();
+
+        // fill the map
+        let key = MAP_SLOTS * 2;
+        let value = key;
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+
+        let key = 0;
+        let value = 0;
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Entry found when missing");
+            }
+            Entry::Vacant(v) => {
+                // Value is returned since the map is full
+                assert_eq!(value, v.insert(value).unwrap_err());
+            }
+        };
+        assert!(src.get(&key).is_none());
+    }
+
+    #[test]
     fn entry_occupied_insert() {
         let key = 0;
         let value = 0;
@@ -1014,6 +1070,7 @@ mod test {
             }
         };
         assert_eq!(MAP_SLOTS - 1, src.len());
+        assert!(!src.contains_key(&key));
     }
 
     #[test]
