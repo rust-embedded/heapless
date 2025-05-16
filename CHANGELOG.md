@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed generic from `history_buf::OldestOrdered`.
 - Made `LenType` opt-in.
 - Added `LinearMap::entry()` API.
+- Added `LinearMap::retain()`.
 
 ### Fixed
 
