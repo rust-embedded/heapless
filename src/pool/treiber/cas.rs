@@ -87,7 +87,7 @@ where
     #[inline]
     fn store(&self, value: Option<NonNullPtr<N>>, order: Ordering) {
         self.inner
-            .store(value.map(NonNullPtr::into_inner).unwrap_or_default(), order)
+            .store(value.map(NonNullPtr::into_inner).unwrap_or_default(), order);
     }
 }
 
@@ -120,7 +120,7 @@ where
     }
 
     #[inline]
-    pub fn from_static_mut_ref(reference: &'static mut N) -> NonNullPtr<N> {
+    pub fn from_static_mut_ref(reference: &'static mut N) -> Self {
         // SAFETY: `reference` is a static mutable reference, i.e. a valid pointer.
         unsafe { Self::new_unchecked(initial_tag(), NonNull::from(reference)) }
     }

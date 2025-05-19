@@ -3,9 +3,10 @@ use core::hash::{BuildHasher, Hash};
 use crate::{
     binary_heap::{BinaryHeapInner, Kind as BinaryHeapKind},
     deque::DequeInner,
-    histbuf::{HistBufStorage, HistoryBufferInner},
-    linear_map::LinearMapInner,
-    string::StringInner,
+    history_buf::{HistoryBufInner, HistoryBufStorage},
+    len_type::LenType,
+    linear_map::{LinearMapInner, LinearMapStorage},
+    string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     IndexMap, IndexSet,
 };
@@ -48,7 +49,7 @@ where
     }
 }
 
-impl<T, St: VecStorage<T> + ?Sized> Serialize for VecInner<T, St>
+impl<T, LenT: LenType, St: VecStorage<T>> Serialize for VecInner<T, LenT, St>
 where
     T: Serialize,
 {
@@ -80,7 +81,7 @@ where
     }
 }
 
-impl<T, S: HistBufStorage<T> + ?Sized> Serialize for HistoryBufferInner<T, S>
+impl<T, S: HistoryBufStorage<T> + ?Sized> Serialize for HistoryBufInner<T, S>
 where
     T: Serialize,
 {
@@ -116,7 +117,7 @@ where
     }
 }
 
-impl<K, V, S: VecStorage<(K, V)> + ?Sized> Serialize for LinearMapInner<K, V, S>
+impl<K, V, S: LinearMapStorage<K, V> + ?Sized> Serialize for LinearMapInner<K, V, S>
 where
     K: Eq + Serialize,
     V: Serialize,
@@ -135,11 +136,11 @@ where
 
 // String containers
 
-impl<S: VecStorage<u8> + ?Sized> Serialize for StringInner<S> {
+impl<LenT: LenType, S: StringStorage + ?Sized> Serialize for StringInner<LenT, S> {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
     where
         SER: Serializer,
     {
-        serializer.serialize_str(&*self)
+        serializer.serialize_str(self)
     }
 }

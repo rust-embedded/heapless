@@ -1,9 +1,9 @@
 //! Collections of `Send`-able things are `Send`
 
 use heapless::{
-    histbuf::HistoryBufferView,
+    history_buf::HistoryBufView,
     spsc::{Consumer, ConsumerView, Producer, ProducerView, Queue, QueueView},
-    HistoryBuffer, Vec, VecView,
+    HistoryBuf, Vec, VecView,
 };
 
 #[test]
@@ -26,6 +26,6 @@ fn send() {
     is_send::<QueueView<IsSend>>();
     is_send::<Vec<IsSend, 4>>();
     is_send::<VecView<IsSend>>();
-    is_send::<HistoryBuffer<IsSend, 4>>();
-    is_send::<HistoryBufferView<IsSend>>();
+    is_send::<HistoryBuf<IsSend, 4>>();
+    is_send::<HistoryBufView<IsSend>>();
 }

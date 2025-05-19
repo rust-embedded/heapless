@@ -1,90 +1,72 @@
-//! A fixed capacity Multiple-Producer Multiple-Consumer (MPMC) lock-free queue.
+//! A fixed capacity multiple-producer, multiple-consumer (MPMC) lock-free queue.
 //!
-//! NOTE: This module requires atomic CAS operations. On targets where they're not natively available,
-//! they are emulated by the [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
+//! **Note:** This module requires atomic compare-and-swap (CAS) instructions. On
+//! targets where they're not natively available, they are emulated by the
+//! [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
 //!
 //! # Example
 //!
-//! This queue can be constructed in "const context". Placing it in a `static` variable lets *all*
-//! contexts (interrupts/threads/`main`) safely enqueue and dequeue items from it.
+//! This queue can be constructed in `const` context. Placing it in a `static` variable lets *all*
+//! contexts (interrupts/threads/`main`) safely enqueue and dequeue items.
 //!
-//! ``` ignore
-//! #![no_main]
-//! #![no_std]
+//! ```
+//! use core::sync::atomic::{AtomicU8, Ordering};
 //!
-//! use panic_semihosting as _;
+//! use heapless::mpmc::Queue;
 //!
-//! use cortex_m::{asm, peripheral::syst::SystClkSource};
-//! use cortex_m_rt::{entry, exception};
-//! use cortex_m_semihosting::hprintln;
-//! use heapless::mpmc::Q2;
+//! static Q: Queue<u8, 2> = Queue::new();
 //!
-//! static Q: Q2<u8> = Q2::new();
-//!
-//! #[entry]
-//! fn main() -> ! {
-//!     if let Some(p) = cortex_m::Peripherals::take() {
-//!         let mut syst = p.SYST;
-//!
-//!         // configures the system timer to trigger a SysTick exception every second
-//!         syst.set_clock_source(SystClkSource::Core);
-//!         syst.set_reload(12_000_000);
-//!         syst.enable_counter();
-//!         syst.enable_interrupt();
-//!     }
+//! fn main() {
+//!     // Configure systick interrupt.
 //!
 //!     loop {
 //!         if let Some(x) = Q.dequeue() {
-//!             hprintln!("{}", x).ok();
+//!             println!("{}", x);
 //!         } else {
-//!             asm::wfi();
+//!             // Wait for interrupt.
 //!         }
+//! #       break
 //!     }
 //! }
 //!
-//! #[exception]
-//! fn SysTick() {
-//!     static mut COUNT: u8 = 0;
+//! fn systick() {
+//!     static COUNT: AtomicU8 = AtomicU8::new(0);
+//!     let count = COUNT.fetch_add(1, Ordering::SeqCst);
 //!
-//!     Q.enqueue(*COUNT).ok();
-//!     *COUNT += 1;
+//! #   let _ =
+//!     Q.enqueue(count);
 //! }
 //! ```
 //!
 //! # Benchmark
 //!
-//! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles
+//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled with `-C opt-level=z`:
 //!
-//! N| `Q8::<u8>::enqueue().ok()` (`z`) | `Q8::<u8>::dequeue()` (`z`) |
-//! -|----------------------------------|-----------------------------|
-//! 0|34                                |35                           |
-//! 1|52                                |53                           |
-//! 2|69                                |71                           |
+//! | Method                      | Time | N  |
+//! |:----------------------------|-----:|---:|
+//! | `Queue::<u8, 8>::enqueue()` |   34 |  0 |
+//! | `Queue::<u8, 8>::enqueue()` |   52 |  1 |
+//! | `Queue::<u8, 8>::enqueue()` |   69 |  2 |
+//! | `Queue::<u8, 8>::dequeue()` |   35 |  0 |
+//! | `Queue::<u8, 8>::dequeue()` |   53 |  1 |
+//! | `Queue::<u8, 8>::dequeue()` |   71 |  2 |
 //!
-//! - `N` denotes the number of *interruptions*. On Cortex-M, an interruption consists of an
+//! - N denotes the number of interruptions. On Cortex-M, an interruption consists of an
 //!   interrupt handler preempting the would-be atomic section of the `enqueue`/`dequeue`
 //!   operation. Note that it does *not* matter if the higher priority handler uses the queue or
 //!   not.
-//! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
-//! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
-//!   `memcpy(T)` in their successful path.
-//! - The optimization level is indicated in parentheses.
-//! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
-//!   and `Ok` is returned by `enqueue`).
-//!
-//! # Portability
-//!
-//! This module requires CAS atomic instructions which are not available on all architectures
-//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
-//! emulated however with [`portable-atomic`](https://crates.io/crates/portable-atomic), which is
-//! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
-//! targets.
+//! - All execution times are in clock cycles (1 clock cycle = 125 ns).
+//! - Execution time is *dependent* on `mem::size_of::<T>()`, as both operations include
+//!   `ptr::read::<T>()` or `ptr::write::<T>()` in their successful path.
+//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
+//!   and `enqueue` returning `Ok`.
 //!
 //! # References
 //!
-//! This is an implementation of Dmitry Vyukov's ["Bounded MPMC queue"][0] minus the cache padding.
+//! This is an implementation of Dmitry Vyukov's [bounded MPMC queue], minus the
+//! cache padding.
 //!
-//! [0]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+//! [bounded MPMC queue]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
@@ -112,56 +94,40 @@ type IntSize = isize;
 #[cfg(not(feature = "mpmc_large"))]
 type IntSize = i8;
 
-/// MPMC queue with a capability for 2 elements.
-pub type Q2<T> = MpMcQueue<T, 2>;
-
-/// MPMC queue with a capability for 4 elements.
-pub type Q4<T> = MpMcQueue<T, 4>;
-
-/// MPMC queue with a capability for 8 elements.
-pub type Q8<T> = MpMcQueue<T, 8>;
-
-/// MPMC queue with a capability for 16 elements.
-pub type Q16<T> = MpMcQueue<T, 16>;
-
-/// MPMC queue with a capability for 32 elements.
-pub type Q32<T> = MpMcQueue<T, 32>;
-
-/// MPMC queue with a capability for 64 elements.
-pub type Q64<T> = MpMcQueue<T, 64>;
-
-/// Base struct for [`MpMcQueue`] and [`MpMcQueueView`], generic over the [`Storage`].
+/// Base struct for [`Queue`] and [`QueueView`], generic over the [`Storage`].
 ///
-/// In most cases you should use [`MpMcQueue`] or [`MpMcQueueView`] directly. Only use this
+/// In most cases you should use [`Queue`] or [`QueueView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct MpMcQueueInner<T, S: Storage> {
+pub struct QueueInner<T, S: Storage> {
     dequeue_pos: AtomicTargetSize,
     enqueue_pos: AtomicTargetSize,
     buffer: UnsafeCell<S::Buffer<Cell<T>>>,
 }
 
-/// MPMC queue with a capacity for N elements
-/// N must be a power of 2
-/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
-pub type MpMcQueue<T, const N: usize> = MpMcQueueInner<T, OwnedStorage<N>>;
+/// A statically allocated multi-producer, multi-consumer queue with a capacity of `N` elements.
+///
+/// <div class="warning">
+///
+/// `N` must be a power of 2.
+///
+/// </div>
+///
+/// The maximum value of `N` is 128 if the `mpmc_large` feature is not enabled.
+pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
-/// MPMC queue with a capacity for N elements
-/// N must be a power of 2
-/// The max value of N is u8::MAX - 1 if `mpmc_large` feature is not enabled.
-pub type MpMcQueueView<T> = MpMcQueueInner<T, ViewStorage>;
+/// A [`Queue`] with dynamic capacity.
+///
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
+pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
-impl<T, const N: usize> MpMcQueue<T, N> {
-    const ASSERT: [(); 1] = [()];
-
-    /// Creates an empty queue
+impl<T, const N: usize> Queue<T, N> {
+    /// Creates an empty queue.
     pub const fn new() -> Self {
-        // Const assert
-        crate::sealed::greater_than_1::<N>();
-        crate::sealed::power_of_two::<N>();
-
-        // Const assert on size.
-        #[allow(clippy::no_effect)]
-        Self::ASSERT[(N >= (UintSize::MAX as usize)) as usize];
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+            assert!(N < UintSize::MAX as usize);
+        }
 
         let mut cell_count = 0;
 
@@ -177,61 +143,77 @@ impl<T, const N: usize> MpMcQueue<T, N> {
             enqueue_pos: AtomicTargetSize::new(0),
         }
     }
-    /// Get a reference to the `MpMcQueue`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &MpMcQueueView<u8> = queue.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueueView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &MpMcQueueView<u8> = &queue;
-    /// ```
-    #[inline]
-    pub const fn as_view(&self) -> &MpMcQueueView<T> {
+
+    /// Used in `Storage` implementation.
+    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
         self
     }
-
-    /// Get a mutable reference to the `MpMcQueue`, erasing the `N` const-generic.
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let mut queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &mut MpMcQueueView<u8> = queue.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `MpMcQueue<T, N>` implements `Unsize<MpMcQueueView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{MpMcQueue, MpMcQueueView};
-    /// let mut queue: MpMcQueue<u8, 2> = MpMcQueue::new();
-    /// let view: &mut MpMcQueueView<u8> = &mut queue;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut MpMcQueueView<T> {
+    /// Used in `Storage` implementation.
+    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
         self
     }
 }
 
-impl<T, S: Storage> MpMcQueueInner<T, S> {
+impl<T, S: Storage> QueueInner<T, S> {
+    /// Returns the maximum number of elements the queue can hold.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        S::len(self.buffer.get())
+    }
+
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = queue.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = &queue;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &QueueView<T> {
+        S::as_mpmc_view(self)
+    }
+
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = queue.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = &mut queue;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+        S::as_mpmc_mut_view(self)
+    }
+
     fn mask(&self) -> UintSize {
         (S::len(self.buffer.get()) - 1) as _
     }
 
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    /// Returns the item in the front of the queue, or `None` if the queue is empty.
     pub fn dequeue(&self) -> Option<T> {
         unsafe { dequeue(S::as_ptr(self.buffer.get()), &self.dequeue_pos, self.mask()) }
     }
 
-    /// Adds an `item` to the end of the queue
+    /// Adds an `item` to the end of the queue.
     ///
-    /// Returns back the `item` if the queue is full
+    /// Returns back the `item` if the queue is full.
     pub fn enqueue(&self, item: T) -> Result<(), T> {
         unsafe {
             enqueue(
@@ -244,20 +226,20 @@ impl<T, S: Storage> MpMcQueueInner<T, S> {
     }
 }
 
-impl<T, const N: usize> Default for MpMcQueue<T, N> {
+impl<T, const N: usize> Default for Queue<T, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, S: Storage> Drop for MpMcQueueInner<T, S> {
+impl<T, S: Storage> Drop for QueueInner<T, S> {
     fn drop(&mut self) {
-        // drop all contents currently in the queue
+        // Drop all elements currently in the queue.
         while self.dequeue().is_some() {}
     }
 }
 
-unsafe impl<T, S: Storage> Sync for MpMcQueueInner<T, S> where T: Send {}
+unsafe impl<T, S: Storage> Sync for QueueInner<T, S> where T: Send {}
 
 struct Cell<T> {
     data: MaybeUninit<T>,
@@ -364,16 +346,16 @@ unsafe fn enqueue<T>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::{MpMcQueue, Q2};
+    use super::Queue;
 
-    // Ensure a `MpMcQueue` containing `!Send` values stays `!Send` itself.
-    assert_not_impl_any!(MpMcQueue<*const (), 4>: Send);
+    // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Queue<*const (), 4>: Send);
 
     #[test]
     fn memory_leak() {
         droppable!();
 
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
         drop(q);
@@ -383,7 +365,7 @@ mod tests {
 
     #[test]
     fn sanity() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         q.enqueue(0).unwrap();
         q.enqueue(1).unwrap();
         assert!(q.enqueue(2).is_err());
@@ -395,7 +377,7 @@ mod tests {
 
     #[test]
     fn drain_at_pos255() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         for _ in 0..255 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
@@ -407,7 +389,7 @@ mod tests {
 
     #[test]
     fn full_at_wrapped_pos0() {
-        let q = Q2::new();
+        let q = Queue::<_, 2>::new();
         for _ in 0..254 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
@@ -426,7 +408,9 @@ mod tests {
         #[cfg(feature = "mpmc_large")]
         const CAPACITY: usize = 256;
 
-        let q: MpMcQueue<u8, CAPACITY> = MpMcQueue::new();
+        let q: Queue<u8, CAPACITY> = Queue::new();
+
+        assert_eq!(q.capacity(), CAPACITY);
 
         for _ in 0..CAPACITY {
             q.enqueue(0xAA).unwrap();

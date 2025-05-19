@@ -12,9 +12,11 @@ keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/rust-embedded/heapless"
-version = "0.8.0"
+version = "0.9.0"
 
 [features]
+bytes = ["dep:bytes"]
+
 # Enable polyfilling of atomics via `portable-atomic`.
 # `portable-atomic` polyfills some functionality by default, but to get full atomics you must
 # enable one of its features to tell it how to do it. See `portable-atomic` documentation for details.
@@ -31,33 +33,46 @@ portable-atomic-unsafe-assume-single-core = ["dep:portable-atomic", "portable-at
 serde = ["dep:serde"]
 
 # implement ufmt traits.
-ufmt = ["dep:ufmt-write"]
+ufmt = ["dep:ufmt", "dep:ufmt-write"]
 
-# Implement defmt::Format from defmt v0.3
-defmt-03 = ["dep:defmt"]
+# Implement `defmt::Format`.
+defmt = ["dep:defmt"]
 
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Implement some alloc Vec interoperability
+alloc = []
+
 nightly = []
 
 [dependencies]
+bytes = { version = "1", default-features = false, optional = true }
 portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
 serde = { version = "1", optional = true, default-features = false }
+ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
-defmt = { version = ">=0.2.0,<0.4", optional = true }
+defmt = { version = "1.0.1", optional = true }
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]
 stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
-ufmt = "0.2"
+critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
 
 [package.metadata.docs.rs]
-features = ["ufmt", "serde", "defmt-03", "mpmc_large", "portable-atomic-critical-section"]
+features = [
+  "bytes",
+  "ufmt",
+  "serde",
+  "defmt",
+  "mpmc_large",
+  "portable-atomic-critical-section",
+  "alloc",
+]
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]

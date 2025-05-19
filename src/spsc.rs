@@ -1,84 +1,76 @@
-//! # A fixed capacity Single Producer Single Consumer (SPSC) queue.
+//! A fixed capacity single-producer, single-consumer (SPSC) lock-free queue.
 //!
-//! Implementation based on <https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular>
+//! *Note:* This module requires atomic load and store instructions. On
+//! targets where they're not natively available, they are emulated by the
+//! [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
 //!
-//! ## Portability
+//! # Examples
 //!
-//! This module requires CAS atomic instructions which are not available on all architectures
-//! (e.g.  ARMv6-M (`thumbv6m-none-eabi`) and MSP430 (`msp430-none-elf`)). These atomics can be
-//! emulated however with [`portable-atomic`](https://crates.io/crates/portable-atomic), which is
-//! enabled with the `cas` feature and is enabled by default for `thumbv6m-none-eabi` and `riscv32`
-//! targets.
-//!
-//! ## Examples
-//!
-//! - [Queue] can be used as a plain queue
+//! [`Queue`] can be used as a plain queue:
 //!
 //! ```
 //! use heapless::spsc::Queue;
 //!
-//! let mut rb: Queue<u8, 4> = Queue::new();
+//! let mut queue: Queue<u8, 4> = Queue::new();
 //!
-//! assert!(rb.enqueue(0).is_ok());
-//! assert!(rb.enqueue(1).is_ok());
-//! assert!(rb.enqueue(2).is_ok());
-//! assert!(rb.enqueue(3).is_err()); // full
+//! assert_eq!(queue.enqueue(0), Ok(()));
+//! assert_eq!(queue.enqueue(1), Ok(()));
+//! assert_eq!(queue.enqueue(2), Ok(()));
+//! assert_eq!(queue.enqueue(3), Err(3)); // Queue is full.
 //!
-//! assert_eq!(rb.dequeue(), Some(0));
+//! assert_eq!(queue.dequeue(), Some(0));
 //! ```
 //!
-//! - [Queue] can be [Queue::split] and then be used in Single Producer Single Consumer mode.
+//! [`Queue::split`] can be used to split the queue into a [`Producer`]/[`Consumer`] pair.
 //!
-//! "no alloc" applications can create a `&'static mut` reference to a `Queue` -- using a static
-//! variable -- and then `split` it: this consumes the static reference. The resulting `Consumer`
-//! and `Producer` can then be moved into different execution contexts (threads, interrupt handlers,
-//! etc.).
-//!
-//! Alternatively, you can also create the Queue statically in the global scope by wrapping it with
-//! a [static_cell](https://docs.rs/static_cell/latest/static_cell/)
+//! After splitting a `&'static mut Queue`, the resulting [`Producer`] and [`Consumer`]
+//! can be moved into different execution contexts, e.g. threads, interrupt handlers, etc.
 //!
 //!
 //! ```
 //! use heapless::spsc::{Producer, Queue};
 //!
+//! #[derive(Debug)]
 //! enum Event {
 //!     A,
 //!     B,
 //! }
 //!
 //! fn main() {
-//!     // Alternatively, use something like `static_cell` to create the `Queue` in the global
-//!     // scope.
 //!     let queue: &'static mut Queue<Event, 4> = {
 //!         static mut Q: Queue<Event, 4> = Queue::new();
+//!         // SAFETY: `Q` is only accessible in this scope
+//!         // and `main` is only called once.
 //!         unsafe { &mut Q }
 //!     };
 //!
 //!     let (producer, mut consumer) = queue.split();
 //!
 //!     // `producer` can be moved into `interrupt_handler` using a static mutex or the mechanism
-//!     // provided by the concurrency framework you are using (e.g. a resource in RTIC)
+//!     // provided by the concurrency framework you are using, e.g. a resource in RTIC.
+//! #   let mut producer = producer;
+//! #   interrupt_handler(&mut producer);
 //!
 //!     loop {
 //!         match consumer.dequeue() {
 //!             Some(Event::A) => { /* .. */ }
 //!             Some(Event::B) => { /* .. */ }
-//!             None => { /* sleep */ }
+//!             None => { /* Sleep. */ }
 //!         }
 //! #       break
 //!     }
 //! }
 //!
-//! // this is a different execution context that can preempt `main`
+//! // This is a different execution context that can preempt `main`.
 //! fn interrupt_handler(producer: &mut Producer<'static, Event, 4>) {
 //! #   let condition = true;
 //!
 //!     // ..
 //!
 //!     if condition {
-//!         producer.enqueue(Event::A).ok().unwrap();
+//!         producer.enqueue(Event::A).unwrap();
 //!     } else {
-//!         producer.enqueue(Event::B).ok().unwrap();
+//!         producer.enqueue(Event::B).unwrap();
 //!     }
 //!
 //!     // ..
@@ -87,21 +79,26 @@
 //!
 //! # Benchmarks
 //!
-//! Measured on a ARM Cortex-M3 core running at 8 MHz and with zero Flash wait cycles
+//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled with `-C opt-level=3`:
 //!
-//! `-C opt-level`         |`3`|
-//! -----------------------|---|
-//! `Consumer<u8>::dequeue`| 15|
-//! `Queue<u8>::dequeue`   | 12|
-//! `Producer<u8>::enqueue`| 16|
-//! `Queue<u8>::enqueue`   | 14|
+//! | Method                         | Time |
+//! |:-------------------------------|-----:|
+//! | `Producer::<u8, _>::enqueue()` |   16 |
+//! | `Queue::<u8, _>::enqueue()`    |   14 |
+//! | `Consumer::<u8, _>::dequeue()` |   15 |
+//! | `Queue::<u8, _>::dequeue()`    |   12 |
 //!
-//! - All execution times are in clock cycles. 1 clock cycle = 125 ns.
-//! - Execution time is *dependent* of `mem::size_of::<T>()`. Both operations include one
-//!   `memcpy(T)` in their successful path.
-//! - The optimization level is indicated in the first row.
-//! - The numbers reported correspond to the successful path (i.e. `Some` is returned by `dequeue`
-//!   and `Ok` is returned by `enqueue`).
+//! - All execution times are in clock cycles (1 clock cycle = 125 ns).
+//! - Execution time is *dependent* on `mem::size_of::<T>()`, as both operations include
+//!   `ptr::read::<T>()` or `ptr::write::<T>()` in their successful path.
+//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
+//!   and `enqueue` returning `Ok`.
+//!
+//! # References
+//!
+//! This is an implementation based on [https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular](
+//!   https://web.archive.org/web/20250117082625/https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular
+//! ).
 
 use core::{borrow::Borrow, cell::UnsafeCell, fmt, hash, mem::MaybeUninit, ptr};
 
@@ -128,23 +125,28 @@ pub struct QueueInner<T, S: Storage> {
     pub(crate) buffer: S::Buffer<UnsafeCell<MaybeUninit<T>>>,
 }
 
-/// A statically allocated single producer single consumer queue with a capacity of `N - 1` elements
+/// A statically allocated single-producer, single-consumer queue with a capacity of `N - 1` elements.
 ///
-/// *IMPORTANT*: To get better performance use a value for `N` that is a power of 2 (e.g. `16`, `32`,
-/// etc.).
+/// <div class="warning">
+///
+/// To get better performance, use a value for `N` that is a power of 2.
+///
+/// </div>
+///
+/// You will likely want to use [`split`](QueueInner::split) to create a producer-consumer pair.
 pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
-/// Asingle producer single consumer queue
+/// A [`Queue`] with dynamic capacity.
 ///
-/// *IMPORTANT*: To get better performance use a value for `N` that is a power of 2 (e.g. `16`, `32`,
-/// etc.).
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
-    /// Creates an empty queue with a fixed capacity of `N - 1`
+    /// Creates an empty queue.
     pub const fn new() -> Self {
-        // Const assert N > 1
-        crate::sealed::greater_than_1::<N>();
+        const {
+            assert!(N > 1);
+        }
 
         Queue {
             head: AtomicUsize::new(0),
@@ -153,26 +155,28 @@ impl<T, const N: usize> Queue<T, N> {
         }
     }
 
-    /// Returns the maximum number of elements the queue can hold
-    ///
-    /// For the same method on [`QueueView`], see [`storage_capacity`](QueueInner::storage_capacity)
-    #[inline]
-    pub const fn capacity(&self) -> usize {
-        N - 1
-    }
-
-    /// Get a reference to the `Queue`, erasing the `N` const-generic.
-    pub fn as_view(&self) -> &QueueView<T> {
+    /// Used in `Storage` implementation
+    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
         self
     }
 
-    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
-    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+    /// Used in `Storage` implementation
+    pub(crate) fn as_mut_view_private(&mut self) -> &mut QueueView<T> {
         self
     }
 }
 
 impl<T, S: Storage> QueueInner<T, S> {
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
+    pub fn as_view(&self) -> &QueueView<T> {
+        S::as_queue_view(self)
+    }
+
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+        S::as_mut_queue_view(self)
+    }
+
     #[inline]
     fn increment(&self, val: usize) -> usize {
         (val + 1) % self.n()
@@ -183,13 +187,13 @@ impl<T, S: Storage> QueueInner<T, S> {
         self.buffer.borrow().len()
     }
 
-    /// Returns the maximum number of elements the queue can hold
+    /// Returns the maximum number of elements the queue can hold.
     #[inline]
-    pub fn storage_capacity(&self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.n() - 1
     }
 
-    /// Returns the number of elements in the queue
+    /// Returns the number of elements in the queue.
     #[inline]
     pub fn len(&self) -> usize {
         let current_head = self.head.load(Ordering::Relaxed);
@@ -201,19 +205,19 @@ impl<T, S: Storage> QueueInner<T, S> {
             % self.n()
     }
 
-    /// Returns `true` if the queue is empty
+    /// Returns whether the queue is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.head.load(Ordering::Relaxed) == self.tail.load(Ordering::Relaxed)
     }
 
-    /// Returns `true` if the queue is full
+    /// Returns whether the queue is full.
     #[inline]
     pub fn is_full(&self) -> bool {
         self.increment(self.tail.load(Ordering::Relaxed)) == self.head.load(Ordering::Relaxed)
     }
 
-    /// Iterates from the front of the queue to the back
+    /// Iterates from the front of the queue to the back.
     pub fn iter(&self) -> IterInner<'_, T, S> {
         IterInner {
             rb: self,
@@ -222,7 +226,7 @@ impl<T, S: Storage> QueueInner<T, S> {
         }
     }
 
-    /// Returns an iterator that allows modifying each value
+    /// Returns an iterator that allows modifying each value.
     pub fn iter_mut(&mut self) -> IterMutInner<'_, T, S> {
         let len = self.len();
         IterMutInner {
@@ -232,21 +236,21 @@ impl<T, S: Storage> QueueInner<T, S> {
         }
     }
 
-    /// Adds an `item` to the end of the queue
+    /// Adds an `item` to the end of the queue.
     ///
-    /// Returns back the `item` if the queue is full
+    /// Returns back the `item` if the queue is full.
     #[inline]
-    pub fn enqueue(&mut self, val: T) -> Result<(), T> {
-        unsafe { self.inner_enqueue(val) }
+    pub fn enqueue(&mut self, item: T) -> Result<(), T> {
+        unsafe { self.inner_enqueue(item) }
     }
 
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    /// Returns the item in the front of the queue, or `None` if the queue is empty.
     #[inline]
     pub fn dequeue(&mut self) -> Option<T> {
         unsafe { self.inner_dequeue() }
     }
 
-    /// Returns a reference to the item in the front of the queue without dequeuing, or
+    /// Returns a reference to the item in the front of the queue without dequeuing it, or
     /// `None` if the queue is empty.
     ///
     /// # Examples
@@ -262,32 +266,34 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// assert_eq!(None, consumer.peek());
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        if !self.is_empty() {
+        if self.is_empty() {
+            None
+        } else {
             let head = self.head.load(Ordering::Relaxed);
             Some(unsafe { &*(self.buffer.borrow().get_unchecked(head).get() as *const T) })
-        } else {
-            None
         }
     }
 
     // The memory for enqueueing is "owned" by the tail pointer.
+    //
     // NOTE: This internal function uses internal mutability to allow the [`Producer`] to enqueue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_enqueue(&self, val: T) -> Result<(), T> {
         let current_tail = self.tail.load(Ordering::Relaxed);
         let next_tail = self.increment(current_tail);
 
-        if next_tail != self.head.load(Ordering::Acquire) {
+        if next_tail == self.head.load(Ordering::Acquire) {
+            Err(val)
+        } else {
             (self.buffer.borrow().get_unchecked(current_tail).get()).write(MaybeUninit::new(val));
             self.tail.store(next_tail, Ordering::Release);
 
             Ok(())
-        } else {
-            Err(val)
         }
     }
 
     // The memory for enqueueing is "owned" by the tail pointer.
+    //
     // NOTE: This internal function uses internal mutability to allow the [`Producer`] to enqueue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_enqueue_unchecked(&self, val: T) {
@@ -298,19 +304,20 @@ impl<T, S: Storage> QueueInner<T, S> {
             .store(self.increment(current_tail), Ordering::Release);
     }
 
-    /// Adds an `item` to the end of the queue, without checking if it's full
+    /// Adds an `item` to the end of the queue, without checking if it's full.
     ///
     /// # Safety
     ///
-    /// If the queue is full this operation will leak a value (T's destructor won't run on
+    /// If the queue is full, this operation will leak a value (`T`'s destructor won't run on
     /// the value that got overwritten by `item`), *and* will allow the `dequeue` operation
     /// to create a copy of `item`, which could result in `T`'s destructor running on `item`
     /// twice.
-    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.inner_enqueue_unchecked(val)
+    pub unsafe fn enqueue_unchecked(&mut self, item: T) {
+        self.inner_enqueue_unchecked(item);
     }
 
-    // The memory for dequeuing is "owned" by the head pointer,.
+    // The memory for dequeuing is "owned" by the head pointer.
+    //
     // NOTE: This internal function uses internal mutability to allow the [`Consumer`] to dequeue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_dequeue(&self) -> Option<T> {
@@ -328,7 +335,8 @@ impl<T, S: Storage> QueueInner<T, S> {
         }
     }
 
-    // The memory for dequeuing is "owned" by the head pointer,.
+    // The memory for dequeuing is "owned" by the head pointer.
+    //
     // NOTE: This internal function uses internal mutability to allow the [`Consumer`] to dequeue
     // items without doing pointer arithmetic and accessing internal fields of this type.
     unsafe fn inner_dequeue_unchecked(&self) -> T {
@@ -342,17 +350,121 @@ impl<T, S: Storage> QueueInner<T, S> {
     }
 
     /// Returns the item in the front of the queue, without checking if there is something in the
-    /// queue
+    /// queue.
     ///
     /// # Safety
     ///
-    /// If the queue is empty this operation will return uninitialized memory.
+    /// The queue must not be empty. Calling this on an empty queue causes [undefined behavior].
+    ///
+    /// [undefined behavior]: https://doc.rust-lang.org/reference/behavior-considered-undefined.html
     pub unsafe fn dequeue_unchecked(&mut self) -> T {
         self.inner_dequeue_unchecked()
     }
 
-    /// Splits a queue into producer and consumer endpoints
-    pub fn split(&mut self) -> (ProducerInner<'_, T, S>, ConsumerInner<'_, T, S>) {
+    /// Splits a queue into producer and consumer endpoints.
+    ///
+    /// # Examples
+    ///
+    /// Create a queue at compile time, split it at runtime,
+    /// and pass it to an interrupt handler via a mutex.
+    ///
+    /// ```
+    /// use core::cell::RefCell;
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Producer, Queue};
+    ///
+    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, (), 4>>>> =
+    ///     Mutex::new(RefCell::new(None));
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'static, (), 4>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PRODUCER.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = {
+    ///         let (p, c) = {
+    ///             static mut Q: Queue<(), 4> = Queue::new();
+    ///             // SAFETY: `Q` is only accessible in this scope
+    ///             // and `main` is only called once.
+    ///             #[allow(static_mut_refs)]
+    ///             unsafe {
+    ///                 Q.split()
+    ///             }
+    ///         };
+    ///
+    ///         critical_section::with(move |cs| {
+    ///             let mut producer = PRODUCER.borrow_ref_mut(cs);
+    ///             *producer = Some(p);
+    ///         });
+    ///
+    ///         c
+    ///     };
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    ///
+    /// Create and split a queue at compile time, and pass it to the main
+    /// function and an interrupt handler via a mutex at runtime.
+    ///
+    /// ```
+    /// use core::cell::RefCell;
+    ///
+    /// use critical_section::Mutex;
+    /// use heapless::spsc::{Consumer, Producer, Queue};
+    ///
+    /// static PC: (
+    ///     Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
+    ///     Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+    /// ) = {
+    ///     static mut Q: Queue<(), 4> = Queue::new();
+    ///     // SAFETY: `Q` is only accessible in this scope.
+    ///     #[allow(static_mut_refs)]
+    ///     let (p, c) = unsafe { Q.split() };
+    ///
+    ///     (
+    ///         Mutex::new(RefCell::new(Some(p))),
+    ///         Mutex::new(RefCell::new(Some(c))),
+    ///     )
+    /// };
+    ///
+    /// fn interrupt() {
+    ///     let mut producer = {
+    ///         static mut P: Option<Producer<'_, (), 4>> = None;
+    ///         // SAFETY: Mutable access to `P` is allowed exclusively in this scope
+    ///         // and `interrupt` cannot be called directly or preempt itself.
+    ///         unsafe { &mut P }
+    ///     }
+    ///     .get_or_insert_with(|| {
+    ///         critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap())
+    ///     });
+    ///
+    ///     producer.enqueue(()).unwrap();
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
+    ///
+    ///     // Interrupt occurs.
+    /// #   interrupt();
+    ///
+    ///     consumer.dequeue().unwrap();
+    /// }
+    /// ```
+    pub const fn split(&mut self) -> (ProducerInner<'_, T, S>, ConsumerInner<'_, T, S>) {
         (ProducerInner { rb: self }, ConsumerInner { rb: self })
     }
 }
@@ -368,12 +480,12 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        let mut new: Queue<T, N> = Queue::new();
+        let mut new: Self = Self::new();
 
         for s in self.iter() {
+            // SAFETY: `new.capacity() == self.capacity() >= self.len()`,
+            // so no overflow is possible.
             unsafe {
-                // NOTE(unsafe) new.capacity() == self.capacity() >= self.len()
-                // no overflow possible
                 new.enqueue_unchecked(s.clone());
             }
         }
@@ -405,10 +517,10 @@ pub struct IterInner<'a, T, S: Storage> {
     len: usize,
 }
 
-/// An iterator over the items of a queue
+/// An iterator over the items of a queue.
 pub type Iter<'a, T, const N: usize> = IterInner<'a, T, OwnedStorage<N>>;
 
-/// An iterator over the items of a queue
+/// An iterator over the items of a queue.
 pub type IterView<'a, T> = IterInner<'a, T, ViewStorage>;
 
 impl<T, const N: usize> Clone for Iter<'_, T, N> {
@@ -431,10 +543,10 @@ pub struct IterMutInner<'a, T, S: Storage> {
     len: usize,
 }
 
-/// An iterator over the items of a queue
+/// An iterator over the items of a queue.
 pub type IterMut<'a, T, const N: usize> = IterMutInner<'a, T, OwnedStorage<N>>;
 
-/// An iterator over the items of a queue
+/// An iterator over the items of a queue.
 pub type IterMutView<'a, T> = IterMutInner<'a, T, ViewStorage>;
 
 impl<'a, T, S: Storage> Iterator for IterInner<'a, T, S> {
@@ -464,7 +576,7 @@ impl<'a, T, S: Storage> Iterator for IterMutInner<'a, T, S> {
             let i = (head + self.index) % self.rb.n();
             self.index += 1;
 
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }
@@ -494,7 +606,7 @@ impl<T, S: Storage> DoubleEndedIterator for IterMutInner<'_, T, S> {
             // self.len > 0, since it's larger than self.index > 0
             let i = (head + self.len - 1) % self.rb.n();
             self.len -= 1;
-            Some(unsafe { &mut *(self.rb.buffer.borrow().get_unchecked(i).get() as *mut T) })
+            Some(unsafe { &mut *self.rb.buffer.borrow().get_unchecked(i).get().cast::<T>() })
         } else {
             None
         }
@@ -560,12 +672,14 @@ pub struct ConsumerInner<'a, T, S: Storage> {
     rb: &'a QueueInner<T, S>,
 }
 
-/// A queue "consumer"; it can dequeue items from the queue
-/// NOTE the consumer semantically owns the `head` pointer of the queue
+/// A consumer; it can dequeue items from the queue.
+///
+/// **Note:** The consumer semantically owns the `head` pointer of the queue.
 pub type Consumer<'a, T, const N: usize> = ConsumerInner<'a, T, OwnedStorage<N>>;
 
-/// A queue "consumer"; it can dequeue items from the queue
-/// NOTE the consumer semantically owns the `head` pointer of the queue
+/// A consumer; it can dequeue items from the queue.
+///
+/// **Note:** The consumer semantically owns the `head` pointer of the queue.
 pub type ConsumerView<'a, T> = ConsumerInner<'a, T, ViewStorage>;
 
 unsafe impl<T, S: Storage> Send for ConsumerInner<'_, T, S> where T: Send {}
@@ -578,48 +692,50 @@ pub struct ProducerInner<'a, T, S: Storage> {
     rb: &'a QueueInner<T, S>,
 }
 
-/// A queue "producer"; it can enqueue items into the queue
-/// NOTE the producer semantically owns the `tail` pointer of the queue
+/// A producer; it can enqueue items into the queue.
+///
+/// **Note:** The producer semantically owns the `tail` pointer of the queue.
 pub type Producer<'a, T, const N: usize> = ProducerInner<'a, T, OwnedStorage<N>>;
 
-/// A queue "producer"; it can enqueue items into the queue
-/// NOTE the producer semantically owns the `tail` pointer of the queue
+/// A producer; it can enqueue items into the queue.
+///
+/// **Note:** The producer semantically owns the `tail` pointer of the queue.
 pub type ProducerView<'a, T> = ProducerInner<'a, T, ViewStorage>;
 
 unsafe impl<T, S: Storage> Send for ProducerInner<'_, T, S> where T: Send {}
 
 impl<T, S: Storage> ConsumerInner<'_, T, S> {
-    /// Returns the item in the front of the queue, or `None` if the queue is empty
+    /// Returns the item in the front of the queue, or `None` if the queue is empty.
     #[inline]
     pub fn dequeue(&mut self) -> Option<T> {
         unsafe { self.rb.inner_dequeue() }
     }
 
     /// Returns the item in the front of the queue, without checking if there are elements in the
-    /// queue
+    /// queue.
     ///
     /// # Safety
     ///
-    /// See [`Queue::dequeue_unchecked`]
+    /// See [`Queue::dequeue_unchecked`].
     #[inline]
     pub unsafe fn dequeue_unchecked(&mut self) -> T {
         self.rb.inner_dequeue_unchecked()
     }
 
     /// Returns if there are any items to dequeue. When this returns `true`, at least the
-    /// first subsequent dequeue will succeed
+    /// first subsequent dequeue will succeed.
     #[inline]
     pub fn ready(&self) -> bool {
         !self.rb.is_empty()
     }
 
-    /// Returns the number of elements in the queue
+    /// Returns the number of elements in the queue.
     #[inline]
     pub fn len(&self) -> usize {
         self.rb.len()
     }
 
-    /// Returns true if the queue is empty
+    /// Returns whether the queue is empty.
     ///
     /// # Examples
     ///
@@ -635,14 +751,14 @@ impl<T, S: Storage> ConsumerInner<'_, T, S> {
         self.len() == 0
     }
 
-    /// Returns the maximum number of elements the queue can hold
+    /// Returns the maximum number of elements the queue can hold.
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.rb.storage_capacity()
+        self.rb.capacity()
     }
 
     /// Returns the item in the front of the queue without dequeuing, or `None` if the queue is
-    /// empty
+    /// empty.
     ///
     /// # Examples
     ///
@@ -664,20 +780,20 @@ impl<T, S: Storage> ConsumerInner<'_, T, S> {
 }
 
 impl<T, S: Storage> ProducerInner<'_, T, S> {
-    /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full
+    /// Adds an `item` to the end of the queue, returns back the `item` if the queue is full.
     #[inline]
-    pub fn enqueue(&mut self, val: T) -> Result<(), T> {
-        unsafe { self.rb.inner_enqueue(val) }
+    pub fn enqueue(&mut self, item: T) -> Result<(), T> {
+        unsafe { self.rb.inner_enqueue(item) }
     }
 
-    /// Adds an `item` to the end of the queue, without checking if the queue is full
+    /// Adds an `item` to the end of the queue, without checking if the queue is full.
     ///
     /// # Safety
     ///
-    /// See [`Queue::enqueue_unchecked`]
+    /// See [`Queue::enqueue_unchecked`].
     #[inline]
-    pub unsafe fn enqueue_unchecked(&mut self, val: T) {
-        self.rb.inner_enqueue_unchecked(val)
+    pub unsafe fn enqueue_unchecked(&mut self, item: T) {
+        self.rb.inner_enqueue_unchecked(item);
     }
 
     /// Returns if there is any space to enqueue a new item. When this returns true, at
@@ -687,13 +803,13 @@ impl<T, S: Storage> ProducerInner<'_, T, S> {
         !self.rb.is_full()
     }
 
-    /// Returns the number of elements in the queue
+    /// Returns the number of elements in the queue.
     #[inline]
     pub fn len(&self) -> usize {
         self.rb.len()
     }
 
-    /// Returns true if the queue is empty
+    /// Returns whether the queue is empty.
     ///
     /// # Examples
     ///
@@ -709,10 +825,10 @@ impl<T, S: Storage> ProducerInner<'_, T, S> {
         self.len() == 0
     }
 
-    /// Returns the maximum number of elements the queue can hold
+    /// Returns the maximum number of elements the queue can hold.
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.rb.storage_capacity()
+        self.rb.capacity()
     }
 }
 
@@ -732,6 +848,38 @@ mod tests {
 
     // Ensure a `Consumer` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Consumer<*const (), 4>: Send);
+
+    #[test]
+    fn const_split() {
+        use critical_section::Mutex;
+        use std::cell::RefCell;
+
+        use super::{Consumer, Producer};
+
+        #[allow(clippy::type_complexity)]
+        static PC: (
+            Mutex<RefCell<Option<Producer<'_, (), 4>>>>,
+            Mutex<RefCell<Option<Consumer<'_, (), 4>>>>,
+        ) = {
+            static mut Q: Queue<(), 4> = Queue::new();
+            // SAFETY: `Q` is only accessible in this scope.
+            #[allow(static_mut_refs)]
+            let (p, c) = unsafe { Q.split() };
+
+            (
+                Mutex::new(RefCell::new(Some(p))),
+                Mutex::new(RefCell::new(Some(c))),
+            )
+        };
+        let producer = critical_section::with(|cs| PC.0.borrow_ref_mut(cs).take().unwrap());
+        let consumer = critical_section::with(|cs| PC.1.borrow_ref_mut(cs).take().unwrap());
+
+        let mut producer: Producer<'static, (), 4> = producer;
+        let mut consumer: Consumer<'static, (), 4> = consumer;
+
+        assert_eq!(producer.enqueue(()), Ok(()));
+        assert_eq!(consumer.dequeue(), Some(()));
+    }
 
     #[test]
     fn full() {
@@ -829,7 +977,7 @@ mod tests {
                 unsafe {
                     COUNT += 1;
                 }
-                Droppable
+                Self
             }
         }
 

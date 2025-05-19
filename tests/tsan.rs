@@ -1,6 +1,5 @@
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
-#![deny(warnings)]
 
 use std::{ptr::addr_of_mut, thread};
 
@@ -119,11 +118,11 @@ fn contention() {
 fn mpmc_contention() {
     use std::sync::mpsc;
 
-    use heapless::mpmc::Q64;
+    use heapless::mpmc::Queue;
 
     const N: u32 = 64;
 
-    static Q: Q64<u32> = Q64::new();
+    static Q: Queue<u32, 64> = Queue::new();
 
     let (s, r) = mpsc::channel();
     thread::scope(|scope| {
@@ -229,5 +228,5 @@ fn iterator_properly_wraps() {
     for (idx, el) in rb.iter().enumerate() {
         actual[idx] = *el;
     }
-    assert_eq!(expected, actual)
+    assert_eq!(expected, actual);
 }

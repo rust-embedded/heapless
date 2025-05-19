@@ -6,38 +6,31 @@ use core::{
     slice,
 };
 
+use crate::len_type::LenType;
+
 use super::VecView;
 
 /// A draining iterator for [`Vec`](super::Vec).
 ///
 /// This `struct` is created by [`Vec::drain`](super::Vec::drain).
 /// See its documentation for more.
-///
-/// # Example
-///
-/// ```
-/// use heapless::{vec, Vec};
-///
-/// let mut v = Vec::<_, 4>::from_array([0, 1, 2]);
-/// let iter: vec::Drain<'_, _> = v.drain(..);
-/// ```
-pub struct Drain<'a, T: 'a> {
+pub struct Drain<'a, T: 'a, LenT: LenType> {
     /// Index of tail to preserve
-    pub(super) tail_start: usize,
+    pub(super) tail_start: LenT,
     /// Length of tail
-    pub(super) tail_len: usize,
+    pub(super) tail_len: LenT,
     /// Current remaining range to remove
     pub(super) iter: slice::Iter<'a, T>,
-    pub(super) vec: NonNull<VecView<T>>,
+    pub(super) vec: NonNull<VecView<T, LenT>>,
 }
 
-impl<T: fmt::Debug> fmt::Debug for Drain<'_, T> {
+impl<T: fmt::Debug, LenT: LenType> fmt::Debug for Drain<'_, T, LenT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Drain").field(&self.iter.as_slice()).finish()
     }
 }
 
-impl<T> Drain<'_, T> {
+impl<T, LenT: LenType> Drain<'_, T, LenT> {
     /// Returns the remaining items of this iterator as a slice.
     ///
     /// # Examples
@@ -57,23 +50,23 @@ impl<T> Drain<'_, T> {
     }
 }
 
-impl<T> AsRef<[T]> for Drain<'_, T> {
+impl<T, LenT: LenType> AsRef<[T]> for Drain<'_, T, LenT> {
     fn as_ref(&self) -> &[T] {
         self.as_slice()
     }
 }
 
-unsafe impl<T: Sync> Sync for Drain<'_, T> {}
-unsafe impl<T: Send> Send for Drain<'_, T> {}
+unsafe impl<T: Sync, LenT: LenType> Sync for Drain<'_, T, LenT> {}
+unsafe impl<T: Send, LenT: LenType> Send for Drain<'_, T, LenT> {}
 
-impl<T> Iterator for Drain<'_, T> {
+impl<T, LenT: LenType> Iterator for Drain<'_, T, LenT> {
     type Item = T;
 
     #[inline]
     fn next(&mut self) -> Option<T> {
         self.iter
             .next()
-            .map(|elt| unsafe { ptr::read(elt as *const _) })
+            .map(|elt| unsafe { ptr::read(core::ptr::from_ref(elt)) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -81,34 +74,35 @@ impl<T> Iterator for Drain<'_, T> {
     }
 }
 
-impl<T> DoubleEndedIterator for Drain<'_, T> {
+impl<T, LenT: LenType> DoubleEndedIterator for Drain<'_, T, LenT> {
     #[inline]
     fn next_back(&mut self) -> Option<T> {
         self.iter
             .next_back()
-            .map(|elt| unsafe { ptr::read(elt as *const _) })
+            .map(|elt| unsafe { ptr::read(core::ptr::from_ref(elt)) })
     }
 }
 
-impl<T> Drop for Drain<'_, T> {
+impl<T, LenT: LenType> Drop for Drain<'_, T, LenT> {
     fn drop(&mut self) {
         /// Moves back the un-`Drain`ed elements to restore the original `Vec`.
-        struct DropGuard<'r, 'a, T>(&'r mut Drain<'a, T>);
+        struct DropGuard<'r, 'a, T, LenT: LenType>(&'r mut Drain<'a, T, LenT>);
 
-        impl<T> Drop for DropGuard<'_, '_, T> {
+        impl<T, LenT: LenType> Drop for DropGuard<'_, '_, T, LenT> {
             fn drop(&mut self) {
-                if self.0.tail_len > 0 {
+                if self.0.tail_len > LenT::ZERO {
                     unsafe {
                         let source_vec = self.0.vec.as_mut();
                         // memmove back untouched tail, update to new length
                         let start = source_vec.len();
-                        let tail = self.0.tail_start;
+                        let tail = self.0.tail_start.into_usize();
+                        let tail_len = self.0.tail_len.into_usize();
                         if tail != start {
                             let dst = source_vec.as_mut_ptr().add(start);
                             let src = source_vec.as_ptr().add(tail);
-                            ptr::copy(src, dst, self.0.tail_len);
+                            ptr::copy(src, dst, tail_len);
                         }
-                        source_vec.set_len(start + self.0.tail_len);
+                        source_vec.set_len(start + tail_len);
                     }
                 }
             }
@@ -125,8 +119,9 @@ impl<T> Drop for Drain<'_, T> {
             unsafe {
                 let vec = vec.as_mut();
                 let old_len = vec.len();
-                vec.set_len(old_len + drop_len + self.tail_len);
-                vec.truncate(old_len + self.tail_len);
+                let tail_len = self.tail_len.into_usize();
+                vec.set_len(old_len + drop_len + tail_len);
+                vec.truncate(old_len + tail_len);
             }
 
             return;
@@ -159,9 +154,9 @@ impl<T> Drop for Drain<'_, T> {
     }
 }
 
-impl<T> ExactSizeIterator for Drain<'_, T> {}
+impl<T, LenT: LenType> ExactSizeIterator for Drain<'_, T, LenT> {}
 
-impl<T> FusedIterator for Drain<'_, T> {}
+impl<T, LenT: LenType> FusedIterator for Drain<'_, T, LenT> {}
 
 #[cfg(test)]
 mod tests {

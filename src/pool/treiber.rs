@@ -27,7 +27,7 @@ where
     /// - `node` must be a valid pointer
     /// - aliasing rules must be enforced by the caller. e.g, the same `node` may not be pushed more than once
     pub unsafe fn push(&self, node: NonNullPtr<N>) {
-        impl_::push(self, node)
+        impl_::push(self, node);
     }
 
     pub fn try_pop(&self) -> Option<NonNullPtr<N>> {

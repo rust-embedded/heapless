@@ -57,7 +57,7 @@ impl private::Sealed for Min {}
 /// struct if you want to write code that's generic over both.
 pub struct BinaryHeapInner<T, K, S: VecStorage<T> + ?Sized> {
     pub(crate) _kind: PhantomData<K>,
-    pub(crate) data: VecInner<T, S>,
+    pub(crate) data: VecInner<T, usize, S>,
 }
 
 /// A priority queue implemented with a binary heap.
@@ -159,7 +159,7 @@ pub type BinaryHeapView<T, K> = BinaryHeapInner<T, K, ViewVecStorage<T>>;
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /* Constructors */
-    /// Creates an empty BinaryHeap as a $K-heap.
+    /// Creates an empty `BinaryHeap` as a $K-heap.
     ///
     /// ```
     /// use heapless::binary_heap::{BinaryHeap, Max};
@@ -181,17 +181,19 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
-    pub fn into_vec(self) -> Vec<T, N> {
+    pub fn into_vec(self) -> Vec<T, N, usize> {
         self.data
     }
+}
 
+impl<T, K, S: VecStorage<T>> BinaryHeapInner<T, K, S> {
     /// Get a reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &BinaryHeapView<T, K> {
-        self
+        S::as_binary_heap_view(self)
     }
     /// Get a mutable reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
-        self
+        S::as_binary_heap_mut_view(self)
     }
 }
 
@@ -203,7 +205,7 @@ where
     /* Public API */
     /// Returns the capacity of the binary heap.
     pub fn capacity(&self) -> usize {
-        self.data.storage_capacity()
+        self.data.capacity()
     }
 
     /// Drops all items from the binary heap.
@@ -222,7 +224,7 @@ where
     /// assert!(heap.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.data.clear()
+        self.data.clear();
     }
 
     /// Returns the length of the binary heap.
@@ -386,7 +388,24 @@ where
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
     /// returns it, without checking if the binary heap is empty.
-    #[allow(clippy::missing_safety_doc)] // TODO
+    ///
+    /// # Safety
+    ///
+    /// The binary heap must not be empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    /// heap.push(42)?;
+    ///
+    /// // SAFETY: We just pushed a number onto the heap, so it cannot be empty.
+    /// let val = unsafe { heap.pop_unchecked() };
+    /// assert_eq!(val, 42);
+    /// # Ok::<(), u8>(())
+    /// ```
     pub unsafe fn pop_unchecked(&mut self) -> T {
         let mut item = self.data.pop_unchecked();
 
@@ -420,7 +439,23 @@ where
     }
 
     /// Pushes an item onto the binary heap without first checking if it's full.
-    #[allow(clippy::missing_safety_doc)] // TODO
+    ///
+    /// # Safety
+    ///
+    /// The binary heap must not be full.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    ///
+    /// // SAFETY: We just created an empty heap of size 8, so it cannot be full.
+    /// unsafe { heap.push_unchecked(42) };
+    /// assert_eq!(heap.len(), 1);
+    /// assert_eq!(heap.peek(), Some(&42));
+    /// ```
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
         self.data.push_unchecked(item);
@@ -596,14 +631,14 @@ where
     }
 }
 
-impl<'a, T, K, S> PeekMutInner<'a, T, K, S>
+impl<T, K, S> PeekMutInner<'_, T, K, S>
 where
     T: Ord,
     K: Kind,
     S: VecStorage<T> + ?Sized,
 {
     /// Removes the peeked value from the heap and returns it.
-    pub fn pop(mut this: PeekMutInner<'a, T, K, S>) -> T {
+    pub fn pop(mut this: Self) -> T {
         let value = this.heap.pop().unwrap();
         this.sift = false;
         value

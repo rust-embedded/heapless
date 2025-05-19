@@ -1,5 +1,7 @@
 use core::{fmt, iter::FusedIterator, str::Chars};
 
+use crate::LenType;
+
 use super::StringView;
 
 /// A draining iterator for `String`.
@@ -8,40 +10,42 @@ use super::StringView;
 /// documentation for more.
 ///
 /// [`drain`]: crate::String::drain
-pub struct Drain<'a> {
+pub struct Drain<'a, LenT: LenType> {
     /// Will be used as &'a mut String in the destructor
-    pub(super) string: *mut StringView,
+    pub(super) string: *mut StringView<LenT>,
     /// Stast of part to remove
-    pub(super) start: usize,
+    pub(super) start: LenT,
     /// End of part to remove
-    pub(super) end: usize,
+    pub(super) end: LenT,
     /// Current remaining range to remove
     pub(super) iter: Chars<'a>,
 }
 
-impl fmt::Debug for Drain<'_> {
+impl<LenT: LenType> fmt::Debug for Drain<'_, LenT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Drain").field(&self.as_str()).finish()
     }
 }
 
-unsafe impl Sync for Drain<'_> {}
-unsafe impl Send for Drain<'_> {}
+unsafe impl<LenT: LenType> Sync for Drain<'_, LenT> {}
+unsafe impl<LenT: LenType> Send for Drain<'_, LenT> {}
 
-impl Drop for Drain<'_> {
+impl<LenT: LenType> Drop for Drain<'_, LenT> {
     fn drop(&mut self) {
         unsafe {
             // Use `Vec::drain`. “Reaffirm” the bounds checks to avoid
             // panic code being inserted again.
             let self_vec = (*self.string).as_mut_vec();
-            if self.start <= self.end && self.end <= self_vec.len() {
-                self_vec.drain(self.start..self.end);
+            let start = self.start.into_usize();
+            let end = self.end.into_usize();
+            if start <= end && end <= self_vec.len() {
+                self_vec.drain(start..end);
             }
         }
     }
 }
 
-impl Drain<'_> {
+impl<LenT: LenType> Drain<'_, LenT> {
     /// Returns the remaining (sub)string of this iterator as a slice.
     ///
     /// # Examples
@@ -61,19 +65,19 @@ impl Drain<'_> {
     }
 }
 
-impl AsRef<str> for Drain<'_> {
+impl<LenT: LenType> AsRef<str> for Drain<'_, LenT> {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-impl AsRef<[u8]> for Drain<'_> {
+impl<LenT: LenType> AsRef<[u8]> for Drain<'_, LenT> {
     fn as_ref(&self) -> &[u8] {
         self.as_str().as_bytes()
     }
 }
 
-impl Iterator for Drain<'_> {
+impl<LenT: LenType> Iterator for Drain<'_, LenT> {
     type Item = char;
 
     #[inline]
@@ -91,14 +95,14 @@ impl Iterator for Drain<'_> {
     }
 }
 
-impl DoubleEndedIterator for Drain<'_> {
+impl<LenT: LenType> DoubleEndedIterator for Drain<'_, LenT> {
     #[inline]
     fn next_back(&mut self) -> Option<char> {
         self.iter.next_back()
     }
 }
 
-impl FusedIterator for Drain<'_> {}
+impl<LenT: LenType> FusedIterator for Drain<'_, LenT> {}
 
 #[cfg(test)]
 mod tests {

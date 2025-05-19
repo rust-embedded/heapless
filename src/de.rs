@@ -1,6 +1,6 @@
 use crate::{
-    binary_heap::Kind as BinaryHeapKind, BinaryHeap, Deque, HistoryBuffer, IndexMap, IndexSet,
-    LinearMap, String, Vec,
+    binary_heap::Kind as BinaryHeapKind, len_type::LenType, BinaryHeap, Deque, HistoryBuf,
+    IndexMap, IndexSet, LinearMap, String, Vec,
 };
 use core::{
     fmt,
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<'de, T, const N: usize> Deserialize<'de> for Vec<T, N>
+impl<'de, T, LenT: LenType, const N: usize> Deserialize<'de> for Vec<T, N, LenT>
 where
     T: Deserialize<'de>,
 {
@@ -103,13 +103,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, T, const N: usize>(PhantomData<(&'de (), T)>);
+        struct ValueVisitor<'de, T, LenT: LenType, const N: usize>(PhantomData<(&'de (), T, LenT)>);
 
-        impl<'de, T, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, N>
+        impl<'de, T, LenT, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, LenT, N>
         where
             T: Deserialize<'de>,
+            LenT: LenType,
         {
-            type Value = Vec<T, N>;
+            type Value = Vec<T, N, LenT>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -173,7 +174,7 @@ where
     }
 }
 
-impl<'de, T, const N: usize> Deserialize<'de> for HistoryBuffer<T, N>
+impl<'de, T, const N: usize> Deserialize<'de> for HistoryBuf<T, N>
 where
     T: Deserialize<'de>,
 {
@@ -187,7 +188,7 @@ where
         where
             T: Deserialize<'de>,
         {
-            type Value = HistoryBuffer<T, N>;
+            type Value = HistoryBuf<T, N>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a sequence")
@@ -197,7 +198,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = HistoryBuffer::new();
+                let mut values = HistoryBuf::new();
 
                 while let Some(value) = seq.next_element()? {
                     values.write(value);
@@ -298,15 +299,15 @@ where
 
 // String containers
 
-impl<'de, const N: usize> Deserialize<'de> for String<N> {
+impl<'de, LenT: LenType, const N: usize> Deserialize<'de> for String<N, LenT> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ValueVisitor<'de, const N: usize>(PhantomData<&'de ()>);
+        struct ValueVisitor<'de, LenT: LenType, const N: usize>(PhantomData<(&'de (), LenT)>);
 
-        impl<'de, const N: usize> de::Visitor<'de> for ValueVisitor<'de, N> {
-            type Value = String<N>;
+        impl<'de, LenT: LenType, const N: usize> de::Visitor<'de> for ValueVisitor<'de, LenT, N> {
+            type Value = String<N, LenT>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(formatter, "a string no more than {} bytes long", N as u64)
@@ -338,6 +339,6 @@ impl<'de, const N: usize> Deserialize<'de> for String<N> {
             }
         }
 
-        deserializer.deserialize_str(ValueVisitor::<'de, N>(PhantomData))
+        deserializer.deserialize_str(ValueVisitor(PhantomData))
     }
 }
