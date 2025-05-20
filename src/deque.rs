@@ -39,7 +39,7 @@ use core::iter::FusedIterator;
 use core::marker::PhantomData;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::{ptr, slice};
-
+use crate::CapacityError;
 use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
 
 /// Base struct for [`Deque`] and [`DequeView`], generic over the [`VecStorage`].
@@ -1014,11 +1014,11 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     ///
     /// assert_eq!(deq1, deq2);
     /// ```
-    type Error = ();
+    type Error = CapacityError;
 
     fn try_from(value: [T; NS]) -> Result<Self, Self::Error> {
         if NS > ND {
-            return Err(());
+            return Err(CapacityError);
         }
 
         let mut deq = Self::default();
@@ -1046,7 +1046,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
-
+    use crate::CapacityError;
     use super::Deque;
 
     // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
@@ -1593,7 +1593,7 @@ mod tests {
     #[test]
     fn try_from_array() {
         // Array is too big error.
-        assert!(Deque::<u8, 3>::try_from([1, 2, 3, 4]).is_err());
+        assert!(matches!(Deque::<u8, 3>::try_from([1, 2, 3, 4]), Err(CapacityError)));
 
         // Array is at limit.
         assert!(Deque::<u8, 3>::try_from([1, 2, 3]).unwrap().is_full());
