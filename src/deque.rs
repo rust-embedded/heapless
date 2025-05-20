@@ -33,14 +33,14 @@
 //! }
 //! ```
 
+use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
+use crate::CapacityError;
 use core::cmp::Ordering;
 use core::fmt;
 use core::iter::FusedIterator;
 use core::marker::PhantomData;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::{ptr, slice};
-use crate::CapacityError;
-use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
 
 /// Base struct for [`Deque`] and [`DequeView`], generic over the [`VecStorage`].
 ///
@@ -1028,7 +1028,7 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
             unsafe {
                 ptr::copy_nonoverlapping(
                     value.as_ptr(),
-                    deq.buffer.buffer.as_mut_ptr() as *mut T,
+                    deq.buffer.buffer.as_mut_ptr().cast::<T>(),
                     NS,
                 );
             }
@@ -1044,9 +1044,9 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
 
 #[cfg(test)]
 mod tests {
-    use static_assertions::assert_not_impl_any;
-    use crate::CapacityError;
     use super::Deque;
+    use crate::CapacityError;
+    use static_assertions::assert_not_impl_any;
 
     // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Deque<*const (), 4>: Send);
@@ -1592,7 +1592,10 @@ mod tests {
     #[test]
     fn try_from_array() {
         // Array is too big error.
-        assert!(matches!(Deque::<u8, 3>::try_from([1, 2, 3, 4]), Err(CapacityError)));
+        assert!(matches!(
+            Deque::<u8, 3>::try_from([1, 2, 3, 4]),
+            Err(CapacityError)
+        ));
 
         // Array is at limit.
         assert!(Deque::<u8, 3>::try_from([1, 2, 3]).unwrap().is_full());
