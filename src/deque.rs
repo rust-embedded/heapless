@@ -1005,12 +1005,11 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// ```
     /// use heapless::Deque;
     ///
-    /// let deq1 = Deque::<u8, 4>::try_from([1, 2, 3, 4]).unwrap();
-    /// let mut deq2 = Deque::<u8, 4>::new();
+    /// let deq1 = Deque::<u8, 5>::try_from([1, 2, 3]).unwrap();
+    /// let mut deq2 = Deque::<u8, 5>::new();
     /// deq2.push_back(1).unwrap();
     /// deq2.push_back(2).unwrap();
     /// deq2.push_back(3).unwrap();
-    /// deq2.push_back(4).unwrap();
     ///
     /// assert_eq!(deq1, deq2);
     /// ```
