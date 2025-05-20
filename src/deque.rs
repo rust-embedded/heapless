@@ -33,14 +33,14 @@
 //! }
 //! ```
 
+use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
+use crate::CapacityError;
 use core::cmp::Ordering;
 use core::fmt;
 use core::iter::FusedIterator;
 use core::marker::PhantomData;
-use core::mem::MaybeUninit;
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::{ptr, slice};
-
-use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
 
 /// Base struct for [`Deque`] and [`DequeView`], generic over the [`VecStorage`].
 ///
@@ -999,11 +999,54 @@ impl<T: PartialEq, const N: usize> PartialEq for Deque<T, N> {
 
 impl<T: Eq, const N: usize> Eq for Deque<T, N> {}
 
+impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
+    /// Converts a `[T; NS]` into a `Deque<T, ND>`.
+    ///
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let deq1 = Deque::<u8, 5>::try_from([1, 2, 3]).unwrap();
+    /// let mut deq2 = Deque::<u8, 5>::new();
+    /// deq2.push_back(1).unwrap();
+    /// deq2.push_back(2).unwrap();
+    /// deq2.push_back(3).unwrap();
+    ///
+    /// assert_eq!(deq1, deq2);
+    /// ```
+    type Error = CapacityError;
+
+    fn try_from(value: [T; NS]) -> Result<Self, Self::Error> {
+        if NS > ND {
+            return Err(CapacityError);
+        }
+
+        let mut deq = Self::default();
+        let value = ManuallyDrop::new(value);
+
+        if size_of::<T>() != 0 {
+            // SAFETY: We already ensured that value fits in deq.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    value.as_ptr(),
+                    deq.buffer.buffer.as_mut_ptr().cast::<T>(),
+                    NS,
+                );
+            }
+        }
+
+        deq.front = 0;
+        deq.back = NS;
+        deq.full = NS == ND;
+
+        Ok(deq)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use static_assertions::assert_not_impl_any;
-
     use super::Deque;
+    use crate::CapacityError;
+    use static_assertions::assert_not_impl_any;
 
     // Ensure a `Deque` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Deque<*const (), 4>: Send);
@@ -1544,5 +1587,27 @@ mod tests {
         b.push_front(1).unwrap();
 
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn try_from_array() {
+        // Array is too big error.
+        assert!(matches!(
+            Deque::<u8, 3>::try_from([1, 2, 3, 4]),
+            Err(CapacityError)
+        ));
+
+        // Array is at limit.
+        assert!(Deque::<u8, 3>::try_from([1, 2, 3]).unwrap().is_full());
+
+        // Array is under limit.
+        let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
+        let mut deq2 = Deque::<u8, 8>::new();
+        deq2.push_back(1).unwrap();
+        deq2.push_back(2).unwrap();
+        deq2.push_back(3).unwrap();
+        deq2.push_back(4).unwrap();
+
+        assert_eq!(deq1, deq2);
     }
 }
