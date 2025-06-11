@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `bytes::BufMut` is now implemented on `VecInner`.
 - Removed generic from `history_buf::OldestOrdered`.
 - Made `LenType` opt-in.
+- Minor fixes to `pool::boxed` docs.
 
 ### Fixed
 

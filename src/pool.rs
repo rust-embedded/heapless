@@ -6,7 +6,7 @@
 //!
 //! - ARM architectures which instruction set include the LDREX, CLREX and STREX instructions, e.g.
 //!   `thumbv7m-none-eabi` but not `thumbv6m-none-eabi`
-//! - 32-bit x86, e.g. `i686-unknown-linux-gnu`
+//! - 32-bit and 64-bit x86.
 //!
 //! # Benchmarks
 //!
