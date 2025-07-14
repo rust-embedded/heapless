@@ -677,6 +677,132 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     pub fn clear(&mut self) {
         self.vec.clear();
     }
+
+    /// Inserts a character into this `String` at a byte position.
+    ///
+    /// This is an *O*(*n*) operation as it requires copying every element in the
+    /// buffer.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than the `String`'s length, or if it does not
+    /// lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<4> = String::new();
+    ///
+    /// s.insert(0, 'f').unwrap();
+    /// s.insert(1, 'o').unwrap();
+    /// s.insert(2, 'o').unwrap();
+    ///
+    /// assert_eq!("foo", s);
+    /// # Ok::<(), heapless::CapacityError>(())
+    /// ```
+    #[inline]
+    pub fn insert(&mut self, idx: usize, ch: char) -> Result<(), CapacityError> {
+        assert!(self.is_char_boundary(idx), "index must be a char boundary");
+
+        let len = self.len();
+        let ch_len = ch.len_utf8();
+
+        // Check if there is enough capacity
+        if len + ch_len > self.capacity() {
+            return Err(CapacityError);
+        }
+
+        // SAFETY: Move the bytes starting from `idx` to their new location `ch_len`
+        // bytes ahead. This is safe because we checked `len + ch_len` does not
+        // exceed the capacity and `idx` is a char boundary
+        unsafe {
+            let ptr = self.vec.as_mut_ptr();
+            core::ptr::copy(ptr.add(idx), ptr.add(idx + ch_len), len - idx);
+        }
+
+        // SAFETY: Copy the encoded character into the vacated region if
+        // `idx != len`, or into the uninitialized spare capacity otherwise.
+        unsafe {
+            // 4 bytes is the maximum length of a UTF-8 character
+            let mut buf = [0u8; 4];
+            let encoded = ch.encode_utf8(&mut buf);
+            core::ptr::copy_nonoverlapping(
+                encoded.as_ptr(),
+                self.vec.as_mut_ptr().add(idx),
+                ch_len,
+            );
+        }
+
+        // SAFETY: Update the length to include the newly added bytes.
+        unsafe {
+            self.vec.set_len(len + ch_len);
+        }
+
+        Ok(())
+    }
+
+    /// Inserts a string slice into this `String` at a byte position.
+    ///
+    /// This is an *O*(*n*) operation as it requires copying every element in the
+    /// buffer.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is larger than the `String`'s length, or if it does not
+    /// lie on a [`char`] boundary.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::try_from("bar")?;
+    ///
+    /// s.insert_str(0, "foo")?;
+    ///
+    /// assert_eq!("foobar", s);
+    /// # Ok::<(), heapless::CapacityError>(())
+    /// ```
+    #[inline]
+    pub fn insert_str(&mut self, idx: usize, string: &str) -> Result<(), CapacityError> {
+        assert!(self.is_char_boundary(idx), "index must be a char boundary");
+
+        let len = self.len();
+        let string_len = string.len();
+
+        // Check if there is enough capacity
+        if len + string_len > self.capacity() {
+            return Err(CapacityError);
+        }
+
+        // SAFETY: Move the bytes starting from `idx` to their new location
+        // `string_len` bytes ahead. This is safe because we checked there is
+        // sufficient capacity, and `idx` is a char boundary.
+        unsafe {
+            let ptr = self.vec.as_mut_ptr();
+            core::ptr::copy(ptr.add(idx), ptr.add(idx + string_len), len - idx);
+        }
+
+        // SAFETY: Copy the new string slice into the vacated region if `idx != len`,
+        // or into the uninitialized spare capacity otherwise. The borrow checker
+        // ensures that the source and destination do not overlap.
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                string.as_ptr(),
+                self.vec.as_mut_ptr().add(idx),
+                string_len,
+            );
+        }
+
+        // SAFETY: Update the length to include the newly added bytes.
+        unsafe {
+            self.vec.set_len(len + string_len);
+        }
+
+        Ok(())
+    }
 }
 
 impl<LenT: LenType, const N: usize> Default for String<N, LenT> {
@@ -1239,5 +1365,104 @@ mod tests {
     fn format_plain_string_overflow() {
         let formatted = format!(2; "123");
         assert_eq!(formatted, Err(core::fmt::Error));
+    }
+
+    #[test]
+    fn insert() {
+        let mut s: String<6> = String::try_from("123").unwrap();
+        assert!(s.insert(0, 'a').is_ok());
+        assert_eq!(s, "a123");
+
+        assert!(s.insert(2, 'b').is_ok());
+        assert_eq!(s, "a1b23");
+
+        assert!(s.insert(s.len(), '4').is_ok());
+        assert_eq!(s, "a1b234");
+
+        assert_eq!(s.len(), 6);
+        assert!(s.insert(0, 'd').is_err());
+        assert_eq!(s, "a1b234");
+    }
+
+    #[test]
+    fn insert_unicode() {
+        let mut s: String<21> = String::try_from("ĝėēƶ").unwrap();
+        let idx = s.find("ė").unwrap();
+
+        assert!(s.insert(idx, '🦀').is_ok());
+        assert_eq!(s, "ĝ🦀ėēƶ");
+
+        s.insert(s.len(), '🦀').unwrap();
+        assert_eq!(s, "ĝ🦀ėēƶ🦀");
+
+        s.insert(0, '🦀').unwrap();
+        assert_eq!(s, "🦀ĝ🦀ėēƶ🦀");
+
+        assert_eq!(s.len(), 20);
+        assert_eq!('ƶ'.len_utf8(), 2);
+        assert!(s.insert(0, 'ƶ').is_err());
+        assert_eq!(s, "🦀ĝ🦀ėēƶ🦀");
+    }
+
+    #[test]
+    #[should_panic = "index must be a char boundary"]
+    fn insert_at_non_char_boundary_panics() {
+        let mut s: String<8> = String::try_from("é").unwrap();
+        _ = s.insert(1, 'a');
+    }
+
+    #[test]
+    #[should_panic = "index must be a char boundary"]
+    fn insert_beyond_length_panics() {
+        let mut s: String<8> = String::try_from("a").unwrap();
+        _ = s.insert(2, 'a');
+    }
+
+    #[test]
+    fn insert_str() {
+        let mut s: String<14> = String::try_from("bar").unwrap();
+        assert!(s.insert_str(0, "foo").is_ok());
+        assert_eq!(s, "foobar");
+
+        assert!(s.insert_str(3, "baz").is_ok());
+        assert_eq!(s, "foobazbar");
+
+        assert!(s.insert_str(s.len(), "end").is_ok());
+        assert_eq!(s, "foobazbarend");
+
+        assert_eq!(s.len(), 12);
+        assert!(s.insert_str(0, "def").is_err());
+        assert_eq!(s, "foobazbarend");
+    }
+
+    #[test]
+    fn insert_str_unicode() {
+        let mut s: String<20> = String::try_from("Héllô").unwrap();
+        let idx = s.find("lô").unwrap();
+
+        assert!(s.insert_str(idx, "p, í'm ").is_ok());
+        assert_eq!(s, "Hélp, í'm lô");
+
+        assert!(s.insert_str(s.len(), "st").is_ok());
+        assert_eq!(s, "Hélp, í'm lôst");
+
+        assert_eq!(s.len(), 17);
+        assert_eq!("🦀".len(), 4);
+        assert!(s.insert_str(0, "🦀").is_err());
+        assert_eq!(s, "Hélp, í'm lôst");
+    }
+
+    #[test]
+    #[should_panic = "index must be a char boundary"]
+    fn insert_str_at_non_char_boundary_panics() {
+        let mut s: String<8> = String::try_from("é").unwrap();
+        _ = s.insert_str(1, "a");
+    }
+
+    #[test]
+    #[should_panic = "index must be a char boundary"]
+    fn insert_str_beyond_length_panics() {
+        let mut s: String<8> = String::try_from("a").unwrap();
+        _ = s.insert_str(2, "a");
     }
 }
