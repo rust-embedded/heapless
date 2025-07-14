@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `String::insert` and `String::insert_str`.
+
 ### Changed
 
 - `bytes::BufMut` is now implemented on `VecInner`.
