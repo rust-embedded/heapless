@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - CI now uses flags specified in `Cargo.toml` for `rustdoc` tests.
+- Fixed clippy lints.
 
 ### Removed
 
