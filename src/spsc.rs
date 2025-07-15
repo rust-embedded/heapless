@@ -922,7 +922,7 @@ mod tests {
 
         for _ in 0..1_000_000 {
             let v = rb.dequeue().unwrap();
-            println!("{}", v);
+            println!("{v}");
             rb.enqueue(v).unwrap();
             assert_eq!(rb.len(), 2);
         }

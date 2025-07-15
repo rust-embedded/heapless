@@ -1014,10 +1014,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         let len = self.len();
         if index > len {
-            panic!(
-                "insertion index (is {}) should be <= len (is {})",
-                index, len
-            );
+            panic!("insertion index (is {index}) should be <= len (is {len})");
         }
 
         // check there's space for the new element
@@ -1071,7 +1068,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len();
         if index >= len {
-            panic!("removal index (is {}) should be < len (is {})", index, len);
+            panic!("removal index (is {index}) should be < len (is {len})");
         }
         unsafe {
             // infallible

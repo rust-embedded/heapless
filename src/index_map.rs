@@ -1871,14 +1871,14 @@ mod tests {
         assert_eq!(all.len(), MAP_SLOTS - 1);
 
         let mut even = almost_filled_map();
-        even.retain(|_, &mut v| v % 2 == 0);
+        even.retain(|_, &mut v| v.is_multiple_of(2));
         assert_eq!(even.len(), (MAP_SLOTS - 1) / 2);
         for &v in even.values() {
             assert_eq!(v % 2, 0);
         }
 
         let mut odd = almost_filled_map();
-        odd.retain(|_, &mut v| v % 2 != 0);
+        odd.retain(|_, &mut v| !v.is_multiple_of(2));
         assert_eq!(odd.len(), MAP_SLOTS / 2);
         for &v in odd.values() {
             assert_ne!(v % 2, 0);

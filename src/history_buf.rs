@@ -880,7 +880,7 @@ mod tests {
             let a_item = a.next();
             let b_item = b.next();
 
-            assert_eq!(a_item, b_item, "{}", i);
+            assert_eq!(a_item, b_item, "{i}");
 
             i += 1;
 
