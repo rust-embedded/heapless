@@ -1016,7 +1016,7 @@ mod tests {
 
         let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
-        write!(std_s, "{:?}", s).unwrap();
+        write!(std_s, "{s:?}").unwrap();
         assert_eq!("\"abcd\"", std_s);
     }
 
@@ -1026,7 +1026,7 @@ mod tests {
 
         let s: String<8> = String::try_from("abcd").unwrap();
         let mut std_s = std::string::String::new();
-        write!(std_s, "{}", s).unwrap();
+        write!(std_s, "{s}").unwrap();
         assert_eq!("abcd", std_s);
     }
 
