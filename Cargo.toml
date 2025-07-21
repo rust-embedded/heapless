@@ -50,6 +50,9 @@ defmt = ["dep:defmt"]
 # Implement `zeroize::Zeroize` trait.
 zeroize = ["dep:zeroize"]
 
+# Implement `embedded_io::Write`
+"embedded-io-v0.7" = ["dep:embedded-io"]
+
 # Enable larger MPMC sizes.
 mpmc_large = []
 
@@ -67,6 +70,7 @@ ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
 zeroize = { version = "1.8", optional = true, default-features = false, features = ["derive"] }
+embedded-io = { version = "0.7", optional = true }
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]
