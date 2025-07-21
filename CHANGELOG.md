@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added optional `embedded_io::Write` impl for `Vec`.
+
 ### Changed
 
 - `bytes::BufMut` is now implemented on `VecInner`.
