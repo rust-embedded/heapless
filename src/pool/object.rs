@@ -3,6 +3,7 @@
 //! # Example usage
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{object_pool, pool::object::{Object, ObjectBlock}};
 //!
 //! object_pool!(MyObjectPool: [u8; 128]);
@@ -46,6 +47,7 @@
 //! to the `ObjectPool`. This requires an intermediate `const` value as shown below:
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{object_pool, pool::object::ObjectBlock};
 //!
 //! object_pool!(MyObjectPool: [u8; 128]);
@@ -55,7 +57,7 @@
 //! let blocks: &'static mut [ObjectBlock<[u8; 128]>] = {
 //!     const BLOCK: ObjectBlock<[u8; 128]> = ObjectBlock::new([0; 128]); // <=
 //!     static mut BLOCKS: [ObjectBlock<[u8; 128]>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
+//!     unsafe { addr_of_mut!(BLOCKS).as_mut().unwrap() }
 //! };
 //!
 //! for block in blocks {

@@ -3,6 +3,7 @@
 //! # Example usage
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{arc_pool, pool::arc::{Arc, ArcBlock}};
 //!
 //! arc_pool!(MyArcPool: u128);
@@ -45,6 +46,7 @@
 //! to the `ArcPool`. This requires an intermediate `const` value as shown below:
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{arc_pool, pool::arc::ArcBlock};
 //!
 //! arc_pool!(MyArcPool: u128);
@@ -54,7 +56,7 @@
 //! let blocks: &'static mut [ArcBlock<u128>] = {
 //!     const BLOCK: ArcBlock<u128> = ArcBlock::new(); // <=
 //!     static mut BLOCKS: [ArcBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
+//!     unsafe { addr_of_mut!(BLOCKS).as_mut().unwrap() }
 //! };
 //!
 //! for block in blocks {

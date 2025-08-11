@@ -61,6 +61,7 @@
 //! to the `BoxPool`. This requires an intermediate `const` value as shown below:
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{box_pool, pool::boxed::BoxBlock};
 //!
 //! box_pool!(MyBoxPool: u128);
