@@ -3,6 +3,7 @@
 //! # Example usage
 //!
 //! ```
+//! use core::ptr::addr_of_mut;
 //! use heapless::{box_pool, pool::boxed::{Box, BoxBlock}};
 //!
 //! box_pool!(MyBoxPool: u128);
@@ -70,7 +71,7 @@
 //!     #[allow(clippy::declare_interior_mutable_const)]
 //!     const BLOCK: BoxBlock<u128> = BoxBlock::new(); // <=
 //!     static mut BLOCKS: [BoxBlock<u128>; POOL_CAPACITY] = [BLOCK; POOL_CAPACITY];
-//!     unsafe { addr_of_mut!(BLOCK).as_mut().unwrap()S }
+//!     unsafe { addr_of_mut!(BLOCKS).as_mut().unwrap() }
 //! };
 //!
 //! for block in blocks {
