@@ -716,26 +716,23 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
 
         // SAFETY: Move the bytes starting from `idx` to their new location `ch_len`
         // bytes ahead. This is safe because we checked `len + ch_len` does not
-        // exceed the capacity and `idx` is a char boundary
+        // exceed the capacity and `idx` is a char boundary.
         unsafe {
             let ptr = self.vec.as_mut_ptr();
             core::ptr::copy(ptr.add(idx), ptr.add(idx + ch_len), len - idx);
         }
 
-        // SAFETY: Copy the encoded character into the vacated region if
-        // `idx != len`, or into the uninitialized spare capacity otherwise.
+        // SAFETY: Encode the character into the vacated region if `idx != len`,
+        // or into the uninitialized spare capacity otherwise. This is safe
+        // because `is_char_boundary` checks that `idx <= len`, and we checked that
+        // `(idx + ch_len)` does not exceed the capacity.
         unsafe {
-            // 4 bytes is the maximum length of a UTF-8 character
-            let mut buf = [0u8; 4];
-            let encoded = ch.encode_utf8(&mut buf);
-            core::ptr::copy_nonoverlapping(
-                encoded.as_ptr(),
-                self.vec.as_mut_ptr().add(idx),
-                ch_len,
-            );
+            let buf = core::slice::from_raw_parts_mut(self.vec.as_mut_ptr().add(idx), ch_len);
+            ch.encode_utf8(buf);
         }
 
-        // SAFETY: Update the length to include the newly added bytes.
+        // SAFETY: Update the length to include the newly added bytes. This is
+        // safe because we checked that `len + ch_len` does not exceed the capacity.
         unsafe {
             self.vec.set_len(len + ch_len);
         }
