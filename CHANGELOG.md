@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed generic from `history_buf::OldestOrdered`.
 - Made `LenType` opt-in.
 - Minor fixes to `pool::boxed` docs.
+- Removed generic from `spsc::Consumer`, `spsc::Producer` and `spsc::Iter`.
 
 ### Fixed
 
