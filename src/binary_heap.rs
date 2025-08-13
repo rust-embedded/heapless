@@ -193,7 +193,7 @@ impl<T, K, S: VecStorage<T>> BinaryHeapInner<T, K, S> {
     }
     /// Get a mutable reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut BinaryHeapView<T, K> {
-        S::as_binary_heap_mut_view(self)
+        S::as_binary_heap_view_mut(self)
     }
 }
 
