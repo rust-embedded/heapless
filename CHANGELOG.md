@@ -82,6 +82,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Updated `hash32` from `0.3.0` to `1.0.0`.
 - Updated defmt from 0.3 to 1.0.1
   - Changed the feature name from `defmt-03` to `defmt`.
 - Changed the error type of these methods from `()` to `CapacityError`.
