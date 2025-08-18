@@ -363,7 +363,8 @@ impl<T, S: Storage> QueueInner<T, S> {
 
     /// Splits a queue into producer and consumer endpoints.
     ///
-    /// If you need this function in a `const` context, check out [`Queue::split_const`] and [`QueueView::split_const`].
+    /// If you need this function in a `const` context,
+    /// check out [`Queue::split_const`] and [`QueueView::split_const`].
     ///
     /// # Examples
     ///
@@ -385,7 +386,8 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// use critical_section::Mutex;
     /// use heapless::spsc::{Producer, Queue};
     ///
-    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, ()>>>> = Mutex::new(RefCell::new(None));
+    /// static PRODUCER: Mutex<RefCell<Option<Producer<'static, ()>>>> =
+    ///     { Mutex::new(RefCell::new(None)) };
     ///
     /// fn interrupt() {
     ///     let mut producer = {
