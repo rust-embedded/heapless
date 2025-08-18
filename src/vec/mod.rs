@@ -61,7 +61,7 @@ mod storage {
         fn as_vec_view<LenT: LenType>(this: &VecInner<T, LenT, Self>) -> &VecView<T, LenT>
         where
             Self: VecStorage<T>;
-        fn as_vec_mut_view<LenT: LenType>(
+        fn as_vec_view_mut<LenT: LenType>(
             this: &mut VecInner<T, LenT, Self>,
         ) -> &mut VecView<T, LenT>
         where
@@ -70,7 +70,7 @@ mod storage {
         fn as_binary_heap_view<K>(this: &BinaryHeapInner<T, K, Self>) -> &BinaryHeapView<T, K>
         where
             Self: VecStorage<T>;
-        fn as_binary_heap_mut_view<K>(
+        fn as_binary_heap_view_mut<K>(
             this: &mut BinaryHeapInner<T, K, Self>,
         ) -> &mut BinaryHeapView<T, K>
         where
@@ -79,7 +79,7 @@ mod storage {
         fn as_deque_view(this: &DequeInner<T, Self>) -> &DequeView<T>
         where
             Self: VecStorage<T>;
-        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        fn as_deque_view_mut(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
         where
             Self: VecStorage<T>;
     }
@@ -108,7 +108,7 @@ mod storage {
         {
             this
         }
-        fn as_vec_mut_view<LenT: LenType>(
+        fn as_vec_view_mut<LenT: LenType>(
             this: &mut VecInner<T, LenT, Self>,
         ) -> &mut VecView<T, LenT>
         where
@@ -123,7 +123,7 @@ mod storage {
         {
             this
         }
-        fn as_binary_heap_mut_view<K>(
+        fn as_binary_heap_view_mut<K>(
             this: &mut BinaryHeapInner<T, K, Self>,
         ) -> &mut BinaryHeapView<T, K>
         where
@@ -137,7 +137,7 @@ mod storage {
         {
             this
         }
-        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        fn as_deque_view_mut(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
         where
             Self: VecStorage<T>,
         {
@@ -160,7 +160,7 @@ mod storage {
         {
             this
         }
-        fn as_vec_mut_view<LenT: LenType>(
+        fn as_vec_view_mut<LenT: LenType>(
             this: &mut VecInner<T, LenT, Self>,
         ) -> &mut VecView<T, LenT>
         where
@@ -175,7 +175,7 @@ mod storage {
         {
             this
         }
-        fn as_binary_heap_mut_view<K>(
+        fn as_binary_heap_view_mut<K>(
             this: &mut BinaryHeapInner<T, K, Self>,
         ) -> &mut BinaryHeapView<T, K>
         where
@@ -189,7 +189,7 @@ mod storage {
         {
             this
         }
-        fn as_deque_mut_view(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
+        fn as_deque_view_mut(this: &mut DequeInner<T, Self>) -> &mut DequeView<T>
         where
             Self: VecStorage<T>,
         {
@@ -528,7 +528,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// ```
     #[inline]
     pub fn as_mut_view(&mut self) -> &mut VecView<T, LenT> {
-        S::as_vec_mut_view(self)
+        S::as_vec_view_mut(self)
     }
 
     /// Returns a raw pointer to the vector’s buffer.
@@ -1014,10 +1014,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         let len = self.len();
         if index > len {
-            panic!(
-                "insertion index (is {}) should be <= len (is {})",
-                index, len
-            );
+            panic!("insertion index (is {index}) should be <= len (is {len})");
         }
 
         // check there's space for the new element
@@ -1071,7 +1068,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len();
         if index >= len {
-            panic!("removal index (is {}) should be < len (is {})", index, len);
+            panic!("removal index (is {index}) should be < len (is {len})");
         }
         unsafe {
             // infallible
@@ -1495,6 +1492,31 @@ where
             vec,
             next: LenT::ZERO,
         }
+    }
+}
+
+impl<T, LenT: LenType, const N: usize> core::fmt::Debug for IntoIter<T, N, LenT>
+where
+    T: core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let s = if self.next < self.vec.len {
+            unsafe {
+                slice::from_raw_parts(
+                    self.vec
+                        .buffer
+                        .buffer
+                        .as_ptr()
+                        .cast::<T>()
+                        .add(self.next.into_usize()),
+                    (self.vec.len - self.next).into_usize(),
+                )
+            }
+        } else {
+            &[]
+        };
+
+        write!(f, "{s:?}")
     }
 }
 

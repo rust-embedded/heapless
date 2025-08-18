@@ -7,15 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added `String::insert` and `String::insert_str`.
+
 ### Changed
 
 - `bytes::BufMut` is now implemented on `VecInner`.
 - Removed generic from `history_buf::OldestOrdered`.
 - Made `LenType` opt-in.
+- Minor fixes to `pool::boxed` docs.
+- Add missing `Debug` derive to `vec::IntoIter`.
 
 ### Fixed
 
 - CI now uses flags specified in `Cargo.toml` for `rustdoc` tests.
+- Fixed clippy lints.
 
 ### Removed
 

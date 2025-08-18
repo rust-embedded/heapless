@@ -90,7 +90,7 @@ fn contention() {
                     while p.enqueue(i as u8).is_err() {}
                 }
 
-                println!("producer: {}", sum);
+                println!("producer: {sum}");
             });
 
             scope.spawn(move || {
@@ -105,7 +105,7 @@ fn contention() {
                     }
                 }
 
-                println!("consumer: {}", sum);
+                println!("consumer: {sum}");
             });
         });
     }
@@ -132,7 +132,7 @@ fn mpmc_contention() {
 
             for i in 0..(16 * N) {
                 sum = sum.wrapping_add(i);
-                println!("enqueue {}", i);
+                println!("enqueue {i}");
                 while Q.enqueue(i).is_err() {}
             }
 
@@ -147,7 +147,7 @@ fn mpmc_contention() {
                 loop {
                     if let Some(v) = Q.dequeue() {
                         sum = sum.wrapping_add(v);
-                        println!("dequeue {}", v);
+                        println!("dequeue {v}");
                         break;
                     }
                 }

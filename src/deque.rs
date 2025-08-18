@@ -196,7 +196,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
 
     /// Get a mutable reference to the `Deque`, erasing the `N` const-generic.
     pub fn as_mut_view(&mut self) -> &mut DequeView<T> {
-        S::as_deque_mut_view(self)
+        S::as_deque_view_mut(self)
     }
 
     /// Returns the maximum number of elements the deque can hold.
