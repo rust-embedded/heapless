@@ -1742,8 +1742,11 @@ mod tests {
 
     // tests that use this constant take too long to run under miri, specially on CI, with a map of
     // this size so make the map smaller when using miri
-    #[cfg(not(miri))]
+    #[cfg(not(any(miri, target_os = "vxworks")))]
     const MAP_SLOTS: usize = 4096;
+    // Reduce number of slots as too many slots can cause a stack overflow on VxWorks.
+    #[cfg(target_os = "vxworks")]
+    const MAP_SLOTS: usize = 1024;
     #[cfg(miri)]
     const MAP_SLOTS: usize = 64;
     fn almost_filled_map() -> FnvIndexMap<usize, usize, MAP_SLOTS> {
