@@ -8,6 +8,7 @@ categories = ["data-structures", "no-std"]
 description = "`static` friendly data structures that don't require dynamic memory allocation"
 documentation = "https://docs.rs/heapless"
 edition = "2021"
+rust-version = "1.87"
 keywords = ["static", "no-heap"]
 license = "MIT OR Apache-2.0"
 name = "heapless"
