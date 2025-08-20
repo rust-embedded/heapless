@@ -345,6 +345,9 @@ jobs:
   testcfail:
     name: testcfail
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+      MSRV: 1.87.0
     defaults:
       run:
         working-directory: cfail
@@ -374,7 +377,9 @@ jobs:
             ${{ runner.OS }}-build-
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.MSRV }}
 
       - name: Run cargo
         run: cargo run
