@@ -1023,15 +1023,13 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
         let mut deq = Self::default();
         let value = ManuallyDrop::new(value);
 
-        if size_of::<T>() != 0 {
-            // SAFETY: We already ensured that value fits in deq.
-            unsafe {
-                ptr::copy_nonoverlapping(
-                    value.as_ptr(),
-                    deq.buffer.buffer.as_mut_ptr().cast::<T>(),
-                    NS,
-                );
-            }
+        // SAFETY: We already ensured that value fits in deq.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                value.as_ptr(),
+                deq.buffer.buffer.as_mut_ptr().cast::<T>(),
+                NS,
+            );
         }
 
         deq.front = 0;
@@ -1609,5 +1607,21 @@ mod tests {
         deq2.push_back(4).unwrap();
 
         assert_eq!(deq1, deq2);
+    }
+
+    #[test]
+    fn try_from_array_with_zst() {
+        #[derive(Debug, PartialEq, Copy, Clone)]
+        struct ZeroSizedType;
+
+        // Test with ZST (zero-sized type)
+        let deq1 = Deque::<ZeroSizedType, 5>::try_from([ZeroSizedType, ZeroSizedType, ZeroSizedType]).unwrap();
+        let mut deq2 = Deque::<ZeroSizedType, 5>::new();
+        deq2.push_back(ZeroSizedType).unwrap();
+        deq2.push_back(ZeroSizedType).unwrap();
+        deq2.push_back(ZeroSizedType).unwrap();
+
+        assert_eq!(deq1, deq2);
+        assert_eq!(deq1.len(), 3);
     }
 }
