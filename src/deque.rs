@@ -1625,7 +1625,9 @@ mod tests {
         struct ZeroSizedType;
 
         // Test with ZST (zero-sized type)
-        let deq1 = Deque::<ZeroSizedType, 5>::try_from([ZeroSizedType, ZeroSizedType, ZeroSizedType]).unwrap();
+        let deq1 =
+            Deque::<ZeroSizedType, 5>::try_from([ZeroSizedType, ZeroSizedType, ZeroSizedType])
+                .unwrap();
         let mut deq2 = Deque::<ZeroSizedType, 5>::new();
         deq2.push_back(ZeroSizedType).unwrap();
         deq2.push_back(ZeroSizedType).unwrap();
@@ -1641,21 +1643,33 @@ mod tests {
 
         // Array is over limit.
         {
-            let _result = Deque::<Droppable, 2>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
+            let _result = Deque::<Droppable, 2>::try_from([
+                Droppable::new(),
+                Droppable::new(),
+                Droppable::new(),
+            ]);
         }
 
         assert_eq!(Droppable::count(), 0);
 
         // Array is at limit.
         {
-            let _result = Deque::<Droppable, 3>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
+            let _result = Deque::<Droppable, 3>::try_from([
+                Droppable::new(),
+                Droppable::new(),
+                Droppable::new(),
+            ]);
         }
 
         assert_eq!(Droppable::count(), 0);
 
         // Array is under limit.
         {
-            let _result = Deque::<Droppable, 4>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
+            let _result = Deque::<Droppable, 4>::try_from([
+                Droppable::new(),
+                Droppable::new(),
+                Droppable::new(),
+            ]);
         }
 
         assert_eq!(Droppable::count(), 0);
