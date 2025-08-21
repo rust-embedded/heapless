@@ -1013,11 +1013,14 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     ///
     /// assert_eq!(deq1, deq2);
     /// ```
-    type Error = CapacityError;
+    type Error = (CapacityError, [T; NS]);
 
+    /// Converts a `[T; NS]` array into a `Deque<T, ND>`.
+    ///
+    /// Returns back the `value` if NS > ND.
     fn try_from(value: [T; NS]) -> Result<Self, Self::Error> {
         if NS > ND {
-            return Err(CapacityError);
+            return Err((CapacityError, value));
         }
 
         let mut deq = Self::default();
@@ -1592,7 +1595,7 @@ mod tests {
         // Array is too big error.
         assert!(matches!(
             Deque::<u8, 3>::try_from([1, 2, 3, 4]),
-            Err(CapacityError)
+            Err((CapacityError, [1, 2, 3, 4]))
         ));
 
         // Array is at limit.
@@ -1645,14 +1648,14 @@ mod tests {
 
         // Array is at limit.
         {
-            let _deq = Deque::<Droppable, 3>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]).unwrap();
+            let _result = Deque::<Droppable, 3>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
         }
 
         assert_eq!(Droppable::count(), 0);
 
         // Array is under limit.
         {
-            let _deq = Deque::<Droppable, 4>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]).unwrap();
+            let _result = Deque::<Droppable, 4>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
         }
 
         assert_eq!(Droppable::count(), 0);
