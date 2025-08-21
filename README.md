@@ -32,6 +32,11 @@ Licensed under either of
 
 at your option.
 
+## MSRV Policy
+
+This crate is guaranteed to compile with the latest two stable releases of Rust. For example, if the
+latest stable Rust release is 1.70, then this crate is guaranteed to compile with Rust 1.69 and 1.70.
+
 ## Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
