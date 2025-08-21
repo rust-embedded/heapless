@@ -1596,7 +1596,13 @@ mod tests {
         ));
 
         // Array is at limit.
-        assert!(Deque::<u8, 3>::try_from([1, 2, 3]).unwrap().is_full());
+        let deq1 = Deque::<u8, 3>::try_from([1, 2, 3]).unwrap();
+        let mut deq2 = Deque::<u8, 3>::new();
+        deq2.push_back(1).unwrap();
+        deq2.push_back(2).unwrap();
+        deq2.push_back(3).unwrap();
+        assert!(deq1.is_full());
+        assert_eq!(deq1, deq2);
 
         // Array is under limit.
         let deq1 = Deque::<u8, 8>::try_from([1, 2, 3, 4]).unwrap();
@@ -1606,6 +1612,7 @@ mod tests {
         deq2.push_back(3).unwrap();
         deq2.push_back(4).unwrap();
 
+        assert!(!deq1.is_full());
         assert_eq!(deq1, deq2);
     }
 
@@ -1623,5 +1630,31 @@ mod tests {
 
         assert_eq!(deq1, deq2);
         assert_eq!(deq1.len(), 3);
+    }
+
+    #[test]
+    fn try_from_array_drop() {
+        droppable!();
+
+        // Array is over limit.
+        {
+            let _result = Deque::<Droppable, 2>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]);
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        // Array is at limit.
+        {
+            let _deq = Deque::<Droppable, 3>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]).unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
+
+        // Array is under limit.
+        {
+            let _deq = Deque::<Droppable, 4>::try_from([Droppable::new(), Droppable::new(), Droppable::new()]).unwrap();
+        }
+
+        assert_eq!(Droppable::count(), 0);
     }
 }
