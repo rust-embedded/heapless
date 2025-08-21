@@ -703,7 +703,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Initial release
 
 [Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.1...HEAD
-[v0.9.0]: https://github.com/rust-embedded/heapless/compare/v0.9.0...v0.9.1
+[v0.9.1]: https://github.com/rust-embedded/heapless/compare/v0.9.0...v0.9.1
 [v0.9.0]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
 [v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
