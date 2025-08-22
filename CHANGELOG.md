@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Make MSRV of 1.87.0 explicit.
 
+### Added
+
+- Added `Vec` fuzz test harness + CI runner.
+
 ## [v0.9.1] - 2025-08-19
 
 ### Added
