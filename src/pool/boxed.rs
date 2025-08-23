@@ -64,7 +64,8 @@
 //! use core::ptr::addr_of_mut;
 //! use heapless::{box_pool, pool::boxed::BoxBlock};
 //!
-//! box_pool!(MyBoxPool: u128);
+//! // You can optionally set visibility for the pool struct.
+//! box_pool!(pub MyBoxPool: u128);
 //!
 //! const POOL_CAPACITY: usize = 8;
 //!
@@ -96,8 +97,8 @@ use super::treiber::{NonNullPtr, Stack, UnionNode};
 /// For more extensive documentation see the [module level documentation](crate::pool::boxed)
 #[macro_export]
 macro_rules! box_pool {
-    ($name:ident: $data_type:ty) => {
-        pub struct $name;
+    ($visibility:vis $name:ident: $data_type:ty) => {
+        $visibility struct $name;
 
         impl $crate::pool::boxed::BoxPool for $name {
             type Data = $data_type;
