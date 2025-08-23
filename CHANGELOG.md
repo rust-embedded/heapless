@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Make MSRV of 1.87.0 explicit.
+- Allow setting visibility for the pool struct in the `box_pool!` macro.
 
 ## [v0.9.1] - 2025-08-19
 
