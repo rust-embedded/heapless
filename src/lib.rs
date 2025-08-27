@@ -228,7 +228,7 @@ pub mod _export {
 }
 
 /// The error type for fallible [`Vec`] and [`String`] methods.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[non_exhaustive]
 pub struct CapacityError;
 
