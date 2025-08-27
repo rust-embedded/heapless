@@ -92,23 +92,6 @@
             )
         )
     ),
-    doc = "- [`Arc`][pool::arc::Arc]: Like `std::sync::Arc` but backed by a lock-free memory pool rather than `[global_allocator]`."
-)]
-#![cfg_attr(
-    any(
-        arm_llsc,
-        all(
-            target_pointer_width = "32",
-            any(target_has_atomic = "64", feature = "portable-atomic")
-        ),
-        all(
-            target_pointer_width = "64",
-            any(
-                all(target_has_atomic = "128", feature = "nightly"),
-                feature = "portable-atomic"
-            )
-        )
-    ),
     doc = "- [`Object`](pool::object::Object): Objects managed by an object pool."
 )]
 //! - [`BinaryHeap`]: A priority queue.
