@@ -19,3 +19,10 @@ path = "fuzz_targets/fuzz_vec.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "fuzz_string"
+path = "fuzz_targets/fuzz_string.rs"
+test = false
+doc = false
+bench = false

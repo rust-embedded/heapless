@@ -87,6 +87,7 @@ jobs:
         run:
           - cargo install --locked cargo-fuzz
           - cargo +nightly fuzz run fuzz_vec -- -runs=16384 -max_len=4096
+          - cargo +nightly fuzz run fuzz_string -- -runs=16384 -max_len=4096
 
   # Run cargo test
   test:
