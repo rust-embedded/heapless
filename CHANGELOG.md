@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
 
-- Implement `Default` for `CapacityError`
-- Implement `defmt::Format` for `CapacityError`
+- Implement `Default` for `CapacityError`.
+- Implement `defmt::Format` for `CapacityError`.
 
 ## [v0.9.1] - 2025-08-19
 
