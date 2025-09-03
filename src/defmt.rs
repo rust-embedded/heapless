@@ -4,6 +4,7 @@ use crate::{
     len_type::LenType,
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
+    CapacityError,
 };
 use defmt::Formatter;
 
@@ -19,5 +20,11 @@ where
 impl<LenT: LenType, S: StringStorage + ?Sized> defmt::Format for StringInner<LenT, S> {
     fn format(&self, fmt: Formatter<'_>) {
         defmt::write!(fmt, "{=str}", self.as_str());
+    }
+}
+
+impl defmt::Format for CapacityError {
+    fn format(&self, fmt: Formatter<'_>) {
+        defmt::write!(fmt, "CapacityError");
     }
 }
