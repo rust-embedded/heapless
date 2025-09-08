@@ -44,6 +44,7 @@ pub trait Node: Sized {
     fn next_mut(&mut self) -> &mut AtomicPtr<Self>;
 }
 
+#[repr(C)]
 pub union UnionNode<T> {
     next: ManuallyDrop<AtomicPtr<UnionNode<T>>>,
     pub data: ManuallyDrop<T>,
