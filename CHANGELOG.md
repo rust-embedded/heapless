@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Implement `Default` for `CapacityError`.
 - Implement `defmt::Format` for `CapacityError`.
+- Implement `TryFrom` for `Deque` from array.
 
 ## [v0.9.1] - 2025-08-19
 
