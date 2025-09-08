@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - CI now uses flags specified in `Cargo.toml` for `rustdoc` tests.
 - Fixed clippy lints.
+- The `UnionNode<T>` in `pool` now has the correct memory layout for reinterpreting it as a pointer to `T`
 
 ### Removed
 
