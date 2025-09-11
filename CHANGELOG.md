@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
+- Allow setting visibility for the pool struct in the `box_pool!` macro.
 
 - Implement `Default` for `CapacityError`.
 - Implement `defmt::Format` for `CapacityError`.
