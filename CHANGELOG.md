@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implement `Default` for `CapacityError`.
 - Implement `defmt::Format` for `CapacityError`.
 - Implement `TryFrom` for `Deque` from array.
+- Fixed initialization of the `ArcBlock<T>` and `BoxBlock<T>` types, fixing possible Undefined Behavior
 
 ## [v0.9.1] - 2025-08-19
 
