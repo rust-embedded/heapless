@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `ExactSizeIterator` to `vec::IntoIter`, `deque::IntoIter`, `index_map::IntoIter` and `linear_map::IntoIter`.
 - Added `DoubleEndedIterator` to `vec::IntoIter` and `deque::IntoIter`.
 - Deprecate `mpmc` (see [#583](https://github.com/rust-embedded/heapless/issues/583#issuecomment-3469297720))
+- Fixed initialization of the `ArcBlock<T>` and `BoxBlock<T>` types, fixing possible Undefined Behavior
 
 ## [v0.9.1] - 2025-08-19
 
