@@ -67,6 +67,13 @@ where
 
 impl<N> Copy for NonNullPtr<N> where N: Node {}
 
+/// Pushes the given node on top of the stack
+///
+/// # Safety
+///
+/// - `node` must point to a node that is properly initialized for linking, i.e.
+///   `node.as_mut().next_mut()` must be valid to call (see [`Node::next_mut`])
+/// - `node` must be convertible to a reference (see [`NonNull::as_mut`])
 pub unsafe fn push<N>(stack: &Stack<N>, mut node: NonNullPtr<N>)
 where
     N: Node,
@@ -78,9 +85,11 @@ where
 
         node.inner
             .as_mut()
+            // SAFETY: Caller guarantees that it is valid to call `next_mut`
             .next_mut()
             .inner
             .get()
+            // SAFETY: The pointer comes from `AtomicPtr::inner`, which is valid for writes
             .write(NonNull::new(top as *mut _));
 
         if arch::store_conditional(node.inner.as_ptr() as usize, top_addr).is_ok() {
