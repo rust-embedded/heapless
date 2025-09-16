@@ -10,7 +10,7 @@ use crate::{
     vec::{VecInner, VecStorage},
     IndexMap, IndexSet,
 };
-use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
+use serde_core::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 // Sequential containers
 
