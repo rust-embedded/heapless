@@ -47,6 +47,9 @@ ufmt = ["dep:ufmt", "dep:ufmt-write"]
 # Implement `defmt::Format`.
 defmt = ["dep:defmt"]
 
+# Implement `zeroize::Zeroize` trait.
+zeroize = ["dep:zeroize"]
+
 # Enable larger MPMC sizes.
 mpmc_large = []
 
@@ -63,6 +66,7 @@ serde_core = { version = "1", optional = true, default-features = false }
 ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
+zeroize = { version = "1.8", optional = true, default-features = false, features = ["derive"] }
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]

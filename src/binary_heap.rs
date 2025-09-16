@@ -17,6 +17,9 @@ use core::{
     ptr, slice,
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use crate::vec::{OwnedVecStorage, Vec, VecInner, VecStorage, ViewVecStorage};
 
 /// Min-heap
@@ -55,6 +58,11 @@ impl private::Sealed for Min {}
 ///
 /// In most cases you should use [`BinaryHeap`] or [`BinaryHeapView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
+#[cfg_attr(
+    feature = "zeroize",
+    derive(Zeroize),
+    zeroize(bound = "T: Zeroize, S: Zeroize")
+)]
 pub struct BinaryHeapInner<T, K, S: VecStorage<T> + ?Sized> {
     pub(crate) _kind: PhantomData<K>,
     pub(crate) data: VecInner<T, usize, S>,
@@ -880,6 +888,24 @@ mod tests {
         assert_eq!(heap.pop(), Some(7));
         assert_eq!(heap.pop(), Some(1));
         assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_binary_heap_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut heap = BinaryHeap::<u8, Max, 8>::new();
+        for i in 0..8 {
+            heap.push(i).unwrap();
+        }
+
+        assert_eq!(heap.len(), 8);
+        assert_eq!(heap.peek(), Some(&7));
+
+        // zeroized using Vec's implementation
+        heap.zeroize();
+        assert_eq!(heap.len(), 0);
     }
 
     fn _test_variance<'a: 'b, 'b>(x: BinaryHeap<&'a (), Max, 42>) -> BinaryHeap<&'b (), Max, 42> {

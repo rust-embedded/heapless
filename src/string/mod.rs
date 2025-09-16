@@ -11,6 +11,9 @@ use core::{
     str::{self, Utf8Error},
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use crate::CapacityError;
 use crate::{
     len_type::LenType,
@@ -142,6 +145,7 @@ pub type ViewStorage = ViewVecStorage<u8>;
 ///
 /// In most cases you should use [`String`] or [`StringView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
+#[cfg_attr(feature = "zeroize", derive(Zeroize), zeroize(bound = "S: Zeroize"))]
 pub struct StringInner<LenT: LenType, S: StringStorage + ?Sized> {
     vec: VecInner<u8, LenT, S>,
 }
@@ -1461,5 +1465,27 @@ mod tests {
     fn insert_str_beyond_length_panics() {
         let mut s: String<8> = String::try_from("a").unwrap();
         _ = s.insert_str(2, "a");
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_string_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut s: String<32> = String::try_from("sensitive_password").unwrap();
+
+        assert_eq!(s.as_str(), "sensitive_password");
+        assert!(!s.is_empty());
+        assert_eq!(s.len(), 18);
+
+        s.truncate(9);
+        assert_eq!(s.as_str(), "sensitive");
+        assert_eq!(s.len(), 9);
+
+        // zeroized using Vec's implementation
+        s.zeroize();
+
+        assert_eq!(s.len(), 0);
+        assert!(s.is_empty());
     }
 }

@@ -4,6 +4,9 @@
 
 use core::{borrow::Borrow, fmt, mem, ops, slice};
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use crate::vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage};
 
 mod storage {
@@ -88,6 +91,11 @@ pub type OwnedStorage<K, V, const N: usize> = OwnedVecStorage<(K, V), N>;
 pub type ViewStorage<K, V> = ViewVecStorage<(K, V)>;
 
 /// Base struct for [`LinearMap`] and [`LinearMapView`]
+#[cfg_attr(
+    feature = "zeroize",
+    derive(Zeroize),
+    zeroize(bound = "S: Zeroize, K: Zeroize, V: Zeroize")
+)]
 pub struct LinearMapInner<K, V, S: LinearMapStorage<K, V> + ?Sized> {
     pub(crate) buffer: VecInner<(K, V), usize, S>,
 }
@@ -751,5 +759,25 @@ mod test {
         // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
         let map: LinearMap<usize, f32, 4> = Default::default();
         assert_eq!(map, map);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_linear_map_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut map: LinearMap<u8, u8, 8> = LinearMap::new();
+        for i in 1..=8 {
+            map.insert(i, i * 10).unwrap();
+        }
+
+        assert_eq!(map.len(), 8);
+        assert_eq!(map.get(&5), Some(&50));
+
+        // zeroized using Vec's implementation
+        map.zeroize();
+
+        assert_eq!(map.len(), 0);
+        assert!(map.is_empty());
     }
 }

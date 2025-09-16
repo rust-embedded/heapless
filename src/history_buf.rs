@@ -38,10 +38,14 @@ use core::ops::Deref;
 use core::ptr;
 use core::slice;
 
-mod storage {
-    use core::mem::MaybeUninit;
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
 
+mod storage {
     use super::{HistoryBufInner, HistoryBufView};
+    use core::mem::MaybeUninit;
+    #[cfg(feature = "zeroize")]
+    use zeroize::Zeroize;
 
     /// Trait defining how data for a container is stored.
     ///
@@ -83,6 +87,7 @@ mod storage {
     }
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
+    #[cfg_attr(feature = "zeroize", derive(Zeroize))]
     pub struct HistoryBufStorageInner<T: ?Sized> {
         pub(crate) buffer: T,
     }
@@ -148,6 +153,7 @@ use self::storage::HistoryBufSealedStorage;
 ///
 /// In most cases you should use [`HistoryBuf`] or [`HistoryBufView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 pub struct HistoryBufInner<T, S: HistoryBufStorage<T> + ?Sized> {
     // This phantomdata is required because otherwise rustc thinks that `T` is not used
     phantom: PhantomData<T>,
@@ -936,6 +942,39 @@ mod tests {
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 0);
         x.clear();
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_history_buf_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut buffer = HistoryBuf::<u8, 8>::new();
+        for i in 0..8 {
+            buffer.write(i);
+        }
+
+        assert_eq!(buffer.len(), 8);
+        assert_eq!(buffer.recent(), Some(&7));
+
+        // Clear to mark formerly used memory as unused, to make sure that it also gets zeroed
+        buffer.clear();
+
+        buffer.write(20);
+        assert_eq!(buffer.len(), 1);
+        assert_eq!(buffer.recent(), Some(&20));
+
+        buffer.zeroize();
+
+        assert_eq!(buffer.len(), 0);
+        assert!(buffer.is_empty());
+
+        // Check that all underlying memory actually got zeroized
+        unsafe {
+            for a in buffer.data.buffer {
+                assert_eq!(a.assume_init(), 0);
+            }
+        }
     }
 
     fn _test_variance<'a: 'b, 'b>(x: HistoryBuf<&'a (), 42>) -> HistoryBuf<&'b (), 42> {

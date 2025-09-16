@@ -5,6 +5,9 @@ use core::{
     hash::{BuildHasher, Hash},
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::index_map::{self, IndexMap};
@@ -85,6 +88,7 @@ pub type FnvIndexSet<T, const N: usize> = IndexSet<T, BuildHasherDefault<FnvHash
 ///     println!("{}", book);
 /// }
 /// ```
+#[cfg_attr(feature = "zeroize", derive(Zeroize), zeroize(bound = "T: Zeroize"))]
 pub struct IndexSet<T, S, const N: usize> {
     map: IndexMap<T, (), S, N>,
 }
@@ -696,4 +700,28 @@ mod tests {
 
     // Ensure a `IndexSet` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(IndexSet<*const (), BuildHasherDefault<()>, 4>: Send);
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_index_set_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut set: IndexSet<u8, BuildHasherDefault<hash32::FnvHasher>, 8> = IndexSet::new();
+        for i in 1..=8 {
+            set.insert(i).unwrap();
+        }
+
+        assert_eq!(set.len(), 8);
+        assert!(set.contains(&8));
+
+        // zeroized using index_map's implementation
+        set.zeroize();
+
+        assert_eq!(set.len(), 0);
+        assert!(set.is_empty());
+
+        set.insert(1).unwrap();
+        assert_eq!(set.len(), 1);
+        assert!(set.contains(&1));
+    }
 }

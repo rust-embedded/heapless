@@ -3,6 +3,9 @@ use core::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 pub trait Sealed:
     Send
     + Sync
@@ -75,6 +78,15 @@ macro_rules! impl_lentype {
 /// A sealed trait representing a valid type to use as a length for a container.
 ///
 /// This cannot be implemented in user code, and is restricted to `u8`, `u16`, `u32`, and `usize`.
+///
+/// When the `zeroize` feature is enabled, this trait requires the `Zeroize` trait.
+#[cfg(feature = "zeroize")]
+pub trait LenType: Sealed + Zeroize {}
+
+/// A sealed trait representing a valid type to use as a length for a container.
+///
+/// This cannot be implemented in user code, and is restricted to `u8`, `u16`, `u32`, and `usize`.
+#[cfg(not(feature = "zeroize"))]
 pub trait LenType: Sealed {}
 
 impl_lentype!(
