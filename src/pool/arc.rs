@@ -73,7 +73,8 @@ use core::{
     fmt,
     hash::{Hash, Hasher},
     mem::{ManuallyDrop, MaybeUninit},
-    ops, ptr,
+    ops,
+    ptr::{self},
 };
 
 #[cfg(not(feature = "portable-atomic"))]
@@ -218,14 +219,14 @@ where
         &mut *ptr::addr_of_mut!((*this.node_ptr.as_ptr().cast::<ArcInner<P::Data>>()).data)
     }
 
-    /// Returns the number of strong (`Arc`) pointers to this allocation
-    pub fn strong_count(this: &Self) -> usize {
-        this.inner().strong.load(Ordering::SeqCst)
+    /// Returns `true` if there are no other `Arc` pointers to the same allocation
+    pub fn is_unique(this: &Self) -> bool {
+        this.inner().strong.load(Ordering::Acquire) == 1
     }
 
     /// Returns a mutable reference to the inner data if there are no other `Arc` pointers to the
     pub fn get_mut(this: &mut Self) -> Option<&mut P::Data> {
-        if Self::strong_count(this) == 1 {
+        if Self::is_unique(this) {
             // SAFETY: we just checked that the strong count is 1
             Some(unsafe { Self::get_mut_unchecked(this) })
         } else {
