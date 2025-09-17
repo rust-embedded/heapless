@@ -218,6 +218,21 @@ where
         &mut *ptr::addr_of_mut!((*this.node_ptr.as_ptr().cast::<ArcInner<P::Data>>()).data)
     }
 
+    /// Returns the number of strong (`Arc`) pointers to this allocation
+    pub fn strong_count(this: &Self) -> usize {
+        this.inner().strong.load(Ordering::SeqCst)
+    }
+
+    /// Returns a mutable reference to the inner data if there are no other `Arc` pointers to the
+    pub fn get_mut(this: &mut Self) -> Option<&mut P::Data> {
+        if Self::strong_count(this) == 1 {
+            // SAFETY: we just checked that the strong count is 1
+            Some(unsafe { Self::get_mut_unchecked(this) })
+        } else {
+            None
+        }
+    }
+
     #[inline(never)]
     unsafe fn drop_slow(&mut self) {
         // run `P::Data`'s destructor
