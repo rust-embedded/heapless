@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added `resize_with` to `Vec`
 - Added `retain_back` (aka `truncate_front`) to `Deque`
+- Removed `impl Deref` for `HistoryBuf` to make accessing the raw backing array explicit (use `as_slice`).
 
 ## [v0.9.3] 2025-04-15
 
