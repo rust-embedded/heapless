@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
-
 - Implement `Default` for `CapacityError`.
 - Implement `defmt::Format` for `CapacityError`.
 - Implement `TryFrom` for `Deque` from array.
 - Fixed initialization of the `ArcBlock<T>` and `BoxBlock<T>` types, fixing possible Undefined Behavior
+- Switch from `serde` to `serde_core` for enabling faster compilations.
 
 ## [v0.9.1] - 2025-08-19
 

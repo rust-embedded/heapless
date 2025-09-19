@@ -39,7 +39,7 @@ portable-atomic-unsafe-assume-single-core = [
 ]
 
 # implement serde traits.
-serde = ["dep:serde"]
+serde = ["dep:serde_core"]
 
 # implement ufmt traits.
 ufmt = ["dep:ufmt", "dep:ufmt-write"]
@@ -59,7 +59,7 @@ nightly = []
 bytes = { version = "1", default-features = false, optional = true }
 portable-atomic = { version = "1.0", optional = true }
 hash32 = "0.3.0"
-serde = { version = "1", optional = true, default-features = false }
+serde_core = { version = "1", optional = true, default-features = false }
 ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }

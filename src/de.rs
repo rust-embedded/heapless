@@ -8,7 +8,7 @@ use core::{
     marker::PhantomData,
 };
 use hash32::BuildHasherDefault;
-use serde::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
+use serde_core::de::{self, Deserialize, Deserializer, Error, MapAccess, SeqAccess};
 
 // Sequential containers
 
@@ -105,7 +105,7 @@ where
     {
         struct ValueVisitor<'de, T, LenT: LenType, const N: usize>(PhantomData<(&'de (), T, LenT)>);
 
-        impl<'de, T, LenT, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, LenT, N>
+        impl<'de, T, LenT, const N: usize> serde_core::de::Visitor<'de> for ValueVisitor<'de, T, LenT, N>
         where
             T: Deserialize<'de>,
             LenT: LenType,
@@ -145,7 +145,7 @@ where
     {
         struct ValueVisitor<'de, T, const N: usize>(PhantomData<(&'de (), T)>);
 
-        impl<'de, T, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, N>
+        impl<'de, T, const N: usize> serde_core::de::Visitor<'de> for ValueVisitor<'de, T, N>
         where
             T: Deserialize<'de>,
         {
@@ -184,7 +184,7 @@ where
     {
         struct ValueVisitor<'de, T, const N: usize>(PhantomData<(&'de (), T)>);
 
-        impl<'de, T, const N: usize> serde::de::Visitor<'de> for ValueVisitor<'de, T, N>
+        impl<'de, T, const N: usize> serde_core::de::Visitor<'de> for ValueVisitor<'de, T, N>
         where
             T: Deserialize<'de>,
         {
