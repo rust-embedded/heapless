@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implement `defmt::Format` for `CapacityError`.
 - Implement `TryFrom` for `Deque` from array.
 - Switch from `serde` to `serde_core` for enabling faster compilations.
+- Removed `impl Deref` for `HistoryBuf` to make accessing the raw backing array explicit (use `as_slice`).
+- Replace `HistoryBuf::as_slice` with `HistoryBuf::as_unordered_slice` to clarify ordering.
+- Replace `HistoryBuf::write` with `HistoryBuf::push` for a more consistent naming scheme.
 
 ## [v0.9.1] - 2025-08-19
 
