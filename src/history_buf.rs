@@ -1,6 +1,6 @@
 //! A "history buffer", similar to a write-only ring buffer of fixed length.
 //!
-//! This buffer keeps a fixed number of elements.  On write, the oldest element
+//! This buffer keeps a fixed number of elements.  On push, the oldest element
 //! is overwritten. Thus, the buffer is useful to keep a history of values with
 //! some desired depth, and for example calculate a rolling average.
 //!
@@ -14,8 +14,8 @@
 //! // Starts with no data
 //! assert_eq!(buf.recent(), None);
 //!
-//! buf.write(3);
-//! buf.write(5);
+//! buf.push(3);
+//! buf.push(5);
 //! buf.extend(&[4, 4]);
 //!
 //! // The most recent written element is a four.
@@ -166,7 +166,7 @@ pub struct HistoryBufInner<T, S: HistoryBufStorage<T> + ?Sized> {
 
 /// A "history buffer", similar to a write-only ring buffer of fixed length.
 ///
-/// This buffer keeps a fixed number of elements.  On write, the oldest element
+/// This buffer keeps a fixed number of elements.  On push, the oldest element
 /// is overwritten. Thus, the buffer is useful to keep a history of values with
 /// some desired depth, and for example calculate a rolling average.
 ///
@@ -180,8 +180,8 @@ pub struct HistoryBufInner<T, S: HistoryBufStorage<T> + ?Sized> {
 /// // Starts with no data
 /// assert_eq!(buf.recent(), None);
 ///
-/// buf.write(3);
-/// buf.write(5);
+/// buf.push(3);
+/// buf.push(5);
 /// buf.extend(&[4, 4]);
 ///
 /// // The most recent written element is a four.
@@ -213,8 +213,8 @@ pub type HistoryBuf<T, const N: usize> = HistoryBufInner<T, OwnedHistoryBufStora
 /// // Starts with no data
 /// assert_eq!(buf.recent(), None);
 ///
-/// buf.write(3);
-/// buf.write(5);
+/// buf.push(3);
+/// buf.push(5);
 /// buf.extend(&[4, 4]);
 ///
 /// // The most recent written element is a four.
@@ -384,7 +384,13 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     }
 
     /// Writes an element to the buffer, overwriting the oldest value.
+    #[deprecated(note = "Superseeded by push for harmonizing naming with other containers.")]
     pub fn write(&mut self, t: T) {
+        self.push(t);
+    }
+
+    /// Pushes an element to the buffer, overwriting the oldest value.
+    pub fn push(&mut self, t: T) {
         if self.filled {
             // Drop the old before we overwrite it.
             unsafe { ptr::drop_in_place(self.data.borrow_mut()[self.write_at].as_mut_ptr()) }
@@ -407,7 +413,7 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
         T: Clone,
     {
         for item in other {
-            self.write(item.clone());
+            self.push(item.clone());
         }
     }
 
@@ -419,8 +425,8 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// use heapless::HistoryBuf;
     ///
     /// let mut x: HistoryBuf<u8, 16> = HistoryBuf::new();
-    /// x.write(4);
-    /// x.write(10);
+    /// x.push(4);
+    /// x.push(10);
     /// assert_eq!(x.recent(), Some(&10));
     /// ```
     pub fn recent(&self) -> Option<&T> {
@@ -436,8 +442,8 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// use heapless::HistoryBuf;
     ///
     /// let mut x: HistoryBuf<u8, 16> = HistoryBuf::new();
-    /// x.write(4);
-    /// x.write(10);
+    /// x.push(4);
+    /// x.push(10);
     /// assert_eq!(x.recent_index(), Some(1));
     /// ```
     pub fn recent_index(&self) -> Option<usize> {
@@ -460,8 +466,8 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// use heapless::HistoryBuf;
     ///
     /// let mut x: HistoryBuf<u8, 16> = HistoryBuf::new();
-    /// x.write(4);
-    /// x.write(10);
+    /// x.push(4);
+    /// x.push(10);
     /// assert_eq!(x.oldest(), Some(&4));
     /// ```
     pub fn oldest(&self) -> Option<&T> {
@@ -477,8 +483,8 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// use heapless::HistoryBuf;
     ///
     /// let mut x: HistoryBuf<u8, 16> = HistoryBuf::new();
-    /// x.write(4);
-    /// x.write(10);
+    /// x.push(4);
+    /// x.push(10);
     /// assert_eq!(x.oldest_index(), Some(0));
     /// ```
     pub fn oldest_index(&self) -> Option<usize> {
@@ -557,7 +563,7 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> Extend<T> for HistoryBufInner<T, S> {
         I: IntoIterator<Item = T>,
     {
         for item in iter.into_iter() {
-            self.write(item);
+            self.push(item);
         }
     }
 }
@@ -696,16 +702,41 @@ mod tests {
         assert!(!x.is_full());
     }
 
+    #[allow(deprecated)]
     #[test]
     fn write() {
+        let mut write: HistoryBuf<u8, 4> = HistoryBuf::new();
+        let mut push: HistoryBuf<u8, 4> = HistoryBuf::new();
+
+        write.write(1);
+        write.write(4);
+        push.push(1);
+        push.push(4);
+        assert_eq!(write, push);
+
+        write.push(5);
+        write.push(6);
+        write.push(10);
+        push.push(5);
+        push.push(6);
+        push.push(10);
+        assert_eq!(write, push);
+
+        write.extend([11, 12].iter());
+        push.extend([11, 12].iter());
+        assert_eq!(write, push);
+    }
+
+    #[test]
+    fn push() {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
-        x.write(1);
-        x.write(4);
+        x.push(1);
+        x.push(4);
         assert_eq!(x.as_unordered_slice(), [1, 4]);
 
-        x.write(5);
-        x.write(6);
-        x.write(10);
+        x.push(5);
+        x.push(6);
+        x.push(10);
         assert_eq!(x.as_unordered_slice(), [10, 4, 5, 6]);
 
         x.extend([11, 12].iter());
@@ -728,7 +759,7 @@ mod tests {
         let mut x: HistoryBuf<u8, 3> = HistoryBuf::new();
         for i in 0..10 {
             assert_eq!(x.as_unordered_slice(), x.clone().as_unordered_slice());
-            x.write(i);
+            x.push(i);
         }
 
         // Records number of clones locally and globally.
@@ -746,11 +777,11 @@ mod tests {
         let mut y: HistoryBuf<InstrumentedClone, 2> = HistoryBuf::new();
         let _ = y.clone();
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
-        y.write(InstrumentedClone(0));
+        y.push(InstrumentedClone(0));
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
         assert_eq!(y.clone().as_unordered_slice(), [InstrumentedClone(1)]);
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
-        y.write(InstrumentedClone(0));
+        y.push(InstrumentedClone(0));
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
         assert_eq!(
             y.clone().as_unordered_slice(),
@@ -770,14 +801,14 @@ mod tests {
         assert_eq!(x.recent_index(), None);
         assert_eq!(x.recent(), None);
 
-        x.write(1);
-        x.write(4);
+        x.push(1);
+        x.push(4);
         assert_eq!(x.recent_index(), Some(1));
         assert_eq!(x.recent(), Some(&4));
 
-        x.write(5);
-        x.write(6);
-        x.write(10);
+        x.push(5);
+        x.push(6);
+        x.push(10);
         assert_eq!(x.recent_index(), Some(0));
         assert_eq!(x.recent(), Some(&10));
     }
@@ -788,14 +819,14 @@ mod tests {
         assert_eq!(x.oldest_index(), None);
         assert_eq!(x.oldest(), None);
 
-        x.write(1);
-        x.write(4);
+        x.push(1);
+        x.push(4);
         assert_eq!(x.oldest_index(), Some(0));
         assert_eq!(x.oldest(), Some(&1));
 
-        x.write(5);
-        x.write(6);
-        x.write(10);
+        x.push(5);
+        x.push(6);
+        x.push(10);
         assert_eq!(x.oldest_index(), Some(1));
         assert_eq!(x.oldest(), Some(&4));
     }
@@ -845,7 +876,7 @@ mod tests {
         let mut buffer: HistoryBuf<u8, 6> = HistoryBuf::new();
 
         for n in 0..20 {
-            buffer.write(n);
+            buffer.push(n);
             let (head, tail) = buffer.as_slices();
             assert_eq_iter(
                 [head, tail].iter().copied().flatten(),
@@ -935,16 +966,16 @@ mod tests {
         let mut x: HistoryBuf<u8, 3> = HistoryBuf::new();
         let mut y: HistoryBuf<u8, 3> = HistoryBuf::new();
         assert_eq!(x, y);
-        x.write(1);
+        x.push(1);
         assert_ne!(x, y);
-        y.write(1);
+        y.push(1);
         assert_eq!(x, y);
         for _ in 0..4 {
-            x.write(2);
+            x.push(2);
             assert_ne!(x, y);
             for i in 0..5 {
-                x.write(i);
-                y.write(i);
+                x.push(i);
+                y.push(i);
             }
             assert_eq!(
                 x,
@@ -969,9 +1000,9 @@ mod tests {
         }
 
         let mut x: HistoryBuf<DropCheck, 3> = HistoryBuf::new();
-        x.write(DropCheck {});
-        x.write(DropCheck {});
-        x.write(DropCheck {});
+        x.push(DropCheck {});
+        x.push(DropCheck {});
+        x.push(DropCheck {});
 
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 0);
         x.clear();
@@ -985,7 +1016,7 @@ mod tests {
 
         let mut buffer = HistoryBuf::<u8, 8>::new();
         for i in 0..8 {
-            buffer.write(i);
+            buffer.push(i);
         }
 
         assert_eq!(buffer.len(), 8);
@@ -994,7 +1025,7 @@ mod tests {
         // Clear to mark formerly used memory as unused, to make sure that it also gets zeroed
         buffer.clear();
 
-        buffer.write(20);
+        buffer.push(20);
         assert_eq!(buffer.len(), 1);
         assert_eq!(buffer.recent(), Some(&20));
 
@@ -1038,7 +1069,7 @@ mod tests {
         }
 
         let mut history_buf = HistoryBuf::<Dropper, 5>::new();
-        history_buf.write(Dropper::new());
+        history_buf.push(Dropper::new());
         // Don't panic on dropping of the history_buf
         let mut history_buf = ManuallyDrop::new(history_buf);
         let mut unwind_safe_history_buf = AssertUnwindSafe(&mut history_buf);
