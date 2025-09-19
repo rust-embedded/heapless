@@ -34,7 +34,6 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
-use core::ops::Deref;
 use core::ptr;
 use core::slice;
 
@@ -572,18 +571,10 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> Drop for HistoryBufInner<T, S> {
     }
 }
 
-impl<T, S: HistoryBufStorage<T> + ?Sized> Deref for HistoryBufInner<T, S> {
-    type Target = [T];
-
-    fn deref(&self) -> &[T] {
-        self.as_slice()
-    }
-}
-
 impl<T, S: HistoryBufStorage<T> + ?Sized> AsRef<[T]> for HistoryBufInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &[T] {
-        self
+        self.as_slice()
     }
 }
 
@@ -592,7 +583,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <[T] as fmt::Debug>::fmt(self, f)
+        <[T] as fmt::Debug>::fmt(self.as_slice(), f)
     }
 }
 
@@ -660,7 +651,6 @@ mod tests {
         let x: HistoryBuf<u8, 4> = HistoryBuf::new_with(1);
         assert_eq!(x.len(), 4);
         assert_eq!(x.as_slice(), [1; 4]);
-        assert_eq!(*x, [1; 4]);
         assert!(x.is_full());
 
         let x: HistoryBuf<u8, 4> = HistoryBuf::new();
@@ -910,8 +900,8 @@ mod tests {
                 x,
                 y,
                 "{:?} {:?}",
-                x.iter().collect::<Vec<_>>(),
-                y.iter().collect::<Vec<_>>()
+                x.as_slice().iter().collect::<Vec<_>>(),
+                y.as_slice().iter().collect::<Vec<_>>()
             );
         }
     }
