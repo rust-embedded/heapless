@@ -21,13 +21,13 @@
 //! // The most recent written element is a four.
 //! assert_eq!(buf.recent(), Some(&4));
 //!
-//! // To access all elements in an unspecified order, use `as_slice()`.
-//! for el in buf.as_slice() {
+//! // To access all elements in an unspecified order, use `as_unordered_slice()`.
+//! for el in buf.as_unordered_slice() {
 //!     println!("{:?}", el);
 //! }
 //!
 //! // Now we can prepare an average of all values, which comes out to 4.
-//! let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+//! let avg = buf.as_unordered_slice().iter().sum::<usize>() / buf.len();
 //! assert_eq!(avg, 4);
 //! ```
 
@@ -178,13 +178,13 @@ pub struct HistoryBufInner<T, S: HistoryBufStorage<T> + ?Sized> {
 /// // The most recent written element is a four.
 /// assert_eq!(buf.recent(), Some(&4));
 ///
-/// // To access all elements in an unspecified order, use `as_slice()`.
-/// for el in buf.as_slice() {
+/// // To access all elements in an unspecified order, use `as_unordered_slice()`.
+/// for el in buf.as_unordered_slice() {
 ///     println!("{:?}", el);
 /// }
 ///
 /// // Now we can prepare an average of all values, which comes out to 4.
-/// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+/// let avg = buf.as_unordered_slice().iter().sum::<usize>() / buf.len();
 /// assert_eq!(avg, 4);
 /// ```
 pub type HistoryBuf<T, const N: usize> = HistoryBufInner<T, OwnedHistoryBufStorage<T, N>>;
@@ -211,13 +211,13 @@ pub type HistoryBuf<T, const N: usize> = HistoryBufInner<T, OwnedHistoryBufStora
 /// // The most recent written element is a four.
 /// assert_eq!(buf.recent(), Some(&4));
 ///
-/// // To access all elements in an unspecified order, use `as_slice()`.
-/// for el in buf.as_slice() {
+/// // To access all elements in an unspecified order, use `as_unordered_slice()`.
+/// for el in buf.as_unordered_slice() {
 ///     println!("{:?}", el);
 /// }
 ///
 /// // Now we can prepare an average of all values, which comes out to 4.
-/// let avg = buf.as_slice().iter().sum::<usize>() / buf.len();
+/// let avg = buf.as_unordered_slice().iter().sum::<usize>() / buf.len();
 /// assert_eq!(avg, 4);
 /// ```
 pub type HistoryBufView<T> = HistoryBufInner<T, ViewHistoryBufStorage<T>>;
@@ -269,7 +269,7 @@ where
     /// // Allocate a 16-element buffer on the stack
     /// let mut x: HistoryBuf<u8, 16> = HistoryBuf::new_with(4);
     /// // All elements are four
-    /// assert_eq!(x.as_slice(), [4; 16]);
+    /// assert_eq!(x.as_unordered_slice(), [4; 16]);
     /// ```
     #[inline]
     pub fn new_with(t: T) -> Self {
@@ -478,7 +478,16 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
 
     /// Returns the array slice backing the buffer, without keeping track
     /// of the write position. Therefore, the element order is unspecified.
+    #[deprecated(
+        note = "as_slice's name did not explicitly state unspecified ordering of elements. Use as_unordered_slice instead."
+    )]
     pub fn as_slice(&self) -> &[T] {
+        self.as_unordered_slice()
+    }
+
+    /// Returns the array slice backing the buffer, without keeping track
+    /// of the write position. Therefore, the element order is unspecified.
+    pub fn as_unordered_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.data.borrow().as_ptr().cast(), self.len()) }
     }
 
@@ -495,7 +504,7 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// assert_eq!(buffer.as_slices(), (&[1, 2, 3][..], &[4, 5, 6][..]));
     /// ```
     pub fn as_slices(&self) -> (&[T], &[T]) {
-        let buffer = self.as_slice();
+        let buffer = self.as_unordered_slice();
 
         if self.filled {
             (&buffer[self.write_at..], &buffer[..self.write_at])
@@ -556,7 +565,12 @@ where
 {
     fn clone(&self) -> Self {
         let mut ret = Self::new();
-        for (new, old) in ret.data.borrow_mut().iter_mut().zip(self.as_slice()) {
+        for (new, old) in ret
+            .data
+            .borrow_mut()
+            .iter_mut()
+            .zip(self.as_unordered_slice())
+        {
             new.write(old.clone());
         }
         ret.filled = self.filled;
@@ -574,7 +588,7 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> Drop for HistoryBufInner<T, S> {
 impl<T, S: HistoryBufStorage<T> + ?Sized> AsRef<[T]> for HistoryBufInner<T, S> {
     #[inline]
     fn as_ref(&self) -> &[T] {
-        self.as_slice()
+        self.as_unordered_slice()
     }
 }
 
@@ -583,7 +597,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <[T] as fmt::Debug>::fmt(self.as_slice(), f)
+        <[T] as fmt::Debug>::fmt(self.as_unordered_slice(), f)
     }
 }
 
@@ -650,11 +664,11 @@ mod tests {
     fn new() {
         let x: HistoryBuf<u8, 4> = HistoryBuf::new_with(1);
         assert_eq!(x.len(), 4);
-        assert_eq!(x.as_slice(), [1; 4]);
+        assert_eq!(x.as_unordered_slice(), [1; 4]);
         assert!(x.is_full());
 
         let x: HistoryBuf<u8, 4> = HistoryBuf::new();
-        assert_eq!(x.as_slice(), []);
+        assert_eq!(x.as_unordered_slice(), []);
         assert!(!x.is_full());
     }
 
@@ -663,33 +677,33 @@ mod tests {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
         x.write(1);
         x.write(4);
-        assert_eq!(x.as_slice(), [1, 4]);
+        assert_eq!(x.as_unordered_slice(), [1, 4]);
 
         x.write(5);
         x.write(6);
         x.write(10);
-        assert_eq!(x.as_slice(), [10, 4, 5, 6]);
+        assert_eq!(x.as_unordered_slice(), [10, 4, 5, 6]);
 
         x.extend([11, 12].iter());
-        assert_eq!(x.as_slice(), [10, 11, 12, 6]);
+        assert_eq!(x.as_unordered_slice(), [10, 11, 12, 6]);
     }
 
     #[test]
     fn clear() {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new_with(1);
         x.clear();
-        assert_eq!(x.as_slice(), []);
+        assert_eq!(x.as_unordered_slice(), []);
 
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
         x.clear_with(1);
-        assert_eq!(x.as_slice(), [1; 4]);
+        assert_eq!(x.as_unordered_slice(), [1; 4]);
     }
 
     #[test]
     fn clone() {
         let mut x: HistoryBuf<u8, 3> = HistoryBuf::new();
         for i in 0..10 {
-            assert_eq!(x.as_slice(), x.clone().as_slice());
+            assert_eq!(x.as_unordered_slice(), x.clone().as_unordered_slice());
             x.write(i);
         }
 
@@ -710,17 +724,17 @@ mod tests {
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
         y.write(InstrumentedClone(0));
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 0);
-        assert_eq!(y.clone().as_slice(), [InstrumentedClone(1)]);
+        assert_eq!(y.clone().as_unordered_slice(), [InstrumentedClone(1)]);
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
         y.write(InstrumentedClone(0));
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 1);
         assert_eq!(
-            y.clone().as_slice(),
+            y.clone().as_unordered_slice(),
             [InstrumentedClone(1), InstrumentedClone(1)]
         );
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 3);
         assert_eq!(
-            y.clone().clone().clone().as_slice(),
+            y.clone().clone().clone().as_unordered_slice(),
             [InstrumentedClone(3), InstrumentedClone(3)]
         );
         assert_eq!(GLOBAL.load(Ordering::Relaxed), 9);
@@ -762,15 +776,27 @@ mod tests {
         assert_eq!(x.oldest(), Some(&4));
     }
 
+    #[allow(deprecated)]
     #[test]
     fn as_slice() {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
 
-        assert_eq!(x.as_slice(), []);
+        assert_eq!(x.as_slice(), x.as_unordered_slice());
 
         x.extend([1, 2, 3, 4, 5].iter());
 
-        assert_eq!(x.as_slice(), [5, 2, 3, 4]);
+        assert_eq!(x.as_slice(), x.as_unordered_slice());
+    }
+
+    #[test]
+    fn as_unordered_slice() {
+        let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
+
+        assert_eq!(x.as_unordered_slice(), []);
+
+        x.extend([1, 2, 3, 4, 5].iter());
+
+        assert_eq!(x.as_unordered_slice(), [5, 2, 3, 4]);
     }
 
     /// Test whether `.as_slices()` behaves as expected.
@@ -900,8 +926,8 @@ mod tests {
                 x,
                 y,
                 "{:?} {:?}",
-                x.as_slice().iter().collect::<Vec<_>>(),
-                y.as_slice().iter().collect::<Vec<_>>()
+                x.as_unordered_slice().iter().collect::<Vec<_>>(),
+                y.as_unordered_slice().iter().collect::<Vec<_>>()
             );
         }
     }
