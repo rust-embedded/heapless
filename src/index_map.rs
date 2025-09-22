@@ -65,7 +65,7 @@ use crate::Vec;
 /// ```
 pub type FnvIndexMap<K, V, const N: usize> = IndexMap<K, V, BuildHasherDefault<FnvHasher>, N>;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct HashValue(u16);
 
 impl HashValue {
@@ -113,6 +113,15 @@ impl Pos {
 
     fn index(&self) -> usize {
         self.nz.get().wrapping_sub(1) as u16 as usize
+    }
+}
+
+impl fmt::Debug for Pos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Pos")
+            .field("index", &self.index())
+            .field("hash", &self.hash().0)
+            .finish()
     }
 }
 
@@ -302,12 +311,12 @@ where
     where
         F: FnMut(&mut K, &mut V) -> bool,
     {
-        const INIT: Option<Pos> = None;
-
         self.entries
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
         if self.entries.len() < self.indices.len() {
+            const INIT: Option<Pos> = None;
+
             for index in self.indices.iter_mut() {
                 *index = INIT;
             }
@@ -340,6 +349,24 @@ where
                 });
             }
         }
+    }
+
+    fn shift_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
+        self.indices[probe] = None;
+        let entry = self.entries.remove(found);
+
+        // Re-write the indexes for all elements that moved
+        for index in self.indices.iter_mut() {
+            if let Some(pos) = index {
+                if pos.index() > found {
+                    *index = Some(Pos::new(pos.index() - 1, pos.hash()));
+                }
+            }
+        }
+
+        self.backward_shift_after_removal(probe);
+
+        (entry.key, entry.value)
     }
 
     fn backward_shift_after_removal(&mut self, probe_at_remove: usize) {
@@ -1231,6 +1258,159 @@ where
             .map(|(probe, found)| self.core.remove_found(probe, found).1)
     }
 
+    /// Removes the key-value pair at position `index` and returns it.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation
+    ///
+    /// Returns `None` if `index` is not in `0..len()`.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_index(1);
+    /// assert_eq!(removed, Some((2, "b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_index(2), None);
+    /// assert_eq!(map.shift_remove_index(3), None);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)> {
+        if index >= self.len() {
+            return None;
+        }
+        self.find(&self.core.entries[index].key)
+            .map(|(probe, found)| self.core.shift_remove_found(probe, found))
+    }
+
+    /// Removes the key-value pair equivalent to `key` and returns it and
+    /// the index it had.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation.
+    ///
+    /// Returns `None` if `key` is not in map.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_full(&2);
+    /// assert_eq!(removed, Some((1, 2, "b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_full(&2), None);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn shift_remove_full<Q>(&mut self, key: &Q) -> Option<(usize, K, V)>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(probe, found)| {
+            let (k, v) = self.core.shift_remove_found(probe, found);
+            (found, k, v)
+        })
+    }
+
+    /// Removes and returns the key-value pair equivalent to `key`.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all
+    /// remaining items. This maintains the remaining elements' relative
+    /// insertion order, but is a more expensive operation.
+    ///
+    /// Returns `None` if `key` is not in map.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove_entry(&2);
+    /// assert_eq!(removed, Some((2, "b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove_entry(&2), None);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn shift_remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.shift_remove_full(key).map(|(_idx, k, v)| (k, v))
+    }
+
+    /// Remove the key-value pair equivalent to `key` and return
+    /// its value.
+    ///
+    /// Like [`Vec::remove`], the pair is removed by shifting all of the
+    /// elements that follow it, preserving their relative order.
+    ///
+    /// Returns `None` if `key` is not in map.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(3, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(1, "c").unwrap();
+    /// let removed = map.shift_remove(&2);
+    /// assert_eq!(removed, Some(("b")));
+    /// assert_eq!(map.len(), 2);
+    /// assert_eq!(map.shift_remove(&2), None);
+    ///
+    /// let mut iter = map.iter();
+    /// assert_eq!(iter.next(), Some((&3, &"a")));
+    /// assert_eq!(iter.next(), Some((&1, &"c")));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn shift_remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.shift_remove_full(key).map(|(_idx, _k, v)| v)
+    }
+
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)` returns `false`.
@@ -1290,6 +1470,42 @@ where
         }
         let h = hash_with(key, &self.build_hasher);
         self.core.find(h, key)
+    }
+
+    #[cfg(test)]
+    fn assert_internally_consistent(&mut self) {
+        // For every entry
+        for (index, bucket) in self.core.entries.iter().enumerate() {
+            let found = self.find(&bucket.key);
+            // We must be able to find it
+            assert!(found.is_some(), "Entry couldn't be found");
+            let (probe, found_index) = found.unwrap();
+            // In the right place
+            assert_eq!(found_index, index, "Found a different entry");
+            // For the right reason
+            assert_eq!(
+                self.core.indices.get(probe),
+                Some(&Some(Pos::new(index, bucket.hash))),
+                "Found hash mismatch"
+            );
+        }
+
+        // For every non-empty index
+        let mut used_index_count = 0;
+        for pos in self.core.indices.iter().filter_map(|p| p.as_ref()) {
+            let entry = self.core.entries.get(pos.index());
+            // It must point to an entry
+            assert!(entry.is_some(), "Dangling reference");
+            // With a matching hash
+            assert_eq!(pos.hash(), entry.unwrap().hash, "Index hash mismatch");
+            used_index_count += 1;
+        }
+
+        assert_eq!(
+            self.core.entries.len(),
+            used_index_count,
+            "Entry/index count mismatch"
+        );
     }
 }
 
@@ -1864,14 +2080,58 @@ mod tests {
     }
 
     #[test]
+    fn shift_remove_full() {
+        const REMOVED_KEY: usize = 7;
+        let mut map = almost_filled_map();
+        map.assert_internally_consistent();
+        assert_eq!(
+            map.shift_remove_full(&REMOVED_KEY),
+            Some((REMOVED_KEY - 1, REMOVED_KEY, REMOVED_KEY))
+        );
+        // Verify all other elements can still be looked up after removing the entry
+        for x in 1..MAP_SLOTS - 1 {
+            if x == REMOVED_KEY {
+                continue;
+            }
+            assert!(map.contains_key(&x));
+        }
+        // Make sure we can't find any entry for the one we removed
+        assert_eq!(map.get(&REMOVED_KEY), None);
+        map.assert_internally_consistent();
+    }
+
+    #[test]
+    fn shift_remove_index() {
+        const REMOVED_KEY: usize = 7;
+        let mut map = almost_filled_map();
+        map.assert_internally_consistent();
+        assert_eq!(
+            map.shift_remove_index(REMOVED_KEY - 1),
+            Some((REMOVED_KEY, REMOVED_KEY))
+        );
+        // Verify all other elements can still be looked up after removing the entry
+        for x in 1..MAP_SLOTS - 1 {
+            if x == REMOVED_KEY {
+                continue;
+            }
+            assert!(map.contains_key(&x));
+        }
+        // Make sure we can't find any entry for the one we removed
+        assert_eq!(map.get(&REMOVED_KEY), None);
+        map.assert_internally_consistent();
+    }
+
+    #[test]
     fn retain() {
         let mut none = almost_filled_map();
         none.retain(|_, _| false);
         assert!(none.is_empty());
+        none.assert_internally_consistent();
 
         let mut all = almost_filled_map();
         all.retain(|_, _| true);
         assert_eq!(all.len(), MAP_SLOTS - 1);
+        all.assert_internally_consistent();
 
         let mut even = almost_filled_map();
         even.retain(|_, &mut v| v.is_multiple_of(2));
@@ -1879,6 +2139,7 @@ mod tests {
         for &v in even.values() {
             assert_eq!(v % 2, 0);
         }
+        even.assert_internally_consistent();
 
         let mut odd = almost_filled_map();
         odd.retain(|_, &mut v| !v.is_multiple_of(2));
@@ -1888,6 +2149,7 @@ mod tests {
         }
         assert_eq!(odd.insert(2, 2), Ok(None));
         assert_eq!(odd.len(), (MAP_SLOTS / 2) + 1);
+        odd.assert_internally_consistent();
     }
 
     #[test]

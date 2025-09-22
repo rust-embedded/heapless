@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [v0.9.0] - 2025-04-28 [YANKED]
 
 ### Added
-
+- Added `shift_remove`, `shift_remove_entry`, `shift_remove_full`, `shift_remove_index` to `IndexMap`.
 - Added `bytes::Buf` and `bytes::BufMut` implementations for `Vec`.
 - Added `format` macro.
 - Added `String::from_utf16`.
