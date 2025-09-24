@@ -8,6 +8,9 @@ use core::{
     ops, slice,
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use hash32::{BuildHasherDefault, FnvHasher};
 
 use crate::Vec;
@@ -66,6 +69,7 @@ use crate::Vec;
 pub type FnvIndexMap<K, V, const N: usize> = IndexMap<K, V, BuildHasherDefault<FnvHasher>, N>;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 struct HashValue(u16);
 
 impl HashValue {
@@ -80,6 +84,7 @@ impl HashValue {
 
 #[doc(hidden)]
 #[derive(Clone)]
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 pub struct Bucket<K, V> {
     hash: HashValue,
     key: K,
@@ -88,6 +93,7 @@ pub struct Bucket<K, V> {
 
 #[doc(hidden)]
 #[derive(Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 pub struct Pos {
     // compact representation of `{ hash_value: u16, index: u16 }`
     // To get the most from `NonZero` we store the *value minus 1*. This way `None::Option<Pos>`
@@ -138,6 +144,11 @@ macro_rules! probe_loop {
     }
 }
 
+#[cfg_attr(
+    feature = "zeroize",
+    derive(Zeroize),
+    zeroize(bound = "K: Zeroize, V: Zeroize")
+)]
 struct CoreMap<K, V, const N: usize> {
     entries: Vec<Bucket<K, V>, N, usize>,
     indices: [Option<Pos>; N],
@@ -722,8 +733,14 @@ where
 ///     println!("{}: \"{}\"", book, review);
 /// }
 /// ```
+#[cfg_attr(
+    feature = "zeroize",
+    derive(Zeroize),
+    zeroize(bound = "K: Zeroize, V: Zeroize")
+)]
 pub struct IndexMap<K, V, S, const N: usize> {
     core: CoreMap<K, V, N>,
+    #[cfg_attr(feature = "zeroize", zeroize(skip))]
     build_hasher: S,
 }
 
@@ -1987,5 +2004,29 @@ mod tests {
         // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
         let map: FnvIndexMap<usize, f32, 4> = Default::default();
         assert_eq!(map, map);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_index_map_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut map: FnvIndexMap<u8, u8, 8> = FnvIndexMap::new();
+        for i in 1..=8 {
+            map.insert(i, i * 10).unwrap();
+        }
+
+        assert_eq!(map.len(), 8);
+        assert!(!map.is_empty());
+
+        // zeroized using Vec's implementation
+        map.zeroize();
+
+        assert_eq!(map.len(), 0);
+        assert!(map.is_empty());
+
+        map.insert(1, 10).unwrap();
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get(&1), Some(&10));
     }
 }

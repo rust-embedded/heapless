@@ -48,7 +48,7 @@ jobs:
           components: miri
 
       - name: Run miri
-        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test --features="alloc,defmt,mpmc_large,portable-atomic-critical-section,serde,ufmt,bytes"
+        run: MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test --features="alloc,defmt,mpmc_large,portable-atomic-critical-section,serde,ufmt,bytes,zeroize"
 
   # Run cargo test
   test:
@@ -84,7 +84,7 @@ jobs:
           toolchain: stable
 
       - name: Run cargo test
-        run: cargo test --features="alloc,defmt,mpmc_large,portable-atomic-critical-section,serde,ufmt,bytes"
+        run: cargo test --features="alloc,defmt,mpmc_large,portable-atomic-critical-section,serde,ufmt,bytes,zeroize"
 
   # Run cargo fmt --check
   style:
@@ -176,6 +176,7 @@ jobs:
           cargo check --target="${target}" --features="portable-atomic-critical-section"
           cargo check --target="${target}" --features="serde"
           cargo check --target="${target}" --features="ufmt"
+          cargo check --target="${target}" --features="zeroize"
         env:
           target: ${{ matrix.target }}
 

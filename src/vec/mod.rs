@@ -11,6 +11,9 @@ use core::{
     slice,
 };
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 use crate::len_type::{check_capacity_fits, LenType};
 use crate::CapacityError;
 
@@ -84,7 +87,11 @@ mod storage {
             Self: VecStorage<T>;
     }
 
+    #[cfg(feature = "zeroize")]
+    use zeroize::Zeroize;
+
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
+    #[cfg_attr(feature = "zeroize", derive(Zeroize))]
     pub struct VecStorageInner<T: ?Sized> {
         pub(crate) buffer: T,
     }
@@ -208,6 +215,7 @@ pub use drain::Drain;
 ///
 /// In most cases you should use [`Vec`] or [`VecView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
+#[cfg_attr(feature = "zeroize", derive(Zeroize), zeroize(bound = "S: Zeroize"))]
 pub struct VecInner<T, LenT: LenType, S: VecStorage<T> + ?Sized> {
     phantom: PhantomData<T>,
     len: LenT,
@@ -2245,6 +2253,69 @@ mod tests {
 
         let _: crate::CapacityError =
             <alloc::vec::Vec<u8> as TryInto<Vec<u8, 1>>>::try_into(av.clone()).unwrap_err();
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_vec_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut v: Vec<u8, 8> = Vec::new();
+        for i in 0..8 {
+            v.push(i).unwrap();
+        }
+
+        for i in 0..8 {
+            assert_eq!(v[i], i as u8);
+        }
+
+        v.truncate(4);
+        assert_eq!(v.len(), 4);
+
+        for i in 0..4 {
+            assert_eq!(v[i], i as u8);
+        }
+
+        v.zeroize();
+
+        assert_eq!(v.len(), 0);
+
+        unsafe {
+            v.set_len(8);
+        }
+
+        for i in 0..8 {
+            assert_eq!(v[i], 0);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_vecview_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut v: Vec<u8, 8> = Vec::new();
+        for i in 0..8 {
+            v.push(i).unwrap();
+        }
+
+        let view = v.as_mut_view();
+
+        for i in 0..8 {
+            assert_eq!(view[i], i as u8);
+        }
+
+        view.zeroize();
+
+        assert_eq!(view.len(), 0);
+
+        unsafe {
+            view.set_len(8);
+        }
+
+        for i in 0..8 {
+            assert_eq!(view[i], 0);
+        }
     }
 
     fn _test_variance<'a: 'b, 'b>(x: Vec<&'a (), 42>) -> Vec<&'b (), 42> {

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implement `defmt::Format` for `CapacityError`.
 - Implement `TryFrom` for `Deque` from array.
 - Switch from `serde` to `serde_core` for enabling faster compilations.
+- Implement `Zeroize` trait for all data structures with the `zeroize` feature to securely clear sensitive data from memory.
 
 ## [v0.9.1] - 2025-08-19
 

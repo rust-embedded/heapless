@@ -33,6 +33,9 @@ use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 mod storage {
     use super::{LenType, Node, SortedLinkedListInner, SortedLinkedListView};
 
@@ -191,6 +194,7 @@ impl private::Sealed for Max {}
 impl private::Sealed for Min {}
 
 /// A node in the [`SortedLinkedList`].
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 pub struct Node<T, Idx> {
     val: MaybeUninit<T>,
     next: Idx,
@@ -845,6 +849,26 @@ where
     }
 }
 
+#[cfg(feature = "zeroize")]
+impl<T, Idx, K, S> Zeroize for SortedLinkedListInner<T, Idx, K, S>
+where
+    T: Ord + Zeroize,
+    Idx: LenType + Zeroize,
+    K: Kind,
+    S: SortedLinkedListStorage<T, Idx> + ?Sized,
+{
+    fn zeroize(&mut self) {
+        while let Some(mut item) = self.pop() {
+            item.zeroize();
+        }
+
+        let buffer = self.list.borrow_mut();
+        for elem in buffer {
+            elem.zeroize();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
@@ -972,6 +996,38 @@ mod tests {
         find.finish();
 
         assert_eq!(ll.peek().unwrap(), &1001);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_sorted_linked_list_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut list: SortedLinkedList<u8, Max, 8, u8> = SortedLinkedList::new_u8();
+        for i in 1..=8 {
+            list.push(i).unwrap();
+        }
+
+        assert_eq!(list.is_empty(), false);
+        assert!(list.is_full());
+        assert_eq!(list.peek(), Some(&8));
+
+        list.pop();
+        list.pop();
+        list.push(100).unwrap();
+
+        assert_eq!(list.peek(), Some(&100));
+
+        list.zeroize();
+
+        assert_eq!(list.peek(), None);
+        assert!(list.is_empty());
+
+        unsafe {
+            for node in &list.list.buffer {
+                assert_eq!(node.val.assume_init(), 0);
+            }
+        }
     }
 
     fn _test_variance<'a: 'b, 'b>(
