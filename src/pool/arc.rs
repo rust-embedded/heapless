@@ -73,7 +73,8 @@ use core::{
     fmt,
     hash::{Hash, Hasher},
     mem::{ManuallyDrop, MaybeUninit},
-    ops, ptr,
+    ops,
+    ptr::{self},
 };
 
 #[cfg(not(feature = "portable-atomic"))]
@@ -216,6 +217,21 @@ where
 
     unsafe fn get_mut_unchecked(this: &mut Self) -> &mut P::Data {
         &mut *ptr::addr_of_mut!((*this.node_ptr.as_ptr().cast::<ArcInner<P::Data>>()).data)
+    }
+
+    /// Returns `true` if there are no other `Arc` pointers to the same allocation
+    pub fn is_unique(this: &Self) -> bool {
+        this.inner().strong.load(Ordering::Acquire) == 1
+    }
+
+    /// Returns a mutable reference to the inner data if there are no other `Arc` pointers to the
+    pub fn get_mut(this: &mut Self) -> Option<&mut P::Data> {
+        if Self::is_unique(this) {
+            // SAFETY: we just checked that the strong count is 1
+            Some(unsafe { Self::get_mut_unchecked(this) })
+        } else {
+            None
+        }
     }
 
     #[inline(never)]
