@@ -3,7 +3,8 @@
 extern crate alloc;
 
 use crate::len_type::LenType;
-use crate::{CapacityError, String, StringView};
+use crate::string::StringView;
+use crate::String;
 use core::borrow::Borrow;
 
 /// A clone-on-write (COW) string type for heapless.
