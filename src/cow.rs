@@ -35,7 +35,7 @@ impl<'a, const N: usize, LenT: LenType> Cow<'a, N, LenT> {
     /// If the `Cow` is already owned, this returns a clone of it.
     pub fn to_owned(&self) -> String<N, LenT> {
         match self {
-            Cow::Borrowed(sv) => String::from(sv),
+            Cow::Borrowed(sv) => String::from(*sv),
             Cow::Owned(s) => s.clone(),
         }
     }
