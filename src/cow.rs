@@ -117,16 +117,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Helper function to create a StringView from a static str
-    fn sv_from_str(s: &'static str) -> StringView<usize> {
-        StringView::new(s)
-    }
+    use crate::string::StringView;
+    use crate::String;
 
     #[test]
     fn test_borrowed_variant() {
-        let view = sv_from_str("hello");
-        let cow: CowStr<16> = CowStr::Borrowed(&view);
+        let s: String<16> = String::try_from("hello").unwrap();
+        let view = s.as_view();
+        let cow: CowStr<16> = CowStr::Borrowed(view);
 
         assert!(cow.is_borrowed());
         assert!(!cow.is_static());
@@ -139,8 +137,9 @@ mod tests {
 
     #[test]
     fn test_static_variant() {
-        static VIEW: StringView<usize> = StringView::new("world");
-        let cow: CowStr<16> = CowStr::from_static(&VIEW);
+        let s: String<16> = String::try_from("world").unwrap();
+        let view: &'static StringView<usize> = Box::leak(Box::new(s));
+        let cow: CowStr<16> = CowStr::Static(view.as_view());
 
         assert!(!cow.is_borrowed());
         assert!(cow.is_static());
@@ -167,8 +166,9 @@ mod tests {
 
     #[test]
     fn test_from_stringview() {
-        let view = sv_from_str("from_borrowed");
-        let cow: CowStr<16> = CowStr::from(&view);
+        let s: String<16> = String::try_from("from_borrowed").unwrap();
+        let view = s.as_view();
+        let cow: CowStr<16> = CowStr::from(view);
 
         assert!(cow.is_borrowed());
         assert_eq!(cow.as_str(), "from_borrowed");
