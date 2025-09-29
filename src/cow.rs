@@ -1,84 +1,114 @@
-#![cfg(feature = "alloc")]
-
-extern crate alloc;
-
+//! Clone-on-write string type for heapless.
+//!
+//! Provides `CowStr`, a heapless clone-on-write string that can be
+//! borrowed, static, or owned. Useful for efficiently handling
+//! temporary string references and owned strings.
 use crate::len_type::LenType;
 use crate::string::StringView;
 use crate::String;
 use core::borrow::Borrow;
 
-/// A clone-on-write (COW) string type for heapless.
+/// A clone-on-write (COW) string type specialized for heapless strings.
 ///
-/// `Cow` can either **borrow** a `StringView` or **own** a `String`.
-/// This allows efficient handling of strings that may be either temporary
-/// references or fully owned data.
+/// `CowStr` can be either:
+/// - `Borrowed(&'a StringView<LenT>)` for a non-`'static` borrowed view,
+/// - `Static(&'static StringView<LenT>)` for a `'static` borrowed view (no deep clone needed),
+/// - `Owned(String<N, LenT>)` for an owned heapless `String`.
 ///
-/// # Type Parameters
-///
-/// - `N`: The inline buffer size for owned strings.
-/// - `LenT`: The integer type used for length tracking (must implement [`LenType`]).
-
-/// A clone-on-write string type for heapless
+/// `N` is the inline buffer capacity; `LenT` is the length type (must implement [`LenType`]).
+/// We add `LenT: 'static` because the `Static` variant stores `&'static StringView<LenT>`.
 #[derive(Debug)]
-pub enum Cow<'a, const N: usize, LenT: LenType = usize> {
-    /// A borrowed view of a string.
+pub enum CowStr<'a, const N: usize, LenT: LenType = usize>
+where
+    LenT: 'static,
+{
+    /// A borrowed view with lifetime `'a`.
     Borrowed(&'a StringView<LenT>),
 
-    /// An owned string with inline storage of size `N`.
+    /// A `'static` borrowed view.
+    Static(&'static StringView<LenT>),
+
+    /// An owned `String` with inline storage of size `N`.
     Owned(String<N, LenT>),
 }
 
-impl<'a, const N: usize, LenT: LenType> Cow<'a, N, LenT> {
-    /// Converts the `Cow` into an owned [`String`].
+impl<'a, const N: usize, LenT: LenType> CowStr<'a, N, LenT>
+where
+    LenT: 'static,
+{
+    /// Convert the `CowStr` into an owned `String<N, LenT>`.
     ///
-    /// If the `Cow` is borrowed, this clones the underlying string data.
-    /// If the `Cow` is already owned, this returns a clone of it.
+    /// This uses `String::try_from(&str)` and will `panic!` on capacity overflow.
+    /// If you prefer a fallible API, we can add `try_into_owned()` that returns `Result`.
     pub fn to_owned(&self) -> String<N, LenT> {
         match self {
-            Cow::Borrowed(sv) => String::from(*sv),
-            Cow::Owned(s) => s.clone(),
+            CowStr::Borrowed(sv) => {
+                String::try_from(sv.as_str()).expect("capacity too small for CowStr::to_owned")
+            }
+            CowStr::Static(sv) => {
+                String::try_from(sv.as_str()).expect("capacity too small for CowStr::to_owned")
+            }
+            CowStr::Owned(s) => s.clone(),
         }
     }
 
-    /// Returns the string as a `&str`.
-    ///
-    /// Works for both borrowed and owned variants.
+    /// Return the inner value as `&str`.
     pub fn as_str(&self) -> &str {
         match self {
-            Cow::Borrowed(sv) => sv.as_str(),
-            Cow::Owned(s) => s.as_str(),
+            CowStr::Borrowed(sv) => sv.as_str(),
+            CowStr::Static(sv) => sv.as_str(),
+            CowStr::Owned(s) => s.as_str(),
         }
     }
 
-    /// Returns `true` if this `Cow` is a borrowed string.
+    /// Is this a non-`'static` borrowed view?
     pub fn is_borrowed(&self) -> bool {
-        matches!(self, Cow::Borrowed(_))
+        matches!(self, CowStr::Borrowed(_))
     }
 
-    /// Returns `true` if this `Cow` is an owned string.
+    /// Is this a `'static` borrowed view?
+    pub fn is_static(&self) -> bool {
+        matches!(self, CowStr::Static(_))
+    }
+
+    /// Is this an owned string?
     pub fn is_owned(&self) -> bool {
-        matches!(self, Cow::Owned(_))
+        matches!(self, CowStr::Owned(_))
     }
 }
 
-impl<'a, const N: usize, LenT: LenType> From<&'a StringView<LenT>> for Cow<'a, N, LenT> {
-    /// Creates a borrowed `Cow` from a `StringView`.
+impl<'a, const N: usize, LenT: LenType> From<&'a StringView<LenT>> for CowStr<'a, N, LenT>
+where
+    LenT: 'static,
+{
     fn from(sv: &'a StringView<LenT>) -> Self {
-        Cow::Borrowed(sv)
+        CowStr::Borrowed(sv)
     }
 }
 
-impl<const N: usize, LenT: LenType> From<String<N, LenT>> for Cow<'_, N, LenT> {
-    /// Creates an owned `Cow` from a `String`.
+impl<const N: usize, LenT: LenType> From<String<N, LenT>> for CowStr<'_, N, LenT>
+where
+    LenT: 'static,
+{
     fn from(s: String<N, LenT>) -> Self {
-        Cow::Owned(s)
+        CowStr::Owned(s)
     }
 }
 
-impl<'a, const N: usize, LenT: LenType> Borrow<str> for Cow<'a, N, LenT> {
-    /// Borrows the string as a `&str`.
-    ///
-    /// This allows `Cow` to be used anywhere a `&str` is expected.
+impl<const N: usize, LenT: LenType> CowStr<'static, N, LenT>
+where
+    LenT: 'static,
+{
+    /// Construct a `CowStr` that holds a `'static` `StringView`.
+    pub const fn from_static(sv: &'static StringView<LenT>) -> Self {
+        CowStr::Static(sv)
+    }
+}
+
+impl<'a, const N: usize, LenT: LenType> Borrow<str> for CowStr<'a, N, LenT>
+where
+    LenT: 'static,
+{
     fn borrow(&self) -> &str {
         self.as_str()
     }
