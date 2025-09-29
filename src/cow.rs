@@ -39,7 +39,6 @@ where
     /// Convert the `CowStr` into an owned `String<N, LenT>`.
     ///
     /// This uses `String::try_from(&str)` and will `panic!` on capacity overflow.
-    /// If you prefer a fallible API, we can add `try_into_owned()` that returns `Result`.
     pub fn to_owned(&self) -> String<N, LenT> {
         match self {
             CowStr::Borrowed(sv) => {
@@ -111,5 +110,85 @@ where
 {
     fn borrow(&self) -> &str {
         self.as_str()
+    }
+}
+
+// ---------------------- UNIT TESTS ----------------------
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper function to create a StringView from a static str
+    fn sv_from_str(s: &'static str) -> StringView<usize> {
+        StringView::new(s)
+    }
+
+    #[test]
+    fn test_borrowed_variant() {
+        let view = sv_from_str("hello");
+        let cow: CowStr<16> = CowStr::Borrowed(&view);
+
+        assert!(cow.is_borrowed());
+        assert!(!cow.is_static());
+        assert!(!cow.is_owned());
+        assert_eq!(cow.as_str(), "hello");
+
+        let owned = cow.to_owned();
+        assert_eq!(owned.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_static_variant() {
+        static VIEW: StringView<usize> = StringView::new("world");
+        let cow: CowStr<16> = CowStr::from_static(&VIEW);
+
+        assert!(!cow.is_borrowed());
+        assert!(cow.is_static());
+        assert!(!cow.is_owned());
+        assert_eq!(cow.as_str(), "world");
+
+        let owned = cow.to_owned();
+        assert_eq!(owned.as_str(), "world");
+    }
+
+    #[test]
+    fn test_owned_variant() {
+        let s: String<16> = String::try_from("heapless").unwrap();
+        let cow: CowStr<16> = CowStr::Owned(s.clone());
+
+        assert!(!cow.is_borrowed());
+        assert!(!cow.is_static());
+        assert!(cow.is_owned());
+        assert_eq!(cow.as_str(), "heapless");
+
+        let owned = cow.to_owned();
+        assert_eq!(owned.as_str(), "heapless");
+    }
+
+    #[test]
+    fn test_from_stringview() {
+        let view = sv_from_str("from_borrowed");
+        let cow: CowStr<16> = CowStr::from(&view);
+
+        assert!(cow.is_borrowed());
+        assert_eq!(cow.as_str(), "from_borrowed");
+    }
+
+    #[test]
+    fn test_from_string() {
+        let s: String<16> = String::try_from("from_owned").unwrap();
+        let cow: CowStr<16> = CowStr::from(s.clone());
+
+        assert!(cow.is_owned());
+        assert_eq!(cow.as_str(), "from_owned");
+    }
+
+    #[test]
+    fn test_borrow_trait() {
+        let s: String<16> = String::try_from("borrow_trait").unwrap();
+        let cow: CowStr<16> = CowStr::Owned(s);
+
+        let b: &str = cow.borrow();
+        assert_eq!(b, "borrow_trait");
     }
 }
