@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Minor fixes to `pool::boxed` docs.
 - Add missing `Debug` derive to `vec::IntoIter`.
 - Removed generic from `spsc::Consumer`, `spsc::Producer` and `spsc::Iter`.
+- Added `LinearMap::entry()` API.
+- Added `LinearMap::retain()`.
 
 ### Fixed
 
