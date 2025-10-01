@@ -475,6 +475,50 @@ where
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.iter_mut().map(|(_, v)| v)
     }
+
+    /// Returns an entry for the corresponding key
+    /// ```
+    /// use heapless::linear_map;
+    /// use heapless::LinearMap;
+    /// let mut map = LinearMap::<_, _, 16>::new();
+    /// if let linear_map::Entry::Vacant(v) = map.entry("a") {
+    ///     v.insert(1).unwrap();
+    /// }
+    /// if let linear_map::Entry::Occupied(mut o) = map.entry("a") {
+    ///     println!("found {}", *o.get()); // Prints 1
+    ///     o.insert(2);
+    /// }
+    /// // Prints 2
+    /// println!("val: {}", *map.get("a").unwrap());
+    /// ```
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
+        let idx = self
+            .keys()
+            .enumerate()
+            .find(|&(_, k)| *k.borrow() == key)
+            .map(|(idx, _)| idx);
+
+        match idx {
+            Some(idx) => Entry::Occupied(OccupiedEntry {
+                idx,
+                map: self.as_mut_view(),
+            }),
+            None => Entry::Vacant(VacantEntry {
+                key,
+                map: self.as_mut_view(),
+            }),
+        }
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)` returns `false`.
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&K, &mut V) -> bool,
+    {
+        self.buffer.retain_mut(|(k, v)| f(k, v));
+    }
 }
 
 impl<K, V, Q, S: LinearMapStorage<K, V> + ?Sized> ops::Index<&'_ Q> for LinearMapInner<K, V, S>
@@ -643,11 +687,111 @@ where
 {
 }
 
+/// A view into an entry in the map
+pub enum Entry<'a, K, V> {
+    /// The entry corresponding to the key `K` exists in the map
+    Occupied(OccupiedEntry<'a, K, V>),
+    /// The entry corresponding to the key `K` does not exist in the map
+    Vacant(VacantEntry<'a, K, V>),
+}
+
+/// An occupied entry which can be manipulated
+pub struct OccupiedEntry<'a, K, V> {
+    // SAFETY: `idx` must not be modified after construction, and
+    // the size of `map` must not be changed.
+    idx: usize,
+    map: &'a mut LinearMapView<K, V>,
+}
+
+impl<'a, K, V> OccupiedEntry<'a, K, V>
+where
+    K: Eq,
+{
+    /// Gets a reference to the key that this entity corresponds to
+    pub fn key(&self) -> &K {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        let (k, _v) = unsafe { self.map.buffer.get_unchecked(self.idx) };
+        k
+    }
+
+    /// Removes this entry from the map and yields its corresponding key and value
+    pub fn remove_entry(self) -> (K, V) {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        unsafe { self.map.buffer.swap_remove_unchecked(self.idx) }
+    }
+
+    /// Removes this entry from the map and yields its corresponding key and value
+    pub fn remove(self) -> V {
+        self.remove_entry().1
+    }
+
+    /// Gets a reference to the value associated with this entry
+    pub fn get(&self) -> &V {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        let (_k, v) = unsafe { self.map.buffer.get_unchecked(self.idx) };
+        v
+    }
+
+    /// Gets a mutable reference to the value associated with this entry
+    pub fn get_mut(&mut self) -> &mut V {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        let (_k, v) = unsafe { self.map.buffer.get_unchecked_mut(self.idx) };
+        v
+    }
+
+    /// Consumes this entry and yields a reference to the underlying value
+    pub fn into_mut(self) -> &'a mut V {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        let (_k, v) = unsafe { self.map.buffer.get_unchecked_mut(self.idx) };
+        v
+    }
+
+    /// Overwrites the underlying map's value with this entry's value
+    pub fn insert(self, value: V) -> V {
+        // SAFETY: Valid idx from OccupiedEntry construction
+        let (_k, v) = unsafe { self.map.buffer.get_unchecked_mut(self.idx) };
+        mem::replace(v, value)
+    }
+}
+
+/// A view into an empty slot in the underlying map
+pub struct VacantEntry<'a, K, V> {
+    key: K,
+    map: &'a mut LinearMapView<K, V>,
+}
+
+impl<'a, K, V> VacantEntry<'a, K, V>
+where
+    K: Eq,
+{
+    /// Get the key associated with this entry
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Consumes this entry to yield to key associated with it
+    pub fn into_key(self) -> K {
+        self.key
+    }
+
+    /// Inserts this entry into to underlying map, yields a mutable reference to the inserted value.
+    /// If the map is at capacity the value is returned instead.
+    pub fn insert(self, value: V) -> Result<&'a mut V, V> {
+        self.map
+            .buffer
+            .push((self.key, value))
+            .map_err(|(_k, v)| v)?;
+        let idx = self.map.buffer.len() - 1;
+        let r = &mut self.map.buffer[idx];
+        Ok(&mut r.1)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use static_assertions::assert_not_impl_any;
 
-    use super::{LinearMap, LinearMapView};
+    use super::{Entry, LinearMap, LinearMapView};
 
     // Ensure a `LinearMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(LinearMap<*const (), (), 4>: Send);
@@ -779,5 +923,206 @@ mod test {
 
         assert_eq!(map.len(), 0);
         assert!(map.is_empty());
+    }
+
+    // tests that use this constant take too long to run under miri, specially on CI, with a map of
+    // this size so make the map smaller when using miri
+    #[cfg(not(miri))]
+    const MAP_SLOTS: usize = 4096;
+    #[cfg(miri)]
+    const MAP_SLOTS: usize = 64;
+    fn almost_filled_map() -> LinearMap<usize, usize, MAP_SLOTS> {
+        let mut almost_filled = LinearMap::new();
+        for i in 1..MAP_SLOTS {
+            almost_filled.insert(i, i).unwrap();
+        }
+        almost_filled
+    }
+
+    #[test]
+    fn remove() {
+        let mut src = almost_filled_map();
+        // key doesn't exist
+        let k = 0;
+        let r = src.remove(&k);
+        assert!(r.is_none());
+
+        let k = 5;
+        let v = 5;
+        let r = src.remove(&k);
+        assert_eq!(r, Some(v));
+        let r = src.remove(&k);
+        assert!(r.is_none());
+        assert_eq!(src.len(), MAP_SLOTS - 2);
+    }
+
+    #[test]
+    fn replace() {
+        let mut src = almost_filled_map();
+        src.insert(10, 1000).unwrap();
+        let v = src.get(&10).unwrap();
+        assert_eq!(*v, 1000);
+
+        let mut src = almost_filled_map();
+        let v = src.get_mut(&10).unwrap();
+        *v = 500;
+        let v = src.get(&10).unwrap();
+        assert_eq!(*v, 500);
+    }
+
+    #[test]
+    fn retain() {
+        let mut src = almost_filled_map();
+        src.retain(|k, _v| k % 2 == 0);
+        src.retain(|k, _v| k % 3 == 0);
+
+        for (k, v) in src.iter() {
+            assert_eq!(k, v);
+            assert_eq!(k % 2, 0);
+            assert_eq!(k % 3, 0);
+        }
+
+        let mut src = almost_filled_map();
+        src.retain(|_k, _v| false);
+        assert!(src.is_empty());
+
+        let mut src = almost_filled_map();
+        src.retain(|_k, _v| true);
+        assert_eq!(src.len(), MAP_SLOTS - 1);
+        src.insert(0, 0).unwrap();
+        src.retain(|_k, _v| true);
+        assert_eq!(src.len(), MAP_SLOTS);
+    }
+
+    #[test]
+    fn entry_find() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Found entry without inserting");
+            }
+            Entry::Vacant(v) => {
+                assert_eq!(&key, v.key());
+                assert_eq!(key, v.into_key());
+            }
+        }
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(mut o) => {
+                assert_eq!(&key, o.key());
+                assert_eq!(&value, o.get());
+                assert_eq!(&value, o.get_mut());
+                assert_eq!(&value, o.into_mut());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        }
+    }
+
+    #[test]
+    fn entry_vacant_insert() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Entry found when empty");
+            }
+            Entry::Vacant(v) => {
+                assert_eq!(value, *v.insert(value).unwrap());
+            }
+        };
+        assert_eq!(value, *src.get(&key).unwrap());
+    }
+
+    #[test]
+    fn entry_vacant_full_insert() {
+        let mut src = almost_filled_map();
+
+        // fill the map
+        let key = MAP_SLOTS * 2;
+        let value = key;
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+
+        let key = 0;
+        let value = 0;
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Entry found when missing");
+            }
+            Entry::Vacant(v) => {
+                // Value is returned since the map is full
+                assert_eq!(value, v.insert(value).unwrap_err());
+            }
+        };
+        assert!(src.get(&key).is_none());
+    }
+
+    #[test]
+    fn entry_occupied_insert() {
+        let key = 0;
+        let value = 0;
+        let value2 = 5;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.insert(value2));
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(value2, *src.get(&key).unwrap());
+    }
+
+    #[test]
+    fn entry_remove_entry() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!((key, value), o.remove_entry());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found")
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        assert!(!src.contains_key(&key));
+    }
+
+    #[test]
+    fn entry_remove() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.remove());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
     }
 }

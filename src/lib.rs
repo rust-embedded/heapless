@@ -123,7 +123,7 @@
 //!
 //! In other words, changes in the Rust version requirement of this crate are not considered semver
 //! breaking change and may occur in patch version releases.
-#![cfg_attr(docsrs, feature(doc_cfg), feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(test), no_std)]
 #![deny(missing_docs)]
 #![cfg_attr(
