@@ -948,11 +948,13 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     ///
     /// let mut buf: Deque<_, 10> = Deque::new();
     /// buf.extend(1..5);
-    /// buf.retain_mut(|x| if *x % 2 == 0 {
-    ///     *x += 1;
-    ///     true
-    /// } else {
-    ///     false
+    /// buf.retain_mut(|x| {
+    ///     if *x % 2 == 0 {
+    ///         *x += 1;
+    ///         true
+    ///     } else {
+    ///         false
+    ///     }
     /// });
     /// assert_eq!(buf.make_contiguous(), [3, 5]);
     /// ```
