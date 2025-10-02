@@ -968,8 +968,10 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
 
         // Stage 1: Check if all values can be retained.
         while cur < len {
-            // Safety: `cur` must be under the deque's total length as per the loop condition
-            if !f(unsafe { self.get_unchecked_mut(cur) }) {
+            let val = self
+                .get_mut(cur)
+                .expect("cur was checked to be less than deque's length");
+            if !f(val) {
                 cur += 1;
                 break;
             }
@@ -979,8 +981,10 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         }
         // Stage 2: Swap retained values into current idx, building a contiguous chunk from 0 to idx.
         while cur < len {
-            // Safety: `cur` must be under the deque's total length as per the loop condition
-            if !f(unsafe { self.get_unchecked_mut(cur) }) {
+            let val = self
+                .get_mut(cur)
+                .expect("cur was checked to be less than deque's length");
+            if !f(val) {
                 cur += 1;
                 continue;
             }
