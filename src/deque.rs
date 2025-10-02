@@ -1882,6 +1882,202 @@ mod tests {
         assert!(deque.is_empty());
     }
 
+    // Checking that no invalid destructors are called with empty Deques
+    #[test]
+    fn truncate_empty() {
+        droppable!();
+
+        const LEN: usize = 1;
+        let mut tester: Deque<_, LEN> = Deque::new();
+
+        // Truncate to 0 from 0
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+
+        // Truncate to 123 from 0 (thus clamping back down to 0)
+        tester.truncate(123);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+
+        // Ensure state is still valid by pushing one element in and then truncating again
+        assert!(tester.push_front(Droppable::new()).is_ok());
+        assert_eq!(tester.len(), 1);
+        assert_eq!(Droppable::count(), 1);
+
+        // Truncate to 0 from 1
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    // Testing truncation with contiguous Deques
+    #[test]
+    fn truncate_contiguous() {
+        droppable!();
+
+        fn slice_lengths<T>(slices: (&[T], &[T])) -> (usize, usize) {
+            let (a, b) = slices;
+            (a.len(), b.len())
+        }
+
+        const LEN: usize = 20;
+        let mut tester: Deque<_, LEN> = Deque::new();
+
+        // Filling from front.
+        for _ in 0..5 {
+            assert!(tester.push_front(Droppable::new()).is_ok());
+        }
+
+        // Truncating past the elements present, no change.
+        tester.truncate(10);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        // Truncating equal to elements present, no change.
+        tester.truncate(5);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        // Truncating to empty.
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+
+        // Refill from front.
+        for _ in 0..5 {
+            assert!(tester.push_front(Droppable::new()).is_ok());
+        }
+
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        // Truncate into the middle of elements.
+        tester.truncate(3);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (3, 0));
+        assert_eq!(Droppable::count(), 3);
+
+        // Truncating to empty.
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+
+        // Resetting cursors.
+        tester.clear();
+
+        // Filling from back...
+        for _ in 0..5 {
+            assert!(tester.push_back(Droppable::new()).is_ok());
+        }
+
+        tester.truncate(10);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        tester.truncate(5);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+
+        for _ in 0..5 {
+            assert!(tester.push_back(Droppable::new()).is_ok());
+        }
+
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (5, 0));
+        assert_eq!(Droppable::count(), 5);
+
+        tester.truncate(3);
+        let lens = slice_lengths(tester.as_slices());
+        assert_eq!(lens, (3, 0));
+        assert_eq!(Droppable::count(), 3);
+
+        tester.truncate(0);
+        assert_eq!(tester.len(), 0);
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    // Testing truncation with non-contiguous Deques
+    #[test]
+    fn truncate_non_contiguous() {
+        const LEN: usize = 20;
+        let mut tester: Deque<u8, LEN> = Deque::new();
+
+        // Filling non-contiguously.
+        //
+        // Expecting [3, 2, 1, 1, 2, 3]
+        for x in 1..=3 {
+            assert!(tester.push_front(x).is_ok());
+        }
+        for y in 1..=3 {
+            assert!(tester.push_back(y).is_ok());
+        }
+
+        // Truncating past the elements present, no change.
+        tester.truncate(10);
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
+        println!("{} {}", tester.front, tester.back);
+        // Truncating equal to elements present, no change.
+        tester.truncate(6);
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
+
+        // Truncating to empty.
+        tester.truncate(0);
+        assert_eq!(tester.as_slices(), (&[][..], &[][..]));
+
+        // Resetting cursors.
+        tester.clear();
+
+        // Refilling.
+        for x in 1..=3 {
+            assert!(tester.push_front(x).is_ok());
+        }
+        for y in 1..=3 {
+            assert!(tester.push_back(y).is_ok());
+        }
+
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
+
+        // Truncating only part of back, retaining front and part of back.
+        tester.truncate(5);
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2][..]));
+
+        // Replacing the truncated element.
+        assert!(tester.push_back(3).is_ok());
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
+
+        // Truncating away all of back's contents, but retaining all of front's contents.
+        tester.truncate(3);
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[][..]));
+
+        // Replacing the truncated elements.
+        for y in 1..=3 {
+            assert!(tester.push_back(y).is_ok());
+        }
+        assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
+
+        // Truncating into front, thus also dropping all of back.
+        tester.truncate(2);
+        assert_eq!(tester.as_slices(), (&[3, 2][..], &[][..]));
+
+        // Truncating to empty.
+        tester.truncate(0);
+        assert_eq!(tester.as_slices(), (&[][..], &[][..]));
+
+        // Should remain empty.
+        tester.truncate(123);
+        assert_eq!(tester.as_slices(), (&[][..], &[][..]));
+    }
+
     // Tests that each element's destructor is called when being truncated.
     #[test]
     fn truncate_drop_count() {
@@ -1896,12 +2092,12 @@ mod tests {
                     assert!(
                         tester.push_front(Droppable::new()).is_ok(),
                         "deque must have room for all {LEN} entries"
-                    )
+                    );
                 } else {
                     assert!(
                         tester.push_back(Droppable::new()).is_ok(),
                         "deque must have room for all {LEN} entries"
-                    )
+                    );
                 }
             }
 
