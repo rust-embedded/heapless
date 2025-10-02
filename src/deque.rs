@@ -1891,25 +1891,10 @@ mod tests {
         assert!(deque.is_empty());
     }
 
-    // Based on alloc's own VecDeque test
-    //
-    // https://github.com/rust-lang/rust/blob/fa3155a644dd62e865825087b403646be01d4cef/library/alloc/src/collections/vec_deque/tests.rs#L1086
-    //
     // Tests that each element's destructor is called when being truncated.
     #[test]
     fn truncate_drop_count() {
-        use core::cell::Cell;
-        thread_local! {
-            static DROPS: Cell<u32> = const { Cell::new(0) };
-        }
-
-        #[derive(Debug)]
-        struct DropIncrementor;
-        impl Drop for DropIncrementor {
-            fn drop(&mut self) {
-                DROPS.set(DROPS.get() + 1);
-            }
-        }
+        droppable!();
 
         const LEN: usize = 20;
         const TRUNC: usize = 3;
@@ -1917,41 +1902,50 @@ mod tests {
             let mut tester: Deque<_, LEN> = Deque::new();
             for index in 0..LEN {
                 if index < push_front_amt {
-                    tester.push_front(DropIncrementor).unwrap();
+                    assert!(
+                        tester.push_front(Droppable::new()).is_ok(),
+                        "deque must have room for all {LEN} entries"
+                    )
                 } else {
-                    tester.push_back(DropIncrementor).unwrap();
+                    assert!(
+                        tester.push_back(Droppable::new()).is_ok(),
+                        "deque must have room for all {LEN} entries"
+                    )
                 }
             }
 
-            assert_eq!(DROPS.get(), 0);
+            assert_eq!(Droppable::count(), LEN as i32);
+
             tester.truncate(TRUNC);
             assert_eq!(tester.len(), TRUNC);
+            assert_eq!(Droppable::count(), TRUNC as i32);
 
-            assert_eq!(DROPS.get(), (LEN - TRUNC) as u32);
             tester.truncate(0);
             assert_eq!(tester.len(), 0);
-
-            assert_eq!(DROPS.get(), LEN as u32);
-            DROPS.set(0);
+            assert_eq!(Droppable::count(), 0);
         }
     }
 
     #[test]
     fn retain() {
+        droppable!();
+
         const LEN: usize = 20;
         for push_front_amt in 0..=LEN {
             let mut tester: Deque<_, LEN> = Deque::new();
             for index in 0..LEN {
                 if index < push_front_amt {
-                    tester.push_front(index).unwrap();
+                    assert!(tester.push_front((index, Droppable::new())).is_ok());
                 } else {
-                    tester.push_back(index).unwrap();
+                    assert!(tester.push_back((index, Droppable::new())).is_ok());
                 }
             }
+            assert_eq!(Droppable::count(), LEN as i32);
 
-            tester.retain(|x| *x >= 10);
+            tester.retain(|(x, _)| *x >= 10);
 
             assert_eq!(tester.len(), 10);
+            assert_eq!(Droppable::count(), 10);
         }
     }
 }
