@@ -843,24 +843,30 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             }
         }
 
+        // Safety:
+        // * Any slice passed to `drop_in_place` is valid; the second case has
+        //   `len <= front.len()` and returning on `len > self.storage_len()` ensures
+        //   `begin <= back.len()` in the first case
+        // * Deque front/back cursors are moved before calling `drop_in_place`,
+        //   so no value is dropped twice if `drop_in_place` panics
         unsafe {
             // If new desired length is greater or equal, we don't need to act.
             if len >= self.storage_len() {
                 return;
             }
 
-            let (front_idx, back_idx) = (self.front, self.back);
             let (front, back) = self.as_mut_slices();
 
             // If `len` desires to keep elements past front's entire length,
-            // then only back's contents need to be dropped
+            // then only back's contents will need to be dropped
             // as the two slices combined should be more than `len`.
             if len > front.len() {
                 let begin = len - front.len();
                 let drop_back = back.get_unchecked_mut(begin..) as *mut _;
 
-                // When we have a non-contiguous deque,
-                // we find the new wrapped index for `back` using the desired length
+                // Self::to_physical_index returns the index `len` units _after_ the front cursor,
+                // meaning we can use it to find the decremented index for `back` for non-contiguous deques,
+                // as well as determine where the new "cap" for front needs to be placed for contiguous deques.
                 self.back = self.to_physical_index(len);
                 self.full = false;
 
@@ -871,22 +877,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                 let drop_back = back as *mut _;
                 let drop_front = front.get_unchecked_mut(len..) as *mut _;
 
-                if back_idx <= front_idx {
-                    // Self::to_physical_index returns the index `len` units _after_ the front cursor,
-                    // meaning we also can use it to determine where the cap for front needs to be placed.
-                    self.back = self.to_physical_index(len);
-                } else {
-                    // If the back cursor is "in front" of the front cursor,
-                    // we can just move it closer to truncate front's length.
-                    let back_trunc = front.len() - len;
-
-                    // This shouldn't underflow since `back` must be larger
-                    // than both `len` and `front` for this to even be reached.
-                    self.back -= back_trunc;
-                }
-                // In either case, if a 0 desired length is provided,
-                // `back` will equal `front` and `full` will be unset,
-                // properly marking the deque as empty.
+                self.back = self.to_physical_index(len);
                 self.full = false;
 
                 // If `drop_front` causes a panic, the Dropper will still be called to drop it's slice during unwinding.
