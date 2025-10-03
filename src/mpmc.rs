@@ -208,7 +208,14 @@ impl<T, S: Storage> QueueInner<T, S> {
 
     /// Returns the item in the front of the queue, or `None` if the queue is empty.
     pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(S::as_ptr(self.buffer.get()), &self.dequeue_pos, self.mask()) }
+        unsafe {
+            dequeue(
+                S::as_ptr(self.buffer.get()),
+                &self.dequeue_pos,
+                &self.enqueue_pos,
+                self.mask(),
+            )
+        }
     }
 
     /// Adds an `item` to the end of the queue.
@@ -218,6 +225,7 @@ impl<T, S: Storage> QueueInner<T, S> {
         unsafe {
             enqueue(
                 S::as_ptr(self.buffer.get()),
+                &self.dequeue_pos,
                 &self.enqueue_pos,
                 self.mask(),
                 item,
@@ -255,18 +263,25 @@ impl<T> Cell<T> {
     }
 }
 
+const CONTENTION_RETRY_COUNT: usize = 10000;
+
 unsafe fn dequeue<T>(
     buffer: *mut Cell<T>,
     dequeue_pos: &AtomicTargetSize,
+    enqueue_pos: &AtomicTargetSize,
     mask: UintSize,
 ) -> Option<T> {
     let mut pos = dequeue_pos.load(Ordering::Relaxed);
 
     let mut cell;
+    let mut seq;
+    let mut dif;
+    let mut contention_retry_count = 0;
+
     loop {
         cell = buffer.add(usize::from(pos & mask));
-        let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as IntSize).wrapping_sub((pos.wrapping_add(1)) as IntSize);
+        seq = (*cell).sequence.load(Ordering::Acquire);
+        dif = (seq as IntSize).wrapping_sub((pos.wrapping_add(1)) as IntSize);
 
         match dif.cmp(&0) {
             core::cmp::Ordering::Equal => {
@@ -283,6 +298,16 @@ unsafe fn dequeue<T>(
                 }
             }
             core::cmp::Ordering::Less => {
+                if pos != enqueue_pos.load(Ordering::Relaxed)
+                    && contention_retry_count < CONTENTION_RETRY_COUNT
+                {
+                    // In this case according to the positions the queue is not empty
+                    // This suggests that there is a enqueue operations that is in progress in some other task
+                    // Therefore we can wait a bit hoping that the other task can finish its `enqueue` operation complete
+                    core::hint::spin_loop();
+                    contention_retry_count += 1;
+                    continue;
+                }
                 return None;
             }
             core::cmp::Ordering::Greater => {
@@ -300,6 +325,7 @@ unsafe fn dequeue<T>(
 
 unsafe fn enqueue<T>(
     buffer: *mut Cell<T>,
+    dequeue_pos: &AtomicTargetSize,
     enqueue_pos: &AtomicTargetSize,
     mask: UintSize,
     item: T,
@@ -307,6 +333,7 @@ unsafe fn enqueue<T>(
     let mut pos = enqueue_pos.load(Ordering::Relaxed);
 
     let mut cell;
+    let mut contention_retry_count = 0;
     loop {
         cell = buffer.add(usize::from(pos & mask));
         let seq = (*cell).sequence.load(Ordering::Acquire);
@@ -325,8 +352,19 @@ unsafe fn enqueue<T>(
                 {
                     break;
                 }
+                pos = enqueue_pos.load(Ordering::Relaxed);
             }
             core::cmp::Ordering::Less => {
+                if dequeue_pos.load(Ordering::Relaxed).wrapping_add(mask + 1) != pos
+                    && contention_retry_count < CONTENTION_RETRY_COUNT
+                {
+                    // In this case according to the positions the queue is not full
+                    // This suggests that there is a dequeue operation that is in progress in some other task
+                    // Therefore we can wait a bit hoping that the other task can finish its `dequeue` operation completes
+                    core::hint::spin_loop();
+                    contention_retry_count += 1;
+                    continue;
+                }
                 return Err(item);
             }
             core::cmp::Ordering::Greater => {
