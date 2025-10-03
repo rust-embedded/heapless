@@ -3,6 +3,16 @@
 //! Provides `CowStr`, a heapless clone-on-write string that can be
 //! borrowed, static, or owned. Useful for efficiently handling
 //! temporary string references and owned strings.
+//!
+//! NOTE: Unlike `std::borrow::Cow<'a, str>` this type does NOT provide a
+//! smaller in-memory representation for the borrowed variants. The enum is
+//! at least as large as the owned `String<N, LenT>` because the owned
+//! variant carries the inline buffer. The motivation is purely to avoid
+//! paying an O(len) copy when a string is very often reused unchanged, while
+//! still allowing the API to return an owned form when a (rare) mutation or
+//! normalization is required. If the caller always needs an owned `String`
+//! anyway, `CowStr` offers no benefit and should not be used.
+
 use crate::len_type::LenType;
 use crate::string::StringView;
 use crate::String;
