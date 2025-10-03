@@ -346,10 +346,19 @@ unsafe fn enqueue<T>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::Queue;
+    use super::{Queue, QueueView};
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
+
+    fn to_vec<T>(q: &QueueView<T>) -> Vec<T> {
+        // inaccurate
+        let mut ret = vec![];
+        while let Some(v) = q.dequeue() {
+            ret.push(v);
+        }
+        ret
+    }
 
     #[test]
     fn memory_leak() {
@@ -418,5 +427,82 @@ mod tests {
 
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    fn issue_583_enqueue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        for i in 0..N {
+            q0.enqueue(i as u8).expect("new enqueue");
+        }
+        eprintln!("start!");
+
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1000_000 {
+                        if let Some(v) = q0.dequeue() {
+                            q0.enqueue(v).unwrap_or_else(|v| {
+                                panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0))
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn issue_583_dequeue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        eprintln!("start!");
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1000_000 {
+                        q0.enqueue(k as u8).unwrap();
+                        if q0.dequeue().is_none() {
+                            panic!("{k}");
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn issue_583_enqueue_loom() {
+        const N: usize = 4;
+
+        loom::model(|| {
+            let q0 = loom::sync::Arc::new(Queue::<u8, N>::new());
+            for i in 0..N {
+                q0.enqueue(i as u8).expect("new enqueue");
+            }
+            eprintln!("start!");
+
+            let q1 = q0.clone();
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q0.dequeue() {
+                        q0.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q0)));
+                    }
+                }
+            });
+
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q1.dequeue() {
+                        q1.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q1)));
+                    }
+                }
+            });
+        });
     }
 }
