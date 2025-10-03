@@ -79,6 +79,8 @@ use atomic::Ordering;
 
 use crate::storage::{OwnedStorage, Storage, ViewStorage};
 
+pub mod crossbeam_array_queue;
+
 #[cfg(feature = "mpmc_large")]
 type AtomicTargetSize = atomic::AtomicUsize;
 #[cfg(not(feature = "mpmc_large"))]
