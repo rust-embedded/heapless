@@ -505,4 +505,30 @@ mod tests {
             });
         });
     }
+
+    #[test]
+    fn issue_583_enqueue_loom_scope() {
+        const N: usize = 4;
+
+        loom::model(|| {
+            let q0 = Queue::<u8, N>::new();
+            for i in 0..N {
+                q0.enqueue(i as u8).expect("new enqueue");
+            }
+            eprintln!("start!");
+
+            loom::thread::scope(|sc| {
+                for _ in 0..2 {
+                    sc.spawn(|| {
+                        for k in 0..1000_000 {
+                            if let Some(v) = q0.dequeue() {
+                                q0.enqueue(v)
+                                    .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0)));
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    }
 }
