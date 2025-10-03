@@ -166,6 +166,7 @@ pub use vec::{Vec, VecView};
 mod test_helpers;
 
 pub mod c_string;
+pub mod cow;
 pub mod deque;
 pub mod history_buf;
 pub mod index_map;

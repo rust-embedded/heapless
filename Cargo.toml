@@ -75,6 +75,11 @@ stable_deref_trait = { version = "1", default-features = false }
 [dev-dependencies]
 critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
+criterion = "0.5"
+
+[[bench]]
+name = "cow_str"
+harness = false
 
 [package.metadata.docs.rs]
 features = [

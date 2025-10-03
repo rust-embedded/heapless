@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Add `Cow` (Copy-On-Write)
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
 - Implement `Default` for `CapacityError`.
