@@ -5,24 +5,52 @@
 //!
 //! From the [crossbeam-queue](https://github.com/crossbeam-rs/crossbeam/blob/master/crossbeam-queue/src/array_queue.rs) implementation.
 
+use super::{atomic, atomic::Ordering};
 use core::cell::UnsafeCell;
 use core::fmt;
-use core::mem::{self, MaybeUninit};
+use core::mem::MaybeUninit;
 use core::panic::{RefUnwindSafe, UnwindSafe};
-use core::sync::atomic::{self, AtomicUsize, Ordering};
+
+use crate::storage::{OwnedStorage, Storage};
 
 use crossbeam_utils::{Backoff, CachePadded};
 
+use super::{AtomicTargetSize, QueueView, UintSize};
+
 /// A slot in a queue.
-struct Slot<T> {
+struct Slot<T: Sized> {
     /// The current stamp.
     ///
     /// If the stamp equals the tail, this node will be next written to. If it equals head + 1,
     /// this node will be next read from.
-    stamp: AtomicUsize,
+    stamp: AtomicTargetSize,
 
     /// The value in this slot.
     value: UnsafeCell<MaybeUninit<T>>,
+}
+
+impl<T> Slot<T> {
+    /// Creates a new uninitialized [Slot].
+    pub const fn new() -> Self {
+        Self {
+            stamp: AtomicTargetSize::new(0),
+            value: UnsafeCell::new(MaybeUninit::uninit()),
+        }
+    }
+
+    /// Creates a new uninitialized [Slot] with the provided stamp.
+    pub const fn create_uninit(stamp: UintSize) -> Self {
+        Self {
+            stamp: AtomicTargetSize::new(stamp),
+            value: UnsafeCell::new(MaybeUninit::uninit()),
+        }
+    }
+}
+
+impl<T> Default for Slot<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// A bounded multi-producer multi-consumer queue.
@@ -44,19 +72,25 @@ struct Slot<T> {
 ///
 /// let q = Queue::new::<N>();
 ///
-/// assert_eq!(q.push('a'), Ok(()));
-/// assert_eq!(q.push('b'), Ok(()));
-/// assert_eq!(q.push('c'), Err('c'));
-/// assert_eq!(q.pop(), Some('a'));
+/// assert_eq!(q.enqueue('a'), Ok(()));
+/// assert_eq!(q.enqueue('b'), Ok(()));
+/// assert_eq!(q.enqueue('c'), Err('c'));
+/// assert_eq!(q.dequeue(), Some('a'));
 /// ```
-pub struct Queue<T, const N: usize> {
+pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
+
+/// Base struct for [`Queue`] and [`QueueView`], generic over the [`Storage`].
+///
+/// In most cases you should use [`Queue`] or [`QueueView`] directly. Only use this
+/// struct if you want to write code that's generic over both.
+pub struct QueueInner<T, S: Storage> {
     /// The head of the queue.
     ///
     /// This value is a "stamp" consisting of an index into the buffer and a lap, but packed into a
     /// single `usize`. The lower bits represent the index, while the upper bits represent the lap.
     ///
     /// Elements are popped from the head of the queue.
-    head: CachePadded<AtomicUsize>,
+    head: CachePadded<AtomicTargetSize>,
 
     /// The tail of the queue.
     ///
@@ -64,29 +98,46 @@ pub struct Queue<T, const N: usize> {
     /// single `usize`. The lower bits represent the index, while the upper bits represent the lap.
     ///
     /// Elements are pushed into the tail of the queue.
-    tail: CachePadded<AtomicUsize>,
-
-    /// The buffer holding slots.
-    buffer: [Slot<T>; N],
+    tail: CachePadded<AtomicTargetSize>,
 
     /// A stamp with the value of `{ lap: 1, index: 0 }`.
-    one_lap: usize,
+    one_lap: UintSize,
+
+    /// The buffer holding slots.
+    buffer: UnsafeCell<S::Buffer<Slot<T>>>,
 }
 
-unsafe impl<T: Send, const N: usize> Sync for Queue<T, N> {}
-unsafe impl<T: Send, const N: usize> Send for Queue<T, N> {}
-
-impl<T, const N: usize> UnwindSafe for Queue<T, N> {}
-impl<T, const N: usize> RefUnwindSafe for Queue<T, N> {}
-
-impl<T, const N: usize> Queue<T, N> {
-    const _NON_ZERO_CAP: () = assert!(N > 0, "capacity must be non-zero");
-
-    /// Creates a new bounded queue with the given capacity.
+impl<T, S: Storage> QueueInner<T, S> {
+    /// Attempts to push an element into the queue.
     ///
-    /// # Panics
+    /// If the queue is full, the element is returned back as an error.
     ///
-    /// Panics if the capacity is zero.
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::mpmc::Queue;
+    /// const N: usize = 1;
+    ///
+    /// let q = Queue::new::<N>();
+    ///
+    /// assert_eq!(q.enqueue(10), Ok(()));
+    /// assert_eq!(q.enqueue(20), Err(20));
+    /// ```
+    pub fn enqueue(&self, value: T) -> Result<(), T> {
+        self.push_or_else(value, |v, tail, _, _| {
+            let head = self.head.load(Ordering::Relaxed);
+
+            // If the head lags one lap behind the tail as well...
+            if head.wrapping_add(self.one_lap) == tail as UintSize {
+                // ...then the queue is full.
+                Err(v)
+            } else {
+                Ok(v)
+            }
+        })
+    }
+
+    /// Returns the number of elements in the queue.
     ///
     /// # Examples
     ///
@@ -94,46 +145,56 @@ impl<T, const N: usize> Queue<T, N> {
     /// use heapless::mpmc::Queue;
     /// const N: usize = 100;
     ///
-    /// let q = Queue::<i32, N>::new();
+    /// let q = Queue::new::<N>();
+    /// assert_eq!(q.len(), 0);
+    ///
+    /// q.enqueue(10).unwrap();
+    /// assert_eq!(q.len(), 1);
+    ///
+    /// q.enqueue(20).unwrap();
+    /// assert_eq!(q.len(), 2);
     /// ```
-    pub fn new() -> Self {
-        // Head is initialized to `{ lap: 0, index: 0 }`.
-        // Tail is initialized to `{ lap: 0, index: 0 }`.
-        let head = 0;
-        let tail = 0;
+    pub fn len(&self) -> usize {
+        loop {
+            // Load the tail, then load the head.
+            let tail = self.tail.load(Ordering::SeqCst);
+            let head = self.head.load(Ordering::SeqCst);
 
-        // Allocate a buffer of `cap` slots initialized
-        // with stamps.
-        let buffer: [Slot<T>; N] = core::array::from_fn(|i| {
-            // Set the stamp to `{ lap: 0, index: i }`.
-            Slot {
-                stamp: AtomicUsize::new(i),
-                value: UnsafeCell::new(MaybeUninit::uninit()),
+            // If the tail didn't change, we've got consistent values to work with
+
+            if self.tail.load(Ordering::SeqCst) == tail {
+                let hix = head & (self.one_lap - 1);
+                let tix = tail & (self.one_lap - 1);
+
+                return if hix < tix {
+                    usize::from(tix - hix)
+                } else if hix > tix {
+                    self.capacity() - usize::from(hix + tix)
+                } else if tail == head {
+                    0
+                } else {
+                    self.capacity()
+                };
             }
-        });
-
-        // One lap is the smallest power of two greater than `cap`.
-        let one_lap = (N + 1).next_power_of_two();
-
-        Self {
-            buffer,
-            one_lap,
-            head: CachePadded::new(AtomicUsize::new(head)),
-            tail: CachePadded::new(AtomicUsize::new(tail)),
         }
+    }
+
+    fn as_ptr(&self) -> *const Slot<T> {
+        S::as_ptr(self.buffer.get() as *mut S::Buffer<Slot<T>>) as *const _
     }
 
     fn push_or_else<F>(&self, mut value: T, f: F) -> Result<(), T>
     where
-        F: Fn(T, usize, usize, &Slot<T>) -> Result<T, T>,
+        F: Fn(T, UintSize, UintSize, &Slot<T>) -> Result<T, T>,
     {
         let backoff = Backoff::new();
         let mut tail = self.tail.load(Ordering::Relaxed);
 
         loop {
             // Deconstruct the tail.
-            let index = tail & (self.one_lap - 1);
-            let lap = tail & !(self.one_lap - 1);
+            let lap_mask = self.one_lap.wrapping_sub(1);
+            let index = usize::from(tail & lap_mask);
+            let lap = tail & !lap_mask;
 
             let new_tail = if index + 1 < self.capacity() {
                 // Same lap, incremented index.
@@ -146,8 +207,9 @@ impl<T, const N: usize> Queue<T, N> {
             };
 
             // Inspect the corresponding slot.
-            debug_assert!(index < self.buffer.len());
-            let slot = unsafe { self.buffer.get_unchecked(index) };
+            debug_assert!(index < self.capacity());
+            // SAFETY: index is a valid offset, and buffer is valid contiguous memory.
+            let slot = unsafe { &*self.as_ptr().add(index) };
             let stamp = slot.stamp.load(Ordering::Acquire);
 
             // If the tail and the stamp match, we may attempt to push.
@@ -185,35 +247,6 @@ impl<T, const N: usize> Queue<T, N> {
         }
     }
 
-    /// Attempts to push an element into the queue.
-    ///
-    /// If the queue is full, the element is returned back as an error.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::mpmc::Queue;
-    /// const N: usize = 1;
-    ///
-    /// let q = Queue::new::<N>();
-    ///
-    /// assert_eq!(q.enqueue(10), Ok(()));
-    /// assert_eq!(q.enqueue(20), Err(20));
-    /// ```
-    pub fn enqueue(&self, value: T) -> Result<(), T> {
-        self.push_or_else(value, |v, tail, _, _| {
-            let head = self.head.load(Ordering::Relaxed);
-
-            // If the head lags one lap behind the tail as well...
-            if head.wrapping_add(self.one_lap) == tail {
-                // ...then the queue is full.
-                Err(v)
-            } else {
-                Ok(v)
-            }
-        })
-    }
-
     /// Pushes an element into the queue, replacing the oldest element if necessary.
     ///
     /// If the queue is full, the oldest element is replaced and returned,
@@ -227,15 +260,15 @@ impl<T, const N: usize> Queue<T, N> {
     ///
     /// let q = Queue::new::<N>();
     ///
-    /// assert_eq!(q.force_push(10), None);
-    /// assert_eq!(q.force_push(20), None);
-    /// assert_eq!(q.force_push(30), Some(10));
-    /// assert_eq!(q.pop(), Some(20));
+    /// assert_eq!(q.force_enqueue(10), None);
+    /// assert_eq!(q.force_enqueue(20), None);
+    /// assert_eq!(q.force_enqueue(30), Some(10));
+    /// assert_eq!(q.dequeue(), Some(20));
     /// ```
-    pub fn force_push(&self, value: T) -> Option<T> {
+    pub fn force_enqueue(&self, value: T) -> Option<T> {
         self.push_or_else(value, |v, tail, new_tail, slot| {
-            let head = tail.wrapping_sub(self.one_lap);
-            let new_head = new_tail.wrapping_sub(self.one_lap);
+            let head = (tail as UintSize).wrapping_sub(self.one_lap);
+            let new_head = (new_tail as UintSize).wrapping_sub(self.one_lap);
 
             // Try moving the head.
             if self
@@ -282,12 +315,14 @@ impl<T, const N: usize> Queue<T, N> {
 
         loop {
             // Deconstruct the head.
-            let index = head & (self.one_lap - 1);
-            let lap = head & !(self.one_lap - 1);
+            let lap_mask = self.one_lap.wrapping_sub(1);
+            let index = usize::from(head & lap_mask);
+            let lap = head & !lap_mask;
 
             // Inspect the corresponding slot.
-            debug_assert!(index < self.buffer.len());
-            let slot = unsafe { self.buffer.get_unchecked(index) };
+            debug_assert!(index < self.capacity());
+            // SAFETY: index is a valid offset, and buffer is valid contiguous memory.
+            let slot = unsafe { &*self.as_ptr().add(index) };
             let stamp = slot.stamp.load(Ordering::Acquire);
 
             // If the stamp is ahead of the head by 1, we may attempt to pop.
@@ -340,7 +375,76 @@ impl<T, const N: usize> Queue<T, N> {
         }
     }
 
-    /// Returns the capacity of the queue.
+    /// Returns the maximum number of elements the queue can hold.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        S::len(self.buffer.get())
+    }
+
+    /// Get a reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = queue.as_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let queue: Queue<u8, 2> = Queue::new();
+    /// let view: &QueueView<u8> = &queue;
+    /// ```
+    #[inline]
+    pub fn as_view(&self) -> &QueueView<T> {
+        S::as_mpmc_view(self)
+    }
+
+    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = queue.as_mut_view();
+    /// ```
+    ///
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    ///
+    /// ```rust
+    /// # use heapless::mpmc::{Queue, QueueView};
+    /// let mut queue: Queue<u8, 2> = Queue::new();
+    /// let view: &mut QueueView<u8> = &mut queue;
+    /// ```
+    #[inline]
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+        S::as_mpmc_mut_view(self)
+    }
+}
+
+impl<T, S: Storage> Drop for QueueInner<T, S> {
+    fn drop(&mut self) {
+        while self.dequeue().is_some() {}
+    }
+}
+
+unsafe impl<T: Send, const N: usize> Sync for Queue<T, N> {}
+unsafe impl<T: Send, const N: usize> Send for Queue<T, N> {}
+
+impl<T, const N: usize> UnwindSafe for Queue<T, N> {}
+impl<T, const N: usize> RefUnwindSafe for Queue<T, N> {}
+
+impl<T, const N: usize> Queue<T, N> {
+    const _MIN_SIZE: () = assert!(N > 1, "capacity must be at least two");
+    const _IS_POW2: () = assert!(N.is_power_of_two(), "capacity must be power of two");
+    const _CAP_MAX: () = assert!(N < UintSize::MAX as usize, "capacity maximum exceeded");
+
+    /// Creates a new bounded queue with the given capacity.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the capacity is zero.
     ///
     /// # Examples
     ///
@@ -349,12 +453,32 @@ impl<T, const N: usize> Queue<T, N> {
     /// const N: usize = 100;
     ///
     /// let q = Queue::<i32, N>::new();
-    ///
-    /// assert_eq!(q.capacity(), 100);
     /// ```
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        self.buffer.len()
+    pub const fn new() -> Self {
+        // Head is initialized to `{ lap: 0, index: 0 }`.
+        // Tail is initialized to `{ lap: 0, index: 0 }`.
+        let head = 0;
+        let tail = 0;
+
+        // Allocate a buffer of `cap` slots initialized
+        // with stamps.
+        let mut slot_count = 0usize;
+        let mut buffer: [Slot<T>; N] = [const { Slot::<T>::new() }; N];
+        while slot_count < N {
+            // Set the stamp to `{ lap: 0, index: i }`.
+            buffer[slot_count] = Slot::create_uninit(slot_count as UintSize);
+            slot_count += 1;
+        }
+
+        // One lap is the smallest power of two greater than `cap`.
+        let one_lap = (N + 1).next_power_of_two() as UintSize;
+
+        Self {
+            buffer: UnsafeCell::new(buffer),
+            one_lap,
+            head: CachePadded::new(AtomicTargetSize::new(head)),
+            tail: CachePadded::new(AtomicTargetSize::new(tail)),
+        }
     }
 
     /// Returns `true` if the queue is empty.
@@ -408,84 +532,13 @@ impl<T, const N: usize> Queue<T, N> {
         head.wrapping_add(self.one_lap) == tail
     }
 
-    /// Returns the number of elements in the queue.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::mpmc::Queue;
-    /// const N: usize = 100;
-    ///
-    /// let q = Queue::new::<N>();
-    /// assert_eq!(q.len(), 0);
-    ///
-    /// q.enqueue(10).unwrap();
-    /// assert_eq!(q.len(), 1);
-    ///
-    /// q.enqueue(20).unwrap();
-    /// assert_eq!(q.len(), 2);
-    /// ```
-    pub fn len(&self) -> usize {
-        loop {
-            // Load the tail, then load the head.
-            let tail = self.tail.load(Ordering::SeqCst);
-            let head = self.head.load(Ordering::SeqCst);
-
-            // If the tail didn't change, we've got consistent values to work with.
-            if self.tail.load(Ordering::SeqCst) == tail {
-                let hix = head & (self.one_lap - 1);
-                let tix = tail & (self.one_lap - 1);
-
-                return if hix < tix {
-                    tix - hix
-                } else if hix > tix {
-                    self.capacity() - hix + tix
-                } else if tail == head {
-                    0
-                } else {
-                    self.capacity()
-                };
-            }
-        }
+    /// Used in `Storage` implementation.
+    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
+        self
     }
-}
-
-impl<T, const N: usize> Drop for Queue<T, N> {
-    fn drop(&mut self) {
-        if mem::needs_drop::<T>() {
-            // Get the index of the head.
-            let head = *self.head.get_mut();
-            let tail = *self.tail.get_mut();
-
-            let hix = head & (self.one_lap - 1);
-            let tix = tail & (self.one_lap - 1);
-
-            let len = if hix < tix {
-                tix - hix
-            } else if hix > tix {
-                self.capacity() - hix + tix
-            } else if tail == head {
-                0
-            } else {
-                self.capacity()
-            };
-
-            // Loop over all slots that hold a message and drop them.
-            for i in 0..len {
-                // Compute the index of the next slot holding a message.
-                let index = if hix + i < self.capacity() {
-                    hix + i
-                } else {
-                    hix + i - self.capacity()
-                };
-
-                unsafe {
-                    debug_assert!(index < self.buffer.len());
-                    let slot = self.buffer.get_unchecked_mut(index);
-                    (*slot.value.get()).assume_init_drop();
-                }
-            }
-        }
+    /// Used in `Storage` implementation.
+    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
+        self
     }
 }
 
@@ -505,7 +558,7 @@ impl<T, const N: usize> IntoIterator for Queue<T, N> {
     }
 }
 
-/// Represents the iterator container for implementing the [`Iterator`] trait for [Queue]. 
+/// Represents the iterator container for implementing the [`Iterator`] trait for [Queue].
 #[derive(Debug)]
 pub struct IntoIter<T, const N: usize> {
     value: Queue<T, N>,
@@ -518,15 +571,15 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
         let value = &mut self.value;
         let head = *value.head.get_mut();
         if value.head.get_mut() != value.tail.get_mut() {
-            let index = head & (value.one_lap - 1);
+            let index = usize::from(head & (value.one_lap - 1));
             let lap = head & !(value.one_lap - 1);
             // SAFETY: We have mutable access to this, so we can read without
             // worrying about concurrency. Furthermore, we know this is
             // initialized because it is the value pointed at by `value.head`
             // and this is a non-empty queue.
             let val = unsafe {
-                debug_assert!(index < value.buffer.len());
-                let slot = value.buffer.get_unchecked_mut(index);
+                debug_assert!(index < N);
+                let slot = (&mut *value.buffer.get_mut()).get_unchecked_mut(index);
                 slot.value.get().read().assume_init()
             };
             let new = if index + 1 < value.capacity() {
@@ -543,122 +596,5 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
         } else {
             None
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn to_vec<T, const N: usize>(q: &Queue<T, N>) -> Vec<T> {
-        // inaccurate
-        let mut ret = vec![];
-        while let Some(v) = q.dequeue() {
-            ret.push(v);
-        }
-        ret
-    }
-
-    #[test]
-    fn issue_583_enqueue() {
-        const N: usize = 4;
-
-        let q0 = Queue::<u8, N>::new();
-        for i in 0..N {
-            q0.enqueue(i as u8).expect("new enqueue");
-        }
-        eprintln!("start!");
-
-        std::thread::scope(|sc| {
-            for _ in 0..2 {
-                sc.spawn(|| {
-                    for k in 0..1000_000 {
-                        if let Some(v) = q0.dequeue() {
-                            q0.enqueue(v).unwrap_or_else(|v| {
-                                panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0))
-                            });
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    #[test]
-    fn issue_583_dequeue() {
-        const N: usize = 4;
-
-        let q0 = Queue::<u8, N>::new();
-        eprintln!("start!");
-        std::thread::scope(|sc| {
-            for _ in 0..2 {
-                sc.spawn(|| {
-                    for k in 0..1000_000 {
-                        q0.enqueue(k as u8).unwrap();
-                        if q0.dequeue().is_none() {
-                            panic!("{k}");
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    #[test]
-    fn issue_583_enqueue_loom() {
-        const N: usize = 4;
-
-        loom::model(|| {
-            let q0 = loom::sync::Arc::new(Queue::<u8, N>::new());
-            for i in 0..N {
-                q0.enqueue(i as u8).expect("new enqueue");
-            }
-            eprintln!("start!");
-
-            let q1 = q0.clone();
-            loom::thread::spawn(move || {
-                for k in 0..1000_000 {
-                    if let Some(v) = q0.dequeue() {
-                        q0.enqueue(v)
-                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q0)));
-                    }
-                }
-            });
-
-            loom::thread::spawn(move || {
-                for k in 0..1000_000 {
-                    if let Some(v) = q1.dequeue() {
-                        q1.enqueue(v)
-                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q1)));
-                    }
-                }
-            });
-        });
-    }
-
-    #[test]
-    fn issue_583_enqueue_loom_scope() {
-        const N: usize = 4;
-
-        loom::model(|| {
-            let q0 = Queue::<u8, N>::new();
-            for i in 0..N {
-                q0.enqueue(i as u8).expect("new enqueue");
-            }
-            eprintln!("start!");
-
-            loom::thread::scope(|sc| {
-                for _ in 0..2 {
-                    sc.spawn(|| {
-                        for k in 0..1000_000 {
-                            if let Some(v) = q0.dequeue() {
-                                q0.enqueue(v)
-                                    .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0)));
-                            }
-                        }
-                    });
-                }
-            });
-        });
     }
 }

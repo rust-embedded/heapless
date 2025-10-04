@@ -68,6 +68,23 @@
 //!
 //! [bounded MPMC queue]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
+use crate::storage::ViewStorage;
+
+#[cfg(not(feature = "portable-atomic"))]
+use core::sync::atomic;
+#[cfg(feature = "portable-atomic")]
+use portable_atomic as atomic;
+
+#[cfg(feature = "mpmc_large")]
+type AtomicTargetSize = atomic::AtomicUsize;
+#[cfg(not(feature = "mpmc_large"))]
+type AtomicTargetSize = atomic::AtomicU8;
+
+#[cfg(feature = "mpmc_large")]
+type UintSize = usize;
+#[cfg(not(feature = "mpmc_large"))]
+type UintSize = u8;
+
 #[cfg(feature = "mpmc_crossbeam")]
 pub mod crossbeam_array_queue;
 #[cfg(feature = "mpmc_crossbeam")]
@@ -77,3 +94,200 @@ pub use crossbeam_array_queue::*;
 mod original;
 #[cfg(not(feature = "mpmc_crossbeam"))]
 pub use original::*;
+
+/// A [`Queue`] with dynamic capacity.
+///
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
+pub type QueueView<T> = QueueInner<T, ViewStorage>;
+
+#[cfg(test)]
+mod tests {
+    use static_assertions::assert_not_impl_any;
+
+    use super::{Queue, QueueView};
+
+    // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(Queue<*const (), 4>: Send);
+
+    fn to_vec<T>(q: &QueueView<T>) -> Vec<T> {
+        // inaccurate
+        let mut ret = vec![];
+        while let Some(v) = q.dequeue() {
+            ret.push(v);
+        }
+        ret
+    }
+
+    #[test]
+    fn memory_leak() {
+        droppable!();
+
+        let q = Queue::<_, 2>::new();
+        q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
+        q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
+        drop(q);
+
+        assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn sanity() {
+        let q = Queue::<_, 2>::new();
+        q.enqueue(0).unwrap();
+        q.enqueue(1).unwrap();
+        assert!(q.enqueue(2).is_err());
+
+        assert_eq!(q.dequeue(), Some(0));
+        assert_eq!(q.dequeue(), Some(1));
+        assert_eq!(q.dequeue(), None);
+    }
+
+    #[test]
+    fn drain_at_pos255() {
+        let q = Queue::<_, 2>::new();
+        for _ in 0..255 {
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
+        }
+
+        // Queue is empty, this should not block forever.
+        assert_eq!(q.dequeue(), None);
+    }
+
+    #[test]
+    fn full_at_wrapped_pos0() {
+        let q = Queue::<_, 2>::new();
+        for _ in 0..254 {
+            assert!(q.enqueue(0).is_ok());
+            assert_eq!(q.dequeue(), Some(0));
+        }
+        assert!(q.enqueue(0).is_ok());
+        assert!(q.enqueue(0).is_ok());
+        // this should not block forever
+        assert!(q.enqueue(0).is_err());
+    }
+
+    #[test]
+    fn enqueue_full() {
+        #[cfg(not(feature = "mpmc_large"))]
+        const CAPACITY: usize = 128;
+
+        #[cfg(feature = "mpmc_large")]
+        const CAPACITY: usize = 256;
+
+        let q: Queue<u8, CAPACITY> = Queue::new();
+
+        assert_eq!(q.capacity(), CAPACITY);
+
+        for _ in 0..CAPACITY {
+            q.enqueue(0xAA).unwrap();
+        }
+
+        // Queue is full, this should not block forever.
+        q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    fn issue_583_enqueue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        for i in 0..N {
+            q0.enqueue(i as u8).expect("new enqueue");
+        }
+        eprintln!("start!");
+
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1000_000 {
+                        if let Some(v) = q0.dequeue() {
+                            q0.enqueue(v).unwrap_or_else(|v| {
+                                panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0))
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn issue_583_dequeue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        eprintln!("start!");
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1000_000 {
+                        q0.enqueue(k as u8).unwrap();
+                        if q0.dequeue().is_none() {
+                            panic!("{k}");
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    fn issue_583_enqueue_loom() {
+        const N: usize = 4;
+
+        loom::model(|| {
+            let q0 = loom::sync::Arc::new(Queue::<u8, N>::new());
+            for i in 0..N {
+                q0.enqueue(i as u8).expect("new enqueue");
+            }
+            eprintln!("start!");
+
+            let q1 = q0.clone();
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q0.dequeue() {
+                        q0.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q0)));
+                    }
+                }
+            });
+
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q1.dequeue() {
+                        q1.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q1)));
+                    }
+                }
+            });
+        });
+    }
+
+    #[test]
+    fn issue_583_enqueue_loom_scope() {
+        const N: usize = 4;
+
+        loom::model(|| {
+            let q0 = Queue::<u8, N>::new();
+            for i in 0..N {
+                q0.enqueue(i as u8).expect("new enqueue");
+            }
+            eprintln!("start!");
+
+            loom::thread::scope(|sc| {
+                for _ in 0..2 {
+                    sc.spawn(|| {
+                        for k in 0..1000_000 {
+                            if let Some(v) = q0.dequeue() {
+                                q0.enqueue(v).unwrap_or_else(|v| {
+                                    panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0))
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    }
+}
