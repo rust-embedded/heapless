@@ -115,6 +115,7 @@ fn contention() {
 
 #[test]
 #[cfg_attr(miri, ignore)] // too slow
+#[cfg(not(feature = "loom"))]
 fn mpmc_contention() {
     use std::sync::mpsc;
 

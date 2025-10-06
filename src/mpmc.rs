@@ -70,9 +70,11 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(not(feature = "portable-atomic"))]
+#[cfg(all(not(feature = "portable-atomic"), not(feature = "loom")))]
 use core::sync::atomic;
-#[cfg(feature = "portable-atomic")]
+#[cfg(feature = "loom")]
+use loom::sync::atomic;
+#[cfg(all(feature = "portable-atomic", not(feature = "loom")))]
 use portable_atomic as atomic;
 
 use atomic::Ordering;
@@ -122,6 +124,7 @@ pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
     /// Creates an empty queue.
+    #[cfg(not(feature = "loom"))]
     pub const fn new() -> Self {
         const {
             assert!(N > 1);
@@ -136,6 +139,24 @@ impl<T, const N: usize> Queue<T, N> {
             result_cells[cell_count] = Cell::new(cell_count);
             cell_count += 1;
         }
+
+        Self {
+            buffer: UnsafeCell::new(result_cells),
+            dequeue_pos: AtomicTargetSize::new(0),
+            enqueue_pos: AtomicTargetSize::new(0),
+        }
+    }
+
+    /// Creates an empty queue.
+    #[cfg(feature = "loom")]
+    pub fn new() -> Self {
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+            assert!(N < UintSize::MAX as usize);
+        }
+
+        let result_cells: [Cell<T>; N] = core::array::from_fn(Cell::new);
 
         Self {
             buffer: UnsafeCell::new(result_cells),
@@ -247,7 +268,16 @@ struct Cell<T> {
 }
 
 impl<T> Cell<T> {
+    #[cfg(not(feature = "loom"))]
     const fn new(seq: usize) -> Self {
+        Self {
+            data: MaybeUninit::uninit(),
+            sequence: AtomicTargetSize::new(seq as UintSize),
+        }
+    }
+
+    #[cfg(feature = "loom")]
+    fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
             sequence: AtomicTargetSize::new(seq as UintSize),
@@ -346,12 +376,22 @@ unsafe fn enqueue<T>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::Queue;
+    use super::{Queue, QueueView};
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
 
+    fn to_vec<T>(q: &QueueView<T>) -> Vec<T> {
+        // inaccurate
+        let mut ret = vec![];
+        while let Some(v) = q.dequeue() {
+            ret.push(v);
+        }
+        ret
+    }
+
     #[test]
+    #[cfg(not(feature = "loom"))]
     fn memory_leak() {
         droppable!();
 
@@ -364,6 +404,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "loom"))]
     fn sanity() {
         let q = Queue::<_, 2>::new();
         q.enqueue(0).unwrap();
@@ -376,6 +417,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "loom"))]
     fn drain_at_pos255() {
         let q = Queue::<_, 2>::new();
         for _ in 0..255 {
@@ -388,6 +430,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "loom"))]
     fn full_at_wrapped_pos0() {
         let q = Queue::<_, 2>::new();
         for _ in 0..254 {
@@ -401,6 +444,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "loom"))]
     fn enqueue_full() {
         #[cfg(not(feature = "mpmc_large"))]
         const CAPACITY: usize = 128;
@@ -418,5 +462,117 @@ mod tests {
 
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    #[cfg(not(feature = "loom"))]
+    fn issue_583_enqueue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        for i in 0..N {
+            q0.enqueue(i as u8).expect("new enqueue");
+        }
+        eprintln!("start!");
+
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1_000_000 {
+                        if let Some(v) = q0.dequeue() {
+                            q0.enqueue(v).unwrap_or_else(|v| {
+                                panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&q0))
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    #[cfg(not(feature = "loom"))]
+    fn issue_583_dequeue() {
+        const N: usize = 4;
+
+        let q0 = Queue::<u8, N>::new();
+        eprintln!("start!");
+        std::thread::scope(|sc| {
+            for _ in 0..2 {
+                sc.spawn(|| {
+                    for k in 0..1_000_000 {
+                        q0.enqueue(k as u8).unwrap();
+                        if q0.dequeue().is_none() {
+                            panic!("{k}");
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "loom")]
+    fn issue_583_enqueue_loom() {
+        loom::model(|| {
+            const N: usize = 4;
+
+            let q0 = loom::sync::Arc::new(Queue::<u8, N>::new());
+            for i in 0..N {
+                q0.enqueue(i as u8).expect("new enqueue");
+            }
+            eprintln!("start!");
+
+            let q1 = q0.clone();
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q0.dequeue() {
+                        q0.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q0)));
+                    }
+                }
+            });
+
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    if let Some(v) = q1.dequeue() {
+                        q1.enqueue(v)
+                            .unwrap_or_else(|v| panic!("{k}: q0 -> q0: {v}, {:?}", to_vec(&*q1)));
+                    }
+                }
+            });
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "loom")]
+    fn issue_583_dequeue_loom() {
+        loom::model(|| {
+            const N: usize = 4;
+
+            let q0 = loom::sync::Arc::new(Queue::<u8, N>::new());
+
+            eprintln!("start!");
+
+            let q1 = q0.clone();
+
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    q0.enqueue(k as u8).unwrap();
+                    if q0.dequeue().is_none() {
+                        panic!("{k}");
+                    }
+                }
+            });
+
+            loom::thread::spawn(move || {
+                for k in 0..1000_000 {
+                    q1.enqueue(k as u8).unwrap();
+                    if q1.dequeue().is_none() {
+                        panic!("{k}");
+                    }
+                }
+            });
+        });
     }
 }
