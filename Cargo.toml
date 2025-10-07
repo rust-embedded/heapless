@@ -75,6 +75,7 @@ stable_deref_trait = { version = "1", default-features = false }
 [dev-dependencies]
 critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
+criterion = "0.5"
 
 [package.metadata.docs.rs]
 features = [
@@ -89,3 +90,8 @@ features = [
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[bench]]
+name = "string_baseline"
+harness = false
+
