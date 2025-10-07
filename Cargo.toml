@@ -92,6 +92,11 @@ targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [[bench]]
+name = "cow_str"
+harness = false
+
+
+[[bench]]
 name = "string_baseline"
 harness = false
 

@@ -4,28 +4,28 @@
 //! String operations to establish a baseline for comparison.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use heapless::String;
+use heapless::{cow::CowStr, String};
 
 fn create_test_string<const N: usize>(content: &str) -> String<N> {
     String::try_from(content).expect("String too long for capacity")
 }
 
 /// Baseline function that always copies into a new String<N>.
-fn baseline_always_copy<const N: usize>(input: &String<N>) -> String<N> {
-    input.clone()
+fn baseline_always_copy<const N: usize>(input: &String<N>) -> CowStr<'_, N> {
+    CowStr::Owned(input.clone())
 }
 
 /// Function that sometimes mutates the string (requires clone).
 fn baseline_conditional_mutation<const N: usize>(
     input: &String<N>,
     needs_mutation: bool,
-) -> String<N> {
+) -> CowStr<'_, N> {
     if needs_mutation {
         let mut owned = input.clone();
         let _ = owned.push_str("_mutated");
-        owned
+        CowStr::Owned(owned)
     } else {
-        input.clone()
+        CowStr::Borrowed(input.as_view())
     }
 }
 

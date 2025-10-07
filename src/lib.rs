@@ -175,6 +175,7 @@ pub mod linear_map;
 mod slice;
 pub mod storage;
 pub mod string;
+pub mod cow;
 pub mod vec;
 
 // FIXME: Workaround a compiler ICE in rust 1.83 to 1.86
