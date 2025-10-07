@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Minor fixes to `pool::boxed` docs.
 - Add missing `Debug` derive to `vec::IntoIter`.
 - Removed generic from `spsc::Consumer`, `spsc::Producer` and `spsc::Iter`.
+- Added `LinearMap::entry()` API.
+- Added `LinearMap::retain()`.
 
 ### Fixed
 
@@ -151,6 +153,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed `sorted_linked_list::Iter` and `sorted_linked_list::IterInner`.
 - Removed `sorted_linked_list::FindMut` and `sorted_linked_list::FindMutInner`.
 - The `Q2`, `Q4`, `Q8`, `Q16`, `Q32` and `Q64` aliases for `MpMcQueue` have been removed.
+- `doc_auto_cfg` feature which was merged into `doc_cfg`. Presence of the feature led to doc
+  build failures on nightly.
 
 ## [v0.8.0] - 2023-11-07
 
