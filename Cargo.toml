@@ -56,10 +56,14 @@ zeroize = ["dep:zeroize"]
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Enable crossbeam ArrayQueue MPMC implementation.
+mpmc_crossbeam = ["dep:crossbeam-utils"]
+
 # Implement some alloc Vec interoperability
 alloc = []
 
 nightly = []
+
 
 [dependencies]
 bytes = { version = "1", default-features = false, optional = true }
@@ -71,6 +75,7 @@ ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
 zeroize = { version = "1.8", optional = true, default-features = false, features = ["derive"] }
 embedded-io = { version = "0.7", optional = true }
+crossbeam-utils = { version = "0.8", optional = true }
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]
