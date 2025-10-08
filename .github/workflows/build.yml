@@ -86,6 +86,11 @@ jobs:
       - name: Run cargo test
         run: cargo test --features="alloc,defmt,mpmc_large,portable-atomic-critical-section,serde,ufmt,bytes,zeroize,embedded-io-v0.7"
 
+      - name: Run loom tests
+        run: cargo test -- loom
+        continue-on-error: true
+        env:
+          RUSTFLAGS: '--cfg loom'
   # Run cargo fmt --check
   style:
     name: style

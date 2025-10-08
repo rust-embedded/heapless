@@ -61,6 +61,16 @@
 //! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
 //!   and `enqueue` returning `Ok`.
 //!
+//!
+//! <div class="warning">
+//!
+//! This implementation is not fully lock-free. If a thread or task gets preempted during
+//! a `dequeue` or `enqueue` operation, it may prevent other operations from succeeding until
+//! it's scheduled again to finish its operation.
+//!
+//! See <https://github.com/rust-embedded/heapless/issues/583> for more details.
+//!
+//! </div>
 //! # References
 //!
 //! This is an implementation of Dmitry Vyukov's [bounded MPMC queue], minus the
@@ -70,7 +80,13 @@
 
 use core::{cell::UnsafeCell, mem::MaybeUninit};
 
-#[cfg(not(feature = "portable-atomic"))]
+#[cfg(loom)]
+use loom::sync::atomic;
+
+#[cfg(all(loom, feature = "portable-atomic"))]
+compile_error!("Loom can only be used in tests without portable-atomic");
+
+#[cfg(not(any(feature = "portable-atomic", loom)))]
 use core::sync::atomic;
 #[cfg(feature = "portable-atomic")]
 use portable_atomic as atomic;
@@ -113,6 +129,16 @@ pub struct QueueInner<T, S: Storage> {
 /// </div>
 ///
 /// The maximum value of `N` is 128 if the `mpmc_large` feature is not enabled.
+///
+/// <div class="warning">
+///
+/// This implementation is not fully lock-free. If a thread or task gets preempted during
+/// a `dequeue` or `enqueue` operation, it may prevent other operations from succeeding until
+/// it's scheduled again to finish its operation.
+///
+/// See <https://github.com/rust-embedded/heapless/issues/583> for more details.
+///
+/// </div>
 pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
 /// A [`Queue`] with dynamic capacity.
@@ -121,6 +147,7 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
+    #[cfg(not(loom))]
     /// Creates an empty queue.
     pub const fn new() -> Self {
         const {
@@ -136,6 +163,26 @@ impl<T, const N: usize> Queue<T, N> {
             result_cells[cell_count] = Cell::new(cell_count);
             cell_count += 1;
         }
+
+        Self {
+            buffer: UnsafeCell::new(result_cells),
+            dequeue_pos: AtomicTargetSize::new(0),
+            enqueue_pos: AtomicTargetSize::new(0),
+        }
+    }
+
+    /// Creates an empty queue.
+    #[cfg(loom)]
+    pub fn new() -> Self {
+        use core::array;
+
+        const {
+            assert!(N > 1);
+            assert!(N.is_power_of_two());
+            assert!(N < UintSize::MAX as usize);
+        }
+
+        let result_cells: [Cell<T>; N] = array::from_fn(|idx| Cell::new(idx));
 
         Self {
             buffer: UnsafeCell::new(result_cells),
@@ -247,7 +294,15 @@ struct Cell<T> {
 }
 
 impl<T> Cell<T> {
+    #[cfg(not(loom))]
     const fn new(seq: usize) -> Self {
+        Self {
+            data: MaybeUninit::uninit(),
+            sequence: AtomicTargetSize::new(seq as UintSize),
+        }
+    }
+    #[cfg(loom)]
+    fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
             sequence: AtomicTargetSize::new(seq as UintSize),
@@ -342,6 +397,7 @@ unsafe fn enqueue<T>(
     Ok(())
 }
 
+#[cfg(not(loom))]
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
@@ -418,5 +474,70 @@ mod tests {
 
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+}
+#[cfg(all(loom, test))]
+mod tests_loom {
+    use super::*;
+    use std::sync::Arc;
+    const N: usize = 4;
+
+    // FIXME: This test should pass. See https://github.com/rust-embedded/heapless/issues/583
+    #[test]
+    #[cfg(loom)]
+    #[should_panic]
+    fn loom_issue_583_enqueue() {
+        loom::model(|| {
+            let q0 = Arc::new(Queue::<u8, N>::new());
+            for i in 0..N {
+                q0.enqueue(i as u8).unwrap();
+            }
+            let model_thread = || {
+                let q0 = q0.clone();
+                move || {
+                    for k in 0..N + 2 {
+                        let Some(i) = q0.dequeue() else {
+                            panic!("Test failed at dequeue");
+                        };
+                        if q0.enqueue(k as u8).is_err() {
+                            panic!("Test failed at enqueue: {i}");
+                        }
+                    }
+                }
+            };
+
+            let h1 = loom::thread::spawn(model_thread());
+            let h2 = loom::thread::spawn(model_thread());
+            h1.join().unwrap();
+            h2.join().unwrap();
+        });
+    }
+
+    // FIXME: This test should pass. See https://github.com/rust-embedded/heapless/issues/583
+    #[test]
+    #[cfg(loom)]
+    #[should_panic]
+    fn loom_issue_583_dequeue() {
+        loom::model(|| {
+            let q0 = Arc::new(Queue::<u8, N>::new());
+            let model_thread = || {
+                let q0 = q0.clone();
+                move || {
+                    for k in 0..N + 2 {
+                        if q0.enqueue(k as u8).is_err() {
+                            panic!("Test failed at enqueue: {k}");
+                        }
+                        if q0.dequeue().is_none() {
+                            panic!("Test failed at dequeue: {k}");
+                        }
+                    }
+                }
+            };
+
+            let h1 = loom::thread::spawn(model_thread());
+            let h2 = loom::thread::spawn(model_thread());
+            h1.join().unwrap();
+            h2.join().unwrap();
+        });
     }
 }

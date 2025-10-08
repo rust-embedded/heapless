@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `truncate` to `Deque`
 - Added `retain` to `Deque`
 - Added `retain_mut` to `Deque`
+- `mpmc::Queue`: document non-lock free behaviour, and add loom tests
 
 ## [v0.9.1] - 2025-08-19
 
