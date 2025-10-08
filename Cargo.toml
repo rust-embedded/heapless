@@ -53,10 +53,14 @@ zeroize = ["dep:zeroize"]
 # Enable larger MPMC sizes.
 mpmc_large = []
 
+# Enable crossbeam ArrayQueue MPMC implementation.
+mpmc_crossbeam = ["dep:crossbeam-utils"]
+
 # Implement some alloc Vec interoperability
 alloc = []
 
 nightly = []
+
 
 [dependencies]
 bytes = { version = "1", default-features = false, optional = true }
@@ -67,6 +71,7 @@ ufmt = { version = "0.2", optional = true }
 ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
 zeroize = { version = "1.8", optional = true, default-features = false, features = ["derive"] }
+crossbeam-utils = { version = "0.8", optional = true }
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]
@@ -75,6 +80,9 @@ stable_deref_trait = { version = "1", default-features = false }
 [dev-dependencies]
 critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
+
+[target.'cfg(loom)'.dependencies]
+loom = "0.7.2"
 
 [package.metadata.docs.rs]
 features = [
@@ -89,3 +97,6 @@ features = [
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

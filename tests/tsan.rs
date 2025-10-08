@@ -1,5 +1,6 @@
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
+#![cfg(not(loom))]
 
 use std::{ptr::addr_of_mut, thread};
 

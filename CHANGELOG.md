@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Implement `TryFrom` for `Deque` from array.
 - Switch from `serde` to `serde_core` for enabling faster compilations.
 - Implement `Zeroize` trait for all data structures with the `zeroize` feature to securely clear sensitive data from memory.
+- `mpmc::Queue`: document non-lock free behaviour, and add loom tests
 
 ## [v0.9.1] - 2025-08-19
 
