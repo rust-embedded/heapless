@@ -80,6 +80,9 @@ stable_deref_trait = { version = "1", default-features = false }
 critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
 
+[target.'cfg(loom)'.dependencies]
+loom = "0.7.2"
+
 [package.metadata.docs.rs]
 features = [
     "bytes",
@@ -93,3 +96,6 @@ features = [
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
