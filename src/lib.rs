@@ -230,6 +230,9 @@ pub mod spsc;
 #[cfg(feature = "ufmt")]
 mod ufmt;
 
+#[cfg(feature = "embedded-io-v0.7")]
+mod embedded_io;
+
 /// Implementation details for macros.
 /// Do not use. Used for macros only. Not covered by semver guarantees.
 #[doc(hidden)]
