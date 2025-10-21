@@ -85,8 +85,8 @@ use core::{
     hash::{Hash, Hasher},
     mem::{ManuallyDrop, MaybeUninit},
     ops, ptr,
+    ptr::{addr_of, addr_of_mut},
 };
-
 use stable_deref_trait::StableDeref;
 
 use super::treiber::{NonNullPtr, Stack, UnionNode};
@@ -178,6 +178,43 @@ where
     P: BoxPool,
 {
     node_ptr: NonNullPtr<UnionNode<MaybeUninit<P::Data>>>,
+}
+
+impl<P> Box<P>
+where
+    P: BoxPool,
+{
+    /// Consumes the `Box`, returning the wrapped pointer
+    pub fn into_raw(b: Self) -> *mut P::Data {
+        let mut b = ManuallyDrop::new(b);
+        // SAFETY: `b` is not dropped, so the pointer remains valid however caller must ensure that
+        // eventually it is returned to the pool
+        addr_of_mut!(**b)
+    }
+
+    /// Constructs a `Box<P>` from a raw pointer
+    ///
+    /// # Safety
+    ///
+    /// The `ptr` must have been allocated by the same `BoxPool` `P` that this `Box<P>` uses.
+    pub unsafe fn from_raw(ptr: *mut P::Data) -> Self {
+        // SAFETY: caller must guarantee that `ptr` is valid and was allocated by `P`
+        debug_assert!(!ptr.is_null(), "Pointer must be non-null");
+
+        // Calculate the offset of the `data` field within `UnionNode` (with the current layout
+        // tha data is at the beginning so offset is zero, but this may change in the future)
+        let uninit_union_node = MaybeUninit::<UnionNode<MaybeUninit<P::Data>>>::uninit();
+        let data_ptr = unsafe { addr_of!((*uninit_union_node.as_ptr()).data) };
+        let data_offset = (data_ptr as usize) - (uninit_union_node.as_ptr() as usize);
+        let union_node_ptr = ptr
+            .cast::<u8>()
+            .sub(data_offset)
+            .cast::<UnionNode<MaybeUninit<P::Data>>>();
+
+        Self {
+            node_ptr: NonNullPtr::from_ptr_unchecked(union_node_ptr),
+        }
+    }
 }
 
 impl<A> Clone for Box<A>
@@ -567,5 +604,58 @@ mod tests {
 
         assert!(once.is_ok());
         assert!(twice.is_ok());
+    }
+
+    #[test]
+    fn into_raw_from_raw() {
+        pub struct MyStruct {
+            value: [u8; 64],
+        }
+
+        static NUM_DROP_CALLS: AtomicUsize = AtomicUsize::new(0);
+        impl Drop for MyStruct {
+            fn drop(&mut self) {
+                NUM_DROP_CALLS.fetch_add(1, Ordering::AcqRel);
+            }
+        }
+
+        box_pool!(MyBoxPool: MyStruct);
+
+        MyBoxPool.manage(unsafe {
+            static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
+            addr_of_mut!(BLOCK).as_mut().unwrap()
+        });
+
+        MyBoxPool.manage(unsafe {
+            static mut BLOCK: BoxBlock<MyStruct> = BoxBlock::new();
+            addr_of_mut!(BLOCK).as_mut().unwrap()
+        });
+
+        let raw = {
+            let boxed = MyBoxPool
+                .alloc(MyStruct { value: [0xA5; 64] })
+                .ok()
+                .unwrap();
+            Box::into_raw(boxed)
+        };
+        assert_eq!(0, NUM_DROP_CALLS.load(Ordering::Acquire));
+        let addr_1 = raw as usize;
+
+        {
+            let boxed_again: Box<MyBoxPool> = unsafe { Box::from_raw(raw) };
+            let addr_2 = boxed_again.node_ptr.as_ptr() as usize;
+            assert_eq!([0xA5; 64], boxed_again.value);
+            assert_eq!(addr_1, addr_2);
+        }
+        assert_eq!(1, NUM_DROP_CALLS.load(Ordering::Acquire));
+
+        // Allocate again to ensure memory was returned to the pool
+        let boxed_2 = MyBoxPool
+            .alloc(MyStruct { value: [0xEF; 64] })
+            .ok()
+            .unwrap();
+        let addr_2 = boxed_2.node_ptr.as_ptr() as usize;
+        assert_eq!([0xEF; 64], boxed_2.value);
+        assert_eq!(addr_1, addr_2);
     }
 }
