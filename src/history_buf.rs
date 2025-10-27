@@ -670,7 +670,7 @@ mod tests {
         assert!(x.is_full());
 
         let x: HistoryBuf<u8, 4> = HistoryBuf::new();
-        assert_eq!(x.as_slice(), []);
+        assert!(x.as_slice().is_empty());
         assert!(!x.is_full());
     }
 
@@ -694,7 +694,7 @@ mod tests {
     fn clear() {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new_with(1);
         x.clear();
-        assert_eq!(x.as_slice(), []);
+        assert!(x.as_slice().is_empty());
 
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
         x.clear_with(1);
@@ -782,7 +782,7 @@ mod tests {
     fn as_slice() {
         let mut x: HistoryBuf<u8, 4> = HistoryBuf::new();
 
-        assert_eq!(x.as_slice(), []);
+        assert!(x.as_slice().is_empty());
 
         x.extend([1, 2, 3, 4, 5].iter());
 

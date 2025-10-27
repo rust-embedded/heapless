@@ -61,6 +61,16 @@
 //! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
 //!   and `enqueue` returning `Ok`.
 //!
+//!
+//! <div class="warning">
+//!
+//! This implementation is not fully lock-free. If a thread or task gets preempted during
+//! a `dequeue` or `enqueue` operation, it may prevent other operations from succeeding until
+//! it's scheduled again to finish its operation.
+//!
+//! See <https://github.com/rust-embedded/heapless/issues/583> for more details.
+//!
+//! </div>
 //! # References
 //!
 //! This is an implementation of Dmitry Vyukov's [bounded MPMC queue], minus the
@@ -68,16 +78,15 @@
 //!
 //! [bounded MPMC queue]: http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
 
-use core::{cell::UnsafeCell, mem::MaybeUninit};
+#[cfg(loom)]
+use loom::sync::atomic;
 
-#[cfg(not(feature = "portable-atomic"))]
+#[cfg(not(any(feature = "portable-atomic", loom)))]
 use core::sync::atomic;
-#[cfg(feature = "portable-atomic")]
+#[cfg(all(feature = "portable-atomic", not(loom)))]
 use portable_atomic as atomic;
 
-use atomic::Ordering;
-
-use crate::storage::{OwnedStorage, Storage, ViewStorage};
+use crate::storage::ViewStorage;
 
 #[cfg(feature = "mpmc_large")]
 type AtomicTargetSize = atomic::AtomicUsize;
@@ -90,263 +99,40 @@ type UintSize = usize;
 type UintSize = u8;
 
 #[cfg(feature = "mpmc_large")]
+#[allow(unused)]
 type IntSize = isize;
 #[cfg(not(feature = "mpmc_large"))]
+#[allow(unused)]
 type IntSize = i8;
 
-/// Base struct for [`Queue`] and [`QueueView`], generic over the [`Storage`].
-///
-/// In most cases you should use [`Queue`] or [`QueueView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
-pub struct QueueInner<T, S: Storage> {
-    dequeue_pos: AtomicTargetSize,
-    enqueue_pos: AtomicTargetSize,
-    buffer: UnsafeCell<S::Buffer<Cell<T>>>,
-}
+#[cfg(all(not(feature = "mpmc_nblfq"), not(feature = "mpmc_crossbeam")))]
+mod original;
+#[cfg(all(not(feature = "mpmc_nblfq"), not(feature = "mpmc_crossbeam")))]
+pub use original::*;
 
-/// A statically allocated multi-producer, multi-consumer queue with a capacity of `N` elements.
-///
-/// <div class="warning">
-///
-/// `N` must be a power of 2.
-///
-/// </div>
-///
-/// The maximum value of `N` is 128 if the `mpmc_large` feature is not enabled.
-pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
+#[cfg(feature = "mpmc_crossbeam")]
+mod crossbeam_array_queue;
+#[cfg(feature = "mpmc_crossbeam")]
+pub use crossbeam_array_queue::*;
+
+#[cfg(all(feature = "mpmc_nblfq", not(feature = "mpmc_crossbeam")))]
+mod nblfq;
+#[cfg(all(feature = "mpmc_nblfq", not(feature = "mpmc_crossbeam")))]
+pub use nblfq::*;
 
 /// A [`Queue`] with dynamic capacity.
 ///
 /// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
-impl<T, const N: usize> Queue<T, N> {
-    /// Creates an empty queue.
-    pub const fn new() -> Self {
-        const {
-            assert!(N > 1);
-            assert!(N.is_power_of_two());
-            assert!(N < UintSize::MAX as usize);
-        }
-
-        let mut cell_count = 0;
-
-        let mut result_cells: [Cell<T>; N] = [const { Cell::new(0) }; N];
-        while cell_count != N {
-            result_cells[cell_count] = Cell::new(cell_count);
-            cell_count += 1;
-        }
-
-        Self {
-            buffer: UnsafeCell::new(result_cells),
-            dequeue_pos: AtomicTargetSize::new(0),
-            enqueue_pos: AtomicTargetSize::new(0),
-        }
-    }
-
-    /// Used in `Storage` implementation.
-    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
-        self
-    }
-    /// Used in `Storage` implementation.
-    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
-        self
-    }
-}
-
-impl<T, S: Storage> QueueInner<T, S> {
-    /// Returns the maximum number of elements the queue can hold.
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        S::len(self.buffer.get())
-    }
-
-    /// Get a reference to the `Queue`, erasing the `N` const-generic.
-    ///
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{Queue, QueueView};
-    /// let queue: Queue<u8, 2> = Queue::new();
-    /// let view: &QueueView<u8> = queue.as_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{Queue, QueueView};
-    /// let queue: Queue<u8, 2> = Queue::new();
-    /// let view: &QueueView<u8> = &queue;
-    /// ```
-    #[inline]
-    pub fn as_view(&self) -> &QueueView<T> {
-        S::as_mpmc_view(self)
-    }
-
-    /// Get a mutable reference to the `Queue`, erasing the `N` const-generic.
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{Queue, QueueView};
-    /// let mut queue: Queue<u8, 2> = Queue::new();
-    /// let view: &mut QueueView<u8> = queue.as_mut_view();
-    /// ```
-    ///
-    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
-    ///
-    /// ```rust
-    /// # use heapless::mpmc::{Queue, QueueView};
-    /// let mut queue: Queue<u8, 2> = Queue::new();
-    /// let view: &mut QueueView<u8> = &mut queue;
-    /// ```
-    #[inline]
-    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
-        S::as_mpmc_mut_view(self)
-    }
-
-    fn mask(&self) -> UintSize {
-        (S::len(self.buffer.get()) - 1) as _
-    }
-
-    /// Returns the item in the front of the queue, or `None` if the queue is empty.
-    pub fn dequeue(&self) -> Option<T> {
-        unsafe { dequeue(S::as_ptr(self.buffer.get()), &self.dequeue_pos, self.mask()) }
-    }
-
-    /// Adds an `item` to the end of the queue.
-    ///
-    /// Returns back the `item` if the queue is full.
-    pub fn enqueue(&self, item: T) -> Result<(), T> {
-        unsafe {
-            enqueue(
-                S::as_ptr(self.buffer.get()),
-                &self.enqueue_pos,
-                self.mask(),
-                item,
-            )
-        }
-    }
-}
-
-impl<T, const N: usize> Default for Queue<T, N> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T, S: Storage> Drop for QueueInner<T, S> {
-    fn drop(&mut self) {
-        // Drop all elements currently in the queue.
-        while self.dequeue().is_some() {}
-    }
-}
-
-unsafe impl<T, S: Storage> Sync for QueueInner<T, S> where T: Send {}
-
-struct Cell<T> {
-    data: MaybeUninit<T>,
-    sequence: AtomicTargetSize,
-}
-
-impl<T> Cell<T> {
-    const fn new(seq: usize) -> Self {
-        Self {
-            data: MaybeUninit::uninit(),
-            sequence: AtomicTargetSize::new(seq as UintSize),
-        }
-    }
-}
-
-unsafe fn dequeue<T>(
-    buffer: *mut Cell<T>,
-    dequeue_pos: &AtomicTargetSize,
-    mask: UintSize,
-) -> Option<T> {
-    let mut pos = dequeue_pos.load(Ordering::Relaxed);
-
-    let mut cell;
-    loop {
-        cell = buffer.add(usize::from(pos & mask));
-        let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as IntSize).wrapping_sub((pos.wrapping_add(1)) as IntSize);
-
-        match dif.cmp(&0) {
-            core::cmp::Ordering::Equal => {
-                if dequeue_pos
-                    .compare_exchange_weak(
-                        pos,
-                        pos.wrapping_add(1),
-                        Ordering::Relaxed,
-                        Ordering::Relaxed,
-                    )
-                    .is_ok()
-                {
-                    break;
-                }
-            }
-            core::cmp::Ordering::Less => {
-                return None;
-            }
-            core::cmp::Ordering::Greater => {
-                pos = dequeue_pos.load(Ordering::Relaxed);
-            }
-        }
-    }
-
-    let data = (*cell).data.as_ptr().read();
-    (*cell)
-        .sequence
-        .store(pos.wrapping_add(mask).wrapping_add(1), Ordering::Release);
-    Some(data)
-}
-
-unsafe fn enqueue<T>(
-    buffer: *mut Cell<T>,
-    enqueue_pos: &AtomicTargetSize,
-    mask: UintSize,
-    item: T,
-) -> Result<(), T> {
-    let mut pos = enqueue_pos.load(Ordering::Relaxed);
-
-    let mut cell;
-    loop {
-        cell = buffer.add(usize::from(pos & mask));
-        let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as IntSize).wrapping_sub(pos as IntSize);
-
-        match dif.cmp(&0) {
-            core::cmp::Ordering::Equal => {
-                if enqueue_pos
-                    .compare_exchange_weak(
-                        pos,
-                        pos.wrapping_add(1),
-                        Ordering::Relaxed,
-                        Ordering::Relaxed,
-                    )
-                    .is_ok()
-                {
-                    break;
-                }
-            }
-            core::cmp::Ordering::Less => {
-                return Err(item);
-            }
-            core::cmp::Ordering::Greater => {
-                pos = enqueue_pos.load(Ordering::Relaxed);
-            }
-        }
-    }
-
-    (*cell).data.as_mut_ptr().write(item);
-    (*cell)
-        .sequence
-        .store(pos.wrapping_add(1), Ordering::Release);
-    Ok(())
-}
-
+#[cfg(not(loom))]
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
 
     use super::Queue;
+
+    const N: usize = 4;
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
@@ -418,5 +204,211 @@ mod tests {
 
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    fn test_enqueue_contention_rt() {
+        use thread_priority::*;
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        for i in 0..N {
+            q0.enqueue(i as u8).expect("new enqueue");
+        }
+
+        let model_thread = |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..N {
+                match q0.dequeue() {
+                    Some(_i) => (),
+                    None if q0.is_empty() => (),
+                    None => panic!(
+                        "enqueue: Dequeue failed on iteration: {k}, empty queue?: {}, queue len: {}",
+                        q0.is_empty(),
+                        q0.len()
+                    ),
+                };
+
+                q0.enqueue(k as u8).unwrap();
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
+
+    #[test]
+    fn test_dequeue_contention_rt() {
+        use thread_priority::*;
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        let model_thread = |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..N {
+                q0.enqueue(k as u8).unwrap();
+                match q0.dequeue() {
+                    Some(_i) => (),
+                    None if q0.is_empty() => (),
+                    None => {
+                        panic!(
+                            "dequeue: Dequeue failed on iteration: {k}, queue is empty?: {}, queue len: {}",
+                            q0.is_empty(),
+                            q0.len()
+                        );
+                    }
+                }
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
+
+    #[test]
+    fn test_issue_583_enqueue_rt() {
+        use thread_priority::*;
+
+        fn to_vec<T>(q: &Queue<T, N>) -> Vec<T> {
+            // inaccurate
+            let mut ret = vec![];
+            while let Some(v) = q.dequeue() {
+                ret.push(v);
+            }
+            ret
+        }
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        let model_thread = move |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..1_000_000 {
+                if let Some(v) = q0.dequeue() {
+                    q0.enqueue(v)
+                        .unwrap_or_else(|v| panic!("{}: q0 -> q0: {}, {:?}", k, v, to_vec(&q0)));
+                }
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
+}
+
+#[cfg(all(loom, test))]
+mod tests_loom {
+    use super::*;
+    use std::sync::Arc;
+    const N: usize = 4;
+
+    #[test]
+    #[cfg(loom)]
+    fn loom_issue_583_enqueue() {
+        loom::model(|| {
+            let q0 = Arc::new(Queue::<u8, N>::new());
+            q0.enqueue(0).unwrap();
+            q0.enqueue(1).unwrap();
+            q0.enqueue(2).unwrap();
+            q0.enqueue(3).unwrap();
+            let model_thread = || {
+                let q0 = q0.clone();
+                move || {
+                    for k in 0..10 {
+                        let Some(i) = q0.dequeue() else {
+                            panic!("{k}");
+                        };
+                        if q0.enqueue(k as u8).is_err() {
+                            panic!("{i}");
+                        }
+                    }
+                }
+            };
+
+            let h1 = loom::thread::spawn(model_thread());
+            let h2 = loom::thread::spawn(model_thread());
+            h1.join().unwrap();
+            h2.join().unwrap();
+        });
+    }
+
+    #[test]
+    #[cfg(loom)]
+    fn loom_issue_583_dequeue() {
+        loom::model(|| {
+            let q0 = Arc::new(Queue::<u8, N>::new());
+            let model_thread = || {
+                let q0 = q0.clone();
+                move || {
+                    for k in 0..10 {
+                        q0.enqueue(k as u8).unwrap();
+                        if q0.dequeue().is_none() {
+                            panic!("{k}");
+                        }
+                    }
+                }
+            };
+
+            let h1 = loom::thread::spawn(model_thread());
+            let h2 = loom::thread::spawn(model_thread());
+            h1.join().unwrap();
+            h2.join().unwrap();
+        });
     }
 }

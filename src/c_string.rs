@@ -382,7 +382,7 @@ mod tests {
         let empty = CString::<1>::new();
 
         assert_eq!(empty.as_c_str(), c"");
-        assert_eq!(empty.as_bytes(), &[]);
+        assert!(empty.as_bytes().is_empty());
         assert_eq!(empty.to_str(), Ok(""));
     }
 
