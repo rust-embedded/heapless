@@ -99,19 +99,26 @@ type UintSize = usize;
 type UintSize = u8;
 
 #[cfg(feature = "mpmc_large")]
+#[allow(unused)]
 type IntSize = isize;
 #[cfg(not(feature = "mpmc_large"))]
+#[allow(unused)]
 type IntSize = i8;
 
-#[cfg(not(feature = "mpmc_crossbeam"))]
+#[cfg(all(not(feature = "mpmc_nblfq"), not(feature = "mpmc_crossbeam")))]
 mod original;
-#[cfg(not(feature = "mpmc_crossbeam"))]
+#[cfg(all(not(feature = "mpmc_nblfq"), not(feature = "mpmc_crossbeam")))]
 pub use original::*;
 
 #[cfg(feature = "mpmc_crossbeam")]
 mod crossbeam_array_queue;
 #[cfg(feature = "mpmc_crossbeam")]
 pub use crossbeam_array_queue::*;
+
+#[cfg(all(feature = "mpmc_nblfq", not(feature = "mpmc_crossbeam")))]
+mod nblfq;
+#[cfg(all(feature = "mpmc_nblfq", not(feature = "mpmc_crossbeam")))]
+pub use nblfq::*;
 
 /// A [`Queue`] with dynamic capacity.
 ///
@@ -124,6 +131,8 @@ mod tests {
     use static_assertions::assert_not_impl_any;
 
     use super::Queue;
+
+    const N: usize = 4;
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
@@ -196,7 +205,153 @@ mod tests {
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
     }
+
+    #[test]
+    fn test_enqueue_contention_rt() {
+        use thread_priority::*;
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        for i in 0..N {
+            q0.enqueue(i as u8).expect("new enqueue");
+        }
+
+        let model_thread = |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..N {
+                match q0.dequeue() {
+                    Some(_i) => (),
+                    None if q0.is_empty() => (),
+                    None => panic!(
+                        "enqueue: Dequeue failed on iteration: {k}, empty queue?: {}, queue len: {}",
+                        q0.is_empty(),
+                        q0.len()
+                    ),
+                };
+
+                q0.enqueue(k as u8).unwrap();
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
+
+    #[test]
+    fn test_dequeue_contention_rt() {
+        use thread_priority::*;
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        let model_thread = |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..N {
+                q0.enqueue(k as u8).unwrap();
+                match q0.dequeue() {
+                    Some(_i) => (),
+                    None if q0.is_empty() => (),
+                    None => {
+                        panic!(
+                            "dequeue: Dequeue failed on iteration: {k}, queue is empty?: {}, queue len: {}",
+                            q0.is_empty(),
+                            q0.len()
+                        );
+                    }
+                }
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
+
+    #[test]
+    fn test_issue_583_enqueue_rt() {
+        use thread_priority::*;
+
+        fn to_vec<T>(q: &Queue<T, N>) -> Vec<T> {
+            // inaccurate
+            let mut ret = vec![];
+            while let Some(v) = q.dequeue() {
+                ret.push(v);
+            }
+            ret
+        }
+
+        let q0 = std::sync::Arc::new(Queue::<u8, N>::new());
+
+        let model_thread = move |q0: std::sync::Arc<Queue<u8, N>>| {
+            for k in 0..1_000_000 {
+                if let Some(v) = q0.dequeue() {
+                    q0.enqueue(v)
+                        .unwrap_or_else(|v| panic!("{}: q0 -> q0: {}, {:?}", k, v, to_vec(&q0)));
+                }
+            }
+        };
+
+        let q1 = q0.clone();
+        let h1 = ThreadBuilder::default()
+            .name("h1")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q1))
+            .unwrap();
+
+        let q2 = q0.clone();
+        let h2 = ThreadBuilder::default()
+            .name("h2")
+            .priority(ThreadPriority::Max)
+            .policy(ThreadSchedulePolicy::Realtime(
+                RealtimeThreadSchedulePolicy::Fifo,
+            ))
+            .spawn(move |_| model_thread(q2))
+            .unwrap();
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+    }
 }
+
 #[cfg(all(loom, test))]
 mod tests_loom {
     use super::*;

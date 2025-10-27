@@ -92,10 +92,29 @@ impl<T, const N: usize> Queue<T, N> {
 }
 
 impl<T, S: Storage> QueueInner<T, S> {
+    fn buffer(&self) -> &[Cell<T>] {
+        // SAFETY: buffer is initialized properly, and the pointer references valid memory.
+        unsafe { core::slice::from_raw_parts(S::as_ptr(self.buffer.get()), self.capacity()) }
+    }
+
     /// Returns the maximum number of elements the queue can hold.
     #[inline]
     pub fn capacity(&self) -> usize {
         S::len(self.buffer.get())
+    }
+
+    /// Gets the [Self] length.
+    pub fn len(&self) -> usize {
+        let mut len = 0;
+        while len < self.capacity() && !self.buffer()[len].is_empty() {
+            len = len.saturating_add(1);
+        }
+        len
+    }
+
+    /// Gets whether the [Self] is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Get a reference to the `Queue`, erasing the `N` const-generic.
@@ -197,6 +216,10 @@ impl<T> Cell<T> {
             data: MaybeUninit::uninit(),
             sequence: AtomicTargetSize::new(seq as UintSize),
         }
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.sequence.load(Ordering::Relaxed) != 0
     }
 }
 

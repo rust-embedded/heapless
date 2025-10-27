@@ -636,7 +636,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
                 // Set to `{ lap: lap.wrapping_add(1), index: 0 }`.
                 lap.wrapping_add(value.one_lap)
             };
-            value.head.store(new, Ordering::AcqRel);
+            value.head.store(new, Ordering::Release);
             Some(val)
         } else {
             None
