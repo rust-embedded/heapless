@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `truncate` to `Deque`
 - Added `retain` to `Deque`
 - Added `retain_mut` to `Deque`
+- Deprecate `mpmc` (see [#583](https://github.com/rust-embedded/heapless/issues/583#issuecomment-3469297720))
 
 ## [v0.9.1] - 2025-08-19
 
