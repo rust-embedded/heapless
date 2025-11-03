@@ -1095,6 +1095,21 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     fn next(&mut self) -> Option<Self::Item> {
         self.deque.pop_front()
     }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+impl<T, const N: usize> DoubleEndedIterator for IntoIter<T, N> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.deque.pop_back()
+    }
+}
+impl<T, const N: usize> FusedIterator for IntoIter<T, N> {}
+impl<T, const N: usize> ExactSizeIterator for IntoIter<T, N> {
+    fn len(&self) -> usize {
+        self.deque.len()
+    }
 }
 
 impl<T, const N: usize> IntoIterator for Deque<T, N> {
@@ -1419,6 +1434,41 @@ mod tests {
         assert_eq!(items.next(), Some(2));
         assert_eq!(items.next(), Some(3));
         assert_eq!(items.next(), None);
+    }
+
+    #[test]
+    fn iter_move_back() {
+        let mut v: Deque<i32, 4> = Deque::new();
+
+        v.push_back(0).unwrap();
+        v.push_back(1).unwrap();
+        v.push_back(2).unwrap();
+        v.push_back(3).unwrap();
+
+        let mut items = v.into_iter();
+        assert_eq!(items.next_back(), Some(3));
+        assert_eq!(items.next_back(), Some(2));
+        assert_eq!(items.next_back(), Some(1));
+        assert_eq!(items.next_back(), Some(0));
+        assert_eq!(items.next_back(), None);
+    }
+
+    #[test]
+    fn iter_move_len() {
+        let mut v: Deque<i32, 3> = Deque::new();
+
+        v.push_back(0).unwrap();
+        v.push_back(1).unwrap();
+        v.push_back(2).unwrap();
+
+        let mut items = v.into_iter();
+        assert_eq!(items.len(), 3);
+        let _ = items.next();
+        assert_eq!(items.len(), 2);
+        let _ = items.next_back();
+        assert_eq!(items.len(), 1);
+        let _ = items.next();
+        assert_eq!(items.len(), 0);
     }
 
     #[test]

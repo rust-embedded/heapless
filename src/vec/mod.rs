@@ -1,6 +1,7 @@
 //! A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 
 use core::borrow;
+use core::iter::FusedIterator;
 use core::marker::PhantomData;
 use core::{
     cmp::Ordering,
@@ -1472,6 +1473,31 @@ impl<T, LenT: LenType, const N: usize> Iterator for IntoIter<T, N, LenT> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl<T, LenT: LenType, const N: usize> DoubleEndedIterator for IntoIter<T, N, LenT> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.next < self.vec.len {
+            // SAFETY: len must be non-zero as next is less than len.
+            let item = unsafe { self.vec.pop_unchecked() };
+            Some(item)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T, LenT: LenType, const N: usize> FusedIterator for IntoIter<T, N, LenT> {}
+
+impl<T, LenT: LenType, const N: usize> ExactSizeIterator for IntoIter<T, N, LenT> {
+    fn len(&self) -> usize {
+        (self.vec.len - self.next).into_usize()
+    }
 }
 
 impl<T, LenT: LenType, const N: usize> Clone for IntoIter<T, N, LenT>
@@ -2032,6 +2058,32 @@ mod tests {
         }
 
         assert_eq!(Droppable::count(), 0);
+    }
+
+    #[test]
+    fn iter_move_next_back() {
+        let mut vec: Vec<&str, 3> = Vec::new();
+        vec.push("a").unwrap();
+        vec.push("b").unwrap();
+        vec.push("c").unwrap();
+        let mut items = vec.into_iter();
+        let _ = items.next(); // Remove the first item.
+        assert_eq!(items.next_back(), Some("c"));
+        assert_eq!(items.next_back(), Some("b"));
+        assert_eq!(items.next_back(), None);
+    }
+
+    #[test]
+    fn iter_move_len() {
+        let mut vec: Vec<&str, 2> = Vec::new();
+        vec.push("a").unwrap();
+        vec.push("b").unwrap();
+        let mut items = vec.into_iter();
+        assert_eq!(items.len(), 2);
+        let _ = items.next(); // Remove the first item.
+        assert_eq!(items.len(), 1);
+        let _ = items.next_back(); // Remove the last item.
+        assert_eq!(items.len(), 0);
     }
 
     #[test]
