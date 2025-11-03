@@ -46,6 +46,14 @@ where
             inner: NonNull::from(ref_),
         }
     }
+
+    #[inline]
+    pub unsafe fn from_ptr_unchecked(ptr: *mut N) -> Self {
+        debug_assert!(!ptr.is_null(), "Pointer must be non-null");
+        Self {
+            inner: NonNull::new_unchecked(ptr),
+        }
+    }
 }
 
 impl<N> Clone for NonNullPtr<N>

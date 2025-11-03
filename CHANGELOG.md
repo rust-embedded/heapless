@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `truncate` to `Deque`
 - Added `retain` to `Deque`
 - Added `retain_mut` to `Deque`
+- Added `into_raw` to `Box`
+- Added `from_raw` to `Box`
 
 ## [v0.9.1] - 2025-08-19
 

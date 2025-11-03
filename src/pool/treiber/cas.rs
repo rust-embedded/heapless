@@ -125,6 +125,12 @@ where
         unsafe { Self::new_unchecked(initial_tag(), NonNull::from(reference)) }
     }
 
+    #[inline]
+    pub unsafe fn from_ptr_unchecked(ptr: *mut N) -> Self {
+        debug_assert!(!ptr.is_null(), "Pointer must be non-null");
+        Self::new_unchecked(initial_tag(), NonNull::new_unchecked(ptr))
+    }
+
     /// # Safety
     ///
     /// - `ptr` must be a valid pointer.
