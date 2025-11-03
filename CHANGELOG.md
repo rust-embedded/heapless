@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `retain_mut` to `Deque`
 - Added `into_raw` to `Box`
 - Added `from_raw` to `Box`
+- Added `FusedIterator` to `vec::IntoIter`, `deque::IntoIter`, `index_map::IntoIter` and `linear_map::IntoIter`.
+- Added `ExactSizeIterator` to `vec::IntoIter`, `deque::IntoIter`, `index_map::IntoIter` and `linear_map::IntoIter`.
+- Added `DoubleEndedIterator` to `vec::IntoIter` and `deque::IntoIter`.
 
 ## [v0.9.1] - 2025-08-19
 
