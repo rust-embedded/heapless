@@ -3,6 +3,7 @@ use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
+    iter::FusedIterator,
     mem,
     num::NonZeroU32,
     ops, slice,
@@ -1471,6 +1472,19 @@ impl<K, V, const N: usize> Iterator for IntoIter<K, V, N> {
     fn next(&mut self) -> Option<Self::Item> {
         self.entries.pop().map(|bucket| (bucket.key, bucket.value))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl<K, V, const N: usize> FusedIterator for IntoIter<K, V, N> {}
+
+impl<K, V, const N: usize> ExactSizeIterator for IntoIter<K, V, N> {
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
 }
 
 impl<K, V, S, const N: usize> IntoIterator for IndexMap<K, V, S, N> {
@@ -1744,8 +1758,23 @@ mod tests {
         src.insert("k4", "v4").unwrap();
         let clone = src.clone();
         for (k, v) in clone.into_iter() {
-            assert_eq!(v, *src.get(k).unwrap());
+            assert_eq!(v, src.remove(k).unwrap());
         }
+        assert!(src.is_empty());
+    }
+
+    #[test]
+    fn into_iter_len() {
+        let mut src: FnvIndexMap<_, _, 2> = FnvIndexMap::new();
+        src.insert("k1", "v1").unwrap();
+        src.insert("k2", "v2").unwrap();
+
+        let mut items = src.into_iter();
+        assert_eq!(items.len(), 2);
+        let _ = items.next();
+        assert_eq!(items.len(), 1);
+        let _ = items.next();
+        assert_eq!(items.len(), 0);
     }
 
     #[test]

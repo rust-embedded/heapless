@@ -2,7 +2,7 @@
 //!
 //! Note that as this map doesn't use hashing so most operations are *O*(n) instead of *O*(1).
 
-use core::{borrow::Borrow, fmt, mem, ops, slice};
+use core::{borrow::Borrow, fmt, iter::FusedIterator, mem, ops, slice};
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -606,6 +606,22 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl<K, V, const N: usize> FusedIterator for IntoIter<K, V, N> where K: Eq {}
+
+impl<K, V, const N: usize> ExactSizeIterator for IntoIter<K, V, N>
+where
+    K: Eq,
+{
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 impl<K, V, const N: usize> IntoIterator for LinearMap<K, V, N>
@@ -877,6 +893,20 @@ mod test {
         for (k, v) in clone.into_iter() {
             assert_eq!(v, src.remove(k).unwrap());
         }
+        assert!(src.is_empty());
+    }
+
+    #[test]
+    fn into_iter_len() {
+        let mut src: LinearMap<_, _, 2> = LinearMap::new();
+        src.insert("k1", "v1").unwrap();
+        src.insert("k2", "v2").unwrap();
+        let mut items = src.into_iter();
+        assert_eq!(items.len(), 2);
+        let _ = items.next();
+        assert_eq!(items.len(), 1);
+        let _ = items.next();
+        assert_eq!(items.len(), 0);
     }
 
     fn _test_variance_value<'a: 'b, 'b>(
