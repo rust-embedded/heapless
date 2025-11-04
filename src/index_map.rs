@@ -805,7 +805,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
         }
     }
 
-    /// Return an iterator over mutable references to the the values of the map, in insertion order
+    /// Return an iterator over mutable references to the values of the map, in insertion order
     ///
     /// ```
     /// use heapless::index_map::FnvIndexMap;
