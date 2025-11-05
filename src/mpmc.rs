@@ -1,5 +1,34 @@
 //! A fixed capacity multiple-producer, multiple-consumer (MPMC) lock-free queue.
 //!
+//! # Deprecation
+//!
+//! <div class="warning">
+//! The current implementation of `mpmc` is marked as deprecated due to not being truly lock-free
+//! </div>
+//!
+//! If a thread is parked, or pre-empted for a long time by an higher-priority task
+//! during an `enqueue` or `dequeue` operation, it is possible that the queue ends-up
+//! in a state were no other task can successfully enqueue or dequeue items from it
+//! until the pre-empted task can finish its operation.
+//!
+//! In that case, [`enqueue`](QueueInner::dequeue) and [`dequeue`](QueueInner::enqueue)
+//! will return an error, but will not panic or reach undefined behaviour
+//!
+//! This makes `mpmc` unsuitable for some use cases such as using it as a pool of objects.
+//!
+//! ## When can this queue be used?
+//!
+//! This queue should be used for cross-task communication only when items sent over the queue
+//! can be dropped in case of concurrent operations, or when it is possible to retry
+//! the dequeue/enqueue operation after other tasks have had the opportunity to make progress.
+//!
+//! In that case you can safely ignore the warnings using `#[expect(deprecated)]`
+//! when `new` is called
+//!
+//! For more information, and possible alternative, please see
+//! <https://github.com/rust-embedded/heapless/issues/583>
+//!
+//!
 //! **Note:** This module requires atomic compare-and-swap (CAS) instructions. On
 //! targets where they're not natively available, they are emulated by the
 //! [`portable-atomic`](https://crates.io/crates/portable-atomic) crate.
@@ -121,7 +150,38 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
+    #[deprecated(
+        note = "See the documentation of Queue::new() for more information: https://docs.rs/heapless/latest/heapless/mpmc/type.Queue.html#method.new"
+    )]
     /// Creates an empty queue.
+    ///
+    /// # Deprecation
+    ///
+    /// <div class="warning">
+    /// The current implementation of `mpmc` is marked as deprecated due to not being truly lock-free
+    /// </div>
+    ///
+    /// If a thread is parked, or pre-empted for a long time by an higher-priority task
+    /// during an `enqueue` or `dequeue` operation, it is possible that the queue ends-up
+    /// in a state were no other task can successfully enqueue or dequeue items from it
+    /// until the pre-empted task can finish its operation.
+    ///
+    /// In that case, [`enqueue`](QueueInner::dequeue) and [`dequeue`](QueueInner::enqueue)
+    /// will return an error, but will not panic or reach undefined behaviour
+    ///
+    /// This makes `mpmc` unsuitable for some use cases such as using it as a pool of objects.
+    ///
+    /// ## When can this queue be used?
+    ///
+    /// This queue should be used for cross-task communication only when items sent over the queue
+    /// can be dropped in case of concurrent operations, or when it is possible to retry
+    /// the dequeue/enqueue operation after other tasks have had the opportunity to make progress.
+    ///
+    /// In that case you can safely ignore the warnings using `#[expect(deprecated)]`
+    /// when `new` is called
+    ///
+    /// For more information, and possible alternative, please see
+    /// <https://github.com/rust-embedded/heapless/issues/583>
     pub const fn new() -> Self {
         const {
             assert!(N > 1);
@@ -186,6 +246,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     ///
     /// ```rust
     /// # use heapless::mpmc::{Queue, QueueView};
+    /// ##[expect(deprecated)]
     /// let mut queue: Queue<u8, 2> = Queue::new();
     /// let view: &mut QueueView<u8> = queue.as_mut_view();
     /// ```
@@ -194,6 +255,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     ///
     /// ```rust
     /// # use heapless::mpmc::{Queue, QueueView};
+    /// ##[expect(deprecated)]
     /// let mut queue: Queue<u8, 2> = Queue::new();
     /// let view: &mut QueueView<u8> = &mut queue;
     /// ```
@@ -228,6 +290,7 @@ impl<T, S: Storage> QueueInner<T, S> {
 
 impl<T, const N: usize> Default for Queue<T, N> {
     fn default() -> Self {
+        #[allow(deprecated)]
         Self::new()
     }
 }
@@ -355,6 +418,7 @@ mod tests {
     fn memory_leak() {
         droppable!();
 
+        #[expect(deprecated)]
         let q = Queue::<_, 2>::new();
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
         q.enqueue(Droppable::new()).unwrap_or_else(|_| panic!());
@@ -365,6 +429,7 @@ mod tests {
 
     #[test]
     fn sanity() {
+        #[expect(deprecated)]
         let q = Queue::<_, 2>::new();
         q.enqueue(0).unwrap();
         q.enqueue(1).unwrap();
@@ -377,6 +442,7 @@ mod tests {
 
     #[test]
     fn drain_at_pos255() {
+        #[expect(deprecated)]
         let q = Queue::<_, 2>::new();
         for _ in 0..255 {
             assert!(q.enqueue(0).is_ok());
@@ -389,6 +455,7 @@ mod tests {
 
     #[test]
     fn full_at_wrapped_pos0() {
+        #[expect(deprecated)]
         let q = Queue::<_, 2>::new();
         for _ in 0..254 {
             assert!(q.enqueue(0).is_ok());
@@ -408,6 +475,7 @@ mod tests {
         #[cfg(feature = "mpmc_large")]
         const CAPACITY: usize = 256;
 
+        #[expect(deprecated)]
         let q: Queue<u8, CAPACITY> = Queue::new();
 
         assert_eq!(q.capacity(), CAPACITY);
