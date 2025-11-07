@@ -241,13 +241,16 @@ where
                 // |                               | push(p)                 | (1, 2) -> (1, 3) -> (1, 1)   |
                 // | try_pop()::cas(p, p.next)     |                         | (1, 1)                       |
                 //
-                // As can be seen, the `cas` operation succeeds, wrongly removing pointer `3` from the stack.
+                // As can be seen, the `cas` operation succeeds, wrongly removing pointer `3` from
+                // the stack.
                 //
-                // By incrementing the tag before returning the pointer, it cannot be pushed again with the,
-                // same tag, preventing the `try_pop()::cas(p, p.next)` operation from succeeding.
+                // By incrementing the tag before returning the pointer, it cannot be pushed again
+                // with the, same tag, preventing the `try_pop()::cas(p, p.next)`
+                // operation from succeeding.
                 //
-                // With this fix, `try_pop()` in thread 2 returns `(2, 2)` and the comparison between
-                // `(1, 2)` and `(2, 2)` fails, restarting the loop and correctly removing the new top:
+                // With this fix, `try_pop()` in thread 2 returns `(2, 2)` and the comparison
+                // between `(1, 2)` and `(2, 2)` fails, restarting the loop and
+                // correctly removing the new top:
                 //
                 // | Thread 1                      | Thread 2                | Stack                        |
                 // |-------------------------------|-------------------------|------------------------------|

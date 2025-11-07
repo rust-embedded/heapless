@@ -114,8 +114,9 @@ impl<T, LenT: LenType> Drop for Drain<'_, T, LenT> {
         let mut vec = self.vec;
 
         if size_of::<T>() == 0 {
-            // ZSTs have no identity, so we don't need to move them around, we only need to drop the correct amount.
-            // this can be achieved by manipulating the `Vec` length instead of moving values out from `iter`.
+            // ZSTs have no identity, so we don't need to move them around, we only need to drop the
+            // correct amount. this can be achieved by manipulating the `Vec` length
+            // instead of moving values out from `iter`.
             unsafe {
                 let vec = vec.as_mut();
                 let old_len = vec.len();
@@ -127,7 +128,8 @@ impl<T, LenT: LenType> Drop for Drain<'_, T, LenT> {
             return;
         }
 
-        // ensure elements are moved back into their appropriate places, even when drop_in_place panics
+        // ensure elements are moved back into their appropriate places, even when drop_in_place
+        // panics
         let _guard = DropGuard(self);
 
         if drop_len == 0 {

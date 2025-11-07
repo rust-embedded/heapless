@@ -665,8 +665,8 @@ where
             match self.core.insert(self.hash_val, self.key, value) {
                 Insert::Success(inserted) => {
                     unsafe {
-                        // SAFETY: Already checked existence at instantiation and the only mutable reference
-                        // to the map is internally held.
+                        // SAFETY: Already checked existence at instantiation and the only mutable
+                        // reference to the map is internally held.
                         Ok(&mut (*self.core.entries.as_mut_ptr().add(inserted.index)).value)
                     }
                 }
@@ -1592,8 +1592,8 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
 
 /// A mutable iterator over the values of a [`IndexMap`].
 ///
-/// This `struct` is created by the [`values_mut`](IndexMap::values_mut) method on [`IndexMap`]. See its
-/// documentation for more.
+/// This `struct` is created by the [`values_mut`](IndexMap::values_mut) method on [`IndexMap`]. See
+/// its documentation for more.
 pub struct ValuesMut<'a, K, V> {
     iter: slice::IterMut<'a, Bucket<K, V>>,
 }

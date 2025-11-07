@@ -21,15 +21,17 @@ mod storage {
     /// - [`OwnedStorage`]: stores the data in an array whose size is known at compile time.
     /// - [`ViewStorage`]: stores the data in an unsized slice
     ///
-    /// This allows [`LinearMap`] to be generic over either sized or unsized storage. The [`linear_map`](super)
-    /// module contains a [`LinearMapInner`] struct that's generic on [`LinearMapStorage`],
-    /// and two type aliases for convenience:
+    /// This allows [`LinearMap`] to be generic over either sized or unsized storage. The
+    /// [`linear_map`](super) module contains a [`LinearMapInner`] struct that's generic on
+    /// [`LinearMapStorage`], and two type aliases for convenience:
     ///
     /// - [`LinearMap<N>`](crate::linear_map::LinearMap) = `LinearMapInner<OwnedStorage<u8, N>>`
     /// - [`LinearMapView<T>`](crate::linear_map::LinearMapView) = `LinearMapInner<ViewStorage<u8>>`
     ///
-    /// `LinearMap` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut LinearMap -> &mut LinearMapView` or
-    /// `Box<LinearMap> -> Box<LinearMapView>`, or explicitly with [`.as_view()`](crate::linear_map::LinearMap::as_view) or [`.as_mut_view()`](crate::linear_map::LinearMap::as_mut_view).
+    /// `LinearMap` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut
+    /// LinearMap -> &mut LinearMapView` or `Box<LinearMap> -> Box<LinearMapView>`, or
+    /// explicitly with [`.as_view()`](crate::linear_map::LinearMap::as_view) or
+    /// [`.as_mut_view()`](crate::linear_map::LinearMap::as_mut_view).
     ///
     /// This trait is sealed, so you cannot implement it for your own types. You can only use
     /// the implementations provided by this crate.
@@ -85,7 +87,8 @@ mod storage {
 }
 
 pub use storage::LinearMapStorage;
-/// Implementation of [`LinearMapStorage`] that stores the data in an array whose size is known at compile time.
+/// Implementation of [`LinearMapStorage`] that stores the data in an array whose size is known at
+/// compile time.
 pub type OwnedStorage<K, V, const N: usize> = OwnedVecStorage<(K, V), N>;
 /// Implementation of [`LinearMapStorage`] that stores the data in an unsized slice.
 pub type ViewStorage<K, V> = ViewVecStorage<(K, V)>;
@@ -590,7 +593,8 @@ where
 
 /// An iterator that moves out of a [`LinearMap`].
 ///
-/// This struct is created by calling the [`into_iter`](LinearMap::into_iter) method on [`LinearMap`].
+/// This struct is created by calling the [`into_iter`](LinearMap::into_iter) method on
+/// [`LinearMap`].
 pub struct IntoIter<K, V, const N: usize>
 where
     K: Eq,

@@ -26,12 +26,14 @@
 //!
 //! [`BinaryHeap`]: `crate::binary_heap::BinaryHeap`
 
-use core::cmp::Ordering;
-use core::fmt;
-use core::marker::PhantomData;
-use core::mem::MaybeUninit;
-use core::ops::{Deref, DerefMut};
-use core::ptr;
+use core::{
+    cmp::Ordering,
+    fmt,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    ops::{Deref, DerefMut},
+    ptr,
+};
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -43,18 +45,24 @@ mod storage {
     ///
     /// There's two implementations available:
     ///
-    /// - [`OwnedSortedLinkedListStorage`]: stores the data in an array `[T; N]` whose size is known at compile time.
+    /// - [`OwnedSortedLinkedListStorage`]: stores the data in an array `[T; N]` whose size is known
+    ///   at compile time.
     /// - [`ViewSortedLinkedListStorage`]: stores the data in an unsized `[T]`.
     ///
-    /// This allows [`SortedLinkedList`] to be generic over either sized or unsized storage. The [`sorted_linked_list`](super)
-    /// module contains a [`SortedLinkedListInner`] struct that's generic on [`SortedLinkedListStorage`],
-    /// and two type aliases for convenience:
+    /// This allows [`SortedLinkedList`] to be generic over either sized or unsized storage. The
+    /// [`sorted_linked_list`](super) module contains a [`SortedLinkedListInner`] struct that's
+    /// generic on [`SortedLinkedListStorage`], and two type aliases for convenience:
     ///
-    /// - [`SortedLinkedList<T, Idx, N>`](super::SortedLinkedList) = `SortedLinkedListInner<T, OwnedSortedLinkedListStorage<T, Idx, N>>`
-    /// - [`SortedLinkedListView<T, Idx>`](super::SortedLinkedListView) = `SortedLinkedListInner<T, ViewSortedLinkedListStorage<T, Idx>>`
+    /// - [`SortedLinkedList<T, Idx, N>`](super::SortedLinkedList) = `SortedLinkedListInner<T,
+    ///   OwnedSortedLinkedListStorage<T, Idx, N>>`
+    /// - [`SortedLinkedListView<T, Idx>`](super::SortedLinkedListView) = `SortedLinkedListInner<T,
+    ///   ViewSortedLinkedListStorage<T, Idx>>`
     ///
-    /// `SortedLinkedList` can be unsized into `SortedLinkedListView`, either by unsizing coercions such as `&mut SortedLinkedList -> &mut SortedLinkedListView` or
-    /// `Box<SortedLinkedList> -> Box<SortedLinkedListView>`, or explicitly with [`.as_view()`](super::SortedLinkedList::as_view) or [`.as_mut_view()`](super::SortedLinkedList::as_mut_view).
+    /// `SortedLinkedList` can be unsized into `SortedLinkedListView`, either by unsizing coercions
+    /// such as `&mut SortedLinkedList -> &mut SortedLinkedListView` or `Box<SortedLinkedList>
+    /// -> Box<SortedLinkedListView>`, or explicitly with
+    /// [`.as_view()`](super::SortedLinkedList::as_view) or
+    /// [`.as_mut_view()`](super::SortedLinkedList::as_mut_view).
     ///
     /// This trait is sealed, so you cannot implement it for your own types. You can only use
     /// the implementations provided by this crate.
@@ -66,7 +74,8 @@ mod storage {
     pub trait SortedLinkedListStorage<T, Idx>: SortedLinkedListSealedStorage<T, Idx> {}
 
     pub trait SortedLinkedListSealedStorage<T, Idx> {
-        // part of the sealed trait so that no trait is publicly implemented by `OwnedSortedLinkedListStorage` besides `Storage`
+        // part of the sealed trait so that no trait is publicly implemented by
+        // `OwnedSortedLinkedListStorage` besides `Storage`
         fn borrow(&self) -> &[Node<T, Idx>];
         fn borrow_mut(&mut self) -> &mut [Node<T, Idx>];
         fn as_view<K>(
@@ -88,7 +97,8 @@ mod storage {
         pub(crate) buffer: T,
     }
 
-    /// Implementation of [`SortedLinkedListStorage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+    /// Implementation of [`SortedLinkedListStorage`] that stores the data in an array `[T; N]`
+    /// whose size is known at compile time.
     pub type OwnedSortedLinkedListStorage<T, Idx, const N: usize> =
         SortedLinkedListStorageInner<[Node<T, Idx>; N]>;
     /// Implementation of [`SortedLinkedListStorage`] that stores the data in an unsized `[T]`.
@@ -200,10 +210,11 @@ pub struct Node<T, Idx> {
     next: Idx,
 }
 
-/// Base struct for [`SortedLinkedList`] and [`SortedLinkedListView`], generic over the [`SortedLinkedListStorage`].
+/// Base struct for [`SortedLinkedList`] and [`SortedLinkedListView`], generic over the
+/// [`SortedLinkedListStorage`].
 ///
-/// In most cases you should use [`SortedLinkedList`] or [`SortedLinkedListView`] directly. Only use this
-/// struct if you want to write code that's generic over both.
+/// In most cases you should use [`SortedLinkedList`] or [`SortedLinkedListView`] directly. Only use
+/// this struct if you want to write code that's generic over both.
 pub struct SortedLinkedListInner<T, Idx, K, S>
 where
     Idx: LenType,

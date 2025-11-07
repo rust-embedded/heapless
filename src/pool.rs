@@ -37,8 +37,8 @@
 //! ```
 //!
 //! - measurement method: the cycle counter (CYCCNT) register was sampled each time a breakpoint
-//!   (`bkpt`) was hit. the difference between the "after" and the "before" value of CYCCNT yields the
-//!   execution time in clock cycles.
+//!   (`bkpt`) was hit. the difference between the "after" and the "before" value of CYCCNT yields
+//!   the execution time in clock cycles.
 //!
 //! | API                          | clock cycles |
 //! |------------------------------|--------------|

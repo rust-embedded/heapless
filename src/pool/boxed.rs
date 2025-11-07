@@ -407,8 +407,7 @@ impl<T> Default for BoxBlock<T> {
 #[cfg(test)]
 mod tests {
     use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-    use std::ptr::addr_of_mut;
-    use std::thread;
+    use std::{ptr::addr_of_mut, thread};
 
     use super::*;
 
