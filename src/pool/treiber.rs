@@ -25,7 +25,8 @@ where
 
     /// # Safety
     /// - `node` must be a valid pointer
-    /// - aliasing rules must be enforced by the caller. e.g, the same `node` may not be pushed more than once
+    /// - aliasing rules must be enforced by the caller. e.g, the same `node` may not be pushed more
+    ///   than once
     pub unsafe fn push(&self, node: NonNullPtr<N>) {
         impl_::push(self, node);
     }

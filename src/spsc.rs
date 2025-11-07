@@ -79,7 +79,8 @@
 //!
 //! # Benchmarks
 //!
-//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled with `-C opt-level=3`:
+//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled
+//! with `-C opt-level=3`:
 //!
 //! | Method                         | Time |
 //! |:-------------------------------|-----:|
@@ -91,8 +92,8 @@
 //! - All execution times are in clock cycles (1 clock cycle = 125 ns).
 //! - Execution time is *dependent* on `mem::size_of::<T>()`, as both operations include
 //!   `ptr::read::<T>()` or `ptr::write::<T>()` in their successful path.
-//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
-//!   and `enqueue` returning `Ok`.
+//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some` and
+//!   `enqueue` returning `Ok`.
 //!
 //! # References
 //!
@@ -125,7 +126,8 @@ pub struct QueueInner<T, S: Storage> {
     pub(crate) buffer: S::Buffer<UnsafeCell<MaybeUninit<T>>>,
 }
 
-/// A statically allocated single-producer, single-consumer queue with a capacity of `N - 1` elements.
+/// A statically allocated single-producer, single-consumer queue with a capacity of `N - 1`
+/// elements.
 ///
 /// <div class="warning">
 ///
@@ -138,7 +140,8 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
 /// A [`Queue`] with dynamic capacity.
 ///
-/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by
+/// reference.
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {

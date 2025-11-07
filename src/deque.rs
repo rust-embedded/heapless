@@ -33,14 +33,18 @@
 //! }
 //! ```
 
-use crate::vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage};
-use crate::CapacityError;
-use core::cmp::Ordering;
-use core::fmt;
-use core::iter::FusedIterator;
-use core::marker::PhantomData;
-use core::mem::{ManuallyDrop, MaybeUninit};
-use core::{ptr, slice};
+use crate::{
+    vec::{OwnedVecStorage, VecStorage, VecStorageInner, ViewVecStorage},
+    CapacityError,
+};
+use core::{
+    cmp::Ordering,
+    fmt,
+    iter::FusedIterator,
+    marker::PhantomData,
+    mem::{ManuallyDrop, MaybeUninit},
+    ptr, slice,
+};
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -173,14 +177,16 @@ impl<T, const N: usize> Deque<T, N> {
 
     /// Returns the maximum number of elements the deque can hold.
     ///
-    /// This method is not available on a `DequeView`, use [`storage_capacity`](DequeInner::storage_capacity) instead.
+    /// This method is not available on a `DequeView`, use
+    /// [`storage_capacity`](DequeInner::storage_capacity) instead.
     pub const fn capacity(&self) -> usize {
         N
     }
 
     /// Returns the number of elements currently in the deque.
     ///
-    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len) instead.
+    /// This method is not available on a `DequeView`, use [`storage_len`](DequeInner::storage_len)
+    /// instead.
     pub const fn len(&self) -> usize {
         if self.full {
             N
@@ -452,8 +458,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                         self.storage_capacity() - free,
                     );
 
-                    // because the deque wasn't contiguous, we know that `tail_len < self.len == slice.len()`,
-                    // so this will never panic.
+                    // because the deque wasn't contiguous, we know that `tail_len < self.len ==
+                    // slice.len()`, so this will never panic.
                     slice.rotate_left(back_len);
 
                     // the used part of the buffer now is `free..self.capacity()`, so set
@@ -465,7 +471,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                 // head is shorter so:
                 //  1. copy head backwards
                 //  2. rotate used part of the buffer
-                //  3. update head to point to the new beginning (which is the beginning of the buffer)
+                //  3. update head to point to the new beginning (which is the beginning of the
+                //     buffer)
 
                 unsafe {
                     // if there is no free space in the buffer, then the slices are already
@@ -483,8 +490,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                     // next to each other, all the elements in the range are initialized.
                     let slice: &mut [T] = slice::from_raw_parts_mut(buffer_ptr, len);
 
-                    // because the deque wasn't contiguous, we know that `head_len < self.len == slice.len()`
-                    // so this will never panic.
+                    // because the deque wasn't contiguous, we know that `head_len < self.len ==
+                    // slice.len()` so this will never panic.
                     slice.rotate_right(front_len);
 
                     // the used part of the buffer now is `0..self.len`, so set
@@ -844,11 +851,11 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         }
 
         // Safety:
-        // * Any slice passed to `drop_in_place` is valid; the second case has
-        //   `len <= front.len()` and returning on `len > self.storage_len()` ensures
-        //   `begin <= back.len()` in the first case
-        // * Deque front/back cursors are moved before calling `drop_in_place`,
-        //   so no value is dropped twice if `drop_in_place` panics
+        // * Any slice passed to `drop_in_place` is valid; the second case has `len <= front.len()`
+        //   and returning on `len > self.storage_len()` ensures `begin <= back.len()` in the first
+        //   case
+        // * Deque front/back cursors are moved before calling `drop_in_place`, so no value is
+        //   dropped twice if `drop_in_place` panics
         unsafe {
             // If new desired length is greater or equal, we don't need to act.
             if len >= self.storage_len() {
@@ -865,8 +872,9 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                 let drop_back = back.get_unchecked_mut(begin..) as *mut _;
 
                 // Self::to_physical_index returns the index `len` units _after_ the front cursor,
-                // meaning we can use it to find the decremented index for `back` for non-contiguous deques,
-                // as well as determine where the new "cap" for front needs to be placed for contiguous deques.
+                // meaning we can use it to find the decremented index for `back` for non-contiguous
+                // deques, as well as determine where the new "cap" for front needs
+                // to be placed for contiguous deques.
                 self.back = self.to_physical_index(len);
                 self.full = false;
 
@@ -880,8 +888,9 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                 self.back = self.to_physical_index(len);
                 self.full = false;
 
-                // If `drop_front` causes a panic, the Dropper will still be called to drop it's slice during unwinding.
-                // In either case, front will always be dropped before back.
+                // If `drop_front` causes a panic, the Dropper will still be called to drop it's
+                // slice during unwinding. In either case, front will always be
+                // dropped before back.
                 let _back_dropper = Dropper(&mut *drop_back);
                 ptr::drop_in_place(drop_front);
             }
@@ -970,7 +979,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             cur += 1;
             idx += 1;
         }
-        // Stage 2: Swap retained values into current idx, building a contiguous chunk from 0 to idx.
+        // Stage 2: Swap retained values into current idx, building a contiguous chunk from 0 to
+        // idx.
         while cur < len {
             let val = self
                 .get_mut(cur)

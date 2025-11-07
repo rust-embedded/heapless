@@ -31,12 +31,7 @@
 //! assert_eq!(avg, 4);
 //! ```
 
-use core::fmt;
-use core::marker::PhantomData;
-use core::mem::MaybeUninit;
-use core::ops::Deref;
-use core::ptr;
-use core::slice;
+use core::{fmt, marker::PhantomData, mem::MaybeUninit, ops::Deref, ptr, slice};
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -51,18 +46,23 @@ mod storage {
     ///
     /// There's two implementations available:
     ///
-    /// - [`OwnedHistoryBufStorage`]: stores the data in an array `[T; N]` whose size is known at compile time.
+    /// - [`OwnedHistoryBufStorage`]: stores the data in an array `[T; N]` whose size is known at
+    ///   compile time.
     /// - [`ViewHistoryBufStorage`]: stores the data in an unsized `[T]`.
     ///
-    /// This allows [`HistoryBuf`] to be generic over either sized or unsized storage. The [`histbuf`]
-    /// module contains a [`HistoryBufInner`] struct that's generic on [`HistoryBufStorage`],
-    /// and two type aliases for convenience:
+    /// This allows [`HistoryBuf`] to be generic over either sized or unsized storage. The
+    /// [`histbuf`] module contains a [`HistoryBufInner`] struct that's generic on
+    /// [`HistoryBufStorage`], and two type aliases for convenience:
     ///
-    /// - [`HistoryBuf<T, N>`](super::HistoryBuf) = `HistoryBufInner<T, OwnedHistoryBufStorage<T, N>>`
-    /// - [`HistoryBufView<T>`](super::HistoryBufView) = `HistoryBufInner<T, ViewHistoryBufStorage<T>>`
+    /// - [`HistoryBuf<T, N>`](super::HistoryBuf) = `HistoryBufInner<T, OwnedHistoryBufStorage<T,
+    ///   N>>`
+    /// - [`HistoryBufView<T>`](super::HistoryBufView) = `HistoryBufInner<T,
+    ///   ViewHistoryBufStorage<T>>`
     ///
-    /// `HistoryBuf` can be unsized into `HistoryBufView`, either by unsizing coercions such as `&mut HistoryBuf -> &mut HistoryBufView` or
-    /// `Box<HistoryBuf> -> Box<HistoryBufView>`, or explicitly with [`.as_view()`](super::HistoryBuf::as_view) or [`.as_mut_view()`](super::HistoryBuf::as_mut_view).
+    /// `HistoryBuf` can be unsized into `HistoryBufView`, either by unsizing coercions such as
+    /// `&mut HistoryBuf -> &mut HistoryBufView` or `Box<HistoryBuf> -> Box<HistoryBufView>`, or
+    /// explicitly with [`.as_view()`](super::HistoryBuf::as_view) or
+    /// [`.as_mut_view()`](super::HistoryBuf::as_mut_view).
     ///
     /// This trait is sealed, so you cannot implement it for your own types. You can only use
     /// the implementations provided by this crate.
@@ -75,7 +75,8 @@ mod storage {
     pub trait HistoryBufStorage<T>: HistoryBufSealedStorage<T> {}
 
     pub trait HistoryBufSealedStorage<T> {
-        // part of the sealed trait so that no trait is publicly implemented by `OwnedHistoryBufStorage` besides `Storage`
+        // part of the sealed trait so that no trait is publicly implemented by
+        // `OwnedHistoryBufStorage` besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
         fn as_hist_buf_view(this: &HistoryBufInner<T, Self>) -> &HistoryBufView<T>
@@ -92,7 +93,8 @@ mod storage {
         pub(crate) buffer: T,
     }
 
-    /// Implementation of [`HistoryBufStorage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+    /// Implementation of [`HistoryBufStorage`] that stores the data in an array `[T; N]` whose size
+    /// is known at compile time.
     pub type OwnedHistoryBufStorage<T, const N: usize> =
         HistoryBufStorageInner<[MaybeUninit<T>; N]>;
     /// Implementation of [`HistoryBufStorage`] that stores the data in an unsized `[T]`.
@@ -651,8 +653,10 @@ impl<T> DoubleEndedIterator for OldestOrdered<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use core::fmt::Debug;
-    use core::sync::atomic::{AtomicUsize, Ordering};
+    use core::{
+        fmt::Debug,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
 
     use static_assertions::assert_not_impl_any;
 

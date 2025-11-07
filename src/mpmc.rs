@@ -69,7 +69,8 @@
 //!
 //! # Benchmark
 //!
-//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled with `-C opt-level=z`:
+//! Measured on an ARM Cortex-M3 core running at 8 MHz and with zero flash wait cycles, compiled
+//! with `-C opt-level=z`:
 //!
 //! | Method                      | Time | N  |
 //! |:----------------------------|-----:|---:|
@@ -80,15 +81,14 @@
 //! | `Queue::<u8, 8>::dequeue()` |   53 |  1 |
 //! | `Queue::<u8, 8>::dequeue()` |   71 |  2 |
 //!
-//! - N denotes the number of interruptions. On Cortex-M, an interruption consists of an
-//!   interrupt handler preempting the would-be atomic section of the `enqueue`/`dequeue`
-//!   operation. Note that it does *not* matter if the higher priority handler uses the queue or
-//!   not.
+//! - N denotes the number of interruptions. On Cortex-M, an interruption consists of an interrupt
+//!   handler preempting the would-be atomic section of the `enqueue`/`dequeue` operation. Note that
+//!   it does *not* matter if the higher priority handler uses the queue or not.
 //! - All execution times are in clock cycles (1 clock cycle = 125 ns).
 //! - Execution time is *dependent* on `mem::size_of::<T>()`, as both operations include
 //!   `ptr::read::<T>()` or `ptr::write::<T>()` in their successful path.
-//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some`
-//!   and `enqueue` returning `Ok`.
+//! - The numbers reported correspond to the successful path, i.e. `dequeue` returning `Some` and
+//!   `enqueue` returning `Ok`.
 //!
 //! # References
 //!
@@ -146,7 +146,8 @@ pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
 
 /// A [`Queue`] with dynamic capacity.
 ///
-/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by reference.
+/// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by
+/// reference.
 pub type QueueView<T> = QueueInner<T, ViewStorage>;
 
 impl<T, const N: usize> Queue<T, N> {
@@ -158,8 +159,8 @@ impl<T, const N: usize> Queue<T, N> {
     /// # Deprecation
     ///
     /// <div class="warning">
-    /// The current implementation of `mpmc` is marked as deprecated due to not being truly lock-free
-    /// </div>
+    /// The current implementation of `mpmc` is marked as deprecated due to not being truly
+    /// lock-free </div>
     ///
     /// If a thread is parked, or pre-empted for a long time by an higher-priority task
     /// during an `enqueue` or `dequeue` operation, it is possible that the queue ends-up
@@ -230,7 +231,8 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// let view: &QueueView<u8> = queue.as_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements
+    /// `Unsize<QueueView<T>>`:
     ///
     /// ```rust
     /// # use heapless::mpmc::{Queue, QueueView};
@@ -251,7 +253,8 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// let view: &mut QueueView<u8> = queue.as_mut_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements `Unsize<QueueView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Queue<T, N>` implements
+    /// `Unsize<QueueView<T>>`:
     ///
     /// ```rust
     /// # use heapless::mpmc::{Queue, QueueView};

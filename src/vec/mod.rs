@@ -1,11 +1,11 @@
 //! A fixed capacity [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 
-use core::borrow;
-use core::iter::FusedIterator;
-use core::marker::PhantomData;
 use core::{
+    borrow,
     cmp::Ordering,
     fmt, hash,
+    iter::FusedIterator,
+    marker::PhantomData,
     mem::{self, ManuallyDrop, MaybeUninit},
     ops::{self, Range, RangeBounds},
     ptr::{self, NonNull},
@@ -15,8 +15,10 @@ use core::{
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-use crate::len_type::{check_capacity_fits, LenType};
-use crate::CapacityError;
+use crate::{
+    len_type::{check_capacity_fits, LenType},
+    CapacityError,
+};
 
 mod drain;
 
@@ -35,7 +37,8 @@ mod storage {
     ///
     /// There's two implementations available:
     ///
-    /// - [`OwnedVecStorage`]: stores the data in an array `[T; N]` whose size is known at compile time.
+    /// - [`OwnedVecStorage`]: stores the data in an array `[T; N]` whose size is known at compile
+    ///   time.
     /// - [`ViewVecStorage`]: stores the data in an unsized `[T]`.
     ///
     /// This allows [`Vec`] to be generic over either sized or unsized storage. The [`vec`](super)
@@ -45,8 +48,10 @@ mod storage {
     /// - [`Vec<T, N>`](crate::vec::Vec) = `VecInner<T, OwnedStorage<T, N>>`
     /// - [`VecView<T>`](crate::vec::VecView) = `VecInner<T, ViewStorage<T>>`
     ///
-    /// `Vec` can be unsized into `VecView`, either by unsizing coercions such as `&mut Vec -> &mut VecView` or
-    /// `Box<Vec> -> Box<VecView>`, or explicitly with [`.as_view()`](crate::vec::Vec::as_view) or [`.as_mut_view()`](crate::vec::Vec::as_mut_view).
+    /// `Vec` can be unsized into `VecView`, either by unsizing coercions such as `&mut Vec -> &mut
+    /// VecView` or `Box<Vec> -> Box<VecView>`, or explicitly with
+    /// [`.as_view()`](crate::vec::Vec::as_view) or
+    /// [`.as_mut_view()`](crate::vec::Vec::as_mut_view).
     ///
     /// This trait is sealed, so you cannot implement it for your own types. You can only use
     /// the implementations provided by this crate.
@@ -58,7 +63,8 @@ mod storage {
     pub trait VecStorage<T>: VecSealedStorage<T> {}
 
     pub trait VecSealedStorage<T> {
-        // part of the sealed trait so that no trait is publicly implemented by `OwnedVecStorage` besides `Storage`
+        // part of the sealed trait so that no trait is publicly implemented by `OwnedVecStorage`
+        // besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
         fn borrow_mut(&mut self) -> &mut [MaybeUninit<T>];
 
@@ -97,7 +103,8 @@ mod storage {
         pub(crate) buffer: T,
     }
 
-    /// Implementation of [`VecStorage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+    /// Implementation of [`VecStorage`] that stores the data in an array `[T; N]` whose size is
+    /// known at compile time.
     pub type OwnedVecStorage<T, const N: usize> = VecStorageInner<[MaybeUninit<T>; N]>;
     /// Implementation of [`VecStorage`] that stores the data in an unsized `[T]`.
     pub type ViewVecStorage<T> = VecStorageInner<[MaybeUninit<T>]>;
@@ -252,7 +259,8 @@ pub struct VecInner<T, LenT: LenType, S: VecStorage<T> + ?Sized> {
 /// assert_eq!(*vec, [7, 1, 2, 3]);
 /// ```
 ///
-/// In some cases, the const-generic might be cumbersome. `Vec` can coerce into a [`VecView`] to remove the need for the const-generic:
+/// In some cases, the const-generic might be cumbersome. `Vec` can coerce into a [`VecView`] to
+/// remove the need for the const-generic:
 ///
 /// ```rust
 /// use heapless::{Vec, VecView};
@@ -261,18 +269,21 @@ pub struct VecInner<T, LenT: LenType, S: VecStorage<T> + ?Sized> {
 /// let view: &VecView<_, _> = &vec;
 /// ```
 ///
-/// For uncommmon capacity values, or in generic scenarios, you may have to provide the `LenT` generic yourself.
+/// For uncommmon capacity values, or in generic scenarios, you may have to provide the `LenT`
+/// generic yourself.
 ///
-/// This should be the smallest unsigned integer type that your capacity fits in, or `usize` if you don't want to consider this.
+/// This should be the smallest unsigned integer type that your capacity fits in, or `usize` if you
+/// don't want to consider this.
 pub type Vec<T, const N: usize, LenT = usize> = VecInner<T, LenT, OwnedVecStorage<T, N>>;
 
 /// A [`Vec`] with dynamic capacity
 ///
-/// [`Vec`] coerces to `VecView`. `VecView` is `!Sized`, meaning it can only ever be used by reference.
+/// [`Vec`] coerces to `VecView`. `VecView` is `!Sized`, meaning it can only ever be used by
+/// reference.
 ///
 /// Unlike [`Vec`], `VecView` does not have an `N` const-generic parameter.
-/// This has the ergonomic advantage of making it possible to use functions without needing to know at
-/// compile-time the size of the buffers used, for example for use in `dyn` traits.
+/// This has the ergonomic advantage of making it possible to use functions without needing to know
+/// at compile-time the size of the buffers used, for example for use in `dyn` traits.
 ///
 /// `VecView<T>` is to `Vec<T, N>` what `[T]` is to `[T; N]`.
 ///
@@ -418,15 +429,16 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
 
     /// Casts the `LenT` type to a new type, preserving everything else about the vector.
     ///
-    /// This can be useful if you need to pass a `Vec<T, N, u8>` into a `Vec<T, N, usize>` for example.
+    /// This can be useful if you need to pass a `Vec<T, N, u8>` into a `Vec<T, N, usize>` for
+    /// example.
     ///
     /// This will check at compile time if the `N` value will fit into `NewLenT`, and error if not.
     pub fn cast_len_type<NewLenT: LenType>(self) -> Vec<T, N, NewLenT> {
         const { check_capacity_fits::<NewLenT, N>() }
         let this = ManuallyDrop::new(self);
 
-        // SAFETY: Pointer argument is derived from a reference, meeting the safety documented invariants.
-        // This also prevents double drops by wrapping `self` in `ManuallyDrop`.
+        // SAFETY: Pointer argument is derived from a reference, meeting the safety documented
+        // invariants. This also prevents double drops by wrapping `self` in `ManuallyDrop`.
         Vec {
             len: NewLenT::from_usize(this.len()),
             buffer: unsafe { ptr::read(&this.buffer) },
@@ -508,7 +520,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// let view: &VecView<u8, _> = vec.as_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements
+    /// `Unsize<VecView<T>>`:
     ///
     /// ```rust
     /// # use heapless::{Vec, VecView};
@@ -528,7 +541,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// let view: &mut VecView<u8, _> = vec.as_mut_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements `Unsize<VecView<T>>`:
+    /// It is often preferable to do the same through type coerction, since `Vec<T, N>` implements
+    /// `Unsize<VecView<T>>`:
     ///
     /// ```rust
     /// # use heapless::{Vec, VecView};
@@ -723,11 +737,11 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     pub fn truncate(&mut self, len: usize) {
         // This is safe because:
         //
-        // * the slice passed to `drop_in_place` is valid; the `len > self.len`
-        //   case avoids creating an invalid slice, and
-        // * the `len` of the vector is shrunk before calling `drop_in_place`,
-        //   such that no value will be dropped twice in case `drop_in_place`
-        //   were to panic once (if it panics twice, the program aborts).
+        // * the slice passed to `drop_in_place` is valid; the `len > self.len` case avoids creating
+        //   an invalid slice, and
+        // * the `len` of the vector is shrunk before calling `drop_in_place`, such that no value
+        //   will be dropped twice in case `drop_in_place` were to panic once (if it panics twice,
+        //   the program aborts).
         unsafe {
             // Note: It's intentional that this is `>` and not `>=`.
             //       Changing it to `>=` has negative performance
@@ -1235,8 +1249,9 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
                     }
                 }
                 if DELETED {
-                    // SAFETY: `deleted_cnt` > 0, so the hole slot must not overlap with current element.
-                    // We use copy for move, and never touch this element again.
+                    // SAFETY: `deleted_cnt` > 0, so the hole slot must not overlap with current
+                    // element. We use copy for move, and never touch this
+                    // element again.
                     unsafe {
                         let hole_slot = p.add((g.processed_len - g.deleted_cnt).into_usize());
                         ptr::copy_nonoverlapping(cur, hole_slot, 1);

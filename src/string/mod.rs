@@ -14,10 +14,10 @@ use core::{
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-use crate::CapacityError;
 use crate::{
     len_type::LenType,
     vec::{OwnedVecStorage, Vec, VecInner, ViewVecStorage},
+    CapacityError,
 };
 
 mod drain;
@@ -67,15 +67,17 @@ mod storage {
     /// - [`OwnedStorage`]: stores the data in an array whose size is known at compile time.
     /// - [`ViewStorage`]: stores the data in an unsized slice
     ///
-    /// This allows [`String`] to be generic over either sized or unsized storage. The [`string`](super)
-    /// module contains a [`StringInner`] struct that's generic on [`StringStorage`],
-    /// and two type aliases for convenience:
+    /// This allows [`String`] to be generic over either sized or unsized storage. The
+    /// [`string`](super) module contains a [`StringInner`] struct that's generic on
+    /// [`StringStorage`], and two type aliases for convenience:
     ///
     /// - [`String<N>`](crate::string::String) = `StringInner<OwnedStorage<u8, N>>`
     /// - [`StringView<T>`](crate::string::StringView) = `StringInner<ViewStorage<u8>>`
     ///
-    /// `String` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut String -> &mut StringView` or
-    /// `Box<String> -> Box<StringView>`, or explicitly with [`.as_view()`](crate::string::String::as_view) or [`.as_mut_view()`](crate::string::String::as_mut_view).
+    /// `String` can be unsized into `StrinsgView`, either by unsizing coercions such as `&mut
+    /// String -> &mut StringView` or `Box<String> -> Box<StringView>`, or explicitly with
+    /// [`.as_view()`](crate::string::String::as_view) or
+    /// [`.as_mut_view()`](crate::string::String::as_mut_view).
     ///
     /// This trait is sealed, so you cannot implement it for your own types. You can only use
     /// the implementations provided by this crate.
@@ -136,7 +138,8 @@ mod storage {
 
 pub use storage::StringStorage;
 
-/// Implementation of [`StringStorage`] that stores the data in an array whose size is known at compile time.
+/// Implementation of [`StringStorage`] that stores the data in an array whose size is known at
+/// compile time.
 pub type OwnedStorage<const N: usize> = OwnedVecStorage<u8, N>;
 /// Implementation of [`StringStorage`] that stores the data in an unsized slice.
 pub type ViewStorage = ViewVecStorage<u8>;
@@ -375,7 +378,8 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// let view: &StringView = s.as_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements
+    /// `Unsize<StringView>`:
     ///
     /// ```rust
     /// # use heapless::string::{String, StringView};
@@ -396,7 +400,8 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// let view: &mut StringView = s.as_mut_view();
     /// ```
     ///
-    /// It is often preferable to do the same through type coerction, since `String<N>` implements `Unsize<StringView>`:
+    /// It is often preferable to do the same through type coerction, since `String<N>` implements
+    /// `Unsize<StringView>`:
     ///
     /// ```rust
     /// # use heapless::string::{String, StringView};
@@ -1039,10 +1044,10 @@ pub fn format<const N: usize, LenT: LenType>(
 ///
 /// There are two possible error cases. Both return the unit type [`core::fmt::Error`].
 ///
-/// - In case the formatting exceeds the string's capacity. This error does not exist in
-///   the standard library as the string would just grow.
-/// - If a formatting trait implementation returns an error. The standard library panics
-///   in this case.
+/// - In case the formatting exceeds the string's capacity. This error does not exist in the
+///   standard library as the string would just grow.
+/// - If a formatting trait implementation returns an error. The standard library panics in this
+///   case.
 ///
 /// # Examples
 ///

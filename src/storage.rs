@@ -76,15 +76,17 @@ pub(crate) trait SealedStorage {
 /// - [`Vec<T, N>`](crate::vec::Vec) = `VecInner<T, OwnedStorage<N>>`
 /// - [`VecView<T>`](crate::vec::VecView) = `VecInner<T, ViewStorage>`
 ///
-/// `Vec` can be unsized into `VecView`, either by unsizing coercions such as `&mut Vec -> &mut VecView` or
-/// `Box<Vec> -> Box<VecView>`, or explicitly with [`.as_view()`](crate::vec::Vec::as_view) or [`.as_mut_view()`](crate::vec::Vec::as_mut_view).
+/// `Vec` can be unsized into `VecView`, either by unsizing coercions such as `&mut Vec -> &mut
+/// VecView` or `Box<Vec> -> Box<VecView>`, or explicitly with
+/// [`.as_view()`](crate::vec::Vec::as_view) or [`.as_mut_view()`](crate::vec::Vec::as_mut_view).
 ///
 /// This trait is sealed, so you cannot implement it for your own types. You can only use
 /// the implementations provided by this crate.
 #[allow(private_bounds)]
 pub trait Storage: SealedStorage {}
 
-/// Implementation of [`Storage`] that stores the data in an array `[T; N]` whose size is known at compile time.
+/// Implementation of [`Storage`] that stores the data in an array `[T; N]` whose size is known at
+/// compile time.
 pub enum OwnedStorage<const N: usize> {}
 impl<const N: usize> Storage for OwnedStorage<N> {}
 impl<const N: usize> SealedStorage for OwnedStorage<N> {

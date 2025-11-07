@@ -21,6 +21,15 @@ $ # run only for example histbuf tests
 $ cargo test histbuf --features serde
 ```
 
+# Formatting
+
+Like most Rust projects, we use `rustfmt` to keep the formatting of code consistent. However, we
+make use of cecertain options that are currently only available in the nightly version:
+
+```console
+$ cargo +nightly fmt --all
+```
+
 ## License
 
 Licensed under either of

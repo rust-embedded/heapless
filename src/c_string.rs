@@ -106,11 +106,12 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
     ///
     /// # Safety
     ///
-    /// - The memory pointed to by `ptr` must contain a valid nul terminator at the
-    ///   end of the string.
-    /// - `ptr` must be valid for reads of bytes up to and including the nul terminator.
-    ///   This means in particular:
-    ///     - The entire memory range of this `CStr` must be contained within a single allocated object!
+    /// - The memory pointed to by `ptr` must contain a valid nul terminator at the end of the
+    ///   string.
+    /// - `ptr` must be valid for reads of bytes up to and including the nul terminator. This means
+    ///   in particular:
+    ///     - The entire memory range of this `CStr` must be contained within a single allocated
+    ///       object!
     ///     - `ptr` must be non-nul even for a zero-length `CStr`.
     ///
     /// # Example
@@ -190,7 +191,8 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
 
         match CStr::from_bytes_with_nul(bytes) {
             Ok(_) => {
-                // SAFETY: A string is left in a valid state because appended bytes are nul-terminated.
+                // SAFETY: A string is left in a valid state because appended bytes are
+                // nul-terminated.
                 unsafe { self.extend_from_bytes_unchecked(bytes) }?;
 
                 Ok(())
