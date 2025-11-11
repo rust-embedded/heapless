@@ -376,6 +376,11 @@ impl<T> BoxPoolImpl<T> {
     fn manage(&self, block: &'static mut BoxBlock<T>) {
         let node: &'static mut _ = &mut block.node;
 
+        // SAFETY: The node within a `BoxBlock` is always properly initialized for linking because
+        // the only way for         client code to construct a `BoxBlock` is through
+        // `BoxBlock::new`. The `NonNullPtr` comes from a         reference, so it is
+        // guaranteed to be dereferencable. It is also unique because the `BoxBlock` itself
+        //         is passed as a `&mut`
         unsafe { self.stack.push(NonNullPtr::from_static_mut_ref(node)) }
     }
 }
@@ -391,9 +396,7 @@ impl<T> BoxBlock<T> {
     /// Creates a new memory block
     pub const fn new() -> Self {
         Self {
-            node: UnionNode {
-                data: ManuallyDrop::new(MaybeUninit::uninit()),
-            },
+            node: UnionNode::unlinked(),
         }
     }
 }

@@ -188,6 +188,13 @@ const fn initial_tag() -> Tag {
     Tag::MIN
 }
 
+/// Pushes the given node on top of the stack
+///
+/// # Safety
+///
+/// - `new_top` must point to a node that is properly initialized for linking, i.e.
+///   `new_top.as_ref().next()` must be valid to call (see [`Node::next`])
+/// - `new_top` must be convertible to a reference (see [`NonNull::as_ref`])
 pub unsafe fn push<N>(stack: &Stack<N>, new_top: NonNullPtr<N>)
 where
     N: Node,
@@ -198,6 +205,7 @@ where
         new_top
             .non_null()
             .as_ref()
+            // SAFETY: Caller ensures that it is safe to call `next`
             .next()
             .store(top, Ordering::Relaxed);
 
