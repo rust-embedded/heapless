@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.9.2] 2025-11-12
+
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
 - Implement `Default` for `CapacityError`.
@@ -727,7 +729,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.2...HEAD
+[v0.9.2]: https://github.com/rust-embedded/heapless/compare/v0.9.1...v0.9.2
 [v0.9.1]: https://github.com/rust-embedded/heapless/compare/v0.9.0...v0.9.1
 [v0.9.0]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
