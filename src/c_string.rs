@@ -102,6 +102,68 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
         Ok(string)
     }
 
+    /// Instantiates a [`CString`] copying from the given byte slice, until the first nul character.
+    /// `bytes` may contain any number of nul characters, or none at all.
+    ///
+    /// Fails if the given byte slice can't fit in `N`.
+    ///
+    /// # Examples
+    /// You can pass a byte array with many, or no nul-bytes as `bytes`.
+    ///
+    /// ```rust
+    /// use heapless::CString;
+    ///
+    /// let c_string = CString::<11>::from_bytes_until_nul(b"hey\0there!\0").unwrap();
+    /// assert_eq!(c_string.as_c_str(), c"hey");
+    ///
+    /// let c_string = CString::<11>::from_bytes_until_nul(b"string").unwrap();
+    /// assert_eq!(c_string.as_c_str(), c"string");
+    /// ```
+    ///
+    /// If `bytes` is too long, an error is returned.
+    /// ```rust
+    /// use heapless::CString;
+    ///
+    /// assert!(CString::<3>::from_bytes_until_nul(b"hey\0").is_err());
+    /// ```
+    ///
+    /// `bytes` may also represent an empty string.
+    /// ```rust
+    /// use heapless::CString;
+    ///
+    /// assert_eq!(CString::<1>::from_bytes_until_nul(b"").unwrap().as_c_str(), c"");
+    /// assert_eq!(CString::<1>::from_bytes_until_nul(b"\0").unwrap().as_c_str(), c"");
+    /// ```
+    pub fn from_bytes_until_nul(bytes: &[u8]) -> Result<Self, ExtendError> {
+        // Truncate `bytes` to before the first nul byte.
+        // `bytes` will not contain any nul bytes.
+        let bytes = match CStr::from_bytes_with_nul(bytes) {
+            Ok(_) => &bytes[..bytes.len() - 1], // bytes.len() > 0, as `bytes` is nul-terminated
+            Err(FromBytesWithNulError::InteriorNul { position }) => &bytes[..position],
+            Err(FromBytesWithNulError::NotNulTerminated) => bytes,
+        };
+
+        let mut string = Self::new();
+        if let Some(capacity) = string.capacity_with_bytes(bytes) {
+            // Cannot store `bytes` due to insufficient capacity.
+            if capacity > N {
+                return Err(CapacityError.into());
+            }
+        }
+
+        // SAFETY:
+        // `string` is left in a valid state because
+        // the appended bytes do not contain any nul bytes,
+        // and we push a nul byte at the end.
+        //
+        // We've ensured above that there is enough space to push `bytes`
+        // and the nul byte.
+        unsafe { string.extend_from_bytes_unchecked(bytes) }?;
+        unsafe { string.inner.push_unchecked(0) };
+
+        Ok(string)
+    }
+
     /// Builds a [`CString`] copying from a raw C string pointer.
     ///
     /// # Safety
