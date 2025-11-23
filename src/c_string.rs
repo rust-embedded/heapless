@@ -120,7 +120,7 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
     /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey there!\0").unwrap();
     /// assert_eq!(c_string.as_c_str(), c"hey there!");
     ///
-    /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey\0there!\0").unwrap();
+    /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey\0there\0!").unwrap();
     /// assert_eq!(c_string.as_c_str(), c"hey");
     ///
     /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey there!").unwrap();
