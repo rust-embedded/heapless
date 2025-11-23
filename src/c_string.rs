@@ -106,7 +106,8 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
     /// `bytes` may contain any number of nul characters, or none at all.
     ///
     /// This method mimics [`CStr::from_bytes_until_nul`] with two important differences:
-    /// [`Self::from_bytes_truncating_at_nul`] copies the data, and it does not fail on non-nul terminated data.
+    /// [`Self::from_bytes_truncating_at_nul`] copies the data, and it does not fail on
+    /// non-nul terminated data.
     ///
     /// Fails if the given byte slice can't fit in `N`.
     ///
