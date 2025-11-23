@@ -105,36 +105,42 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
     /// Instantiates a [`CString`] copying from the given byte slice, until the first nul character.
     /// `bytes` may contain any number of nul characters, or none at all.
     ///
+    /// This method mimics [`CStr::from_bytes_until_nul`] with two important differences:
+    /// [`Self::from_bytes_truncating_at_nul`] copies the data, and it does not fail on non-nul terminated data.
+    ///
     /// Fails if the given byte slice can't fit in `N`.
     ///
     /// # Examples
-    /// You can pass a byte array with many, or no nul-bytes as `bytes`.
+    /// You can pass a byte array with one, many, or no nul bytes as `bytes`.
     ///
     /// ```rust
     /// use heapless::CString;
     ///
-    /// let c_string = CString::<11>::from_bytes_until_nul(b"hey\0there!\0").unwrap();
+    /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey there!\0").unwrap();
+    /// assert_eq!(c_string.as_c_str(), c"hey there!");
+    ///
+    /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey\0there!\0").unwrap();
     /// assert_eq!(c_string.as_c_str(), c"hey");
     ///
-    /// let c_string = CString::<11>::from_bytes_until_nul(b"string").unwrap();
-    /// assert_eq!(c_string.as_c_str(), c"string");
+    /// let c_string = CString::<11>::from_bytes_truncating_at_nul(b"hey there!").unwrap();
+    /// assert_eq!(c_string.as_c_str(), c"hey there!");
     /// ```
     ///
     /// If `bytes` is too long, an error is returned.
     /// ```rust
     /// use heapless::CString;
     ///
-    /// assert!(CString::<3>::from_bytes_until_nul(b"hey\0").is_err());
+    /// assert!(CString::<3>::from_bytes_truncating_at_nul(b"hey\0").is_err());
     /// ```
     ///
     /// `bytes` may also represent an empty string.
     /// ```rust
     /// use heapless::CString;
     ///
-    /// assert_eq!(CString::<1>::from_bytes_until_nul(b"").unwrap().as_c_str(), c"");
-    /// assert_eq!(CString::<1>::from_bytes_until_nul(b"\0").unwrap().as_c_str(), c"");
+    /// assert_eq!(CString::<1>::from_bytes_truncating_at_nul(b"").unwrap().as_c_str(), c"");
+    /// assert_eq!(CString::<1>::from_bytes_truncating_at_nul(b"\0").unwrap().as_c_str(), c"");
     /// ```
-    pub fn from_bytes_until_nul(bytes: &[u8]) -> Result<Self, ExtendError> {
+    pub fn from_bytes_truncating_at_nul(bytes: &[u8]) -> Result<Self, ExtendError> {
         // Truncate `bytes` to before the first nul byte.
         // `bytes` will not contain any nul bytes.
         let bytes = match CStr::from_bytes_with_nul(bytes) {
