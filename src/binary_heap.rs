@@ -3,11 +3,6 @@
 //! Insertion and popping the largest element have *O*(log n) time complexity.
 //! Checking the smallest/largest element is *O*(1).
 
-// TODO not yet implemented
-// Converting a vector to a binary heap can be done in-place, and has *O*(n) complexity. A binary
-// heap can also be converted to a sorted vector in-place, allowing it to be used for an
-// *O*(n log n) in-place heapsort.
-
 use core::{
     cmp::Ordering,
     fmt,
@@ -185,11 +180,72 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
             data: Vec::new(),
         }
     }
+
+    /// Creates a new `BinaryHeap` from a `Vec<T,N>`.
+    /// The heap uses the vector as its backing storage, no additional space is required.
+    /// The elements in the vector are rearranged to create the heap.
+    /// The time complexity is *O*(n).
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    /// use heapless::vec::Vec;
+    ///
+    /// let vec = Vec::from_array([4, 1, 8, 7, 3, 0, 6, 9, 2, 5]);
+    /// let heap: BinaryHeap<_, Max, 12> = BinaryHeap::from_vec(vec);
+    /// assert_eq!(heap.len(), 10);
+    /// assert_eq!(heap.capacity(), 12);
+    /// assert_eq!(heap.peek(), Some(&9));
+    /// ```
+    pub fn from_vec(vec: Vec<T, N, usize>) -> Self
+    where
+        T: Ord,
+        K: Kind,
+    {
+        let mut heap = Self {
+            _kind: PhantomData,
+            data: vec,
+        };
+        let len = heap.len();
+        for i in (0..len / 2).rev() {
+            heap.sift_down_to_bottom(i, len);
+        }
+        heap
+    }
 }
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     /// Returns the underlying `Vec<T,N>`. Order is arbitrary and time is *O*(1).
     pub fn into_vec(self) -> Vec<T, N, usize> {
+        self.data
+    }
+
+    /// Returns the underlying `Vec<T,N>` sorted in ascending order.
+    /// The time complexity is *O*(n log n).
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 4> = BinaryHeap::new();
+    /// heap.push(4).unwrap();
+    /// heap.push(2).unwrap();
+    /// heap.push(8).unwrap();
+    /// heap.push(1).unwrap();
+    /// assert_eq!(heap.into_sorted_vec(), [1, 2, 4, 8]);
+    /// ```
+    pub fn into_sorted_vec(mut self) -> Vec<T, N, usize>
+    where
+        K: Kind,
+        T: Ord,
+    {
+        let mut i = self.data.len();
+        while i > 0 {
+            i -= 1;
+            unsafe {
+                let p = self.data.as_mut_ptr();
+                ptr::swap(p, p.add(i));
+            }
+            self.sift_down_to_bottom(0, i);
+        }
         self.data
     }
 }
@@ -419,7 +475,7 @@ where
 
         if !self.is_empty() {
             mem::swap(&mut item, self.data.as_mut_slice().get_unchecked_mut(0));
-            self.sift_down_to_bottom(0);
+            self.sift_down_to_bottom(0, self.len());
         }
         item
     }
@@ -471,8 +527,7 @@ where
     }
 
     /* Private API */
-    fn sift_down_to_bottom(&mut self, mut pos: usize) {
-        let end = self.len();
+    fn sift_down_to_bottom(&mut self, mut pos: usize, end: usize) {
         let start = pos;
         unsafe {
             let mut hole = Hole::new(self.data.as_mut_slice(), pos);
@@ -607,7 +662,7 @@ where
 {
     fn drop(&mut self) {
         if self.sift {
-            self.heap.sift_down_to_bottom(0);
+            self.heap.sift_down_to_bottom(0, self.heap.len());
         }
     }
 }
@@ -915,5 +970,32 @@ mod tests {
         x: &'c BinaryHeapView<&'a (), Max>,
     ) -> &'c BinaryHeapView<&'b (), Max> {
         x
+    }
+
+    #[test]
+    fn from_vec() {
+        use crate::vec::Vec;
+
+        let src: Vec<_, 16, _> = Vec::from_array([4, 1, 12, 8, 7, 3, 0, 6, 9, 2, 5, 11, 10]);
+        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from_vec(src);
+        assert_eq!(heap.len(), 13);
+        assert_eq!(heap.capacity(), 16);
+        assert_eq!(
+            &heap.into_vec(),
+            &[0, 1, 3, 6, 2, 4, 12, 8, 9, 7, 5, 11, 10]
+        );
+    }
+
+    #[test]
+    fn into_sorted_vec() {
+        use crate::vec::Vec;
+        use core::array;
+
+        let src: Vec<_, 16, _> = Vec::from_array([4, 1, 12, 8, 7, 3, 0, 6, 9, 2, 5, 11, 10]);
+        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from_vec(src);
+        let dst = heap.into_sorted_vec();
+        assert_eq!(dst.len(), 13);
+        assert_eq!(dst.capacity(), 16);
+        assert_eq!(&dst, &array::from_fn::<u8, 13, _>(|x| 12 - x as u8));
     }
 }
