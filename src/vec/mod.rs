@@ -960,6 +960,89 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         value
     }
 
+    /// This is the same as calling [`Vec::remove`] with `remove_index`
+    /// followed by calling [`Vec::insert`] with `insert_index` and `element`.
+    ///
+    /// The returned value is the removed element.
+    ///
+    /// This is more efficient than removing then inserting since it only shifts
+    /// `remove_index.abs_diff(insert_index)` values.
+    ///
+    /// [`remove`]: Vec::remove
+    /// [`insert`]: Vec::insert
+    ///
+    /// # Panics
+    ///
+    /// Panics if `remove_index` or `insert_index` are out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let mut v: Vec<_, 8> = Vec::from_slice(&[0, 1, 2, 3]).unwrap();
+    /// assert_eq!(v.remove_insert(1, 2, 4), 1);
+    /// // only one element (2) is shifted back
+    /// assert_eq!(v, [0, 2, 4, 3]);
+    /// ```
+    pub fn remove_insert(&mut self, remove_index: usize, insert_index: usize, element: T) -> T {
+        let length = self.len();
+
+        assert!(remove_index < length);
+        assert!(insert_index < length);
+
+        // SAFETY: `remove_index < length` assertion guarantees the pointer is within bounds.
+        let to_remove = unsafe { ptr::read(self.as_ptr().add(remove_index)) };
+
+        match remove_index.cmp(&insert_index) {
+            Ordering::Equal => (),
+            Ordering::Less => {
+                // SAFETY: `remove_index < length` assertion guarantees the pointer is within
+                // bounds.
+                let remove_at = unsafe { self.as_mut_ptr().add(remove_index) };
+
+                // SAFETY:
+                // Copies from
+                //  (remove_index + 1)..(insert_index + 1)
+                // to
+                //  remove_index..insert_index
+                //
+                // remove_index < insert_index (this match)
+                // remove_index + 1 < insert_index + 1 (can't saturate because <= length)
+                // remove_index + 1 <= insert_index < length
+                // insert_index + 1 <= length
+                //
+                // If `remove_index == 0`, and `insert_index + 1 ==  length`, then we copy from
+                // 1..length to 0..(length-1).
+                unsafe { ptr::copy(remove_at.add(1), remove_at, insert_index - remove_index) };
+            }
+            Ordering::Greater => {
+                // SAFETY: `insert_index < length` assertion guarantees the pointer is within
+                // bounds.
+                let insert_at = unsafe { self.as_mut_ptr().add(insert_index) };
+
+                // SAFETY:
+                // Copies from
+                //  insert_index..remove_index
+                // to
+                //  (insert_index + 1)..(remove_index + 1)
+                //
+                // insert_index < remove_index (this match)
+                // insert_index + 1 < remove_index + 1 (can't saturate because <= length)
+                // insert_index + 1 <= remove_index < length
+                // remove_index + 1 <= length
+                //
+                // If `insert_index == 0`, and `remove_index + 1 ==  length`, then we copy from
+                // 0..(length-1) to 1..(length).
+                unsafe { ptr::copy(insert_at, insert_at.add(1), remove_index - insert_index) };
+            }
+        }
+
+        // SAFETY: `insert_index < length` assertion guarantees the pointer is within bounds.
+        unsafe { ptr::write(self.as_mut_ptr().add(insert_index), element) };
+        to_remove
+    }
+
     /// Returns true if the vec is full
     pub fn is_full(&self) -> bool {
         self.len() == self.capacity()
@@ -2117,6 +2200,92 @@ mod tests {
 
         assert_eq!(v.pop(), None);
         assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn remove_insert() {
+        let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut v: Vec<u8, 10> = Vec::from_array(arr);
+        let mut v2: Vec<u8, 10> = Vec::from_array(arr);
+
+        // insert_index == remove_index
+        let n = v.remove_insert(2, 2, 10);
+        assert_eq!(n, 2);
+        assert_eq!(v, [0, 1, 10, 3, 4, 5, 6, 7, 8, 9]);
+
+        let n2 = v2.remove(2);
+        v2.insert(2, 10).unwrap();
+        assert_eq!(n, n2);
+        assert_eq!(v, v2);
+
+        // reset
+        v.copy_from_slice(&arr);
+        v2.copy_from_slice(&arr);
+
+        // insert_index > remove_index
+        let n = v.remove_insert(3, 5, 10);
+        assert_eq!(n, 3);
+        assert_eq!(v, [0, 1, 2, 4, 5, 10, 6, 7, 8, 9]);
+
+        let n2 = v2.remove(3);
+        v2.insert(5, 10).unwrap();
+        assert_eq!(n, n2);
+        assert_eq!(v, v2);
+
+        v.copy_from_slice(&arr);
+        v2.copy_from_slice(&arr);
+
+        // insert_index < remove_index
+        let n = v.remove_insert(5, 3, 10);
+        assert_eq!(n, 5);
+        assert_eq!(v, [0, 1, 2, 10, 3, 4, 6, 7, 8, 9]);
+
+        let n2 = v2.remove(5);
+        v2.insert(3, 10).unwrap();
+
+        assert_eq!(n, n2);
+        assert_eq!(v, v2);
+
+        // at boundaries
+
+        v.copy_from_slice(&arr);
+        v2.copy_from_slice(&arr);
+
+        let n = v.remove_insert(0, 9, 10);
+        assert_eq!(n, 0);
+        assert_eq!(v, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+        let n2 = v2.remove(0);
+        v2.insert(9, 10).unwrap();
+        assert_eq!(n, n2);
+        assert_eq!(v, v2);
+
+        v.copy_from_slice(&arr);
+        v2.copy_from_slice(&arr);
+
+        let n = v.remove_insert(9, 0, 10);
+        assert_eq!(n, 9);
+        assert_eq!(v, [10, 0, 1, 2, 3, 4, 5, 6, 7, 8]);
+
+        let n2 = v2.remove(9);
+        v2.insert(0, 10).unwrap();
+        assert_eq!(n, n2);
+        assert_eq!(v, v2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn remove_insert_out_of_bounds() {
+        let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut v: Vec<u8, 10> = Vec::from_array(arr);
+        let _ = v.remove_insert(0, 10, 10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn remove_insert_empty() {
+        let mut v: Vec<u8, 10> = Vec::from_array([]);
+        let _ = v.remove_insert(0, 0, 10);
     }
 
     #[test]
