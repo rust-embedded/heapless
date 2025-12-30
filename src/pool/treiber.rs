@@ -92,7 +92,7 @@ impl<T> Node for UnionNode<T> {
 }
 
 pub struct StructNode<T> {
-    pub next: ManuallyDrop<AtomicPtr<StructNode<T>>>,
+    pub next: ManuallyDrop<AtomicPtr<Self>>,
     pub data: ManuallyDrop<T>,
 }
 
