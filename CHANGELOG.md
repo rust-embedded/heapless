@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.9.2] 2025-11-12
 
+- Added `from_bytes_truncating_at_nul` to `CString`
+- Added missing `?Sized` bounds in `PartialEq` implementations 
+- Make `PartialEq` implementation for `DequeInner` and `HistoryBufInner` generic over the storage of the RHS
+
+## [v0.9.2] 2025-11-12
+
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
 - Implement `Default` for `CapacityError`.

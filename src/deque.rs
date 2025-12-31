@@ -1164,9 +1164,13 @@ where
     }
 }
 
-impl<T: PartialEq, const N: usize> PartialEq for Deque<T, N> {
-    fn eq(&self, other: &Self) -> bool {
-        if self.len() != other.len() {
+impl<T: PartialEq, S1, S2> PartialEq<DequeInner<T, S2>> for DequeInner<T, S1>
+where
+    S1: VecStorage<T> + ?Sized,
+    S2: VecStorage<T> + ?Sized,
+{
+    fn eq(&self, other: &DequeInner<T, S2>) -> bool {
+        if self.storage_len() != other.storage_len() {
             return false;
         }
         let (sa, sb) = self.as_slices();

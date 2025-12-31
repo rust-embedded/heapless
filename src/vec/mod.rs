@@ -1609,7 +1609,7 @@ impl<A, B, LenTB, const M: usize, SB> PartialEq<VecInner<B, LenTB, SB>> for [A; 
 where
     A: PartialEq<B>,
     LenTB: LenType,
-    SB: VecStorage<B>,
+    SB: VecStorage<B> + ?Sized,
 {
     fn eq(&self, other: &VecInner<B, LenTB, SB>) -> bool {
         self.eq(other.as_slice())
@@ -1620,7 +1620,7 @@ impl<A, B, LenTB, SB, const M: usize> PartialEq<VecInner<B, LenTB, SB>> for &[A;
 where
     A: PartialEq<B>,
     LenTB: LenType,
-    SB: VecStorage<B>,
+    SB: VecStorage<B> + ?Sized,
 {
     fn eq(&self, other: &VecInner<B, LenTB, SB>) -> bool {
         (*self).eq(other)
@@ -1631,7 +1631,7 @@ impl<A, B, LenTB, SB> PartialEq<VecInner<B, LenTB, SB>> for [A]
 where
     A: PartialEq<B>,
     LenTB: LenType,
-    SB: VecStorage<B>,
+    SB: VecStorage<B> + ?Sized,
 {
     fn eq(&self, other: &VecInner<B, LenTB, SB>) -> bool {
         self.eq(other.as_slice())
@@ -1642,7 +1642,7 @@ impl<A, B, LenTB, SB> PartialEq<VecInner<B, LenTB, SB>> for &[A]
 where
     A: PartialEq<B>,
     LenTB: LenType,
-    SB: VecStorage<B>,
+    SB: VecStorage<B> + ?Sized,
 {
     fn eq(&self, other: &VecInner<B, LenTB, SB>) -> bool {
         (*self).eq(other)

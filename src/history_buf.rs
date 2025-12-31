@@ -610,11 +610,13 @@ impl<T, const N: usize> Default for HistoryBuf<T, N> {
     }
 }
 
-impl<T, S: HistoryBufStorage<T> + ?Sized> PartialEq for HistoryBufInner<T, S>
+impl<T, S1, S2> PartialEq<HistoryBufInner<T, S2>> for HistoryBufInner<T, S1>
 where
     T: PartialEq,
+    S1: HistoryBufStorage<T> + ?Sized,
+    S2: HistoryBufStorage<T> + ?Sized,
 {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &HistoryBufInner<T, S2>) -> bool {
         self.oldest_ordered().eq(other.oldest_ordered())
     }
 }
