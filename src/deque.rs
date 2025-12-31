@@ -1164,8 +1164,12 @@ where
     }
 }
 
-impl<T: PartialEq, S: VecStorage<T> + ?Sized> PartialEq for DequeInner<T, S> {
-    fn eq(&self, other: &Self) -> bool {
+impl<T: PartialEq, S1, S2> PartialEq<DequeInner<T, S2>> for DequeInner<T, S1>
+where
+    S1: VecStorage<T> + ?Sized,
+    S2: VecStorage<T> + ?Sized,
+{
+    fn eq(&self, other: &DequeInner<T, S2>) -> bool {
         if self.storage_len() != other.storage_len() {
             return false;
         }
