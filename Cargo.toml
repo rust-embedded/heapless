@@ -71,7 +71,6 @@ ufmt-write = { version = "0.1", optional = true }
 defmt = { version = "1.0.1", optional = true }
 zeroize = { version = "1.8", optional = true, default-features = false, features = ["derive"] }
 embedded-io = { version = "0.7", optional = true }
-thiserror = {version = "2.0.12", default-features = false}
 
 # for the pool module
 [target.'cfg(any(target_arch = "arm", target_pointer_width = "32", target_pointer_width = "64"))'.dependencies]

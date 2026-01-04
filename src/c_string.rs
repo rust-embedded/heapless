@@ -6,12 +6,11 @@ use core::{
     cmp::Ordering,
     error::Error,
     ffi::{c_char, CStr, FromBytesWithNulError},
-    fmt,
+    fmt::{self, Display},
     ops::Deref,
     str::Utf8Error,
 };
 
-use thiserror::Error;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -492,8 +491,7 @@ impl<const N: usize, LenT: LenType> fmt::Debug for CString<N, LenT> {
     }
 }
 
-#[derive(Debug, Error, Clone, PartialEq)]
-#[error("CString contained non-utf8 bytes")]
+#[derive(Debug, Clone, PartialEq)]
 /// An error indicating invalid UTF-8 when converting a [`CString`] into a [`String`].
 ///
 /// This struct is created by [`CString::into_string()`].
@@ -522,7 +520,6 @@ where
     LenT: LenType,
 {
     inner: CString<N, LenT>,
-    #[source]
     error: Utf8Error,
 }
 
@@ -537,6 +534,18 @@ impl<const N: usize, LenT: LenType> IntoStringError<N, LenT> {
     /// Access the underlying UTF-8 error that was the cause of this error.
     pub fn utf8_error(&self) -> Utf8Error {
         self.error
+    }
+}
+
+impl<const N: usize, LenT: LenType> Display for IntoStringError<N, LenT> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "CString contained non-utf8 bytes")
+    }
+}
+
+impl<const N: usize, LenT: LenType> Error for IntoStringError<N, LenT> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error)
     }
 }
 
