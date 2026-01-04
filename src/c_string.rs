@@ -381,10 +381,7 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
         // `String::from_utf8(self.inner)` would be a great fit here,
         // but the error type of that method does not return ownership.
         if let Err(error) = core::str::from_utf8(self.as_bytes()) {
-            return Err(IntoStringError {
-                inner: self,
-                error: error,
-            });
+            return Err(IntoStringError { inner: self, error });
         }
 
         // SAFETY: UTF-8 invariant has just been checked by `str::from_utf8`.
