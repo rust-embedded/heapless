@@ -1,6 +1,6 @@
 //! A fixed capacity [`CString`](https://doc.rust-lang.org/std/ffi/struct.CString.html).
 
-use crate::{vec::Vec, CapacityError, LenType};
+use crate::{vec::Vec, CapacityError, LenType, String};
 use core::{
     borrow::Borrow,
     cmp::Ordering,
@@ -8,8 +8,10 @@ use core::{
     ffi::{c_char, CStr, FromBytesWithNulError},
     fmt,
     ops::Deref,
+    str::Utf8Error,
 };
 
+use thiserror::Error;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -350,6 +352,84 @@ impl<const N: usize, LenT: LenType> CString<N, LenT> {
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner[..self.inner.len() - 1]
     }
+
+    /// Converts the [`CString`] into a [`String`] if it contains valid UTF-8 data.
+    ///
+    /// On failure, ownership of the original [`CString`] is returned.
+    ///
+    /// Equivalent of `std::ffi::CString::into_string`.
+    ///
+    /// # Examples
+    /// Valid UTF-8:
+    ///
+    /// ```rust
+    /// use heapless::CString;
+    ///
+    /// let sparkle_heart = CString::<5>::from_bytes_with_nul(&[240, 159, 146, 150, 0]).unwrap();
+    /// assert_eq!(sparkle_heart.into_string().unwrap(), "💖");
+    /// ```
+    ///
+    /// Invalid UTF-8:
+    ///
+    /// ```rust
+    /// use heapless::CString;
+    ///
+    /// let hello_world = CString::<16>::from_bytes_with_nul(b"Hello \xF0\x90\x80World\0").unwrap();
+    /// assert!(hello_world.into_string().is_err());
+    /// ```
+    pub fn into_string(self) -> Result<String<N, LenT>, IntoStringError<N, LenT>> {
+        // `String::from_utf8(self.inner)` would be a great fit here,
+        // but the error type of that method does not return ownership.
+        if let Err(error) = core::str::from_utf8(self.as_bytes()) {
+            return Err(IntoStringError {
+                inner: self,
+                error: error,
+            });
+        }
+
+        // SAFETY: UTF-8 invariant has just been checked by `str::from_utf8`.
+        Ok(unsafe { String::from_utf8_unchecked(self.into_bytes()) })
+    }
+
+    #[inline]
+    /// Consumes the [`CString`] and returns the underlying byte buffer.
+    ///
+    /// The returned byte buffer *does* contain the trailing nul terminator.
+    /// It is guaranteed that the returned buffer does not contain any interior nul bytes.
+    ///
+    /// Equivalent of `std::ffi::CString::into_bytes_with_nul`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use heapless::CString;
+    /// let c_string = CString::<16>::from_bytes_with_nul(b"Hello World!\0").unwrap();
+    ///
+    /// assert_eq!(c_string.into_bytes_with_nul(), b"Hello World!\0");
+    /// ```
+    pub fn into_bytes_with_nul(self) -> Vec<u8, N, LenT> {
+        self.inner
+    }
+
+    /// Consumes the [`CString`] and returns the underlying byte buffer.
+    ///
+    /// The returned byte buffer does *not* contain the trailing nul terminator,
+    /// and it guaranteed to not contain any interior nul bytes.
+    ///
+    /// Equivalent of `std::ffi::CString::into_bytes`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use heapless::CString;
+    /// let c_string = CString::<16>::from_bytes_with_nul(b"Hello World!\0").unwrap();
+    ///
+    /// assert_eq!(c_string.into_bytes(), b"Hello World!");
+    /// ```
+    pub fn into_bytes(self) -> Vec<u8, N, LenT> {
+        let mut vec = self.into_bytes_with_nul();
+        let _nul = vec.pop();
+        debug_assert_eq!(_nul, Some(0u8));
+        vec
+    }
 }
 
 impl<const N: usize, LenT: LenType> AsRef<CStr> for CString<N, LenT> {
@@ -412,6 +492,54 @@ impl<const N: usize, LenT: LenType> Ord for CString<N, LenT> {
 impl<const N: usize, LenT: LenType> fmt::Debug for CString<N, LenT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_c_str().fmt(f)
+    }
+}
+
+#[derive(Debug, Error, Clone, PartialEq)]
+#[error("CString contained non-utf8 bytes")]
+/// An error indicating invalid UTF-8 when converting a [`CString`] into a [`String`].
+///
+/// This struct is created by [`CString::into_string()`].
+///
+/// Equivalent of `std::ffi::IntoStringError`.
+///
+/// Call [`Self::into_cstring`] to regain ownership of the [`CString`].
+///
+/// # Examples
+/// ```rust
+/// use heapless::CString;
+/// use heapless::c_string::IntoStringError;
+///
+/// // the byte slice contains invalid UTF-8
+/// let hello_world = CString::<16>::from_bytes_with_nul(b"Hello \xF0\x90\x80World\0").unwrap();
+/// let hello_world_clone = hello_world.clone();
+///
+/// let err: IntoStringError<16> = hello_world.into_string().unwrap_err();
+///
+/// assert_eq!(err.utf8_error().valid_up_to(), 6);
+/// assert_eq!(err.utf8_error().error_len(), Some(3));
+/// assert_eq!(err.into_cstring(), hello_world_clone);
+/// ```
+pub struct IntoStringError<const N: usize, LenT = usize>
+where
+    LenT: LenType,
+{
+    inner: CString<N, LenT>,
+    #[source]
+    error: Utf8Error,
+}
+
+impl<const N: usize, LenT: LenType> IntoStringError<N, LenT> {
+    #[inline]
+    /// Consumes this error, returning original [`CString`] which generated the error.
+    pub fn into_cstring(self) -> CString<N, LenT> {
+        self.inner
+    }
+
+    #[inline]
+    /// Access the underlying UTF-8 error that was the cause of this error.
+    pub fn utf8_error(&self) -> Utf8Error {
+        self.error
     }
 }
 
@@ -530,6 +658,25 @@ mod tests {
             Some(INITIAL_BYTES.len() + 5)
         );
     }
+
+    #[test]
+    fn into_bytes_empty() {
+        let c_string = CString::<16>::from_bytes_with_nul(b"\0").unwrap();
+        assert_eq!(c_string.into_bytes(), b"");
+    }
+
+    #[test]
+    fn into_bytes_with_nul_empty() {
+        let c_string = CString::<16>::from_bytes_with_nul(b"\0").unwrap();
+        assert_eq!(c_string.into_bytes_with_nul(), b"\0");
+    }
+
+    #[test]
+    fn into_string_empty() {
+        let c_string = CString::<16>::from_bytes_with_nul(b"\0").unwrap();
+        assert_eq!(c_string.into_string().unwrap(), "");
+    }
+
     #[test]
     fn default() {
         assert_eq!(CString::<1>::default().as_c_str(), c"");
