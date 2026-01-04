@@ -539,7 +539,7 @@ impl<const N: usize, LenT: LenType> IntoStringError<N, LenT> {
 
 impl<const N: usize, LenT: LenType> Display for IntoStringError<N, LenT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CString contained non-utf8 bytes")
+        "CString contained non-utf8 bytes".fmt(f)
     }
 }
 
