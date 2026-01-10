@@ -4,8 +4,8 @@ use core::{
     borrow,
     char::DecodeUtf16Error,
     cmp::Ordering,
-    fmt,
-    fmt::{Arguments, Write},
+    error::Error,
+    fmt::{self, Arguments, Display, Write},
     hash, iter,
     ops::{self, Range, RangeBounds},
     str::{self, Utf8Error},
@@ -22,6 +22,63 @@ use crate::{
 
 mod drain;
 pub use drain::Drain;
+
+/// Error type of the [`String::from_utf8`] function.
+///
+/// [`Self::into_bytes`] will give back the byte vector which was used in the conversion attempt.
+///
+/// Equivalent of `std::string::FromUtf8Error`.
+///
+/// # Examples
+///
+/// ```
+/// use heapless::{String, Vec, string::FromUtf8Error};
+///
+/// let data = [0, 159, 146, 150];
+/// let mut vec = Vec::<u8, 4>::new();
+/// vec.extend_from_slice(&data);
+///
+/// let e: FromUtf8Error<4> = String::from_utf8(vec).unwrap_err();
+///
+/// assert_eq!(e.utf8_error().valid_up_to(), 1);
+/// assert_eq!(e.as_bytes(), &data);
+/// assert_eq!(e.into_bytes(), data);
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FromUtf8Error<const N: usize, LenT: LenType = usize> {
+    bytes: Vec<u8, N, LenT>,
+    error: Utf8Error,
+}
+
+impl<const N: usize, LenT: LenType> FromUtf8Error<N, LenT> {
+    /// Returns a slice of [`u8`]s bytes that were attempted to convert to a [`String`].
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    /// Returns the bytes that were attempted to convert to a [`String`].
+    pub fn into_bytes(self) -> Vec<u8, N, LenT> {
+        self.bytes
+    }
+
+    /// Fetch the [`Utf8Error`] to get more details about the conversion failure.
+    pub fn utf8_error(&self) -> Utf8Error {
+        self.error
+    }
+}
+
+impl<const N: usize, LenT: LenType> Display for FromUtf8Error<N, LenT> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        core::fmt::Display::fmt(&self, f)
+    }
+}
+
+impl<const N: usize, LenT: LenType> Error for FromUtf8Error<N, LenT> {
+    /// returns the underlying [`Utf8Error`]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.error)
+    }
+}
 
 /// A possible error value when converting a [`String`] from a UTF-16 byte slice.
 ///
@@ -219,6 +276,13 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
 
     /// Convert UTF-8 bytes into a `String`.
     ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the bytes are not valid UTF-8. The error includes
+    /// a description as to why the bytes are not UTF-8.
+    /// The error also contains the moved [`Vec`], such that
+    /// you can regain ownership of it.
+    ///
     /// # Examples
     ///
     /// Basic usage:
@@ -231,25 +295,28 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
     ///
     /// let sparkle_heart: String<4> = String::from_utf8(sparkle_heart)?;
     /// assert_eq!("💖", sparkle_heart);
-    /// # Ok::<(), core::str::Utf8Error>(())
+    /// # Ok::<(), heapless::string::FromUtf8Error<4>>(())
     /// ```
     ///
     /// Invalid UTF-8:
     ///
     /// ```
-    /// use core::str::Utf8Error;
-    /// use heapless::{String, Vec};
+    /// use heapless::{String, Vec, string::FromUtf8Error};
     ///
+    /// let data = [0, 159, 146, 150];
     /// let mut vec = Vec::<u8, 4>::new();
-    /// vec.extend_from_slice(&[0, 159, 146, 150]);
+    /// vec.extend_from_slice(&data);
     ///
-    /// let e: Utf8Error = String::from_utf8(vec).unwrap_err();
-    /// assert_eq!(e.valid_up_to(), 1);
-    /// # Ok::<(), core::str::Utf8Error>(())
+    /// let e: FromUtf8Error<4> = String::from_utf8(vec).unwrap_err();
+    /// assert_eq!(e.utf8_error().valid_up_to(), 1);
+    /// assert_eq!(e.into_bytes(), data);
+    /// # Ok::<(), heapless::string::FromUtf8Error<4>>(())
     /// ```
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, N, LenT>) -> Result<Self, Utf8Error> {
-        core::str::from_utf8(&vec)?;
+    pub fn from_utf8(vec: Vec<u8, N, LenT>) -> Result<Self, FromUtf8Error<N, LenT>> {
+        if let Err(error) = core::str::from_utf8(&vec) {
+            return Err(FromUtf8Error { bytes: vec, error });
+        }
 
         // SAFETY: UTF-8 invariant has just been checked by `str::from_utf8`.
         Ok(unsafe { Self::from_utf8_unchecked(vec) })

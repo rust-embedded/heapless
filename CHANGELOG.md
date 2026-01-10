@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 - Added `from_bytes_truncating_at_nul` to `CString`
+- Added `FromUtf8Error` to `heapless::string`
+- [breaking-change] Changed error type of `String::from_utf8` from `core::str::Utf8Error` to `heapless::string::FromUtf8Error`
 
 ## [v0.9.2] 2025-11-12
 
