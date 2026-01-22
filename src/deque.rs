@@ -669,6 +669,56 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         }
     }
 
+    /// Removes and returns the first element from the deque if the predicate
+    /// returns `true`, or [`None`] if the predicate returns false or the deque
+    /// is empty (the predicate will not be called in that case).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut deque: Deque<i32, 5> = [0, 1, 2, 3, 4].try_into().unwrap();
+    /// let pred = |x: &mut i32| *x % 2 == 0;
+    ///
+    /// assert_eq!(deque.pop_front_if(pred), Some(0));
+    /// assert_eq!(deque, Deque::<i32,4>::try_from([1, 2, 3, 4]).unwrap());
+    /// assert_eq!(deque.pop_front_if(pred), None);
+    /// ```
+    pub fn pop_front_if(&mut self, predicate: impl FnOnce(&mut T) -> bool) -> Option<T> {
+        let first = self.front_mut()?;
+        if predicate(first) {
+            self.pop_front()
+        } else {
+            None
+        }
+    }
+
+    /// Removes and returns the last element from the deque if the predicate
+    /// returns `true`, or [`None`] if the predicate returns false or the deque
+    /// is empty (the predicate will not be called in that case).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Deque;
+    ///
+    /// let mut deque: Deque<i32, 5> = [0, 1, 2, 3, 4].try_into().unwrap();
+    /// let pred = |x: &mut i32| *x % 2 == 0;
+    ///
+    /// assert_eq!(deque.pop_back_if(pred), Some(4));
+    /// assert_eq!(deque, Deque::<i32,4>::try_from([0, 1, 2, 3]).unwrap());
+    /// assert_eq!(deque.pop_back_if(pred), None);
+    /// ```
+    pub fn pop_back_if(&mut self, predicate: impl FnOnce(&mut T) -> bool) -> Option<T> {
+        let last = self.back_mut()?;
+        if predicate(last) {
+            self.pop_back()
+        } else {
+            None
+        }
+    }
+
     /// Returns a reference to the element at the given index.
     ///
     /// Index 0 is the front of the `Deque`.
@@ -2198,5 +2248,31 @@ mod tests {
             assert_eq!(tester.len(), 10);
             assert_eq!(Droppable::count(), 10);
         }
+    }
+
+    #[test]
+    fn test_pop_if() {
+        let mut deq: Deque<i32, 5> = [0, 1, 2, 3, 4].try_into().unwrap();
+        let pred = |x: &mut i32| *x % 2 == 0;
+
+        assert_eq!(deq.pop_front_if(pred), Some(0));
+        assert_eq!(deq, Deque::<i32, 5>::try_from([1, 2, 3, 4]).unwrap());
+
+        assert_eq!(deq.pop_front_if(pred), None);
+        assert_eq!(deq, Deque::<i32, 5>::try_from([1, 2, 3, 4]).unwrap());
+
+        assert_eq!(deq.pop_back_if(pred), Some(4));
+        assert_eq!(deq, Deque::<i32, 5>::try_from([1, 2, 3]).unwrap());
+
+        assert_eq!(deq.pop_back_if(pred), None);
+        assert_eq!(deq, Deque::<i32, 5>::try_from([1, 2, 3]).unwrap());
+    }
+
+    #[test]
+    fn test_pop_if_empty() {
+        let mut deq = Deque::<i32, 5>::new();
+        assert_eq!(deq.pop_front_if(|_| true), None);
+        assert_eq!(deq.pop_back_if(|_| true), None);
+        assert!(deq.is_empty());
     }
 }
