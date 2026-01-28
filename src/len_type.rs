@@ -1,6 +1,6 @@
 use core::{
-    mem,
     fmt::{Debug, Display},
+    mem,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
@@ -114,27 +114,28 @@ pub const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
     }
     // The following "select" is safe, since we have fixed number of types
     // implementing LenType - all with distinctive size "signature".
-    unsafe{
+    unsafe {
         // ALWAYS compiletime switch.
-        Some(match size_of::<L>(){
-            // transmute_copy, instead of transmute - because `L` 
-            // is a "dependent type". 
+        Some(match size_of::<L>() {
+            // transmute_copy, instead of transmute - because `L`
+            // is a "dependent type".
             8 => mem::transmute_copy(&(n as u64)),
             4 => mem::transmute_copy(&(n as u32)),
             2 => mem::transmute_copy(&(n as u16)),
             1 => mem::transmute_copy(&(n as u8)),
-            _ => unreachable!()
+            _ => unreachable!(),
         })
     }
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_len_cast(){
-        const{ assert!(to_len_type::<u16>(15000) == 15000); }
+    fn test_len_cast() {
+        const {
+            assert!(to_len_type::<u16>(15000) == 15000);
+        }
     }
 }
-
