@@ -16,7 +16,7 @@ use core::{
 use zeroize::Zeroize;
 
 use crate::{
-    len_type::{check_capacity_fits, LenType, to_len_type},
+    len_type::{check_capacity_fits, to_len_type, LenType},
     CapacityError,
 };
 
@@ -363,7 +363,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // We've got to copy `src`, but we're functionally moving it. Don't run
         // any Drop code for T.
         let src = ManuallyDrop::new(src);
-        
+
         let len: LenT = to_len_type(M);
 
         if N == M {
@@ -377,14 +377,14 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
             }
         } else {
             let mut v = Self::new();
-            unsafe{
+            unsafe {
                 // MaybeUninit::deref is non-const, so we just cast it through.
                 // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
                 let src_ptr: *const T = ptr::from_ref(&src).cast();
-                
+
                 // Cast from [MaybeUninit] to [T] is safe since it is transparent.
-                let dst_ptr: *mut T   = v.buffer.buffer.as_mut_ptr().cast();
-                
+                let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
+
                 ptr::copy_nonoverlapping(src_ptr, dst_ptr, M);
                 v.len = len;
             }
