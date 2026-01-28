@@ -1,4 +1,5 @@
 use core::{
+    mem,
     fmt::{Debug, Display},
     ops::{Add, AddAssign, Sub, SubAssign},
 };
@@ -100,3 +101,40 @@ impl_lentype!(
 pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
     assert!(LenT::MAX_USIZE >= N, "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity");
 }
+
+#[inline]
+pub(crate) const fn to_len_type<L: LenType>(n: usize) -> L {
+    try_to_len_type(n).unwrap()
+}
+
+#[inline]
+pub(crate) const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
+    if n > L::MAX_USIZE {
+        return None;
+    }
+    // The following "select" is safe, since we have fixed number of types
+    // implementing LenType - all with distinctive size "signature".
+    unsafe{
+        // ALWAYS compiletime switch.
+        Some(match size_of::<L>(){
+            // transmute_copy, instead of transmute - because `L` 
+            // is a "dependent type". 
+            8 => mem::transmute_copy(&(n as u64)),
+            4 => mem::transmute_copy(&(n as u32)),
+            2 => mem::transmute_copy(&(n as u16)),
+            1 => mem::transmute_copy(&(n as u8)),
+            _ => unreachable!()
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn test_len_cast(){
+        const{ assert!(to_len_type::<u16>(15000) == 15000); }
+    }
+}
+

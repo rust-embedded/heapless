@@ -16,7 +16,7 @@ use core::{
 use zeroize::Zeroize;
 
 use crate::{
-    len_type::{check_capacity_fits, LenType},
+    len_type::{check_capacity_fits, LenType, to_len_type},
     CapacityError,
 };
 
@@ -355,7 +355,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
     ///
     /// If the length of the provided array is greater than the capacity of the
     /// vector a compile-time error will be produced.
-    pub fn from_array<const M: usize>(src: [T; M]) -> Self {
+    pub const fn from_array<const M: usize>(src: [T; M]) -> Self {
         const {
             assert!(N >= M);
         }
@@ -363,25 +363,31 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // We've got to copy `src`, but we're functionally moving it. Don't run
         // any Drop code for T.
         let src = ManuallyDrop::new(src);
+        
+        let len: LenT = to_len_type(M);
 
         if N == M {
+            // TODO: Do we need this?
             Self {
                 phantom: PhantomData,
-                len: LenT::from_usize(N),
+                len,
                 // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
                 // have the same layout when N == M.
                 buffer: unsafe { mem::transmute_copy(&src) },
             }
         } else {
             let mut v = Self::new();
-
-            for (src_elem, dst_elem) in src.iter().zip(v.buffer.buffer.iter_mut()) {
-                // NOTE(unsafe) src element is not going to drop as src itself
-                // is wrapped in a ManuallyDrop.
-                dst_elem.write(unsafe { ptr::read(src_elem) });
+            unsafe{
+                // MaybeUninit::deref is non-const, so we just cast it through.
+                // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
+                let src_ptr: *const T = &src as *const _ as *const _;
+                
+                // Cast from [MaybeUninit] to [T] is safe since it is transparent.
+                let dst_ptr: *mut T   = v.buffer.buffer.as_mut_ptr().cast();
+                
+                ptr::copy_nonoverlapping(src_ptr, dst_ptr, M);
+                v.len = len;
             }
-
-            unsafe { v.set_len(M) };
             v
         }
     }
