@@ -380,7 +380,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
             unsafe{
                 // MaybeUninit::deref is non-const, so we just cast it through.
                 // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
-                let src_ptr: *const T = &src as *const _ as *const _;
+                let src_ptr: *const T = ptr::from_ref(&src).cast();
                 
                 // Cast from [MaybeUninit] to [T] is safe since it is transparent.
                 let dst_ptr: *mut T   = v.buffer.buffer.as_mut_ptr().cast();

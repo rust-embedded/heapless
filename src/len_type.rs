@@ -103,12 +103,12 @@ pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
 }
 
 #[inline]
-pub(crate) const fn to_len_type<L: LenType>(n: usize) -> L {
+pub const fn to_len_type<L: LenType>(n: usize) -> L {
     try_to_len_type(n).unwrap()
 }
 
 #[inline]
-pub(crate) const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
+pub const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
     if n > L::MAX_USIZE {
         return None;
     }
