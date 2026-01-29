@@ -6,7 +6,7 @@ use core::{
     fmt, hash,
     iter::FusedIterator,
     marker::PhantomData,
-    mem::{self, ManuallyDrop, MaybeUninit},
+    mem::{ManuallyDrop, MaybeUninit},
     ops::{self, Range, RangeBounds},
     ptr::{self, NonNull},
     slice,
@@ -365,31 +365,21 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         let src = ManuallyDrop::new(src);
 
         let len: LenT = to_len_type(M);
+        
+        let mut v = Self::new();
 
-        if N == M {
-            // TODO: Do we need this?
-            Self {
-                phantom: PhantomData,
-                len,
-                // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
-                // have the same layout when N == M.
-                buffer: unsafe { mem::transmute_copy(&src) },
-            }
-        } else {
-            let mut v = Self::new();
+        // MaybeUninit::deref is non-const, so we just cast it through.
+        // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
+        let src_ptr: *const T = ptr::from_ref(&src).cast();
 
-            // MaybeUninit::deref is non-const, so we just cast it through.
-            // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
-            let src_ptr: *const T = ptr::from_ref(&src).cast();
+        // Cast from [MaybeUninit] to [T] is safe since it is transparent.
+        let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
 
-            // Cast from [MaybeUninit] to [T] is safe since it is transparent.
-            let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
+        // Move/copy data from input array to output Self buffer. 
+        unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
+        v.len = len;
 
-            unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
-            v.len = len;
-
-            v
-        }
+        v
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
