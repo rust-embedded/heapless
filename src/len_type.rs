@@ -4,6 +4,14 @@ use core::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+#[allow(non_camel_case_types)]
+pub enum TypeEnum{
+    u8,
+    u16,
+    u32,
+    usize
+}
+
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -28,6 +36,8 @@ pub trait Sealed:
     const MAX: Self;
     /// The maximum value of this type, as a `usize`.
     const MAX_USIZE: usize;
+    /// This type as an enum. 
+    const TYPE: TypeEnum;
 
     /// The one value of the integer type.
     ///
@@ -59,12 +69,13 @@ pub trait Sealed:
 }
 
 macro_rules! impl_lentype {
-    ($($(#[$meta:meta])* $LenT:ty),*) => {$(
+    ($($(#[$meta:meta])* $LenT:ident),*) => {$(
         $(#[$meta])*
         impl Sealed for $LenT {
             const ZERO: Self = 0;
             const MAX: Self = Self::MAX;
             const MAX_USIZE: usize = Self::MAX as _;
+            const TYPE: TypeEnum = TypeEnum::$LenT;
 
             fn one() -> Self {
                 1
@@ -102,30 +113,41 @@ pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
     assert!(LenT::MAX_USIZE >= N, "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity");
 }
 
+/// Const cast from `usize` to [LenType] with `as`.
+#[inline]
+pub const fn as_len_type<L: LenType>(n: usize) -> L {
+    unsafe {
+        // ALWAYS compiletime switch.
+        match L::TYPE{
+            // transmute_copy, instead of transmute - because `L`
+            // is a "dependent type".
+            TypeEnum::u8 => mem::transmute_copy(&(n as u8)),
+            TypeEnum::u16 => mem::transmute_copy(&(n as u16)),
+            TypeEnum::u32 => mem::transmute_copy(&(n as u32)),
+            TypeEnum::usize => mem::transmute_copy(&n),
+        }
+    }
+}
+
+/// Checked cast to [LenType].
+/// 
+/// # Panic
+/// 
+/// Panics if `n` is outside of `L` range.
 #[inline]
 pub const fn to_len_type<L: LenType>(n: usize) -> L {
     try_to_len_type(n).unwrap()
 }
 
+/// Checked cast to [LenType].
+/// 
+/// Returns `None` if `n` is outside of `L` range.
 #[inline]
 pub const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
     if n > L::MAX_USIZE {
         return None;
     }
-    // The following "select" is safe, since we have fixed number of types
-    // implementing LenType - all with distinctive size "signature".
-    unsafe {
-        // ALWAYS compiletime switch.
-        Some(match size_of::<L>() {
-            // transmute_copy, instead of transmute - because `L`
-            // is a "dependent type".
-            8 => mem::transmute_copy(&(n as u64)),
-            4 => mem::transmute_copy(&(n as u32)),
-            2 => mem::transmute_copy(&(n as u16)),
-            1 => mem::transmute_copy(&(n as u8)),
-            _ => unreachable!(),
-        })
-    }
+    Some(as_len_type(n))
 }
 
 #[cfg(test)]
@@ -134,8 +156,24 @@ mod tests {
 
     #[test]
     fn test_len_cast() {
+        // 1. Check constness
         const {
-            assert!(to_len_type::<u16>(15000) == 15000);
+            assert!(to_len_type::<u8>(150) == 150);
+            assert!(to_len_type::<u16>(15_000) == 15_000);
+            assert!(to_len_type::<u32>(1_500_000) == 1_500_000);
+            assert!(to_len_type::<usize>(usize::MAX) == usize::MAX);
         }
+        // 2. Check correctness
+        fn check<T: LenType>(){
+            const COUNT: usize = 1000;
+            for i in 0..COUNT {
+                let n = i * (T::MAX_USIZE/COUNT);
+                assert_eq!(to_len_type::<T>(n).into_usize(), n);    
+            }
+        }        
+        check::<u8>();
+        check::<u16>();
+        check::<u32>();
+        check::<usize>();
     }
 }
