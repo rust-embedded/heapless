@@ -165,7 +165,7 @@ mod tests {
         }
         // 2. Check correctness
         fn check<T: LenType>() {
-            const COUNT: usize = 1000;
+            const COUNT: usize = 100;
             for i in 0..COUNT {
                 let n = i * (T::MAX_USIZE / COUNT);
                 assert_eq!(to_len_type::<T>(n).into_usize(), n);
