@@ -5,11 +5,11 @@ use core::{
 };
 
 #[allow(non_camel_case_types)]
-pub enum TypeEnum{
+pub enum TypeEnum {
     u8,
     u16,
     u32,
-    usize
+    usize,
 }
 
 #[cfg(feature = "zeroize")]
@@ -36,7 +36,7 @@ pub trait Sealed:
     const MAX: Self;
     /// The maximum value of this type, as a `usize`.
     const MAX_USIZE: usize;
-    /// This type as an enum. 
+    /// This type as an enum.
     const TYPE: TypeEnum;
 
     /// The one value of the integer type.
@@ -113,12 +113,12 @@ pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
     assert!(LenT::MAX_USIZE >= N, "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity");
 }
 
-/// Const cast from `usize` to [LenType] with `as`.
+/// Const cast from [`usize`] to [`LenType`] with `as`.
 #[inline]
 pub const fn as_len_type<L: LenType>(n: usize) -> L {
     unsafe {
         // ALWAYS compiletime switch.
-        match L::TYPE{
+        match L::TYPE {
             // transmute_copy, instead of transmute - because `L`
             // is a "dependent type".
             TypeEnum::u8 => mem::transmute_copy(&(n as u8)),
@@ -129,18 +129,18 @@ pub const fn as_len_type<L: LenType>(n: usize) -> L {
     }
 }
 
-/// Checked cast to [LenType].
-/// 
+/// Checked cast to [`LenType`].
+///
 /// # Panic
-/// 
+///
 /// Panics if `n` is outside of `L` range.
 #[inline]
 pub const fn to_len_type<L: LenType>(n: usize) -> L {
     try_to_len_type(n).unwrap()
 }
 
-/// Checked cast to [LenType].
-/// 
+/// Checked cast to [`LenType`].
+///
 /// Returns `None` if `n` is outside of `L` range.
 #[inline]
 pub const fn try_to_len_type<L: LenType>(n: usize) -> Option<L> {
@@ -164,13 +164,13 @@ mod tests {
             assert!(to_len_type::<usize>(usize::MAX) == usize::MAX);
         }
         // 2. Check correctness
-        fn check<T: LenType>(){
+        fn check<T: LenType>() {
             const COUNT: usize = 1000;
             for i in 0..COUNT {
-                let n = i * (T::MAX_USIZE/COUNT);
-                assert_eq!(to_len_type::<T>(n).into_usize(), n);    
+                let n = i * (T::MAX_USIZE / COUNT);
+                assert_eq!(to_len_type::<T>(n).into_usize(), n);
             }
-        }        
+        }
         check::<u8>();
         check::<u16>();
         check::<u32>();

@@ -365,7 +365,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         let src = ManuallyDrop::new(src);
 
         let len: LenT = to_len_type(M);
-        
+
         let mut v = Self::new();
 
         // MaybeUninit::deref is non-const, so we just cast it through.
@@ -375,7 +375,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // Cast from [MaybeUninit] to [T] is safe since it is transparent.
         let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
 
-        // NOTE(unsafe): Move/copy data from input array to output Self buffer. 
+        // NOTE(unsafe): Move/copy data from input array to output Self buffer.
         unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
         v.len = len;
 
@@ -461,6 +461,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// If the returned iterator goes out of scope without being dropped (due to
     /// [`mem::forget`], for example), the vector may have lost and leaked
     /// elements arbitrarily, including elements outside the range.
+    ///
+    /// [`mem::forget`]: core::mem::forget
     ///
     /// # Examples
     ///
