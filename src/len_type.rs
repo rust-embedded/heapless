@@ -116,6 +116,7 @@ pub const fn check_capacity_fits<LenT: LenType, const N: usize>() {
 /// Const cast from [`usize`] to [`LenType`] with `as`.
 #[inline]
 pub const fn as_len_type<L: LenType>(n: usize) -> L {
+    // SAFETY: transmute is safe since after cast we cast to the same type.
     unsafe {
         // ALWAYS compiletime switch.
         match L::TYPE {

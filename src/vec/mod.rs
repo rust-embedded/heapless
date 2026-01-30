@@ -368,14 +368,16 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
 
         let mut v = Self::new();
 
-        // MaybeUninit::deref is non-const, so we just cast it through.
-        // Casting to internal value of MaybeUninit<T> is safe since it is transparent.
+        // MaybeUninit::deref is non-const, so we just cast to it's internal value.
         let src_ptr: *const T = ptr::from_ref(&src).cast();
 
-        // Cast from [MaybeUninit] to [T] is safe since it is transparent.
+        // Cast from buffer's [MaybeUninit<T>] to [T].
         let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
 
-        // SAFETY: Move/copy data from input array to output Self buffer.
+        // SAFETY: Move/copy data from src to v's internal buffer.
+        // * Using src_ptr as `*const T` is safe since src's ManuallyDrop<[T; M]> is transparent.
+        // * Using dst_ptr as `*mut T` is safe since v's [MaybeUninit<T>; N] is an array of
+        //   transparent types.
         unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
         v.len = len;
 
