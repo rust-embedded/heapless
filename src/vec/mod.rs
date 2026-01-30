@@ -375,7 +375,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // Cast from [MaybeUninit] to [T] is safe since it is transparent.
         let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
 
-        // NOTE(unsafe): Move/copy data from input array to output Self buffer.
+        // SAFETY: Move/copy data from input array to output Self buffer.
         unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
         v.len = len;
 
