@@ -978,10 +978,18 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
     /// assert!(a.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.core.entries.clear();
-        for pos in self.core.indices.iter_mut() {
-            *pos = None;
+        struct Guard<'a, K, V, S, const N: usize>(&'a mut IndexMap<K, V, S, N>);
+        impl<'a, K, V, S, const N: usize> Drop for Guard<'a, K, V, S, N> {
+            fn drop(&mut self) {
+                for pos in self.0.core.indices.iter_mut() {
+                    *pos = None;
+                }
+            }
         }
+        let this = Guard(self);
+        // SAFETY: Guard will be dropped and lead to a consistent empty state even in the case of a
+        // panic leading to unwinding during the dropping of an item
+        this.0.core.entries.clear();
     }
 }
 
@@ -1617,6 +1625,11 @@ where
 #[cfg(test)]
 mod tests {
     use core::mem;
+    use std::{
+        mem::ManuallyDrop,
+        panic::{catch_unwind, AssertUnwindSafe},
+        sync::atomic::{AtomicI32, Ordering},
+    };
 
     use static_assertions::assert_not_impl_any;
 
@@ -2057,5 +2070,43 @@ mod tests {
         map.insert(1, 10).unwrap();
         assert_eq!(map.len(), 1);
         assert_eq!(map.get(&1), Some(&10));
+    }
+
+    #[test]
+    fn test_use_after_free_clear() {
+        // See https://github.com/rust-embedded/heapless/issues/646
+
+        static COUNT: AtomicI32 = AtomicI32::new(0);
+
+        #[derive(Debug, Hash, PartialEq, Eq)]
+        #[allow(unused)]
+        struct Dropper();
+
+        impl Dropper {
+            fn new() -> Self {
+                COUNT.fetch_add(1, Ordering::Relaxed);
+                Self()
+            }
+            fn count() -> i32 {
+                COUNT.load(Ordering::Relaxed)
+            }
+        }
+        impl Drop for Dropper {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Ordering::Relaxed);
+                panic!("Testing  panicking");
+            }
+        }
+
+        let mut history_buf = FnvIndexMap::<Dropper, u32, 8>::new();
+        history_buf.insert(Dropper::new(), 0).unwrap();
+        // Don't panic on dropping of the history_buf
+        let mut history_buf = ManuallyDrop::new(history_buf);
+        let mut unwind_safe_history_buf = AssertUnwindSafe(&mut history_buf);
+
+        catch_unwind(move || unwind_safe_history_buf.clear()).unwrap_err();
+        assert_eq!(history_buf.len(), 0);
+        history_buf.clear();
+        assert_eq!(Dropper::count(), 0);
     }
 }
