@@ -243,11 +243,18 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
 
     /// Clears the deque, removing all values.
     pub fn clear(&mut self) {
-        // safety: we're immediately setting a consistent empty state.
-        unsafe { self.drop_contents() }
-        self.front = 0;
-        self.back = 0;
-        self.full = false;
+        struct Guard<'a, T, S: VecStorage<T> + ?Sized>(&'a mut DequeInner<T, S>);
+        impl<'a, T, S: VecStorage<T> + ?Sized> Drop for Guard<'a, T, S> {
+            fn drop(&mut self) {
+                self.0.front = 0;
+                self.0.back = 0;
+                self.0.full = false;
+            }
+        }
+        let this = Guard(self);
+        // SAFETY: Guard will be dropped and lead to a consistent empty state even in the case of a
+        // panic leading to unwinding during the dropping of an item
+        unsafe { this.0.drop_contents() }
     }
 
     /// Drop all items in the `Deque`, leaving the state `back/front/full` unmodified.
@@ -1306,6 +1313,12 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        mem::ManuallyDrop,
+        panic::{catch_unwind, AssertUnwindSafe},
+        sync::atomic::{AtomicI32, Ordering::Relaxed},
+    };
+
     use super::Deque;
     use crate::CapacityError;
     use static_assertions::assert_not_impl_any;
@@ -1324,7 +1337,7 @@ mod tests {
     }
 
     #[test]
-    fn drop() {
+    fn test_drop() {
         droppable!();
 
         {
@@ -1629,20 +1642,23 @@ mod tests {
 
     #[test]
     fn clear() {
-        let mut q: Deque<i32, 4> = Deque::new();
+        droppable!();
+        let mut q: Deque<Droppable, 4> = Deque::new();
         assert_eq!(q.len(), 0);
 
-        q.push_back(0).unwrap();
-        q.push_back(1).unwrap();
-        q.push_back(2).unwrap();
-        q.push_back(3).unwrap();
+        q.push_back(Droppable::new()).unwrap();
+        q.push_back(Droppable::new()).unwrap();
+        q.push_back(Droppable::new()).unwrap();
+        q.push_back(Droppable::new()).unwrap();
         assert_eq!(q.len(), 4);
 
         q.clear();
         assert_eq!(q.len(), 0);
+        assert_eq!(Droppable::count(), 0);
 
-        q.push_back(0).unwrap();
+        q.push_back(Droppable::new()).unwrap();
         assert_eq!(q.len(), 1);
+        assert_eq!(Droppable::count(), 1);
     }
 
     #[test]
@@ -2274,5 +2290,43 @@ mod tests {
         assert_eq!(deq.pop_front_if(|_| true), None);
         assert_eq!(deq.pop_back_if(|_| true), None);
         assert!(deq.is_empty());
+    }
+
+    #[test]
+    fn test_use_after_free_clear() {
+        // See https://github.com/rust-embedded/heapless/issues/646
+
+        static COUNT: AtomicI32 = AtomicI32::new(0);
+
+        #[derive(Debug)]
+        #[allow(unused)]
+        struct Dropper();
+
+        impl Dropper {
+            fn new() -> Self {
+                COUNT.fetch_add(1, Relaxed);
+                Self()
+            }
+            fn count() -> i32 {
+                COUNT.load(Relaxed)
+            }
+        }
+        impl Drop for Dropper {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Relaxed);
+                panic!("Testing  panicking");
+            }
+        }
+
+        let mut deque = Deque::<Dropper, 5>::new();
+        deque.push_back(Dropper::new()).unwrap();
+        // Don't panic on dropping of the deque
+        let mut deque = ManuallyDrop::new(deque);
+        let mut unwind_safe_deque = AssertUnwindSafe(&mut deque);
+
+        catch_unwind(move || unwind_safe_deque.clear()).unwrap_err();
+        assert_eq!(deque.len(), 0);
+        deque.clear();
+        assert_eq!(Dropper::count(), 0);
     }
 }

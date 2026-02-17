@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+- Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context
+of panicking drop implementations.
 - Added `from_bytes_truncating_at_nul` to `CString`
 - Added `CString::{into_bytes, into_bytes_with_nul, into_string}`
 - Added `pop_front_if` and `pop_back_if` to `Deque`

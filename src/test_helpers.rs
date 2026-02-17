@@ -2,7 +2,7 @@ macro_rules! droppable {
     () => {
         static COUNT: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
 
-        #[derive(Eq, Ord, PartialEq, PartialOrd)]
+        #[derive(Eq, Ord, PartialEq, PartialOrd, Debug, Hash)]
         struct Droppable(i32);
         impl Droppable {
             fn new() -> Self {

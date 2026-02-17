@@ -308,24 +308,30 @@ impl<T: Copy, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
 
     /// Clears the buffer, replacing every element with the given value.
     pub fn clear_with(&mut self, t: T) {
-        // SAFETY: we reset the values just after
-        unsafe { self.drop_contents() };
-        self.write_at = 0;
-        self.filled = true;
+        self.clear();
 
         for d in self.data.borrow_mut() {
             *d = MaybeUninit::new(t);
         }
+        self.write_at = 0;
+        self.filled = true;
     }
 }
 
 impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
     /// Clears the buffer
     pub fn clear(&mut self) {
-        // SAFETY: we reset the values just after
-        unsafe { self.drop_contents() };
-        self.write_at = 0;
-        self.filled = false;
+        struct Guard<'a, T, S: HistoryBufStorage<T> + ?Sized>(&'a mut HistoryBufInner<T, S>);
+        impl<'a, T, S: HistoryBufStorage<T> + ?Sized> Drop for Guard<'a, T, S> {
+            fn drop(&mut self) {
+                self.0.write_at = 0;
+                self.0.filled = false;
+            }
+        }
+        let this = Guard(self);
+        // SAFETY: Guard will be dropped and lead to a consistent empty state even in the case of a
+        // panic leading to unwinding during the dropping of an item
+        unsafe { this.0.drop_contents() };
     }
 }
 
@@ -659,6 +665,11 @@ mod tests {
         fmt::Debug,
         sync::atomic::{AtomicUsize, Ordering},
     };
+    use std::{
+        mem::ManuallyDrop,
+        panic::{catch_unwind, AssertUnwindSafe},
+        sync::atomic::AtomicI32,
+    };
 
     use static_assertions::assert_not_impl_any;
 
@@ -981,6 +992,44 @@ mod tests {
                 assert_eq!(a.assume_init(), 0);
             }
         }
+    }
+
+    #[test]
+    fn test_use_after_free_clear() {
+        // See https://github.com/rust-embedded/heapless/issues/646
+
+        static COUNT: AtomicI32 = AtomicI32::new(0);
+
+        #[derive(Debug)]
+        #[allow(unused)]
+        struct Dropper();
+
+        impl Dropper {
+            fn new() -> Self {
+                COUNT.fetch_add(1, Ordering::Relaxed);
+                Self()
+            }
+            fn count() -> i32 {
+                COUNT.load(Ordering::Relaxed)
+            }
+        }
+        impl Drop for Dropper {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Ordering::Relaxed);
+                panic!("Testing  panicking");
+            }
+        }
+
+        let mut history_buf = HistoryBuf::<Dropper, 5>::new();
+        history_buf.write(Dropper::new());
+        // Don't panic on dropping of the history_buf
+        let mut history_buf = ManuallyDrop::new(history_buf);
+        let mut unwind_safe_history_buf = AssertUnwindSafe(&mut history_buf);
+
+        catch_unwind(move || unwind_safe_history_buf.clear()).unwrap_err();
+        assert_eq!(history_buf.len(), 0);
+        history_buf.clear();
+        assert_eq!(Dropper::count(), 0);
     }
 
     fn _test_variance<'a: 'b, 'b>(x: HistoryBuf<&'a (), 42>) -> HistoryBuf<&'b (), 42> {
