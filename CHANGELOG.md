@@ -39,6 +39,10 @@ of panicking drop implementations.
 - Deprecate `mpmc` (see [#583](https://github.com/rust-embedded/heapless/issues/583#issuecomment-3469297720))
 - Fixed initialization of the `ArcBlock<T>` and `BoxBlock<T>` types, fixing possible Undefined Behavior
 
+### Added
+
+- Added `Vec` fuzz test harness + CI runner.
+
 ## [v0.9.1] - 2025-08-19
 
 ### Added
