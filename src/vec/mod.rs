@@ -621,17 +621,21 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     }
 
     /// Extends the vec from an iterator.
-    ///
-    /// # Panic
-    ///
-    /// Panics if the vec cannot hold all elements of the iterator.
-    pub fn extend<I>(&mut self, iter: I)
+    pub fn extend<I>(&mut self, iter: I) -> Result<(), CapacityError>
     where
         I: IntoIterator<Item = T>,
     {
-        for elem in iter {
-            self.push(elem).ok().unwrap();
-        }
+        // Save current length to restore it later in case of an error.
+        let len = self.len();
+
+        iter.into_iter()
+            .try_for_each(|elem| self.push(elem))
+            .map_err(|_| {
+                // SAFETY: This is the length from before pushing elements for extending this
+                // vector.
+                unsafe { self.set_len(len) };
+                CapacityError
+            })
     }
 
     /// Clones and appends all elements in a slice to the `Vec`.
@@ -1404,7 +1408,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> Extend<T> for VecInner<T, LenT
     where
         I: IntoIterator<Item = T>,
     {
-        self.extend(iter);
+        self.extend(iter).expect("VecInner::extend overflow");
     }
 }
 
@@ -1416,7 +1420,8 @@ where
     where
         I: IntoIterator<Item = &'a T>,
     {
-        self.extend(iter.into_iter().cloned());
+        self.extend(iter.into_iter().cloned())
+            .expect("Vec::extend overflow");
     }
 }
 
@@ -1808,7 +1813,7 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use super::{Vec, VecView};
+    use super::{CapacityError, Vec, VecView};
 
     // Ensure a `Vec` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Vec<*const (), 4>: Send);
@@ -2117,6 +2122,22 @@ mod tests {
 
         assert_eq!(v.pop(), None);
         assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn extend_size_limit() {
+        let mut v: Vec<u8, 4> = Vec::new();
+        assert!(v.extend(core::iter::empty()).is_ok());
+        assert!(v.is_empty());
+
+        assert!(v.extend(core::iter::repeat_n(42, 2)).is_ok());
+        assert_eq!(&v, &[42, 42]);
+
+        matches!(v.extend(core::iter::repeat_n(0, 3)), Err(CapacityError));
+        assert_eq!(&v, &[42, 42]);
+
+        assert!(v.extend(core::iter::repeat_n(0, 2)).is_ok());
+        assert_eq!(&v, &[42, 42, 0, 0]);
     }
 
     #[test]

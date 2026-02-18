@@ -586,7 +586,9 @@ where
         I: IntoIterator<Item = (K, V)>,
     {
         let mut out = Self::new();
-        out.buffer.extend(iter);
+        out.buffer
+            .extend(iter)
+            .expect("LinearMap::from_iter overflow");
         out
     }
 }

@@ -12,6 +12,7 @@ of panicking drop implementations.
 - Added `from_bytes_truncating_at_nul` to `CString`
 - Added `CString::{into_bytes, into_bytes_with_nul, into_string}`
 - Added `pop_front_if` and `pop_back_if` to `Deque`
+- Replace panicking in `VecInner::extend` with returning a `Result`.
 
 ## [v0.9.2] 2025-11-12
 
