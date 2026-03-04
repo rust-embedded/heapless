@@ -2,13 +2,13 @@
 use core::{
     borrow::Borrow,
     fmt,
-    hash::{BuildHasher, Hash},
+    hash::{BuildHasher, BuildHasherDefault, Hash},
 };
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-use hash32::{BuildHasherDefault, FnvHasher};
+use hash32::FnvHasher;
 
 use crate::index_map::{self, IndexMap};
 
