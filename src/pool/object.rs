@@ -420,7 +420,7 @@ mod tests {
 
         let object = MyObjectPool.request().unwrap();
 
-        let raw = &*object as *const Zst4096;
+        let raw = std::ptr::from_ref::<Zst4096>(&*object);
         assert_eq!(0, raw as usize % 4096);
     }
 }
