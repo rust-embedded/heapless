@@ -495,7 +495,7 @@ mod tests {
 
         let boxed = MyBoxPool.alloc(Zst4096).ok().unwrap();
 
-        let raw = &*boxed as *const Zst4096;
+        let raw = std::ptr::from_ref::<Zst4096>(&*boxed);
         assert_eq!(0, raw as usize % 4096);
     }
 

@@ -542,7 +542,7 @@ mod tests {
 
         let arc = MyArcPool.alloc(Zst4096).ok().unwrap();
 
-        let raw = &*arc as *const Zst4096;
+        let raw = std::ptr::from_ref::<Zst4096>(&*arc);
         assert_eq!(0, raw as usize % 4096);
     }
 }

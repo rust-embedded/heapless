@@ -357,7 +357,7 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
 
         // Take out two simultaneous borrows. The &mut String won't be accessed
         // until iteration is over, in Drop.
-        let self_ptr = self.as_mut_view() as *mut _;
+        let self_ptr = core::ptr::from_mut(self.as_mut_view());
         // SAFETY: `slice::range` and `is_char_boundary` do the appropriate bounds checks.
         let chars_iter = unsafe { self.get_unchecked(start..end) }.chars();
 

@@ -926,7 +926,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             // as the two slices combined should be more than `len`.
             if len > front.len() {
                 let begin = len - front.len();
-                let drop_back = back.get_unchecked_mut(begin..) as *mut _;
+                let drop_back = core::ptr::from_mut(back.get_unchecked_mut(begin..));
 
                 // Self::to_physical_index returns the index `len` units _after_ the front cursor,
                 // meaning we can use it to find the decremented index for `back` for non-contiguous
@@ -939,8 +939,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             } else {
                 // Otherwise, we know back's entire contents need to be dropped,
                 // since the desired length never reaches into it.
-                let drop_back = back as *mut _;
-                let drop_front = front.get_unchecked_mut(len..) as *mut _;
+                let drop_back = core::ptr::from_mut(back);
+                let drop_front = core::ptr::from_mut(front.get_unchecked_mut(len..));
 
                 self.back = self.to_physical_index(len);
                 self.full = false;
