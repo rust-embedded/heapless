@@ -6,7 +6,7 @@ use core::{
     fmt, hash,
     iter::FusedIterator,
     marker::PhantomData,
-    mem::{self, ManuallyDrop, MaybeUninit},
+    mem::{ManuallyDrop, MaybeUninit},
     ops::{self, Range, RangeBounds},
     ptr::{self, NonNull},
     slice,
@@ -16,7 +16,7 @@ use core::{
 use zeroize::Zeroize;
 
 use crate::{
-    len_type::{check_capacity_fits, LenType},
+    len_type::{check_capacity_fits, to_len_type, LenType},
     CapacityError,
 };
 
@@ -355,7 +355,7 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
     ///
     /// If the length of the provided array is greater than the capacity of the
     /// vector a compile-time error will be produced.
-    pub fn from_array<const M: usize>(src: [T; M]) -> Self {
+    pub const fn from_array<const M: usize>(src: [T; M]) -> Self {
         const {
             assert!(N >= M);
         }
@@ -364,26 +364,24 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // any Drop code for T.
         let src = ManuallyDrop::new(src);
 
-        if N == M {
-            Self {
-                phantom: PhantomData,
-                len: LenT::from_usize(N),
-                // NOTE(unsafe) ManuallyDrop<[T; M]> and [MaybeUninit<T>; N]
-                // have the same layout when N == M.
-                buffer: unsafe { mem::transmute_copy(&src) },
-            }
-        } else {
-            let mut v = Self::new();
+        let len: LenT = to_len_type(M);
 
-            for (src_elem, dst_elem) in src.iter().zip(v.buffer.buffer.iter_mut()) {
-                // NOTE(unsafe) src element is not going to drop as src itself
-                // is wrapped in a ManuallyDrop.
-                dst_elem.write(unsafe { ptr::read(src_elem) });
-            }
+        let mut v = Self::new();
 
-            unsafe { v.set_len(M) };
-            v
-        }
+        // MaybeUninit::deref is non-const, so we just cast to it's internal value.
+        let src_ptr: *const T = ptr::from_ref(&src).cast();
+
+        // Cast from buffer's [MaybeUninit<T>] to [T].
+        let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
+
+        // SAFETY: Move/copy data from src to v's internal buffer.
+        // * Using src_ptr as `*const T` is safe since src's ManuallyDrop<[T; M]> is transparent.
+        // * Using dst_ptr as `*mut T` is safe since v's [MaybeUninit<T>; N] is an array of
+        //   transparent types.
+        unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
+        v.len = len;
+
+        v
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
@@ -465,6 +463,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// If the returned iterator goes out of scope without being dropped (due to
     /// [`mem::forget`], for example), the vector may have lost and leaked
     /// elements arbitrarily, including elements outside the range.
+    ///
+    /// [`mem::forget`]: core::mem::forget
     ///
     /// # Examples
     ///
