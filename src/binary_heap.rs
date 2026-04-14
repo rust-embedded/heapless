@@ -180,37 +180,6 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
             data: Vec::new(),
         }
     }
-
-    /// Creates a new `BinaryHeap` from a `Vec<T,N>`.
-    /// The heap uses the vector as its backing storage, no additional space is required.
-    /// The elements in the vector are rearranged to create the heap.
-    /// The time complexity is *O*(n).
-    ///
-    /// ```
-    /// use heapless::binary_heap::{BinaryHeap, Max};
-    /// use heapless::vec::Vec;
-    ///
-    /// let vec = Vec::from_array([4, 1, 8, 7, 3, 0, 6, 9, 2, 5]);
-    /// let heap: BinaryHeap<_, Max, 12> = BinaryHeap::from_vec(vec);
-    /// assert_eq!(heap.len(), 10);
-    /// assert_eq!(heap.capacity(), 12);
-    /// assert_eq!(heap.peek(), Some(&9));
-    /// ```
-    pub fn from_vec(vec: Vec<T, N, usize>) -> Self
-    where
-        T: Ord,
-        K: Kind,
-    {
-        let mut heap = Self {
-            _kind: PhantomData,
-            data: vec,
-        };
-        let len = heap.len();
-        for i in (0..len / 2).rev() {
-            heap.sift_down_to_bottom(i, len);
-        }
-        heap
-    }
 }
 
 impl<T, K, const N: usize> BinaryHeap<T, K, N> {
@@ -742,6 +711,19 @@ where
     }
 }
 
+impl<T: Ord, K: Kind, const N: usize> From<Vec<T, N, usize>> for BinaryHeap<T, K, N> {
+    fn from(vec: Vec<T, N, usize>) -> Self {
+        let mut heap = Self {
+            _kind: PhantomData,
+            data: vec,
+        };
+        let len = heap.len();
+        for i in (0..len / 2).rev() {
+            heap.sift_down_to_bottom(i, len);
+        }
+        heap
+    }
+}
 impl<T, K, S> fmt::Debug for BinaryHeapInner<T, K, S>
 where
     K: Kind,
@@ -977,7 +959,7 @@ mod tests {
         use crate::vec::Vec;
 
         let src: Vec<_, 16, _> = Vec::from_array([4, 1, 12, 8, 7, 3, 0, 6, 9, 2, 5, 11, 10]);
-        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from_vec(src);
+        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from(src);
         assert_eq!(heap.len(), 13);
         assert_eq!(heap.capacity(), 16);
         assert_eq!(
@@ -992,7 +974,7 @@ mod tests {
         use core::array;
 
         let src: Vec<_, 16, _> = Vec::from_array([4, 1, 12, 8, 7, 3, 0, 6, 9, 2, 5, 11, 10]);
-        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from_vec(src);
+        let heap: BinaryHeap<u8, Min, 16> = BinaryHeap::from(src);
         let dst = heap.into_sorted_vec();
         assert_eq!(dst.len(), 13);
         assert_eq!(dst.capacity(), 16);
