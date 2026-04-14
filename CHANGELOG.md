@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [v0.8.1] - 2026-04-15
 
 ### Fixed
 
@@ -569,6 +569,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Initial release
 
 [Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.8.0...HEAD
+[v0.8.1]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
 [v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/rust-embedded/heapless/compare/v0.7.14...v0.7.15
