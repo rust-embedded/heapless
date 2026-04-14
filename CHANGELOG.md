@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- spsc: Fix integer overflow in iterators when N > usize::MAX/2 and the queue loops.
+- spsc: Fix integer overflow leading to a panic in `len` when N == usize::MAX and debug assertions are enabled.
+
 ## [v0.8.0] - 2023-11-07
 
 ### Added
