@@ -110,7 +110,10 @@ impl<T, const N: usize> Queue<T, N> {
 
     #[inline]
     fn increment(val: usize) -> usize {
-        (val + 1) % N
+        // We know that N <= usize::MAX
+        // So this can only overflow if N == usize::MAX
+        // and in this case the overflow will be equivalent to the modulo N operation
+        val.wrapping_add(1) % N
     }
 
     /// Creates an empty queue with a fixed capacity of `N - 1`
@@ -363,7 +366,11 @@ impl<'a, T, const N: usize> Iterator for Iter<'a, T, N> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
 
-            let i = (head + self.index) % N;
+            let i = match head.checked_add(self.index) {
+                Some(i) if i >= N => i - N,
+                Some(i) => i,
+                None => head.wrapping_add(self.index).wrapping_sub(N),
+            };
             self.index += 1;
 
             Some(unsafe { &*(self.rb.buffer.get_unchecked(i).get() as *const T) })
@@ -380,7 +387,11 @@ impl<'a, T, const N: usize> Iterator for IterMut<'a, T, N> {
         if self.index < self.len {
             let head = self.rb.head.load(Ordering::Relaxed);
 
-            let i = (head + self.index) % N;
+            let i = match head.checked_add(self.index) {
+                Some(i) if i >= N => i - N,
+                Some(i) => i,
+                None => head.wrapping_add(self.index).wrapping_sub(N),
+            };
             self.index += 1;
 
             Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
@@ -396,7 +407,11 @@ impl<'a, T, const N: usize> DoubleEndedIterator for Iter<'a, T, N> {
             let head = self.rb.head.load(Ordering::Relaxed);
 
             // self.len > 0, since it's larger than self.index > 0
-            let i = (head + self.len - 1) % N;
+            let i = match head.checked_add(self.len - 1) {
+                Some(i) if i >= N => i - N,
+                Some(i) => i,
+                None => head.wrapping_add(self.len - 1).wrapping_sub(N),
+            };
             self.len -= 1;
             Some(unsafe { &*(self.rb.buffer.get_unchecked(i).get() as *const T) })
         } else {
@@ -411,7 +426,11 @@ impl<'a, T, const N: usize> DoubleEndedIterator for IterMut<'a, T, N> {
             let head = self.rb.head.load(Ordering::Relaxed);
 
             // self.len > 0, since it's larger than self.index > 0
-            let i = (head + self.len - 1) % N;
+            let i = match head.checked_add(self.len - 1) {
+                Some(i) if i >= N => i - N,
+                Some(i) => i,
+                None => head.wrapping_add(self.len - 1).wrapping_sub(N),
+            };
             self.len -= 1;
             Some(unsafe { &mut *(self.rb.buffer.get_unchecked(i).get() as *mut T) })
         } else {
@@ -590,7 +609,10 @@ impl<'a, T, const N: usize> Producer<'a, T, N> {
 
 #[cfg(test)]
 mod tests {
+    use super::AtomicUsize;
     use crate::spsc::Queue;
+    use core::cell::UnsafeCell;
+    use core::mem::MaybeUninit;
     use hash32::Hasher;
 
     #[test]
@@ -903,5 +925,75 @@ mod tests {
             hash2
         };
         assert_eq!(hash1, hash2);
+    }
+
+    // Test for some integer overflow bugs. See
+    // https://github.com/rust-embedded/heapless/pull/652#discussion_r3046630717
+    // for more info
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn test_len_overflow() {
+        let mut queue = Queue::<(), { usize::MAX }> {
+            head: AtomicUsize::new(usize::MAX),
+            tail: AtomicUsize::new(2),
+            buffer: [const { UnsafeCell::new(MaybeUninit::new(())) }; usize::MAX],
+        };
+        queue.enqueue(()).unwrap();
+        queue.enqueue(()).unwrap();
+
+        let collected: Vec<_> = queue.iter().collect();
+        assert_eq!(&collected, &[&(); 4]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn test_usize_overflow_iter() {
+        let queue = Queue::<(), { usize::MAX - 1 }> {
+            head: AtomicUsize::new(usize::MAX - 3),
+            tail: AtomicUsize::new(2),
+            buffer: [const { UnsafeCell::new(MaybeUninit::new(())) }; usize::MAX - 1],
+        };
+
+        let collected: Vec<_> = queue.iter().collect();
+        assert_eq!(&collected, &[&(); 4]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn test_usize_overflow_iter_mut() {
+        let mut queue = Queue::<(), { usize::MAX - 1 }> {
+            head: AtomicUsize::new(usize::MAX - 3),
+            tail: AtomicUsize::new(2),
+            buffer: [const { UnsafeCell::new(MaybeUninit::new(())) }; usize::MAX - 1],
+        };
+
+        let collected: Vec<_> = queue.iter_mut().collect();
+        assert_eq!(&collected, &[&(); 4]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn test_usize_overflow_iter_rev() {
+        let queue = Queue::<(), { usize::MAX - 1 }> {
+            head: AtomicUsize::new(usize::MAX - 3),
+            tail: AtomicUsize::new(2),
+            buffer: [const { UnsafeCell::new(MaybeUninit::new(())) }; usize::MAX - 1],
+        };
+
+        let collected: Vec<_> = queue.iter().rev().collect();
+        assert_eq!(&collected, &[&(); 4]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn test_usize_overflow_iter_mut_rev() {
+        let mut queue = Queue::<(), { usize::MAX - 1 }> {
+            head: AtomicUsize::new(usize::MAX - 3),
+            tail: AtomicUsize::new(2),
+            buffer: [const { UnsafeCell::new(MaybeUninit::new(())) }; usize::MAX - 1],
+        };
+
+        let collected: Vec<_> = queue.iter_mut().rev().collect();
+        assert_eq!(&collected, &[&(); 4]);
     }
 }
