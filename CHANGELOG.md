@@ -5,13 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [v0.7.18] - 2026-04-15
 
 ### Added
 
 ### Changed
 
 ### Fixed
+
+- spsc: Fix integer overflow in iterators when N > usize::MAX/2 and the queue loops.
+- spsc: Fix integer overflow leading to a panic in `len` when N == usize::MAX and debug assertions are enabled.
 
 ## [v0.7.17] - 2023-12-04
 
@@ -525,6 +528,8 @@ architecture.
 - Initial release
 
 [Unreleased]: https://github.com/japaric/heapless/compare/v0.7.16...HEAD
+[v0.7.18]: https://github.com/japaric/heapless/compare/v0.7.17...v0.7.18
+[v0.7.17]: https://github.com/japaric/heapless/compare/v0.7.16...v0.7.17
 [v0.7.16]: https://github.com/japaric/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/japaric/heapless/compare/v0.7.14...v0.7.15
 [v0.7.14]: https://github.com/japaric/heapless/compare/v0.7.13...v0.7.14
