@@ -15,6 +15,9 @@ of panicking drop implementations.
 - Added `CString::{into_bytes, into_bytes_with_nul, into_string}`
 - Added `pop_front_if` and `pop_back_if` to `Deque`
 - Made `Vec::from_array` const.
+- Fixed long division being instroduced by the const-erasure in spsc
+- spsc: Fix integer overflow in iterators when N > usize::MAX/2 and the queue loops.
+- spsc: Fix integer overflow leading to a panic in `len` when N == usize::MAX and debug assertions are enabled.
 
 ## [v0.9.2] 2025-11-12
 
