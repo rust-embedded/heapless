@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [v0.8.1] - 2026-04-15
+
+### Fixed
+
+- spsc: Fix integer overflow in iterators when N > usize::MAX/2 and the queue loops.
+- spsc: Fix integer overflow leading to a panic in `len` when N == usize::MAX and debug assertions are enabled.
 
 ## [v0.8.0] - 2023-11-07
 
@@ -564,6 +569,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Initial release
 
 [Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.8.0...HEAD
+[v0.8.1]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/rust-embedded/heapless/compare/v0.7.16...v0.8.0
 [v0.7.16]: https://github.com/rust-embedded/heapless/compare/v0.7.15...v0.7.16
 [v0.7.15]: https://github.com/rust-embedded/heapless/compare/v0.7.14...v0.7.15
