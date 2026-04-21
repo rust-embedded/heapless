@@ -49,6 +49,10 @@ of panicking drop implementations.
 
 - Added optional `embedded_io::Write` impl for `Vec`.
 
+### Added
+
+- Added `from_vec` and `into_sorted_vec` implementations for `BinaryHeap`.
+
 ### Changed
 
 - `bytes::BufMut` is now implemented on `VecInner`.
