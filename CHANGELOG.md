@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.9.3] 2025-04-15
+
 - Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context
 of panicking drop implementations.
 - Added `from_bytes_truncating_at_nul` to `CString`
@@ -19,9 +21,6 @@ of panicking drop implementations.
 - Added `from_bytes_truncating_at_nul` to `CString`
 - Added missing `?Sized` bounds in `PartialEq` implementations 
 - Make `PartialEq` implementation for `DequeInner` and `HistoryBufInner` generic over the storage of the RHS
-
-## [v0.9.2] 2025-11-12
-
 - Minor fixes to module docs.
 - Make MSRV of 1.87.0 explicit.
 - Implement `Default` for `CapacityError`.
@@ -742,7 +741,8 @@ of panicking drop implementations.
 
 - Initial release
 
-[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.3...HEAD
+[v0.9.3]: https://github.com/rust-embedded/heapless/compare/v0.9.2...v0.9.3
 [v0.9.2]: https://github.com/rust-embedded/heapless/compare/v0.9.1...v0.9.2
 [v0.9.1]: https://github.com/rust-embedded/heapless/compare/v0.9.0...v0.9.1
 [v0.9.0]: https://github.com/rust-embedded/heapless/compare/v0.8.0...v0.9.0
