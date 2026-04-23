@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Added `SortedLinearMap`, a fixed-capacity map that keeps entries sorted by key and performs lookups via binary search (analogous to `BTreeMap` as `LinearMap` is to `HashMap`). Includes `first_key_value`/`last_key_value`, `pop_first`/`pop_last`, `range`/`range_mut`, `entry`, `retain`, serde, and zeroize support.
+
 ## [v0.9.3] 2025-04-15
 
 - Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context
