@@ -6,6 +6,7 @@ use crate::{
     history_buf::{HistoryBufInner, HistoryBufStorage},
     len_type::LenType,
     linear_map::{LinearMapInner, LinearMapStorage},
+    sorted_linear_map::{SortedLinearMapInner, SortedLinearMapStorage},
     string::{StringInner, StringStorage},
     vec::{VecInner, VecStorage},
     IndexMap, IndexSet,
@@ -120,6 +121,23 @@ where
 impl<K, V, S: LinearMapStorage<K, V> + ?Sized> Serialize for LinearMapInner<K, V, S>
 where
     K: Eq + Serialize,
+    V: Serialize,
+{
+    fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
+    where
+        SER: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.len()))?;
+        for (k, v) in self {
+            map.serialize_entry(k, v)?;
+        }
+        map.end()
+    }
+}
+
+impl<K, V, S: SortedLinearMapStorage<K, V> + ?Sized> Serialize for SortedLinearMapInner<K, V, S>
+where
+    K: Ord + Serialize,
     V: Serialize,
 {
     fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>

@@ -100,6 +100,7 @@
 //! - [`IndexMap`]: A hash table.
 //! - [`IndexSet`]: A hash set.
 //! - [`LinearMap`]: A linear map.
+//! - [`SortedLinearMap`]: A map with entries kept sorted by key.
 //! - [`SortedLinkedList`](sorted_linked_list::SortedLinkedList): A sorted linked list.
 //! - [`String`]: A string.
 //! - [`Vec`]: A vector.
@@ -157,6 +158,7 @@ pub use index_map::IndexMap;
 pub use index_set::IndexSet;
 pub use len_type::LenType;
 pub use linear_map::LinearMap;
+pub use sorted_linear_map::SortedLinearMap;
 pub use string::String;
 
 pub use vec::{Vec, VecView};
@@ -173,6 +175,7 @@ pub mod index_set;
 mod len_type;
 pub mod linear_map;
 mod slice;
+pub mod sorted_linear_map;
 pub mod storage;
 pub mod string;
 pub mod vec;
