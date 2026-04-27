@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
+
 ## [v0.9.3] 2025-04-15
 
-- Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context
-of panicking drop implementations.
+- Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context of panicking drop implementations.
 - Added `from_bytes_truncating_at_nul` to `CString`
 - Added `CString::{into_bytes, into_bytes_with_nul, into_string}`
 - Added `pop_front_if` and `pop_back_if` to `Deque`
