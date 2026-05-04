@@ -385,9 +385,12 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> HistoryBufInner<T, S> {
 
     /// Writes an element to the buffer, overwriting the oldest value.
     pub fn write(&mut self, t: T) {
+        let _tmp;
         if self.filled {
-            // Drop the old before we overwrite it.
-            unsafe { ptr::drop_in_place(self.data.borrow_mut()[self.write_at].as_mut_ptr()) }
+            // Copy the old so that it is dropped at the end
+            // We don't drop it now so that a panic in its destructor doesn't
+            // lead to an invalid state
+            _tmp = unsafe { ptr::read(self.data.borrow_mut()[self.write_at].as_mut_ptr()) };
         }
         self.data.borrow_mut()[self.write_at] = MaybeUninit::new(t);
 
@@ -994,10 +997,11 @@ mod tests {
         }
     }
 
+    // Tests that a panic in in a downstream drop implementation does not lead to an
+    // inconsistent state during unwinding that could lead to undefined behaviour.
+    // See https://github.com/rust-embedded/heapless/issues/646
     #[test]
     fn test_use_after_free_clear() {
-        // See https://github.com/rust-embedded/heapless/issues/646
-
         static COUNT: AtomicI32 = AtomicI32::new(0);
 
         #[derive(Debug)]
@@ -1029,6 +1033,45 @@ mod tests {
         catch_unwind(move || unwind_safe_history_buf.clear()).unwrap_err();
         assert_eq!(history_buf.len(), 0);
         history_buf.clear();
+        assert_eq!(Dropper::count(), 0);
+    }
+
+    // Tests that a panic in in a downstream drop implementation does not lead to an
+    // inconsistent state during unwinding that could lead to undefined behaviour.
+    // See https://github.com/rust-embedded/heapless/issues/659
+    #[test]
+    fn test_use_after_free_write() {
+        static COUNT: AtomicI32 = AtomicI32::new(0);
+
+        #[derive(Debug)]
+        struct Dropper(bool);
+
+        impl Dropper {
+            fn new(should_panic: bool) -> Self {
+                COUNT.fetch_add(1, Ordering::Relaxed);
+                Self(should_panic)
+            }
+            fn count() -> i32 {
+                COUNT.load(Ordering::Relaxed)
+            }
+        }
+        impl Drop for Dropper {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Ordering::Relaxed);
+                assert!(!self.0, "Testing  panicking");
+            }
+        }
+
+        let mut histbuf = HistoryBuf::<Dropper, 5>::new();
+        histbuf.write(Dropper::new(true));
+        histbuf.write(Dropper::new(false));
+        histbuf.write(Dropper::new(false));
+        histbuf.write(Dropper::new(false));
+        histbuf.write(Dropper::new(false));
+        let mut unwind_safe = AssertUnwindSafe(&mut histbuf);
+
+        catch_unwind(move || unwind_safe.write(Dropper::new(false))).unwrap_err();
+        drop(histbuf);
         assert_eq!(Dropper::count(), 0);
     }
 

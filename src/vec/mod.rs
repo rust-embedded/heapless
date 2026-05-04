@@ -745,7 +745,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         unsafe {
             // Note: It's intentional that this is `>` and not `>=`.
             //       Changing it to `>=` has negative performance
-            //       implications in some cases. See rust-lang/rust#78884 for more.
+            //       implications in some cases. See https://github.com/rust-lang/rust/issues/78884 for more.
             if len > self.len() {
                 return;
             }
@@ -1571,11 +1571,21 @@ where
 
 impl<T, LenT: LenType, const N: usize> Drop for IntoIter<T, N, LenT> {
     fn drop(&mut self) {
+        let len = self.vec.len;
+        self.vec.len = LenT::ZERO;
+        // SAFETY: `self.vec` is a vec where the first `self.next` elements have
+        // been moved through iteration. The rest a have not been consumed yet,
+        // so it is safe to create a mutable slice and drop them
+        //
+        // `self.vec.len` is set to `0` before dropping the elements so that
+        // a panicking `Drop` implementation does not result in inconsistent
+        // state during unwinding that could lead to undefined behaviour.
         unsafe {
-            // Drop all the elements that have not been moved out of vec
-            ptr::drop_in_place(&mut self.vec.as_mut_slice()[self.next.into_usize()..]);
-            // Prevent dropping of other elements
-            self.vec.len = LenT::ZERO;
+            let remaining = slice::from_raw_parts_mut(
+                self.vec.as_mut_ptr().add(self.next.into_usize()),
+                (len - self.next).into_usize(),
+            );
+            ptr::drop_in_place(remaining);
         }
     }
 }
@@ -1805,6 +1815,10 @@ where
 #[cfg(test)]
 mod tests {
     use core::fmt::Write;
+    use std::{
+        panic::catch_unwind,
+        sync::atomic::{AtomicI32, Ordering::Relaxed},
+    };
 
     use static_assertions::assert_not_impl_any;
 
@@ -1848,7 +1862,7 @@ mod tests {
     }
 
     #[test]
-    fn drop() {
+    fn test_drop() {
         droppable!();
 
         {
@@ -2383,6 +2397,41 @@ mod tests {
         for i in 0..8 {
             assert_eq!(view[i], 0);
         }
+    }
+
+    // Tests that a panic in a downstream drop implementation does not lead to an
+    // inconsistent state during unwinding that could lead to undefined behaviour.
+    // For more info see https://github.com/rust-embedded/heapless/issues/659
+    #[test]
+    fn test_use_after_free_intoiter_drop() {
+        static COUNT: AtomicI32 = AtomicI32::new(0);
+
+        #[derive(Debug)]
+        #[allow(unused)]
+        struct Dropper();
+
+        impl Dropper {
+            fn new() -> Self {
+                COUNT.fetch_add(1, Relaxed);
+                Self()
+            }
+            fn count() -> i32 {
+                COUNT.load(Relaxed)
+            }
+        }
+        impl Drop for Dropper {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Relaxed);
+                panic!("Testing  panicking");
+            }
+        }
+
+        let mut vec = Vec::<Dropper, 5>::new();
+        vec.push(Dropper::new()).unwrap();
+        let iterator = vec.into_iter();
+
+        catch_unwind(move || drop(iterator)).unwrap_err();
+        assert_eq!(Dropper::count(), 0);
     }
 
     fn _test_variance<'a: 'b, 'b>(x: Vec<&'a (), 42>) -> Vec<&'b (), 42> {
