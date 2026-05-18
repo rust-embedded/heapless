@@ -814,7 +814,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     ///
     /// # Examples
     ///
-    ///```
+    /// ```
     /// use heapless::Vec;
     ///
     /// let mut vec: Vec<usize, 8> = Vec::new();
@@ -823,7 +823,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// let mut p = 1;
     /// vec.resize_with(7, || { p *= 2; p }).unwrap();
     /// assert_eq!(vec, [1, 2, 3, 2, 4, 8, 16]);
-    ///```
+    /// ```
     pub fn resize_with<F>(&mut self, new_len: usize, mut f: F) -> Result<(), CapacityError>
     where
         F: FnMut() -> T,
