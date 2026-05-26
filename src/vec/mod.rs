@@ -796,7 +796,7 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         self.resize(new_len, T::default())
     }
 
-    ///  Resizes the `Vec` in-place to that `len` is equal to `new_len`.
+    ///  Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     ///  If `new_len` is greater than `len`, the `Vec` is extended by the
     ///  difference, with each additional slot filled with calling the closure
