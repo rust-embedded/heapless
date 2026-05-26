@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Added `resize_with` to `Vec`
+
 ## [v0.9.3] 2025-04-15
 
 - Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context
