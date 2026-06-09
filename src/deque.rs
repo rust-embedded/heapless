@@ -991,8 +991,9 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
         let (front, back) = self.as_mut_slices();
 
         if len > back.len() {
-            // The `back` slice remains unchanged (`len` intends to retain more elements than `back` contains),
-            // front.len() + back.len() == self.len, so `end` is non-negative and end <= front.len().
+            // The `back` slice remains unchanged (`len` intends to retain more elements than `back`
+            // contains), front.len() + back.len() == self.len, so `end` is non-negative
+            // and end <= front.len().
             let end = front.len() - (len - back.len());
 
             // Safety: `end` is always less than or equal to `front.len()`
@@ -1006,8 +1007,8 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             // Safety: Any slice passed to `drop_in_place` is valid:
             // * Only valid elements previously contained within `front` are present.
             // * The elements are valid for reading/writing, originating from a &mut [T].
-            // * Deque front cursor is moved before calling `drop_in_place`, so no value is
-            //   dropped twice if `drop_in_place` panics.
+            // * Deque front cursor is moved before calling `drop_in_place`, so no value is dropped
+            //   twice if `drop_in_place` panics.
             unsafe { ptr::drop_in_place(drop_front) }
         } else {
             /// Runs the destructor for all items in the slice when it gets dropped
@@ -1039,11 +1040,10 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             self.full = false;
 
             // Safety:
-            // * If `drop_front` causes a panic, the Dropper will still be called to drop its
-            //   slice during unwinding. In either case, front will always be
-            //   dropped before back.
-            // * Deque front cursor is moved before calling `drop_in_place`, so no value is
-            //   dropped twice if either `drop_in_place` panics.
+            // * If `drop_front` causes a panic, the Dropper will still be called to drop its slice
+            //   during unwinding. In either case, front will always be dropped before back.
+            // * Deque front cursor is moved before calling `drop_in_place`, so no value is dropped
+            //   twice if either `drop_in_place` panics.
             unsafe {
                 let _back_dropper = Dropper(&mut *drop_back);
                 ptr::drop_in_place(drop_front);
