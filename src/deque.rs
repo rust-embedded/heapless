@@ -895,59 +895,69 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// assert_eq!(buf.make_contiguous(), [5]);
     /// ```
     pub fn truncate(&mut self, len: usize) {
-        /// Runs the destructor for all items in the slice when it gets dropped (gracefully or
-        /// during unwinding).
-        struct Dropper<'a, T>(&'a mut [T]);
-
-        impl<'a, T> Drop for Dropper<'a, T> {
-            fn drop(&mut self) {
-                unsafe {
-                    ptr::drop_in_place(self.0);
-                }
-            }
+        // If new desired length is greater or equal, we don't need to act.
+        if len >= self.storage_len() {
+            return;
         }
 
-        // Safety:
-        // * Any slice passed to `drop_in_place` is valid; the second case has `len <= front.len()`
-        //   and returning on `len > self.storage_len()` ensures `begin <= back.len()` in the first
-        //   case
-        // * Deque front/back cursors are moved before calling `drop_in_place`, so no value is
-        //   dropped twice if `drop_in_place` panics
-        unsafe {
-            // If new desired length is greater or equal, we don't need to act.
-            if len >= self.storage_len() {
-                return;
+        let (front, back) = self.as_mut_slices();
+
+        // If `len` desires to keep elements past front's entire length,
+        // then only back's contents will need to be dropped
+        // as the two slices combined should be more than `len`.
+        if len > front.len() {
+            let begin = len - front.len();
+
+            // Safety: `begin` is always < `back.len()` by the above conditional.
+            let drop_back = core::ptr::from_mut(unsafe { back.get_unchecked_mut(begin..) });
+
+            // Self::to_physical_index returns the index `len` units _after_ the front cursor,
+            // meaning we can use it to find the decremented index for `back` for non-contiguous
+            // deques, as well as determine where the new "cap" for front needs
+            // to be placed for contiguous deques.
+            self.back = self.to_physical_index(len);
+            self.full = false;
+
+            // Safety: Any slice passed to `drop_in_place` is valid:
+            // * Only valid elements previously contained within `back` are present.
+            // * The elements are valid for reading/writing, originating from a &mut [T].
+            // * Deque back cursor is moved before calling `drop_in_place`, so no value is
+            //   dropped twice if `drop_in_place` panics.
+            unsafe { ptr::drop_in_place(drop_back) }
+        } else {
+            /// Runs the destructor for all items in the slice when it gets dropped (gracefully or
+            /// during unwinding).
+            struct Dropper<'a, T>(&'a mut [T]);
+            impl<'a, T> Drop for Dropper<'a, T> {
+                fn drop(&mut self) {
+                    unsafe {
+                        // Safety:
+                        // The slice given to the Dropper should only contain elements
+                        // that have been truncated by the movement of the front cursor.
+                        ptr::drop_in_place(self.0);
+                    }
+                }
             }
 
-            let (front, back) = self.as_mut_slices();
+            // As `len` is <= `front.len()`, we know all of `back` needs to be dropped,
+            // since the desired length never reaches into it.
+            let drop_back = core::ptr::from_mut(back);
 
-            // If `len` desires to keep elements past front's entire length,
-            // then only back's contents will need to be dropped
-            // as the two slices combined should be more than `len`.
-            if len > front.len() {
-                let begin = len - front.len();
-                let drop_back = core::ptr::from_mut(back.get_unchecked_mut(begin..));
+            // Safety: `len` is always less than or equal to `front.len()` by the above conditional.
+            let drop_front = core::ptr::from_mut(unsafe { front.get_unchecked_mut(len..) });
 
-                // Self::to_physical_index returns the index `len` units _after_ the front cursor,
-                // meaning we can use it to find the decremented index for `back` for non-contiguous
-                // deques, as well as determine where the new "cap" for front needs
-                // to be placed for contiguous deques.
-                self.back = self.to_physical_index(len);
-                self.full = false;
+            // Determine new "cap" for `front`,
+            // shortening it to be equal to `len` elements.
+            self.back = self.to_physical_index(len);
+            self.full = false;
 
-                ptr::drop_in_place(drop_back);
-            } else {
-                // Otherwise, we know back's entire contents need to be dropped,
-                // since the desired length never reaches into it.
-                let drop_back = core::ptr::from_mut(back);
-                let drop_front = core::ptr::from_mut(front.get_unchecked_mut(len..));
-
-                self.back = self.to_physical_index(len);
-                self.full = false;
-
-                // If `drop_front` causes a panic, the Dropper will still be called to drop it's
-                // slice during unwinding. In either case, front will always be
-                // dropped before back.
+            // Safety:
+            // * If `drop_front` causes a panic, the Dropper will still be called to drop its
+            //   slice during unwinding. In either case, front will always be
+            //   dropped before back.
+            // * Deque back cursor is moved before calling `drop_in_place`, so no value is
+            //   dropped twice if either `drop_in_place` panics.
+            unsafe {
                 let _back_dropper = Dropper(&mut *drop_back);
                 ptr::drop_in_place(drop_front);
             }
