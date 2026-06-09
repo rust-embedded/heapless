@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Added `resize_with` to `Vec`
-- Modify `Deque::truncate` to closer match the new `Deque::retain_back` implementation
 
 ## [v0.9.3] 2025-04-15
 
