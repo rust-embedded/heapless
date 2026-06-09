@@ -983,52 +983,68 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
     /// ```
     #[doc(alias = "truncate_front")]
     pub fn retain_back(&mut self, len: usize) {
-        /// Runs the destructor for all items in the slice when it gets dropped (gracefully or
-        /// during unwinding).
-        struct Dropper<'a, T>(&'a mut [T]);
-
-        impl<'a, T> Drop for Dropper<'a, T> {
-            fn drop(&mut self) {
-                unsafe {
-                    ptr::drop_in_place(self.0);
-                }
-            }
+        // If new desired length is greater or equal, we don't need to act.
+        if len >= self.storage_len() {
+            return;
         }
 
-        // Safety:
-        // * Any slice passed to `drop_in_place` is valid; the second case has `len <= back.len()`
-        //   and returning on `len > self.storage_len()` ensures `end <= front.len()` in the first
-        //   case
-        // * Deque front/back cursors are moved before calling `drop_in_place`, so no value is
-        //   dropped twice if `drop_in_place` panics
-        unsafe {
-            // If new desired length is greater or equal, we don't need to act.
-            if len >= self.storage_len() {
-                return;
+        let (front, back) = self.as_mut_slices();
+
+        if len > back.len() {
+            // The `back` slice remains unchanged (`len` intends to retain more elements than `back` contains),
+            // front.len() + back.len() == self.len, so `end` is non-negative and end <= front.len().
+            let end = front.len() - (len - back.len());
+
+            // Safety: `end` is always less than or equal to `front.len()`
+            let drop_front = core::ptr::from_mut(unsafe { front.get_unchecked_mut(..end) });
+
+            // Turn the back slice into the front slice by
+            // placing the front cursor under `self.back`, spaced by `end` elements.
+            self.front = self.to_physical_index(end);
+            self.full = false;
+
+            // Safety: Any slice passed to `drop_in_place` is valid:
+            // * Only valid elements previously contained within `front` are present.
+            // * The elements are valid for reading/writing, originating from a &mut [T].
+            // * Deque front cursor is moved before calling `drop_in_place`, so no value is
+            //   dropped twice if `drop_in_place` panics.
+            unsafe { ptr::drop_in_place(drop_front) }
+        } else {
+            /// Runs the destructor for all items in the slice when it gets dropped
+            /// (gracefully at scope's end or during panic unwinding).
+            struct Dropper<'a, T>(&'a mut [T]);
+            impl<'a, T> Drop for Dropper<'a, T> {
+                fn drop(&mut self) {
+                    // Safety:
+                    // The slice given to the Dropper should only contain elements
+                    // that have been truncated by the movement of the front cursor.
+                    unsafe { ptr::drop_in_place(self.0) }
+                }
             }
 
-            let (front, back) = self.as_mut_slices();
+            // We intend to only keep fewer elements than `back` contains,
+            // so all elements within `front` will be dropped,
+            // before proceeding to truncate values within `back`.
+            let drop_front = core::ptr::from_mut(front);
 
-            if len > back.len() {
-                let end = front.len() - (len - back.len());
-                let drop_front = core::ptr::from_mut(front.get_unchecked_mut(..end));
+            // 'end' is non-negative by the conditional above
+            let end = back.len() - len;
 
-                self.front = self.to_physical_index(end);
-                self.full = false;
+            // Safety: `end` is always less than or equal to `back.len()`
+            let drop_back = core::ptr::from_mut(unsafe { back.get_unchecked_mut(..end) });
 
-                ptr::drop_in_place(drop_front);
-            } else {
-                let drop_front = core::ptr::from_mut(front);
-                // 'end' is non-negative by the condition above
-                let end = back.len() - len;
-                let drop_back = core::ptr::from_mut(back.get_unchecked_mut(..end));
+            // Turn the back slice into the front slice,
+            // additionally shortening its length to `len`.
+            self.front = self.to_physical_index(self.storage_len() - len);
+            self.full = false;
 
-                self.front = self.to_physical_index(self.storage_len() - len);
-                self.full = false;
-
-                // If `drop_front` causes a panic, the Dropper will still be called to drop it's
-                // slice during unwinding. In either case, front will always be
-                // dropped before back.
+            // Safety:
+            // * If `drop_front` causes a panic, the Dropper will still be called to drop its
+            //   slice during unwinding. In either case, front will always be
+            //   dropped before back.
+            // * Deque front cursor is moved before calling `drop_in_place`, so no value is
+            //   dropped twice if either `drop_in_place` panics.
+            unsafe {
                 let _back_dropper = Dropper(&mut *drop_back);
                 ptr::drop_in_place(drop_front);
             }
