@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Added `resize_with` to `Vec`
+- Added `Vec::extract_if`.
 
 ## [v0.9.3] 2025-04-15
 
