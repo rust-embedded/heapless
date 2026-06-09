@@ -2164,7 +2164,7 @@ mod tests {
         // Truncating past the elements present, no change.
         tester.truncate(10);
         assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
-        println!("{} {}", tester.front, tester.back);
+
         // Truncating equal to elements present, no change.
         tester.truncate(6);
         assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
