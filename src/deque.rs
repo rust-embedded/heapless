@@ -2562,17 +2562,11 @@ mod tests {
 
             assert_eq!(Droppable::count(), LEN as i32);
 
-            let (front, back) = tester.as_slices();
-
             tester.retain_back(TRUNC);
             assert_eq!(tester.len(), TRUNC);
             assert_eq!(Droppable::count(), TRUNC as i32);
 
-            let (front, back) = tester.as_slices();
-
             tester.retain_back(0);
-
-            let (front, back) = tester.as_slices();
 
             assert_eq!(tester.len(), 0);
             assert_eq!(Droppable::count(), 0);
