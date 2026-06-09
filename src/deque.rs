@@ -2483,7 +2483,7 @@ mod tests {
         // Retaining more than the elements present, no change.
         tester.retain_back(10);
         assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
-        println!("{} {}", tester.front, tester.back);
+
         // Retaining equal to elements present, no change.
         tester.retain_back(6);
         assert_eq!(tester.as_slices(), (&[3, 2, 1][..], &[1, 2, 3][..]));
@@ -2563,19 +2563,16 @@ mod tests {
             assert_eq!(Droppable::count(), LEN as i32);
 
             let (front, back) = tester.as_slices();
-            println!("A: {:?} {:?}\n", front, back);
 
             tester.retain_back(TRUNC);
             assert_eq!(tester.len(), TRUNC);
             assert_eq!(Droppable::count(), TRUNC as i32);
 
             let (front, back) = tester.as_slices();
-            println!("B: {:?} {:?}\n", front, back);
 
             tester.retain_back(0);
 
             let (front, back) = tester.as_slices();
-            println!("C: {:?} {:?}\n", front, back);
 
             assert_eq!(tester.len(), 0);
             assert_eq!(Droppable::count(), 0);
