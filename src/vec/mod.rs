@@ -21,6 +21,7 @@ use crate::{
 };
 
 mod drain;
+mod extract_if;
 
 mod storage {
     use core::mem::MaybeUninit;
@@ -218,6 +219,7 @@ pub use storage::{OwnedVecStorage, VecStorage, ViewVecStorage};
 pub(crate) use storage::VecStorageInner;
 
 pub use drain::Drain;
+pub use extract_if::ExtractIf;
 
 /// Base struct for [`Vec`] and [`VecView`], generic over the [`VecStorage`].
 ///
@@ -509,6 +511,93 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
                 vec,
             }
         }
+    }
+
+    /// Creates an iterator which uses a closure to determine if an element in the range should be
+    /// removed.
+    ///
+    /// If the closure returns `true`, the element is removed from the vector
+    /// and yielded. If the closure returns `false`, or panics, the element
+    /// remains in the vector and will not be yielded.
+    ///
+    /// Only elements that fall in the provided range are considered for extraction, but any
+    /// elements after the range will still have to be moved if any element has been extracted.
+    ///
+    /// If the returned `ExtractIf` is not exhausted, e.g. because it is dropped without iterating
+    /// or the iteration short-circuits, then the remaining elements will be retained.
+    /// Use `extract_if().for_each(drop)` if you do not need the returned iterator,
+    /// or [`retain_mut`] with a negated predicate if you also do not need to restrict the range.
+    ///
+    /// [`retain_mut`]: VecInner::retain_mut
+    ///
+    /// Using this method is equivalent to the following code:
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// # let some_predicate = |x: &mut i32| { *x % 2 == 1 };
+    /// # let mut vec = Vec::<_, 8>::from_array([0, 1, 2, 3, 4, 5, 6]);
+    /// # let mut vec2 = vec.clone();
+    /// # let range = 1..5;
+    /// let mut i = range.start;
+    /// let end_items = vec.len() - range.end;
+    /// # let mut extracted = Vec::<_, 8>::new();
+    ///
+    /// while i < vec.len() - end_items {
+    ///     if some_predicate(&mut vec[i]) {
+    ///         let val = vec.remove(i);
+    ///         // your code here
+    /// #         extracted.push(val);
+    ///     } else {
+    ///         i += 1;
+    ///     }
+    /// }
+    ///
+    /// # let extracted2: Vec<_, 8> = vec2.extract_if(range, some_predicate).collect();
+    /// # assert_eq!(vec, vec2);
+    /// # assert_eq!(extracted, extracted2);
+    /// ```
+    ///
+    /// But `extract_if` is easier to use. `extract_if` is also more efficient,
+    /// because it can backshift the elements of the array in bulk.
+    ///
+    /// The iterator also lets you mutate the value of each element in the
+    /// closure, regardless of whether you choose to keep or remove it.
+    ///
+    /// # Panics
+    ///
+    /// If `range` is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// Splitting a vector into even and odd values, reusing the original vector:
+    ///
+    /// ```
+    /// # use heapless::Vec;
+    /// let mut numbers = Vec::<_, 16>::from_array([1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15]);
+    ///
+    /// let evens = numbers.extract_if(.., |x| *x % 2 == 0).collect::<Vec<_, 16>>();
+    /// let odds = numbers;
+    ///
+    /// assert_eq!(evens, Vec::<_, 16>::from_array([2, 4, 6, 8, 14]));
+    /// assert_eq!(odds, Vec::<_, 16>::from_array([1, 3, 5, 9, 11, 13, 15]));
+    /// ```
+    ///
+    /// Using the range argument to only process a part of the vector:
+    ///
+    /// ```
+    /// # use heapless::Vec;
+    /// let mut items = Vec::<_, 16>::from_array([0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2, 1, 2]);
+    /// let ones = items.extract_if(7.., |x| *x == 1).collect::<Vec<_, 16>>();
+    /// assert_eq!(items, [0, 0, 0, 0, 0, 0, 0, 2, 2, 2]);
+    /// assert_eq!(ones.len(), 3);
+    /// ```
+    pub fn extract_if<F, R>(&mut self, range: R, filter: F) -> ExtractIf<'_, T, F, LenT>
+    where
+        F: FnMut(&mut T) -> bool,
+        R: RangeBounds<usize>,
+    {
+        ExtractIf::new(self.as_mut_view(), filter, range)
     }
 
     /// Get a reference to the `Vec`, erasing the `N` const-generic.
