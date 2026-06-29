@@ -28,14 +28,14 @@ use super::VecView;
 pub struct ExtractIf<'a, T, F, LenT: LenType> {
     vec: &'a mut VecView<T, LenT>,
     /// The index of the item that will be inspected by the next call to `next`.
-    idx: usize,
+    idx: LenT,
     /// Elements at and beyond this point will be retained. Must be equal or smaller than
     /// `old_len`.
-    end: usize,
+    end: LenT,
     /// The number of items that have been drained (removed) thus far.
-    del: usize,
+    del: LenT,
     /// The original length of `vec` prior to draining.
-    old_len: usize,
+    old_len: LenT,
     /// The filter test predicate.
     pred: F,
 }
@@ -54,10 +54,10 @@ impl<'a, T, F, LenT: LenType> ExtractIf<'a, T, F, LenT> {
         }
         ExtractIf {
             vec,
-            idx: start,
-            del: 0,
-            end,
-            old_len,
+            idx: LenT::from_usize(start),
+            del: LenT::ZERO,
+            end: LenT::from_usize(end),
+            old_len: LenT::from_usize(old_len),
             pred,
         }
     }
@@ -82,21 +82,21 @@ where
             //
             //  Note: we can't use `vec.get_unchecked_mut(i)` here since the precondition for that
             //  function is that i < vec.len(), but we've set vec's length to zero.
-            let cur = unsafe { &mut *buf_ptr.add(i) };
+            let cur = unsafe { &mut *buf_ptr.add(i.into_usize()) };
             let drained = (self.pred)(cur);
             // Update the index *after* the predicate is called. If the index
             // is updated prior and the predicate panics, the element at this
             // index would be leaked.
-            self.idx += 1;
+            self.idx += LenT::one();
             if drained {
-                self.del += 1;
+                self.del += LenT::one();
                 // SAFETY: We never touch this element again after returning it.
                 return Some(unsafe { ptr::read(cur) });
-            } else if self.del > 0 {
+            } else if self.del > LenT::ZERO {
                 // SAFETY: `self.del` > 0, so the hole slot must not overlap with current element.
                 // We use copy for move, and never touch this element again.
                 unsafe {
-                    let hole_slot = buf_ptr.add(i - self.del);
+                    let hole_slot = buf_ptr.add((i - self.del).into_usize());
                     ptr::copy_nonoverlapping(cur, hole_slot, 1);
                 }
             }
@@ -105,26 +105,26 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (0, Some(self.end - self.idx))
+        (0, Some((self.end - self.idx).into_usize()))
     }
 }
 
 impl<T, F, LenT: LenType> Drop for ExtractIf<'_, T, F, LenT> {
     fn drop(&mut self) {
-        if self.del > 0 {
+        if self.del > LenT::ZERO {
             let ptr = self.vec.as_mut_ptr();
             // SAFETY: Trailing unchecked items must be valid since we never touch them.
             unsafe {
                 ptr::copy(
-                    ptr.cast_const().add(self.idx),
-                    ptr.add(self.idx - self.del),
-                    self.old_len - self.idx,
+                    ptr.cast_const().add(self.idx.into_usize()),
+                    ptr.add((self.idx - self.del).into_usize()),
+                    (self.old_len - self.idx).into_usize(),
                 );
             }
         }
         // SAFETY: After filling holes, all items are in contiguous memory.
         unsafe {
-            self.vec.set_len(self.old_len - self.del);
+            self.vec.set_len((self.old_len - self.del).into_usize());
         }
     }
 }
@@ -139,16 +139,20 @@ where
         let start = self.vec.as_ptr();
 
         // SAFETY: we always keep first `self.idx - self.del` elements valid.
-        let retained = unsafe { slice::from_raw_parts(start, self.idx - self.del) };
+        let retained = unsafe { slice::from_raw_parts(start, (self.idx - self.del).into_usize()) };
 
         // SAFETY: we have not yet touched elements starting at `self.idx`.
-        let valid_tail =
-            unsafe { slice::from_raw_parts(start.add(self.idx), self.old_len - self.idx) };
+        let valid_tail = unsafe {
+            slice::from_raw_parts(
+                start.add(self.idx.into_usize()),
+                (self.old_len - self.idx).into_usize(),
+            )
+        };
 
         // SAFETY: `end - idx <= old_len - idx`, because `end <= old_len`. Also `idx <= end` by
         // invariant.
         let (remainder, skipped_tail) =
-            unsafe { valid_tail.split_at_unchecked(self.end - self.idx) };
+            unsafe { valid_tail.split_at_unchecked((self.end - self.idx).into_usize()) };
 
         f.debug_struct("ExtractIf")
             .field("retained", &retained)
