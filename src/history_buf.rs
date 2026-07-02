@@ -606,13 +606,6 @@ impl<T, S: HistoryBufStorage<T> + ?Sized> Drop for HistoryBufInner<T, S> {
     }
 }
 
-impl<T, S: HistoryBufStorage<T> + ?Sized> AsRef<[T]> for HistoryBufInner<T, S> {
-    #[inline]
-    fn as_ref(&self) -> &[T] {
-        self.as_unordered_slice()
-    }
-}
-
 impl<T, S: HistoryBufStorage<T> + ?Sized> fmt::Debug for HistoryBufInner<T, S>
 where
     T: fmt::Debug,
