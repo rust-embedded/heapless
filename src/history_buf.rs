@@ -886,6 +886,17 @@ mod tests {
     }
 
     #[test]
+    fn fmt() {
+        let mut buffer: HistoryBuf<u8, 4> = HistoryBuf::new();
+        buffer.extend([0, 0, 1, 2, 3, 4]);
+
+        // Check that the unordered slice representation is not ordered by accident but that the
+        // debug representation is ordered.
+        assert_ne!(buffer.as_unordered_slice(), [1, 2, 3, 4]);
+        assert_eq!(format!("{buffer:?}"), "[1, 2, 3, 4]");
+    }
+
+    #[test]
     fn ordered() {
         // test on an empty buffer
         let buffer: HistoryBuf<u8, 6> = HistoryBuf::new();
