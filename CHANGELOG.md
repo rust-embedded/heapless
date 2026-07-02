@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed `impl Deref` for `HistoryBuf` to make accessing the raw backing array explicit (use `as_slice`).
 - Replace `HistoryBuf::as_slice` with `HistoryBuf::as_unordered_slice` to clarify ordering.
 - Replace `HistoryBuf::write` with `HistoryBuf::push` for a more consistent naming scheme.
+- Make `Debug` output for `HistoryBuf` ordered as in `HistoryBuf::oldest_ordererd`.
 
 ## [v0.9.3] 2025-04-15
 

@@ -618,7 +618,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <[T] as fmt::Debug>::fmt(self.as_unordered_slice(), f)
+        f.debug_list().entries(self.oldest_ordered()).finish()
     }
 }
 
