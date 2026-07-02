@@ -201,7 +201,7 @@ where
                 let mut values = HistoryBuf::new();
 
                 while let Some(value) = seq.next_element()? {
-                    values.write(value);
+                    values.push(value);
                 }
 
                 Ok(values)
