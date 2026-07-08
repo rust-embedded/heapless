@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed `Deque::make_contigous` leading to an inconsistent state.
 - Added `resize_with` to `Vec`
 - Added `retain_back` (aka `truncate_front`) to `Deque`
+- Added `retain` to `BinaryHeap`
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
 - Added `push_mut` to `Vec`.
 - Fixed unsoundness in `IndexMap:insert`.

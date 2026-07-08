@@ -415,13 +415,47 @@ where
     /// # Ok::<(), u8>(())
     /// ```
     pub unsafe fn pop_unchecked(&mut self) -> T {
-        let mut item = self.data.pop_unchecked();
+        // SAFETY: the binary heap is not empty, thus `0` is smaller than `self.len()`.
+        unsafe { self.remove_unchecked(0) }
+    }
 
-        if !self.is_empty() {
-            mem::swap(&mut item, self.data.as_mut_slice().get_unchecked_mut(0));
-            self.sift_down_to_bottom(0);
+    /// Retains only the elements specified by the predicate.
+    /// The elements are visited in arbitrary order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::binary_heap::{BinaryHeap, Max};
+    ///
+    /// let mut heap: BinaryHeap<_, Max, 8> = BinaryHeap::new();
+    /// heap.push(1).unwrap();
+    /// heap.push(2).unwrap();
+    /// heap.push(3).unwrap();
+    /// heap.push(4).unwrap();
+    ///
+    /// heap.retain(|&x| x % 2 == 0);
+    ///
+    /// let mut iter = heap.iter();
+    /// assert_eq!(iter.next(), Some(&4));
+    /// assert_eq!(iter.next(), Some(&2));
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        let mut len = self.len();
+        let mut index = 0;
+        while index < len {
+            let item = unsafe { self.data.get_unchecked(index) };
+            if f(item) {
+                index += 1;
+            } else {
+                // SAFETY: `index` is smaller than `self.len()`.
+                unsafe { self.remove_unchecked(index) };
+                len -= 1;
+            }
         }
-        item
     }
 
     /// Pushes an item onto the binary heap.
@@ -471,6 +505,22 @@ where
     }
 
     /* Private API */
+
+    /// Removes and returns the element at position `index` within the inner vec.
+    /// The elements are shifted to preserve the invariants of the binary heap.
+    ///
+    /// # Safety
+    ///
+    /// The length of the heap must be larger than `index`.
+    unsafe fn remove_unchecked(&mut self, index: usize) -> T {
+        let mut item = self.data.pop_unchecked();
+        if let Some(place_at_index) = self.data.get_mut(index) {
+            mem::swap(&mut item, place_at_index);
+            self.sift_down_to_bottom(index);
+        }
+        item
+    }
+
     fn sift_down_to_bottom(&mut self, mut pos: usize) {
         let end = self.len();
         let start = pos;
@@ -886,6 +936,78 @@ mod tests {
 
         assert_eq!(heap.pop(), Some(9));
         assert_eq!(heap.pop(), Some(7));
+        assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    fn retain() {
+        let mut heap = BinaryHeap::<_, Max, 8>::new();
+        heap.retain(|_: &i32| true);
+        heap.retain(|_: &i32| false);
+        assert_eq!(heap.len(), 0);
+
+        let mut heap = BinaryHeap::<_, Max, 8>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.retain(|&e| e != 1);
+        assert_eq!(heap.pop(), Some(3));
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), None);
+
+        let mut heap = BinaryHeap::<_, Max, 8>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.retain(|&e| e != 3);
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+
+        let mut heap = BinaryHeap::<_, Max, 8>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.retain(|&e| e != 2);
+        assert_eq!(heap.pop(), Some(3));
+        assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+
+        let mut heap = BinaryHeap::<_, Max, 16>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+        heap.retain(|&x| x % 2 == 0);
+
+        assert_eq!(heap.pop(), Some(100));
+        assert_eq!(heap.pop(), Some(36));
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), None);
+
+        let mut heap = BinaryHeap::<_, Max, 16>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+        heap.retain(|&x| x % 2 != 0);
+
+        assert_eq!(heap.pop(), Some(25));
+        assert_eq!(heap.pop(), Some(19));
+        assert_eq!(heap.pop(), Some(17));
+        assert_eq!(heap.pop(), Some(7));
+        assert_eq!(heap.pop(), Some(3));
         assert_eq!(heap.pop(), Some(1));
         assert_eq!(heap.pop(), None);
     }
