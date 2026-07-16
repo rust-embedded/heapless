@@ -687,13 +687,24 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         }
     }
 
-    /// Appends an `item` to the back of the collection
+    /// Appends an `item` to the back of the collection.
     ///
     /// Returns back the `item` if the vector is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
-        if self.len() < self.capacity() {
-            unsafe { self.push_unchecked(item) }
-            Ok(())
+        self.push_mut(item).map(|_| ())
+    }
+
+    /// Appends an `item` to the back of the collection.
+    ///
+    /// Returns back an mutable reference to the `item` or the `item` if the vector is full.
+    pub fn push_mut(&mut self, item: T) -> Result<&mut T, T> {
+        let len = self.len();
+        if len < self.capacity() {
+            // Safety: len has been checked to be less than capacity, enough for one more item.
+            unsafe { self.push_unchecked(item) };
+            // Safety: len which was obtained before insertion now corresponds to self.len() - 1
+            // representing the index for the just added item.
+            Ok(unsafe { self.get_unchecked_mut(len) })
         } else {
             Err(item)
         }
@@ -2571,5 +2582,14 @@ mod tests {
     }
     fn _test_variance_view<'a: 'b, 'b, 'c>(x: &'c VecView<&'a ()>) -> &'c VecView<&'b ()> {
         x
+    }
+
+    #[test]
+    fn push_mut() {
+        let mut vec = Vec::<u32, 16>::new();
+        *vec.push_mut(3).unwrap() += 2;
+        vec.push_mut(4).unwrap();
+        *vec.push_mut(5).unwrap() += 10;
+        assert_eq!(&vec[..], &[5, 4, 15]);
     }
 }
