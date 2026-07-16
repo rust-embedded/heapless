@@ -187,22 +187,19 @@ where
         let mut dist = 0;
 
         probe_loop!(probe < self.indices.len(), {
-            if let Some(pos) = self.indices[probe] {
-                let entry_hash = pos.hash();
-                // NOTE(i) we use unchecked indexing below
-                let i = pos.index();
-                debug_assert!(i < self.entries.len());
+            let pos = self.indices[probe]?;
+            let entry_hash = pos.hash();
+            // NOTE(i) we use unchecked indexing below
+            let i = pos.index();
+            debug_assert!(i < self.entries.len());
 
-                if dist > entry_hash.probe_distance(Self::mask(), probe) {
-                    // give up when probe distance is too long
-                    return None;
-                } else if entry_hash == hash
-                    && unsafe { self.entries.get_unchecked(i).key.borrow() == query }
-                {
-                    return Some((probe, i));
-                }
-            } else {
+            if dist > entry_hash.probe_distance(Self::mask(), probe) {
+                // give up when probe distance is too long
                 return None;
+            } else if entry_hash == hash
+                && unsafe { self.entries.get_unchecked(i).key.borrow() == query }
+            {
+                return Some((probe, i));
             }
 
             dist += 1;

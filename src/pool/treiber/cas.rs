@@ -227,57 +227,53 @@ where
     N: Node,
 {
     loop {
-        if let Some(mut top) = stack.top.load(Ordering::Acquire) {
-            let next = unsafe { top.non_null().as_ref().next().load(Ordering::Relaxed) };
+        let mut top = stack.top.load(Ordering::Acquire)?;
+        let next = unsafe { top.non_null().as_ref().next().load(Ordering::Relaxed) };
 
-            if stack
-                .top
-                .compare_and_exchange_weak(Some(top), next, Ordering::Release, Ordering::Relaxed)
-                .is_ok()
-            {
-                // Prevent the ABA problem (https://en.wikipedia.org/wiki/Treiber_stack#Correctness).
-                //
-                // Without this, the following would be possible:
-                //
-                // | Thread 1                      | Thread 2                | Stack                        |
-                // |-------------------------------|-------------------------|------------------------------|
-                // | push((1, 1))                  |                         | (1, 1)                       |
-                // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
-                // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
-                // |                               | p = try_pop() // (1, 2) | (1, 1)                       |
-                // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
-                // |                               | push(p)                 | (1, 2) -> (1, 3) -> (1, 1)   |
-                // | try_pop()::cas(p, p.next)     |                         | (1, 1)                       |
-                //
-                // As can be seen, the `cas` operation succeeds, wrongly removing pointer `3` from
-                // the stack.
-                //
-                // By incrementing the tag before returning the pointer, it cannot be pushed again
-                // with the, same tag, preventing the `try_pop()::cas(p, p.next)`
-                // operation from succeeding.
-                //
-                // With this fix, `try_pop()` in thread 2 returns `(2, 2)` and the comparison
-                // between `(1, 2)` and `(2, 2)` fails, restarting the loop and
-                // correctly removing the new top:
-                //
-                // | Thread 1                      | Thread 2                | Stack                        |
-                // |-------------------------------|-------------------------|------------------------------|
-                // | push((1, 1))                  |                         | (1, 1)                       |
-                // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
-                // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
-                // |                               | p = try_pop() // (2, 2) | (1, 1)                       |
-                // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
-                // |                               | push(p)                 | (2, 2) -> (1, 3) -> (1, 1)   |
-                // | try_pop()::cas(p, p.next)     |                         | (2, 2) -> (1, 3) -> (1, 1)   |
-                // | p = try_pop()::load // (2, 2) |                         | (2, 2) -> (1, 3) -> (1, 1)   |
-                // | try_pop()::cas(p, p.next)     |                         | (1, 3) -> (1, 1)             |
-                top.increment_tag();
+        if stack
+            .top
+            .compare_and_exchange_weak(Some(top), next, Ordering::Release, Ordering::Relaxed)
+            .is_ok()
+        {
+            // Prevent the ABA problem (https://en.wikipedia.org/wiki/Treiber_stack#Correctness).
+            //
+            // Without this, the following would be possible:
+            //
+            // | Thread 1                      | Thread 2                | Stack                        |
+            // |-------------------------------|-------------------------|------------------------------|
+            // | push((1, 1))                  |                         | (1, 1)                       |
+            // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
+            // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
+            // |                               | p = try_pop() // (1, 2) | (1, 1)                       |
+            // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
+            // |                               | push(p)                 | (1, 2) -> (1, 3) -> (1, 1)   |
+            // | try_pop()::cas(p, p.next)     |                         | (1, 1)                       |
+            //
+            // As can be seen, the `cas` operation succeeds, wrongly removing pointer `3` from
+            // the stack.
+            //
+            // By incrementing the tag before returning the pointer, it cannot be pushed again
+            // with the, same tag, preventing the `try_pop()::cas(p, p.next)`
+            // operation from succeeding.
+            //
+            // With this fix, `try_pop()` in thread 2 returns `(2, 2)` and the comparison
+            // between `(1, 2)` and `(2, 2)` fails, restarting the loop and
+            // correctly removing the new top:
+            //
+            // | Thread 1                      | Thread 2                | Stack                        |
+            // |-------------------------------|-------------------------|------------------------------|
+            // | push((1, 1))                  |                         | (1, 1)                       |
+            // | push((1, 2))                  |                         | (1, 2) -> (1, 1)             |
+            // | p = try_pop()::load // (1, 2) |                         | (1, 2) -> (1, 1)             |
+            // |                               | p = try_pop() // (2, 2) | (1, 1)                       |
+            // |                               | push((1, 3))            | (1, 3) -> (1, 1)             |
+            // |                               | push(p)                 | (2, 2) -> (1, 3) -> (1, 1)   |
+            // | try_pop()::cas(p, p.next)     |                         | (2, 2) -> (1, 3) -> (1, 1)   |
+            // | p = try_pop()::load // (2, 2) |                         | (2, 2) -> (1, 3) -> (1, 1)   |
+            // | try_pop()::cas(p, p.next)     |                         | (1, 3) -> (1, 1)             |
+            top.increment_tag();
 
-                return Some(top);
-            }
-        } else {
-            // stack observed as empty
-            return None;
+            return Some(top);
         }
     }
 }
