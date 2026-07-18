@@ -4,9 +4,7 @@ use core::{
     fmt,
     hash::{BuildHasher, Hash},
     iter::FusedIterator,
-    mem,
-    num::NonZeroU32,
-    ops, slice,
+    mem, ops, slice,
 };
 
 #[cfg(feature = "zeroize")]
@@ -91,33 +89,92 @@ struct Bucket<K, V> {
     value: V,
 }
 
+const MAX_SIZE: usize = 0x10000;
+
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
 struct Pos {
-    // compact representation of `{ hash_value: u16, index: u16 }`
-    // To get the most from `NonZero` we store the *value minus 1*. This way `None::Option<Pos>`
-    // is equivalent to the very unlikely value of  `{ hash_value: 0xffff, index: 0xffff }` instead
-    // the more likely of `{ hash_value: 0x00, index: 0x00 }`
-    nz: NonZeroU32,
+    maybe_valid: ValidPos,
 }
 
 impl Pos {
-    fn new(index: usize, hash: HashValue) -> Self {
+    const fn none() -> Self {
         Self {
-            nz: unsafe {
-                NonZeroU32::new_unchecked(
-                    ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1),
-                )
-            },
+            maybe_valid: ValidPos { inner: 0 },
+        }
+    }
+
+    fn new(index: usize, hash: HashValue) -> Self {
+        let value = ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1);
+        Self {
+            maybe_valid: ValidPos { inner: value },
+        }
+    }
+
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// This will give the correct information only if the entries vec length
+    /// is known to be less than 0x10000
+    fn assume_not_full(&mut self) -> Option<&mut ValidPos> {
+        if self == &Self::none() {
+            None
+        } else {
+            Some(&mut self.maybe_valid)
+        }
+    }
+
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// The argument is the length of the `entries` buffer
+    fn as_valid<const BUFFER_SIZE: usize>(&self, buf_len: usize) -> Option<&ValidPos> {
+        // Is the buffer full? This uses a const generic to be able to short-circuit
+        // the check at compile time in most cases
+        let buffer_max = BUFFER_SIZE == MAX_SIZE && buf_len == MAX_SIZE;
+        if buffer_max || self != &Self::none() {
+            Some(&self.maybe_valid)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// The argument is the length of the `entries` buffer
+    fn as_valid_mut<const BUFFER_SIZE: usize>(&mut self, buf_len: usize) -> Option<&mut ValidPos> {
+        // Is the buffer full? This uses a const generic to be able to short-circuit
+        // the check at compile time in most cases
+        let buffer_max = BUFFER_SIZE == MAX_SIZE && buf_len == MAX_SIZE;
+        if buffer_max || self != &Self::none() {
+            Some(&mut self.maybe_valid)
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
+#[derive(Clone, Copy, PartialEq)]
+struct ValidPos {
+    /// Contains a simplified representation of `Option<{hash_value, index}>`
+    /// Where `None` is encoded with 0.
+    ///
+    /// In the specific case where the map is full, 0 can encode `Some({hash_value: 0, index: 0})`,
+    inner: u32,
+}
+
+impl ValidPos {
+    fn replace(&mut self, pos: Pos) -> Pos {
+        Pos {
+            maybe_valid: mem::replace(self, pos.maybe_valid),
         }
     }
 
     fn hash(&self) -> HashValue {
-        HashValue((self.nz.get().wrapping_sub(1) >> 16) as u16)
+        HashValue((self.inner.wrapping_sub(1) >> 16) as u16)
     }
 
     fn index(&self) -> usize {
-        self.nz.get().wrapping_sub(1) as u16 as usize
+        self.inner.wrapping_sub(1) as u16 as usize
     }
 }
 
@@ -150,16 +207,14 @@ macro_rules! probe_loop {
 )]
 struct CoreMap<K, V, const N: usize> {
     entries: Vec<Bucket<K, V>, N, usize>,
-    indices: [Option<Pos>; N],
+    indices: [Pos; N],
 }
 
 impl<K, V, const N: usize> CoreMap<K, V, N> {
     const fn new() -> Self {
-        const INIT: Option<Pos> = None;
-
         Self {
             entries: Vec::new(),
-            indices: [INIT; N],
+            indices: [Pos::none(); N],
         }
     }
 }
@@ -185,7 +240,7 @@ where
         let mut dist = 0;
 
         probe_loop!(probe < self.indices.len(), {
-            let pos = self.indices[probe]?;
+            let pos = self.indices[probe].as_valid::<N>(self.indices.len())?;
             let entry_hash = pos.hash();
             // NOTE(i) we use unchecked indexing below
             let i = pos.index();
@@ -211,7 +266,7 @@ where
         probe_loop!(probe < self.indices.len(), {
             let pos = &mut self.indices[probe];
 
-            if let Some(pos) = *pos {
+            if let Some(pos) = pos.as_valid_mut::<N>(self.entries.len()) {
                 let entry_hash = pos.hash();
                 // NOTE(i) we use unchecked indexing below
                 let i = pos.index();
@@ -247,7 +302,7 @@ where
                 }
                 // empty bucket, insert here
                 let index = self.entries.len();
-                *pos = Some(Pos::new(index, hash));
+                *pos = Pos::new(index, hash);
                 unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
                 return Insert::Success(Inserted {
                     index,
@@ -259,18 +314,18 @@ where
     }
 
     // phase 2 is post-insert where we forward-shift `Pos` in the indices.
-    fn insert_phase_2(indices: &mut [Option<Pos>; N], mut probe: usize, mut old_pos: Pos) -> usize {
+    fn insert_phase_2(indices: &mut [Pos; N], mut probe: usize, mut old_pos: Pos) -> usize {
         probe_loop!(probe < indices.len(), {
             let pos = unsafe { indices.get_unchecked_mut(probe) };
 
             let mut is_none = true; // work around lack of NLL
-            if let Some(pos) = pos.as_mut() {
-                old_pos = mem::replace(pos, old_pos);
+            if let Some(pos) = pos.assume_not_full() {
+                old_pos = pos.replace(old_pos);
                 is_none = false;
             }
 
             if is_none {
-                *pos = Some(old_pos);
+                *pos = old_pos;
                 return probe;
             }
         });
@@ -280,7 +335,9 @@ where
         // index `probe` and entry `found` is to be removed
         // use swap_remove, but then we need to update the index that points
         // to the other entry that has to move
-        self.indices[probe] = None;
+        self.indices[probe] = Pos::none();
+        let old_probe = probe;
+        let old_len = self.entries.len();
         let entry = unsafe { self.entries.swap_remove_unchecked(found) };
 
         // correct index that points to the entry that had to swap places
@@ -290,10 +347,13 @@ where
             let mut probe = entry.hash.desired_pos(Self::mask());
 
             probe_loop!(probe < self.indices.len(), {
-                if let Some(pos) = self.indices[probe] {
+                if probe == old_probe {
+                    continue;
+                }
+                if let Some(pos) = self.indices[probe].as_valid_mut::<N>(old_len) {
                     if pos.index() >= self.entries.len() {
                         // found it
-                        self.indices[probe] = Some(Pos::new(found, entry.hash));
+                        self.indices[probe] = Pos::new(found, entry.hash);
                         break;
                     }
                 }
@@ -316,11 +376,8 @@ where
     }
 
     fn reinsert_all(&mut self) {
-        const INIT: Option<Pos> = None;
         if self.entries.len() < self.indices.len() {
-            for index in self.indices.iter_mut() {
-                *index = INIT;
-            }
+            self.indices = [Pos::none(); N];
 
             for (index, entry) in self.entries.iter().enumerate() {
                 let mut probe = entry.hash.desired_pos(Self::mask());
@@ -329,7 +386,7 @@ where
                 probe_loop!(probe < self.indices.len(), {
                     let pos = &mut self.indices[probe];
 
-                    if let Some(pos) = *pos {
+                    if let Some(pos) = pos.as_valid_mut::<N>(self.entries.len()) {
                         let entry_hash = pos.hash();
 
                         // robin hood: steal the spot if it's better for us
@@ -343,7 +400,7 @@ where
                             break;
                         }
                     } else {
-                        *pos = Some(Pos::new(index, entry.hash));
+                        *pos = Pos::new(index, entry.hash);
                         break;
                     }
                     dist += 1;
@@ -359,12 +416,12 @@ where
         let mut probe = probe_at_remove + 1;
 
         probe_loop!(probe < self.indices.len(), {
-            if let Some(pos) = self.indices[probe] {
+            if let Some(pos) = self.indices[probe].assume_not_full() {
                 let entry_hash = pos.hash();
 
                 if entry_hash.probe_distance(Self::mask(), probe) > 0 {
                     unsafe { *self.indices.get_unchecked_mut(last_probe) = self.indices[probe] }
-                    self.indices[probe] = None;
+                    self.indices[probe] = Pos::none();
                 } else {
                     break;
                 }
@@ -749,6 +806,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
         const {
             assert!(N > 1);
             assert!(N.is_power_of_two());
+            assert!(N <= MAX_SIZE);
         }
 
         Self {
@@ -980,7 +1038,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
         impl<'a, K, V, S, const N: usize> Drop for Guard<'a, K, V, S, N> {
             fn drop(&mut self) {
                 for pos in self.0.core.indices.iter_mut() {
-                    *pos = None;
+                    *pos = Pos::none();
                 }
             }
         }
@@ -1292,11 +1350,10 @@ where
     pub fn truncate(&mut self, len: usize) {
         self.core.entries.truncate(len);
 
-        if self.core.indices.len() > self.core.entries.len() {
-            for index in self.core.indices.iter_mut() {
-                match index {
-                    Some(pos) if pos.index() >= len => *index = None,
-                    _ => (),
+        if N > self.core.entries.len() {
+            for pos in self.core.indices.iter_mut() {
+                if pos.maybe_valid.index() >= len {
+                    *pos = Pos::none();
                 }
             }
         }
@@ -1374,6 +1431,7 @@ where
         const {
             assert!(N > 1);
             assert!(N.is_power_of_two());
+            assert!(N <= MAX_SIZE);
         }
 
         Self {
@@ -1625,6 +1683,7 @@ where
 mod tests {
     use core::mem;
     use std::{
+        hash::{BuildHasher, Hash, Hasher},
         mem::ManuallyDrop,
         panic::{catch_unwind, AssertUnwindSafe},
         sync::atomic::{AtomicI32, Ordering},
@@ -1632,7 +1691,7 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap};
+    use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap, Pos};
 
     // Ensure a `IndexMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(IndexMap<*const (), (), BuildHasherDefault<()>, 4>: Send);
@@ -2123,5 +2182,73 @@ mod tests {
         assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&4, &444), (&2, &222)]); // ok
         assert_eq!(map.get(&4), Some(&444)); // ok
         assert_eq!(map.get(&2), Some(&222)); // <-- key present in iter() but unreachable
+    }
+
+    /// see <https://github.com/rust-embedded/heapless/issues/672>
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn insert_overflow() {
+        #[derive(PartialEq, Eq, Debug)]
+        struct CustomHashU16(u16);
+
+        impl Hash for CustomHashU16 {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write_u16(self.0);
+            }
+        }
+
+        #[derive(Default)]
+        struct DummyHasher(u16);
+
+        #[derive(Default)]
+        struct DummyHasherBuilder;
+
+        impl Hasher for DummyHasher {
+            fn finish(&self) -> u64 {
+                self.0 as _
+            }
+
+            fn write(&mut self, _bytes: &[u8]) {}
+            fn write_u16(&mut self, i: u16) {
+                self.0 = i;
+            }
+        }
+
+        impl BuildHasher for DummyHasherBuilder {
+            type Hasher = DummyHasher;
+
+            fn build_hasher(&self) -> Self::Hasher {
+                DummyHasher(0)
+            }
+        }
+
+        // We have to manually allocate and initialize to avoid overflowing the stack in the dev
+        // profile.
+        let map: Box<mem::MaybeUninit<IndexMap<_, _, DummyHasherBuilder, { 1 << 16 }>>> =
+            Box::new_zeroed();
+        // Safety: the default value of IndexMap is zeros
+        let mut map = unsafe { map.assume_init() };
+        for x in 0..=u16::MAX {
+            map.insert(CustomHashU16(x), x).unwrap();
+        }
+        assert!(map.is_full());
+        assert!(map.core.indices[0xFFFF] == Pos::none());
+        for x in 0..=u16::MAX {
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
+        assert_eq!(map.remove(&CustomHashU16(0x123)).unwrap(), 0x123);
+        for x in 0..=u16::MAX {
+            if x == 0x123 {
+                continue;
+            }
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
+        assert_eq!(map.remove(&CustomHashU16(u16::MAX)).unwrap(), u16::MAX);
+        for x in 0..=u16::MAX {
+            if x == 0x123 || x == u16::MAX {
+                continue;
+            }
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
     }
 }
