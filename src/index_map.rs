@@ -83,19 +83,17 @@ impl HashValue {
     }
 }
 
-#[doc(hidden)]
 #[derive(Clone)]
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
-pub struct Bucket<K, V> {
+struct Bucket<K, V> {
     hash: HashValue,
     key: K,
     value: V,
 }
 
-#[doc(hidden)]
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
-pub struct Pos {
+struct Pos {
     // compact representation of `{ hash_value: u16, index: u16 }`
     // To get the most from `NonZero` we store the *value minus 1*. This way `None::Option<Pos>`
     // is equivalent to the very unlikely value of  `{ hash_value: 0xffff, index: 0xffff }` instead
