@@ -113,7 +113,7 @@ jobs:
         with:
           components: clippy
           targets: i686-unknown-linux-musl
-      - run: cargo clippy --all --target i686-unknown-linux-musl --all-targets
+      - run: cargo clippy --all --target i686-unknown-linux-musl --all-targets --features "alloc,defmt,portable-atomic-critical-section,serde,ufmt,bytes,zeroize,embedded-io-v0.7"
 
   # Compilation check
   check:

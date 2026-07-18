@@ -2468,9 +2468,7 @@ mod tests {
     #[test]
     #[cfg(feature = "alloc")]
     fn alloc_to_heapless() {
-        let mut av: alloc::vec::Vec<u8> = alloc::vec::Vec::new();
-        av.push(0);
-        av.push(1);
+        let av = vec![0, 1];
 
         let hv: Vec<u8, 2> = av.clone().try_into().unwrap();
         assert_eq!(hv.as_slice(), av.as_slice());
