@@ -444,17 +444,13 @@ where
     where
         F: FnMut(&T) -> bool,
     {
-        let mut len = self.len();
         let mut index = 0;
-        while index < len {
-            // SAFETY: `index` is smaller than `self.len()`.
-            let item = unsafe { self.data.get_unchecked(index) };
+        while let Some(item) = self.data.get(index) {
             if f(item) {
                 index += 1;
             } else {
-                // SAFETY: `index` is smaller than `self.len()`.
+                // SAFETY: `index` is valid because of the loop condition.
                 unsafe { self.remove_unchecked(index) };
-                len -= 1;
             }
         }
     }
