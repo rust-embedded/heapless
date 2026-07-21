@@ -447,6 +447,7 @@ where
         let mut len = self.len();
         let mut index = 0;
         while index < len {
+            // SAFETY: `index` is smaller than `self.len()`.
             let item = unsafe { self.data.get_unchecked(index) };
             if f(item) {
                 index += 1;
