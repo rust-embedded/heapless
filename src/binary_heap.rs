@@ -514,16 +514,19 @@ where
     /// The length of the heap must be larger than `index`.
     unsafe fn remove_unchecked(&mut self, index: usize) -> T {
         let mut item = self.data.pop_unchecked();
-        if let Some(place_at_index) = self.data.get_mut(index) {
-            mem::swap(&mut item, place_at_index);
+        if let Some(item_to_remove) = self.data.get_mut(index) {
+            mem::swap(&mut item, item_to_remove);
             self.sift_down_to_bottom(index);
         }
         item
     }
 
+    /// Moves the element from `pos` down through the heap until it becomes a leaf,
+    /// then sift up the element to meet the order invariant.
     fn sift_down_to_bottom(&mut self, mut pos: usize) {
         let end = self.len();
         let start = pos;
+        // Moves the element down to a leaf.
         unsafe {
             let mut hole = Hole::new(self.data.as_mut_slice(), pos);
             let mut child = 2 * pos + 1;
@@ -538,9 +541,12 @@ where
             }
             pos = hole.pos;
         }
+        // Moves the element up to satisfy the order invariant.
         self.sift_up(start, pos);
     }
 
+    /// Moves the element at `pos` up through the heap until either the order
+    /// invariant is met or the `start` position is reached.
     fn sift_up(&mut self, start: usize, pos: usize) -> usize {
         unsafe {
             // Take out the value at `pos` and create a hole.
@@ -941,6 +947,41 @@ mod tests {
     }
 
     #[test]
+    fn peek_mut() {
+        let mut heap = BinaryHeap::<_, Max, 16>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+
+        {
+            let mut val = heap.peek_mut().unwrap();
+            *val = 22;
+        }
+
+        {
+            let mut val = heap.peek_mut().unwrap();
+            *val = 9;
+        }
+
+        assert_eq!(heap.pop(), Some(25));
+        assert_eq!(heap.pop(), Some(22));
+        assert_eq!(heap.pop(), Some(19));
+        assert_eq!(heap.pop(), Some(17));
+        assert_eq!(heap.pop(), Some(9));
+        assert_eq!(heap.pop(), Some(7));
+        assert_eq!(heap.pop(), Some(3));
+        assert_eq!(heap.pop(), Some(2));
+        assert_eq!(heap.pop(), Some(1));
+        assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
     fn retain() {
         let mut heap = BinaryHeap::<_, Max, 8>::new();
         heap.retain(|_: &i32| true);
@@ -1010,6 +1051,85 @@ mod tests {
         assert_eq!(heap.pop(), Some(3));
         assert_eq!(heap.pop(), Some(1));
         assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    fn remove_unchecked() {
+        // This test depends on implementation details.
+
+        let mut heap = BinaryHeap::<_, Max, 16>::new();
+        heap.push(1).unwrap();
+        heap.push(2).unwrap();
+        heap.push(3).unwrap();
+        heap.push(17).unwrap();
+        heap.push(19).unwrap();
+        heap.push(36).unwrap();
+        heap.push(7).unwrap();
+        heap.push(25).unwrap();
+        heap.push(100).unwrap();
+
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[100, 36, 19, 25, 3, 2, 7, 1, 17],
+        );
+
+        unsafe {
+            heap.remove_unchecked(1);
+        }
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[100, 25, 19, 17, 3, 2, 7, 1],
+        );
+
+        unsafe {
+            heap.remove_unchecked(2);
+        }
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[100, 25, 7, 17, 3, 2, 1],
+        );
+
+        unsafe {
+            heap.remove_unchecked(3);
+        }
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[100, 25, 7, 1, 3, 2],
+        );
+
+        unsafe {
+            heap.remove_unchecked(5);
+        }
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[100, 25, 7, 1, 3],
+        );
+
+        unsafe {
+            heap.remove_unchecked(0);
+        }
+        assert_eq!(
+            heap.iter()
+                .copied()
+                .collect::<crate::vec::Vec::<i32, 16>>()
+                .as_slice(),
+            &[25, 3, 7, 1],
+        );
     }
 
     #[test]
