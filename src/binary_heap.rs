@@ -420,6 +420,7 @@ where
     }
 
     /// Retains only the elements specified by the predicate.
+    ///
     /// The elements are visited in arbitrary order.
     ///
     /// # Examples
@@ -504,6 +505,7 @@ where
     /* Private API */
 
     /// Removes and returns the element at position `index` within the inner vec.
+    ///
     /// The elements are shifted to preserve the invariants of the binary heap.
     ///
     /// # Safety
