@@ -311,11 +311,14 @@ where
     where
         F: FnMut(&mut K, &mut V) -> bool,
     {
-        const INIT: Option<Pos> = None;
-
         self.entries
             .retain_mut(|entry| keep(&mut entry.key, &mut entry.value));
 
+        self.reinsert_all();
+    }
+
+    fn reinsert_all(&mut self) {
+        const INIT: Option<Pos> = None;
         if self.entries.len() < self.indices.len() {
             for index in self.indices.iter_mut() {
                 *index = INIT;
@@ -1299,6 +1302,7 @@ where
                 }
             }
         }
+        self.core.reinsert_all();
     }
 
     /* Private API */
@@ -2105,5 +2109,21 @@ mod tests {
         assert_eq!(history_buf.len(), 0);
         history_buf.clear();
         assert_eq!(Dropper::count(), 0);
+    }
+
+    /// See <https://github.com/rust-embedded/heapless/issues/674>
+    #[test]
+    fn truncate_invalid() {
+        let mut map: FnvIndexMap<u16, u32, 4> = FnvIndexMap::new();
+        map.insert(4, 444).unwrap();
+        map.insert(2, 222).unwrap();
+        map.insert(0, 0).unwrap();
+        map.insert(7, 7).unwrap();
+
+        assert_eq!(map.get(&2), Some(&222)); // ok before map.truncate(2);
+        map.truncate(2);
+        assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&4, &444), (&2, &222)]); // ok
+        assert_eq!(map.get(&4), Some(&444)); // ok
+        assert_eq!(map.get(&2), Some(&222)); // <-- key present in iter() but unreachable
     }
 }
