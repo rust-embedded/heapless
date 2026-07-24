@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `resize_with` to `Vec`
 - Added `retain_back` (aka `truncate_front`) to `Deque`
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
+- Added `push_mut` to `Vec`.
 
 ## [v0.9.3] 2025-04-15
 
