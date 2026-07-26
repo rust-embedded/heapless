@@ -504,7 +504,7 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
                     // the used part of the buffer now is `0..self.len`, so set
                     // `head` to the beginning of that range.
                     self.front = 0;
-                    self.back = len;
+                    self.back = if free == 0 { 0 } else { len };
                 }
             }
         }
@@ -1807,6 +1807,20 @@ mod tests {
 
         // Deque contains: 5, 6, 7, 8
         assert_eq!(q.as_slices(), ([5, 6, 7, 8].as_slice(), [].as_slice()));
+
+        // Test `make_contiguous` failing to reset back index properly.
+        // See https://github.com/rust-embedded/heapless/issues/676
+        q.clear();
+        for i in 0..4 {
+            q.push_back(i).unwrap();
+        }
+        for i in 4..7 {
+            q.pop_front();
+            q.push_back(i).unwrap();
+        }
+        q.make_contiguous();
+        q.pop_front();
+        q.push_back(99).unwrap();
     }
 
     #[test]

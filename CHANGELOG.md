@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - Fixed `IndexMap::truncate` leading to an inconsistent state.
+- Fixed `Deque::make_contigous` leading to an inconsistent state.
 - Added `resize_with` to `Vec`
 - Added `retain_back` (aka `truncate_front`) to `Deque`
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
