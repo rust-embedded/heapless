@@ -189,15 +189,21 @@ struct Inserted<V> {
 
 macro_rules! probe_loop {
     ($probe_var: ident < $len: expr, $body: expr) => {
+        // We use a separate value to store the probe value increments
+        // so that the increments are done before $body
+        // so that $body can use `continue` without
+        // interfering with the increments
+        let mut next_probe = $probe_var;
         loop {
+            $probe_var = next_probe;
+            next_probe += 1;
             if $probe_var < $len {
                 $body
-                    $probe_var += 1;
             } else {
-                $probe_var = 0;
+                next_probe = 0;
             }
         }
-    }
+    };
 }
 
 #[cfg_attr(
@@ -2296,5 +2302,17 @@ mod tests {
         map.insert(ConstantHash(1), 1).unwrap();
         // Distinct key, same hash
         assert!(map.get(&ConstantHash(0)).is_none());
+    }
+
+    /// Test that `remove_found` doesn't fail
+    ///
+    /// Ensures that `probe_loop!` works correctly with the `continue` in the body
+    #[test]
+    fn remove_found_loop() {
+        let mut map: FnvIndexMap<u16, u16, 4> = IndexMap::default();
+        map.insert(0, 0).unwrap();
+        map.insert(4, 4).unwrap();
+        map.insert(8, 8).unwrap();
+        map.remove(&0).unwrap(); // never returns
     }
 }
