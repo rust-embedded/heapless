@@ -240,7 +240,7 @@ where
         let mut dist = 0;
 
         probe_loop!(probe < self.indices.len(), {
-            let pos = self.indices[probe].as_valid::<N>(self.indices.len())?;
+            let pos = self.indices[probe].as_valid::<N>(self.entries.len())?;
             let entry_hash = pos.hash();
             // NOTE(i) we use unchecked indexing below
             let i = pos.index();
@@ -1693,6 +1693,33 @@ mod tests {
 
     use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap, Pos};
 
+    /// A hasher that returns the `u16` value as the hash
+    /// This makes testing weird hashes easier
+    #[derive(Default)]
+    struct DummyHasher(u16);
+
+    #[derive(Default)]
+    struct DummyHasherBuilder;
+
+    impl Hasher for DummyHasher {
+        fn finish(&self) -> u64 {
+            self.0 as _
+        }
+
+        fn write(&mut self, _bytes: &[u8]) {}
+        fn write_u16(&mut self, i: u16) {
+            self.0 = i;
+        }
+    }
+
+    impl BuildHasher for DummyHasherBuilder {
+        type Hasher = DummyHasher;
+
+        fn build_hasher(&self) -> Self::Hasher {
+            DummyHasher(0)
+        }
+    }
+
     // Ensure a `IndexMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(IndexMap<*const (), (), BuildHasherDefault<()>, 4>: Send);
     // Ensure a `IndexMap` containing `!Send` values stays `!Send` itself.
@@ -2197,31 +2224,6 @@ mod tests {
             }
         }
 
-        #[derive(Default)]
-        struct DummyHasher(u16);
-
-        #[derive(Default)]
-        struct DummyHasherBuilder;
-
-        impl Hasher for DummyHasher {
-            fn finish(&self) -> u64 {
-                self.0 as _
-            }
-
-            fn write(&mut self, _bytes: &[u8]) {}
-            fn write_u16(&mut self, i: u16) {
-                self.0 = i;
-            }
-        }
-
-        impl BuildHasher for DummyHasherBuilder {
-            type Hasher = DummyHasher;
-
-            fn build_hasher(&self) -> Self::Hasher {
-                DummyHasher(0)
-            }
-        }
-
         // We have to manually allocate and initialize to avoid overflowing the stack in the dev
         // profile.
         let map: Box<mem::MaybeUninit<IndexMap<_, _, DummyHasherBuilder, { 1 << 16 }>>> =
@@ -2250,5 +2252,49 @@ mod tests {
             }
             assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
         }
+    }
+
+    /// Test that `as_valid` doesn't fail in the case N = `0x10000`
+    ///
+    /// The first implementation used `indices.len()` instead of `entries.len()`
+    /// causing `as_valid` to return incorrectly always return `Some` when N = `0x10000`
+    #[test]
+    fn indices_valid() {
+        // We have to manually allocate and initialize to avoid overflowing the stack in the dev
+        // profile.
+        let map: Box<mem::MaybeUninit<FnvIndexMap<u16, u16, 0x10000>>> = Box::new_zeroed();
+        // Safety: the default value of FnvIndexMap is zeros
+        let mut map = unsafe { map.assume_init() };
+
+        map.insert(11, 11).unwrap();
+        assert!(map.find(&10).is_none());
+    }
+
+    /// Test that `as_valid` doesn't fail in the case N = `0x10000`
+    ///
+    /// Unlike the above test, here the queried value compares equal to a zeroed
+    /// value, which is the case for the uninitialized entries in the `entries` vec
+    /// because of the zeored allocation.
+    ///
+    /// This test doesn't rely on the `debug_assert` to detect incorrect behaviour
+    #[test]
+    fn indices_valid2() {
+        /// A key whose hash is *always* `0xFFFF`.
+        #[derive(PartialEq, Eq, Debug)]
+        struct ConstantHash(u16);
+
+        impl Hash for ConstantHash {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write_u16(0xFFFF);
+            }
+        }
+
+        let map: Box<mem::MaybeUninit<IndexMap<ConstantHash, u32, DummyHasherBuilder, 0x10000>>> =
+            Box::new_zeroed();
+        let mut map = unsafe { map.assume_init() };
+
+        map.insert(ConstantHash(1), 1).unwrap();
+        // Distinct key, same hash
+        assert!(map.get(&ConstantHash(0)).is_none());
     }
 }
