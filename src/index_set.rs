@@ -1,4 +1,6 @@
+#![deny(clippy::undocumented_unsafe_blocks)]
 //! A fixed-capacity hash set where the iteration order is independent of the hash values.
+
 use core::{
     borrow::Borrow,
     fmt,
