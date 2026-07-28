@@ -1019,7 +1019,7 @@ mod tests {
             list.push(i).unwrap();
         }
 
-        assert_eq!(list.is_empty(), false);
+        assert!(!list.is_empty());
         assert!(list.is_full());
         assert_eq!(list.peek(), Some(&8));
 

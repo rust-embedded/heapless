@@ -1,12 +1,12 @@
+#![deny(clippy::undocumented_unsafe_blocks)]
+
 //! A fixed-capacity hash table where the iteration order is independent of the hash of the keys.
 use core::{
     borrow::Borrow,
     fmt,
     hash::{BuildHasher, Hash},
     iter::FusedIterator,
-    mem,
-    num::NonZeroU32,
-    ops, slice,
+    mem, ops, slice,
 };
 
 #[cfg(feature = "zeroize")]
@@ -83,43 +83,114 @@ impl HashValue {
     }
 }
 
-#[doc(hidden)]
 #[derive(Clone)]
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
-pub struct Bucket<K, V> {
+struct Bucket<K, V> {
     hash: HashValue,
     key: K,
     value: V,
 }
 
-#[doc(hidden)]
+const MAX_SIZE: usize = 0x10000;
+
+/// For a given hash in the `indices` table, encodes whether there is a corresponding
+/// key/value pair and its index
+///
+/// If there is no corresponding entry, its value is `Self::none`.
+/// In the rare case where the `IndexMap` is of `MAX_SIZE`, `Self::none()` can encode
+/// a valid entry.
 #[derive(Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "zeroize", derive(Zeroize))]
-pub struct Pos {
-    // compact representation of `{ hash_value: u16, index: u16 }`
-    // To get the most from `NonZero` we store the *value minus 1*. This way `None::Option<Pos>`
-    // is equivalent to the very unlikely value of  `{ hash_value: 0xffff, index: 0xffff }` instead
-    // the more likely of `{ hash_value: 0x00, index: 0x00 }`
-    nz: NonZeroU32,
+struct Pos {
+    maybe_valid: ValidPos,
 }
 
 impl Pos {
-    fn new(index: usize, hash: HashValue) -> Self {
+    const fn none() -> Self {
         Self {
-            nz: unsafe {
-                NonZeroU32::new_unchecked(
-                    ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1),
-                )
-            },
+            maybe_valid: ValidPos { inner: 0 },
+        }
+    }
+
+    fn new(index: usize, hash: HashValue) -> Self {
+        let value = ((u32::from(hash.0) << 16) + index as u32).wrapping_add(1);
+        Self {
+            maybe_valid: ValidPos { inner: value },
+        }
+    }
+
+    /// Get the `ValidPos` from `self`
+    ///
+    /// SAFETY: the `ValidPos` is correct only if it is known
+    /// that `self` cannot be encoding a `None` value.
+    unsafe fn assume_valid(&mut self) -> &mut ValidPos {
+        &mut self.maybe_valid
+    }
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// SAFETY: This will give the correct information only if it is known
+    /// that `self.index()` cannot be `0xFFFF`
+    unsafe fn assume_not_full(&mut self) -> Option<&mut ValidPos> {
+        if self == &Self::none() {
+            None
+        } else {
+            Some(&mut self.maybe_valid)
+        }
+    }
+
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// The argument is the length of the `entries` buffer
+    fn as_valid<const BUFFER_SIZE: usize>(&self, buf_len: usize) -> Option<&ValidPos> {
+        // Is 0xFFFF a valid index ? This uses a const generic to be able to short-circuit
+        // the check at compile time in most cases
+        let buffer_max = BUFFER_SIZE == MAX_SIZE && buf_len == MAX_SIZE;
+        if buffer_max || self != &Self::none() {
+            Some(&self.maybe_valid)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a `ValidPos` if the pos doesn't encode `None`
+    ///
+    /// The argument is the length of the `entries` buffer
+    fn as_valid_mut<const BUFFER_SIZE: usize>(&mut self, buf_len: usize) -> Option<&mut ValidPos> {
+        // Is 0xFFFF a valid index ? This uses a const generic to be able to short-circuit
+        // the check at compile time in most cases
+        let buffer_max = BUFFER_SIZE == MAX_SIZE && buf_len == MAX_SIZE;
+        if buffer_max || self != &Self::none() {
+            Some(&mut self.maybe_valid)
+        } else {
+            None
+        }
+    }
+}
+
+/// Encodes a hash value and the index of an existing key/value pair in `entries`
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
+#[derive(Clone, Copy, PartialEq)]
+struct ValidPos {
+    /// Contains a simplified representation of `Option<{hash_value, index}>`
+    /// Where `None` is encoded with 0.
+    ///
+    /// In the specific case where the map is full, 0 can encode `Some({hash_value: 0, index: 0})`,
+    inner: u32,
+}
+
+impl ValidPos {
+    fn replace(&mut self, pos: Pos) -> Pos {
+        Pos {
+            maybe_valid: mem::replace(self, pos.maybe_valid),
         }
     }
 
     fn hash(&self) -> HashValue {
-        HashValue((self.nz.get().wrapping_sub(1) >> 16) as u16)
+        HashValue((self.inner.wrapping_sub(1) >> 16) as u16)
     }
 
     fn index(&self) -> usize {
-        self.nz.get().wrapping_sub(1) as u16 as usize
+        self.inner.wrapping_sub(1) as u16 as usize
     }
 }
 
@@ -134,15 +205,21 @@ struct Inserted<V> {
 
 macro_rules! probe_loop {
     ($probe_var: ident < $len: expr, $body: expr) => {
+        // We use a separate value to store the probe value increments
+        // so that the increments are done before $body
+        // so that $body can use `continue` without
+        // interfering with the increments
+        let mut next_probe = $probe_var;
         loop {
+            $probe_var = next_probe;
+            next_probe += 1;
             if $probe_var < $len {
                 $body
-                    $probe_var += 1;
             } else {
-                $probe_var = 0;
+                next_probe = 0;
             }
         }
-    }
+    };
 }
 
 #[cfg_attr(
@@ -152,16 +229,14 @@ macro_rules! probe_loop {
 )]
 struct CoreMap<K, V, const N: usize> {
     entries: Vec<Bucket<K, V>, N, usize>,
-    indices: [Option<Pos>; N],
+    indices: [Pos; N],
 }
 
 impl<K, V, const N: usize> CoreMap<K, V, N> {
     const fn new() -> Self {
-        const INIT: Option<Pos> = None;
-
         Self {
             entries: Vec::new(),
-            indices: [INIT; N],
+            indices: [Pos::none(); N],
         }
     }
 }
@@ -187,7 +262,7 @@ where
         let mut dist = 0;
 
         probe_loop!(probe < self.indices.len(), {
-            let pos = self.indices[probe]?;
+            let pos = self.indices[probe].as_valid::<N>(self.entries.len())?;
             let entry_hash = pos.hash();
             // NOTE(i) we use unchecked indexing below
             let i = pos.index();
@@ -197,6 +272,7 @@ where
                 // give up when probe distance is too long
                 return None;
             } else if entry_hash == hash
+                // SAFETY: We know that the entry is valid ande therefore so is its index
                 && unsafe { self.entries.get_unchecked(i).key.borrow() == query }
             {
                 return Some((probe, i));
@@ -213,7 +289,7 @@ where
         probe_loop!(probe < self.indices.len(), {
             let pos = &mut self.indices[probe];
 
-            if let Some(pos) = *pos {
+            if let Some(pos) = pos.as_valid_mut::<N>(self.entries.len()) {
                 let entry_hash = pos.hash();
                 // NOTE(i) we use unchecked indexing below
                 let i = pos.index();
@@ -227,17 +303,23 @@ where
                     }
                     // robin hood: steal the spot if it's better for us
                     let index = self.entries.len();
+                    // SAFETY: we checked just above that the entries vec is not full
                     unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
                     Self::insert_phase_2(&mut self.indices, probe, Pos::new(index, hash));
                     return Insert::Success(Inserted {
                         index,
                         old_value: None,
                     });
-                } else if entry_hash == hash && unsafe { self.entries.get_unchecked(i).key == key }
+                } else if entry_hash == hash
+                // SAFETY: we know that the entry is valid, and therefore
+                // its index is occupied
+                    && unsafe { self.entries.get_unchecked(i).key == key }
                 {
                     return Insert::Success(Inserted {
                         index: i,
                         old_value: Some(mem::replace(
+                            // SAFETY: we know that the entry is valid, and therefore
+                            // its index is occupied
                             unsafe { &mut self.entries.get_unchecked_mut(i).value },
                             value,
                         )),
@@ -249,7 +331,8 @@ where
                 }
                 // empty bucket, insert here
                 let index = self.entries.len();
-                *pos = Some(Pos::new(index, hash));
+                *pos = Pos::new(index, hash);
+                // SAFETY: we checked just above that entries is not full
                 unsafe { self.entries.push_unchecked(Bucket { hash, key, value }) };
                 return Insert::Success(Inserted {
                     index,
@@ -261,28 +344,35 @@ where
     }
 
     // phase 2 is post-insert where we forward-shift `Pos` in the indices.
-    fn insert_phase_2(indices: &mut [Option<Pos>; N], mut probe: usize, mut old_pos: Pos) -> usize {
+    fn insert_phase_2(indices: &mut [Pos; N], mut probe: usize, mut old_pos: Pos) -> usize {
         probe_loop!(probe < indices.len(), {
-            let pos = unsafe { indices.get_unchecked_mut(probe) };
+            let pos = &mut indices[probe];
 
-            let mut is_none = true; // work around lack of NLL
-            if let Some(pos) = pos.as_mut() {
-                old_pos = mem::replace(pos, old_pos);
-                is_none = false;
-            }
+            // SAFETY: We just inserted a key, meaning that the only
+            // `pos` that can have index `0xFFFF` is the one
+            // passed as argument to this function
+            //
+            // Since `pos` is read from the existing entries
+            // none can have index `0xFFFF`
+            if let Some(pos) = unsafe { pos.assume_not_full() } {
+                old_pos = pos.replace(old_pos);
+            } else {
+                *pos = old_pos;
 
-            if is_none {
-                *pos = Some(old_pos);
                 return probe;
             }
         });
     }
 
-    fn remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
+    /// SAFETY: found must be a valid entry and probe the index of the corresponding `Pos`
+    unsafe fn remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
         // index `probe` and entry `found` is to be removed
         // use swap_remove, but then we need to update the index that points
         // to the other entry that has to move
-        self.indices[probe] = None;
+        self.indices[probe] = Pos::none();
+        let old_probe = probe;
+        // SAFETY: We know that the entry at `found` is valid as an invariant
+        // held by the caller
         let entry = unsafe { self.entries.swap_remove_unchecked(found) };
 
         // correct index that points to the entry that had to swap places
@@ -292,12 +382,18 @@ where
             let mut probe = entry.hash.desired_pos(Self::mask());
 
             probe_loop!(probe < self.indices.len(), {
-                if let Some(pos) = self.indices[probe] {
-                    if pos.index() >= self.entries.len() {
-                        // found it
-                        self.indices[probe] = Some(Pos::new(found, entry.hash));
-                        break;
-                    }
+                if probe == old_probe {
+                    continue;
+                }
+                // SAFETY: We know that the `Pos` are all valid because
+                // because any `None` would mean the index of the removed entry
+                // is further away than it has to.
+                let pos = unsafe { self.indices[probe].assume_valid() };
+                debug_assert!(pos.index() <= self.entries.len());
+                if pos.index() == self.entries.len() {
+                    // found it
+                    self.indices[probe] = Pos::new(found, entry.hash);
+                    break;
                 }
             });
         }
@@ -318,11 +414,8 @@ where
     }
 
     fn reinsert_all(&mut self) {
-        const INIT: Option<Pos> = None;
         if self.entries.len() < self.indices.len() {
-            for index in self.indices.iter_mut() {
-                *index = INIT;
-            }
+            self.indices = [Pos::none(); N];
 
             for (index, entry) in self.entries.iter().enumerate() {
                 let mut probe = entry.hash.desired_pos(Self::mask());
@@ -331,7 +424,8 @@ where
                 probe_loop!(probe < self.indices.len(), {
                     let pos = &mut self.indices[probe];
 
-                    if let Some(pos) = *pos {
+                    // SAFETY: we checked above that the entries vec is not full
+                    if let Some(pos) = unsafe { pos.assume_not_full() } {
                         let entry_hash = pos.hash();
 
                         // robin hood: steal the spot if it's better for us
@@ -345,7 +439,7 @@ where
                             break;
                         }
                     } else {
-                        *pos = Some(Pos::new(index, entry.hash));
+                        *pos = Pos::new(index, entry.hash);
                         break;
                     }
                     dist += 1;
@@ -361,12 +455,17 @@ where
         let mut probe = probe_at_remove + 1;
 
         probe_loop!(probe < self.indices.len(), {
-            if let Some(pos) = self.indices[probe] {
+            // SAFETY: We know that `pos.index() == 0xFFFF `is not possible because
+            // we just removed the last entry and removed the corresponding
+            // `Pos` in `self.indices`
+            if let Some(pos) = unsafe { self.indices[probe].assume_not_full() } {
                 let entry_hash = pos.hash();
 
                 if entry_hash.probe_distance(Self::mask(), probe) > 0 {
-                    unsafe { *self.indices.get_unchecked_mut(last_probe) = self.indices[probe] }
-                    self.indices[probe] = None;
+                    // SAFETY: we know that last_probe is < than N from the caller
+                    // or because last_probe was overwritten by the loop
+                    *unsafe { self.indices.get_unchecked_mut(last_probe) } = self.indices[probe];
+                    self.indices[probe] = Pos::none();
                 } else {
                     break;
                 }
@@ -594,7 +693,9 @@ where
 
     /// Removes this entry from the map and yields its corresponding key and value
     pub fn remove_entry(self) -> (K, V) {
-        self.core.remove_found(self.probe, self.pos)
+        // SAFETY: We know that `pos` is valid from the creation of the entry
+        // and that cannot have changed since we held a mutable entry to the map
+        unsafe { self.core.remove_found(self.probe, self.pos) }
     }
 
     /// Gets a reference to the value associated with this entry
@@ -664,11 +765,9 @@ where
         } else {
             match self.core.insert(self.hash_val, self.key, value) {
                 Insert::Success(inserted) => {
-                    unsafe {
-                        // SAFETY: Already checked existence at instantiation and the only mutable
-                        // reference to the map is internally held.
-                        Ok(&mut (*self.core.entries.as_mut_ptr().add(inserted.index)).value)
-                    }
+                    // SAFETY: Already checked existence at instantiation and the only mutable
+                    // reference to the map is internally held.
+                    unsafe { Ok(&mut (*self.core.entries.as_mut_ptr().add(inserted.index)).value) }
                 }
                 Insert::Full((_, v)) => Err(v),
             }
@@ -751,6 +850,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, BuildHasherDefault<S>, N> {
         const {
             assert!(N > 1);
             assert!(N.is_power_of_two());
+            assert!(N <= MAX_SIZE);
         }
 
         Self {
@@ -982,7 +1082,7 @@ impl<K, V, S, const N: usize> IndexMap<K, V, S, N> {
         impl<'a, K, V, S, const N: usize> Drop for Guard<'a, K, V, S, N> {
             fn drop(&mut self) {
                 for pos in self.0.core.indices.iter_mut() {
-                    *pos = None;
+                    *pos = Pos::none();
                 }
             }
         }
@@ -1052,8 +1152,10 @@ where
         K: Borrow<Q>,
         Q: ?Sized + Hash + Eq,
     {
-        self.find(key)
-            .map(|(_, found)| unsafe { &self.core.entries.get_unchecked(found).value })
+        self.find(key).map(|(_, found)| {
+            // SAFETY: Find gives a correct bucket and the corresponding probe
+            unsafe { &self.core.entries.get_unchecked(found).value }
+        })
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -1106,6 +1208,7 @@ where
         Q: ?Sized + Hash + Eq,
     {
         if let Some((_, found)) = self.find(key) {
+            // SAFETY: Find gives a correct bucket and the corresponding probe
             Some(unsafe { &mut self.core.entries.get_unchecked_mut(found).value })
         } else {
             None
@@ -1253,8 +1356,10 @@ where
         K: Borrow<Q>,
         Q: ?Sized + Hash + Eq,
     {
-        self.find(key)
-            .map(|(probe, found)| self.core.remove_found(probe, found).1)
+        self.find(key).map(|(probe, found)| {
+            // SAFETY: Find gives a correct bucket and the corresponding probe
+            unsafe { self.core.remove_found(probe, found) }.1
+        })
     }
 
     /// Retains only the elements specified by the predicate.
@@ -1294,11 +1399,10 @@ where
     pub fn truncate(&mut self, len: usize) {
         self.core.entries.truncate(len);
 
-        if self.core.indices.len() > self.core.entries.len() {
-            for index in self.core.indices.iter_mut() {
-                match index {
-                    Some(pos) if pos.index() >= len => *index = None,
-                    _ => (),
+        if N > self.core.entries.len() {
+            for pos in self.core.indices.iter_mut() {
+                if pos.maybe_valid.index() >= len {
+                    *pos = Pos::none();
                 }
             }
         }
@@ -1376,6 +1480,7 @@ where
         const {
             assert!(N > 1);
             assert!(N.is_power_of_two());
+            assert!(N <= MAX_SIZE);
         }
 
         Self {
@@ -1627,6 +1732,7 @@ where
 mod tests {
     use core::mem;
     use std::{
+        hash::{BuildHasher, Hash, Hasher},
         mem::ManuallyDrop,
         panic::{catch_unwind, AssertUnwindSafe},
         sync::atomic::{AtomicI32, Ordering},
@@ -1634,7 +1740,36 @@ mod tests {
 
     use static_assertions::assert_not_impl_any;
 
-    use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap};
+    use crate::index_map::MAX_SIZE;
+
+    use super::{BuildHasherDefault, Entry, FnvIndexMap, IndexMap, Pos};
+
+    /// A hasher that returns the `u16` value as the hash
+    /// This makes testing weird hashes easier
+    #[derive(Default)]
+    struct DummyHasher(u16);
+
+    #[derive(Default)]
+    struct DummyHasherBuilder;
+
+    impl Hasher for DummyHasher {
+        fn finish(&self) -> u64 {
+            self.0 as _
+        }
+
+        fn write(&mut self, _bytes: &[u8]) {}
+        fn write_u16(&mut self, i: u16) {
+            self.0 = i;
+        }
+    }
+
+    impl BuildHasher for DummyHasherBuilder {
+        type Hasher = DummyHasher;
+
+        fn build_hasher(&self) -> Self::Hasher {
+            DummyHasher(0)
+        }
+    }
 
     // Ensure a `IndexMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(IndexMap<*const (), (), BuildHasherDefault<()>, 4>: Send);
@@ -2125,5 +2260,136 @@ mod tests {
         assert_eq!(map.iter().collect::<Vec<_>>(), vec![(&4, &444), (&2, &222)]); // ok
         assert_eq!(map.get(&4), Some(&444)); // ok
         assert_eq!(map.get(&2), Some(&222)); // <-- key present in iter() but unreachable
+    }
+
+    /// see <https://github.com/rust-embedded/heapless/issues/672>
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn insert_overflow() {
+        #[derive(PartialEq, Eq, Debug)]
+        struct CustomHashU16(u16);
+
+        impl Hash for CustomHashU16 {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write_u16(self.0);
+            }
+        }
+
+        let mut map = max_size_map::<CustomHashU16, u16, DummyHasherBuilder>();
+        for x in 0..=u16::MAX {
+            map.insert(CustomHashU16(x), x).unwrap();
+        }
+        assert!(map.is_full());
+        assert!(map.core.indices[0xFFFF] == Pos::none());
+        for x in 0..=u16::MAX {
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
+        assert_eq!(map.remove(&CustomHashU16(0x123)).unwrap(), 0x123);
+        for x in 0..=u16::MAX {
+            if x == 0x123 {
+                continue;
+            }
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
+        assert_eq!(map.remove(&CustomHashU16(u16::MAX)).unwrap(), u16::MAX);
+        for x in 0..=u16::MAX {
+            if x == 0x123 || x == u16::MAX {
+                continue;
+            }
+            assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
+        }
+    }
+
+    fn max_size_map<K, V, S>() -> Box<IndexMap<K, V, S, { MAX_SIZE }>> {
+        // We have to manually allocate and initialize to avoid overflowing the stack in the dev
+        // profile.
+        let map: Box<mem::MaybeUninit<IndexMap<K, V, S, 0x10000>>> = Box::new_zeroed();
+        // SAFETY: the default value of FnvIndexMap is zeros
+        unsafe { map.assume_init() }
+    }
+
+    /// Test that `as_valid` doesn't fail in the case N = `0x10000`
+    ///
+    /// The first implementation used `indices.len()` instead of `entries.len()`
+    /// causing `as_valid` to return incorrectly always return `Some` when N = `0x10000`
+    #[test]
+    fn indices_valid() {
+        let mut map = max_size_map::<u16, u32, DummyHasherBuilder>();
+        map.insert(11, 11).unwrap();
+        assert!(map.find(&10).is_none());
+    }
+
+    /// Test that `as_valid` doesn't fail in the case N = `0x10000`
+    ///
+    /// Unlike the above test, here the queried value compares equal to a zeroed
+    /// value, which is the case for the uninitialized entries in the `entries` vec
+    /// because of the zeored allocation.
+    ///
+    /// This test doesn't rely on the `debug_assert` to detect incorrect behaviour
+    #[test]
+    fn indices_valid2() {
+        /// A key whose hash is *always* `0xFFFF`.
+        #[derive(PartialEq, Eq, Debug)]
+        struct ConstantHash(u16);
+
+        impl Hash for ConstantHash {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write_u16(0xFFFF);
+            }
+        }
+
+        let mut map = max_size_map::<ConstantHash, u32, DummyHasherBuilder>();
+
+        map.insert(ConstantHash(1), 1).unwrap();
+        // Distinct key, same hash
+        assert!(map.get(&ConstantHash(0)).is_none());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)] // too slow
+    fn index_none_valid() {
+        /// A key whose hash is *always* `0xFFFF`.
+        #[derive(PartialEq, Eq, Debug)]
+        struct ControlledHash(u16, u16);
+
+        impl Hash for ControlledHash {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write_u16(self.0);
+            }
+        }
+
+        let mut map = max_size_map::<ControlledHash, u32, DummyHasherBuilder>();
+        for i in 0..=u16::MAX {
+            map.insert(ControlledHash(i, 0), i as u32).unwrap();
+        }
+
+        let Entry::Vacant(entry) = map.entry(ControlledHash(0xFFFF, 1)) else {
+            panic!("Should be vacant");
+        };
+        entry.insert(0xFFFF).unwrap_err();
+        let Entry::Occupied(entry) = map.entry(ControlledHash(0xFFFF, 0)) else {
+            panic!("Should be occupied");
+        };
+        entry.insert(0x10000);
+
+        assert_eq!(map.get(&ControlledHash(0xFFFF, 0)), Some(&0x10000));
+        assert_eq!(map.remove(&ControlledHash(0xFFFF, 0)), Some(0x10000));
+        map.insert(ControlledHash(0xFFFF, 0), 0xFFFF).unwrap();
+        assert_eq!(map.remove(&ControlledHash(0xFFFE, 0)), Some(0xFFFE));
+        assert_eq!(map.get(&ControlledHash(0xFFFF, 0)), Some(&0xFFFF));
+        assert_eq!(map.remove(&ControlledHash(0xFFFF, 0)), Some(0xFFFF));
+        assert!(map.get(&ControlledHash(0xFFFF, 0)).is_none());
+    }
+
+    /// Test that `remove_found` doesn't fail
+    ///
+    /// Ensures that `probe_loop!` works correctly with the `continue` in the body
+    #[test]
+    fn remove_found_loop() {
+        let mut map: FnvIndexMap<u16, u16, 4> = IndexMap::default();
+        map.insert(0, 0).unwrap();
+        map.insert(4, 4).unwrap();
+        map.insert(8, 8).unwrap();
+        map.remove(&0).unwrap(); // never returns
     }
 }

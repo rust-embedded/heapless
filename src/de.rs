@@ -43,7 +43,7 @@ where
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
@@ -84,7 +84,7 @@ where
 
                 while let Some(value) = seq.next_element()? {
                     if values.insert(value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
@@ -124,7 +124,7 @@ where
 
                 while let Some(value) = seq.next_element()? {
                     if values.push(value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
@@ -163,7 +163,7 @@ where
 
                 while let Some(value) = seq.next_element()? {
                     if values.push_back(value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
@@ -245,7 +245,7 @@ where
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
@@ -286,7 +286,7 @@ where
 
                 while let Some((key, value)) = map.next_entry()? {
                     if values.insert(key, value).is_err() {
-                        return Err(A::Error::invalid_length(values.capacity() + 1, &self))?;
+                        return Err(A::Error::invalid_length(values.capacity() + 1, &self));
                     }
                 }
 
