@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Added `swap_remove()` to `IndexMap` and `IndexSet`.
 - Fixed `IndexMap::truncate` leading to an inconsistent state.
 - Fixed `Deque::make_contigous` leading to an inconsistent state.
 - Added `resize_with` to `Vec`

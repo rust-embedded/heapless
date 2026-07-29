@@ -691,8 +691,19 @@ where
         &self.key
     }
 
-    /// Removes this entry from the map and yields its corresponding key and value
+    /// Removes this entry from the map and yields its corresponding key and value.
+    ///
+    /// **NOTE**: This is equivalent to `.swap_remove_entry()`, replacing this entry’s position
+    /// with the last element.
     pub fn remove_entry(self) -> (K, V) {
+        self.swap_remove_entry()
+    }
+
+    /// Removes this entry from the map and yields its corresponding key and value.
+    ///
+    /// Like `Vec::swap_remove`, the value is removed by swapping it with the last element of the
+    /// map and popping it off. **This perturbs the position of what used to be the last element!**.
+    pub fn swap_remove_entry(self) -> (K, V) {
         // SAFETY: We know that `pos` is valid from the creation of the entry
         // and that cannot have changed since we held a mutable entry to the map
         unsafe { self.core.remove_found(self.probe, self.pos) }
@@ -731,9 +742,20 @@ where
         }
     }
 
-    /// Removes this entry from the map and yields its value
+    /// Removes this entry from the map and yields its value.
+    ///
+    /// **NOTE**: This is equivalent to `.swap_remove()`, replacing this entry’s position
+    /// with the last element.
     pub fn remove(self) -> V {
-        self.remove_entry().1
+        self.swap_remove()
+    }
+
+    /// Removes this entry from the map and yields its value.
+    ///
+    /// Like `Vec::swap_remove`, the pair is removed by swapping it with the last element of the map
+    /// and popping it off. **This perturbs the position of what used to be the last element!**.
+    pub fn swap_remove(self) -> V {
+        self.swap_remove_entry().1
     }
 }
 
@@ -1321,7 +1343,7 @@ where
         }
     }
 
-    /// Same as [`swap_remove`](Self::swap_remove)
+    /// Removes an element.
     ///
     /// Computes in *O*(1) time (average).
     ///
@@ -1335,6 +1357,9 @@ where
     /// assert_eq!(map.remove(&1), Some("a"));
     /// assert_eq!(map.remove(&1), None);
     /// ```
+    ///
+    /// **NOTE**: This is equivalent to `.swap_remove(key)`, replacing this entry’s position
+    /// with the last element.
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -1346,11 +1371,23 @@ where
     /// Remove the key-value pair equivalent to `key` and return its value.
     ///
     /// Like `Vec::swap_remove`, the pair is removed by swapping it with the last element of the map
-    /// and popping it off. **This perturbs the position of what used to be the last element!**
+    /// and popping it off. **This perturbs the position of what used to be the last element!**.
     ///
     /// Return `None` if `key` is not in map.
     ///
     /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// assert_eq!(map.swap_remove(&1), Some("a"));
+    /// assert_eq!(map.swap_remove(&1), None);
+    /// ```
+    ///
     pub fn swap_remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -1907,7 +1944,7 @@ mod tests {
         src.insert("k4", "v4").unwrap();
         let clone = src.clone();
         for (k, v) in clone.into_iter() {
-            assert_eq!(v, src.remove(k).unwrap());
+            assert_eq!(v, src.swap_remove(k).unwrap());
         }
         assert!(src.is_empty());
     }
@@ -2030,7 +2067,7 @@ mod tests {
         let entry = src.entry(key);
         match entry {
             Entry::Occupied(o) => {
-                assert_eq!((key, value), o.remove_entry());
+                assert_eq!((key, value), o.swap_remove_entry());
             }
             Entry::Vacant(_) => {
                 panic!("Entry not found")
@@ -2049,7 +2086,7 @@ mod tests {
         let entry = src.entry(key);
         match entry {
             Entry::Occupied(o) => {
-                assert_eq!(value, o.remove());
+                assert_eq!(value, o.swap_remove());
             }
             Entry::Vacant(_) => {
                 panic!("Entry not found");
@@ -2112,7 +2149,7 @@ mod tests {
         for i in 0..MAP_SLOTS {
             match src.entry(i) {
                 Entry::Occupied(o) => {
-                    assert_eq!((i, i + add_mod), o.remove_entry());
+                    assert_eq!((i, i + add_mod), o.swap_remove_entry());
                 }
                 Entry::Vacant(_) => {
                     panic!("Entry not found after insert");
@@ -2284,14 +2321,14 @@ mod tests {
         for x in 0..=u16::MAX {
             assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
         }
-        assert_eq!(map.remove(&CustomHashU16(0x123)).unwrap(), 0x123);
+        assert_eq!(map.swap_remove(&CustomHashU16(0x123)).unwrap(), 0x123);
         for x in 0..=u16::MAX {
             if x == 0x123 {
                 continue;
             }
             assert_eq!(map.get(&CustomHashU16(x)).unwrap(), &x);
         }
-        assert_eq!(map.remove(&CustomHashU16(u16::MAX)).unwrap(), u16::MAX);
+        assert_eq!(map.swap_remove(&CustomHashU16(u16::MAX)).unwrap(), u16::MAX);
         for x in 0..=u16::MAX {
             if x == 0x123 || x == u16::MAX {
                 continue;
@@ -2373,11 +2410,11 @@ mod tests {
         entry.insert(0x10000);
 
         assert_eq!(map.get(&ControlledHash(0xFFFF, 0)), Some(&0x10000));
-        assert_eq!(map.remove(&ControlledHash(0xFFFF, 0)), Some(0x10000));
+        assert_eq!(map.swap_remove(&ControlledHash(0xFFFF, 0)), Some(0x10000));
         map.insert(ControlledHash(0xFFFF, 0), 0xFFFF).unwrap();
-        assert_eq!(map.remove(&ControlledHash(0xFFFE, 0)), Some(0xFFFE));
+        assert_eq!(map.swap_remove(&ControlledHash(0xFFFE, 0)), Some(0xFFFE));
         assert_eq!(map.get(&ControlledHash(0xFFFF, 0)), Some(&0xFFFF));
-        assert_eq!(map.remove(&ControlledHash(0xFFFF, 0)), Some(0xFFFF));
+        assert_eq!(map.swap_remove(&ControlledHash(0xFFFF, 0)), Some(0xFFFF));
         assert!(map.get(&ControlledHash(0xFFFF, 0)).is_none());
     }
 
@@ -2390,6 +2427,6 @@ mod tests {
         map.insert(0, 0).unwrap();
         map.insert(4, 4).unwrap();
         map.insert(8, 8).unwrap();
-        map.remove(&0).unwrap(); // never returns
+        map.swap_remove(&0).unwrap(); // never returns
     }
 }

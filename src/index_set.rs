@@ -495,12 +495,42 @@ where
     /// assert_eq!(set.remove(&2), true);
     /// assert_eq!(set.remove(&2), false);
     /// ```
+    ///
+    /// **NOTE**: This is equivalent to `.swap_remove(key)`, replacing this entry’s position
+    /// with the last element.
     pub fn remove<Q>(&mut self, value: &Q) -> bool
     where
         T: Borrow<Q>,
         Q: ?Sized + Eq + Hash,
     {
-        self.map.remove(value).is_some()
+        self.swap_remove(value)
+    }
+
+    /// Removes a value from the set. Returns `true` if the value was present in the set.
+    ///
+    /// The value may be any borrowed form of the set's value type, but `Hash` and `Eq` on the
+    /// borrowed form must match those for the value type.
+    ///
+    /// Like `Vec::swap_remove`, the value is removed by swapping it with the last element of the
+    /// map and popping it off. **This perturbs the position of what used to be the last element!**.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_set::FnvIndexSet;
+    ///
+    /// let mut set = FnvIndexSet::<_, 16>::new();
+    ///
+    /// set.insert(2).unwrap();
+    /// assert_eq!(set.swap_remove(&2), true);
+    /// assert_eq!(set.swap_remove(&2), false);
+    /// ```
+    pub fn swap_remove<Q>(&mut self, value: &Q) -> bool
+    where
+        T: Borrow<Q>,
+        Q: ?Sized + Eq + Hash,
+    {
+        self.map.swap_remove(value).is_some()
     }
 
     /// Retains only the elements specified by the predicate.
