@@ -693,8 +693,12 @@ where
 
     /// Removes this entry from the map and yields its corresponding key and value.
     ///
-    /// **NOTE**: This is equivalent to `.swap_remove_entry()`, replacing this entry’s position
-    /// with the last element.
+    /// **NOTE**: This is equivalent to [`.swap_remove_entry()`](OccupiedEntry::swap_remove_entry),
+    /// replacing this entry’s position with the last element, and it is deprecated in favor of
+    /// calling that explicitly.
+    #[deprecated(
+        note = "`remove_entry` disrupts the map order -- use `swap_remove_entry` for explicit behavior."
+    )]
     pub fn remove_entry(self) -> (K, V) {
         self.swap_remove_entry()
     }
@@ -744,8 +748,12 @@ where
 
     /// Removes this entry from the map and yields its value.
     ///
-    /// **NOTE**: This is equivalent to `.swap_remove()`, replacing this entry’s position
-    /// with the last element.
+    /// **NOTE**: This is equivalent to [`.swap_remove()`](OccupiedEntry::swap_remove), replacing
+    /// this entry’s position with the last element, and it is deprecated in favor of calling
+    /// that explicitly.
+    #[deprecated(
+        note = "`remove` disrupts the map order -- use `swap_remove` for explicit behavior."
+    )]
     pub fn remove(self) -> V {
         self.swap_remove()
     }
@@ -1358,8 +1366,12 @@ where
     /// assert_eq!(map.remove(&1), None);
     /// ```
     ///
-    /// **NOTE**: This is equivalent to `.swap_remove(key)`, replacing this entry’s position
-    /// with the last element.
+    /// **NOTE**: This is equivalent to [`.swap_remove(key)`](IndexMap::swap_remove), replacing this
+    /// entry’s position with the last element, and it is deprecated in favor of calling that
+    /// explicitly.
+    #[deprecated(
+        note = "`remove` disrupts the map order -- use `swap_remove` for explicit behavior."
+    )]
     pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
@@ -1387,7 +1399,6 @@ where
     /// assert_eq!(map.swap_remove(&1), Some("a"));
     /// assert_eq!(map.swap_remove(&1), None);
     /// ```
-    ///
     pub fn swap_remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,

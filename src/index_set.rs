@@ -484,20 +484,12 @@ where
     /// The value may be any borrowed form of the set's value type, but `Hash` and `Eq` on the
     /// borrowed form must match those for the value type.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use heapless::index_set::FnvIndexSet;
-    ///
-    /// let mut set = FnvIndexSet::<_, 16>::new();
-    ///
-    /// set.insert(2).unwrap();
-    /// assert_eq!(set.remove(&2), true);
-    /// assert_eq!(set.remove(&2), false);
-    /// ```
-    ///
-    /// **NOTE**: This is equivalent to `.swap_remove(key)`, replacing this entry’s position
-    /// with the last element.
+    /// **NOTE**: This is equivalent to [`.swap_remove(key)`](IndexSet::swap_remove), replacing this
+    /// entry’s position with the last element, and it is deprecated in favor of calling that
+    /// explicitly.
+    #[deprecated(
+        note = "`remove` disrupts the set order -- use `swap_remove` for explicit behavior."
+    )]
     pub fn remove<Q>(&mut self, value: &Q) -> bool
     where
         T: Borrow<Q>,
