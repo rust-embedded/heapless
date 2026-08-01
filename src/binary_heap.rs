@@ -363,13 +363,10 @@ where
     /// ```
     pub fn peek_mut(&mut self) -> Option<PeekMutInner<'_, T, K, S>> {
         if self.is_empty() {
-            None
-        } else {
-            Some(PeekMutInner {
-                heap: self,
-                sift: true,
-            })
+            return None;
         }
+        // SAFETY: the heap has at least one item because of the previous condition.
+        Some(unsafe { PeekMutInner::new(self) })
     }
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
@@ -388,10 +385,10 @@ where
     /// ```
     pub fn pop(&mut self) -> Option<T> {
         if self.is_empty() {
-            None
-        } else {
-            Some(unsafe { self.pop_unchecked() })
+            return None;
         }
+        // SAFETY: the heap has at least one item because of the previous condition.
+        Some(unsafe { self.pop_unchecked() })
     }
 
     /// Removes the *top* (greatest if max-heap, smallest if min-heap) item from the binary heap and
@@ -473,7 +470,7 @@ where
         if self.data.is_full() {
             return Err(item);
         }
-
+        // SAFETY: the heap is not full because of the previous condition.
         unsafe { self.push_unchecked(item) }
         Ok(())
     }
@@ -498,8 +495,10 @@ where
     /// ```
     pub unsafe fn push_unchecked(&mut self, item: T) {
         let old_len = self.len();
-        self.data.push_unchecked(item);
-        self.sift_up(0, old_len);
+        // SAFETY: the function precondition guarantees that the heap is not full.
+        unsafe { self.data.push_unchecked(item) };
+        // SAFETY: `old_len` is now a valid index because a new item has been pushed.
+        unsafe { self.sift_up(0, old_len) };
     }
 
     /* Private API */
@@ -512,54 +511,71 @@ where
     ///
     /// The length of the heap must be larger than `index`.
     unsafe fn remove_unchecked(&mut self, index: usize) -> T {
-        let mut item = self.data.pop_unchecked();
+        debug_assert!(index < self.len());
+        // SAFETY: the heap is not empty because of the preconiditon.
+        let mut item = unsafe { self.data.pop_unchecked() };
         if let Some(item_to_remove) = self.data.get_mut(index) {
             mem::swap(&mut item, item_to_remove);
-            self.sift_down_to_bottom(index);
+            // SAFETY: `index` is within the data slice because of the condition.
+            unsafe { self.sift_down_to_bottom(index) };
         }
         item
     }
 
     /// Moves the element from `pos` down through the heap until it becomes a leaf,
     /// then sift up the element to meet the order invariant.
-    fn sift_down_to_bottom(&mut self, mut pos: usize) {
+    ///
+    /// # Safety
+    ///
+    /// `pos` must be within the data slice.
+    unsafe fn sift_down_to_bottom(&mut self, mut pos: usize) {
         let end = self.len();
         let start = pos;
-        // Moves the element down to a leaf.
-        unsafe {
-            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
+        // Scope to limit the lifetime of the hole.
+        {
+            // SAFETY: `pos` is within the data slice because of the function precondition.
+            let mut hole = unsafe { Hole::new(self.data.as_mut_slice(), pos) };
             let mut child = 2 * pos + 1;
             while child < end {
                 let right = child + 1;
-                // compare with the greater of the two children
-                if right < end && hole.get(child).cmp(hole.get(right)) != K::ordering() {
+                // SAFETY: `child` is within the data slice because it is lower than `end`.
+                let child_val = unsafe { hole.get(child) };
+                // Compares with the greater of the two children.
+                // SAFETY: `right` is within the data slice because it is lower than `end`.
+                if right < end && child_val.cmp(unsafe { hole.get(right) }) != K::ordering() {
                     child = right;
                 }
-                hole.move_to(child);
+                // SAFETY: `child` is within the data slice because it is lower than `end`.
+                unsafe { hole.move_to(child) };
                 child = 2 * hole.pos() + 1;
             }
             pos = hole.pos;
         }
         // Moves the element up to satisfy the order invariant.
-        self.sift_up(start, pos);
+        // SAFETY: `pos` is within the data slice because `hole` keeps track of a valid index.
+        unsafe { self.sift_up(start, pos) };
     }
 
     /// Moves the element at `pos` up through the heap until either the order
     /// invariant is met or the `start` position is reached.
-    fn sift_up(&mut self, start: usize, pos: usize) -> usize {
-        unsafe {
-            // Take out the value at `pos` and create a hole.
-            let mut hole = Hole::new(self.data.as_mut_slice(), pos);
+    ///
+    /// # Safety
+    ///
+    /// `pos` must be within the data slice.
+    unsafe fn sift_up(&mut self, start: usize, pos: usize) -> usize {
+        // Take out the value at `pos` and create a hole.
+        // SAFETY: `pos` is within the data slice because of the function precondition.
+        let mut hole = unsafe { Hole::new(self.data.as_mut_slice(), pos) };
 
-            while hole.pos() > start {
-                let parent = (hole.pos() - 1) / 2;
-                if hole.element().cmp(hole.get(parent)) != K::ordering() {
-                    break;
-                }
-                hole.move_to(parent);
+        while hole.pos() > start {
+            let parent = (hole.pos() - 1) / 2;
+            if hole.element().cmp(unsafe { hole.get(parent) }) != K::ordering() {
+                break;
             }
-            hole.pos()
+            // SAFETY: `parent` is within the data slice because it is lower than `pos`.
+            unsafe { hole.move_to(parent) };
         }
+        hole.pos()
     }
 }
 
@@ -577,7 +593,9 @@ struct Hole<'a, T> {
 impl<'a, T> Hole<'a, T> {
     /// Create a new Hole at index `pos`.
     ///
-    /// Unsafe because pos must be within the data slice.
+    /// # Safety
+    ///
+    /// `pos` must be within the data slice.
     #[inline]
     unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
         debug_assert!(pos < data.len());
@@ -602,17 +620,22 @@ impl<'a, T> Hole<'a, T> {
 
     /// Returns a reference to the element at `index`.
     ///
-    /// Unsafe because index must be within the data slice and not equal to pos.
+    /// # Safety
+    ///
+    /// `index` must be within the data slice and not equal to [`Self::pos`].
     #[inline]
     unsafe fn get(&self, index: usize) -> &T {
         debug_assert!(index != self.pos);
         debug_assert!(index < self.data.len());
-        self.data.get_unchecked(index)
+        // SAFETY: `index` is valid because of the function precondition.
+        unsafe { self.data.get_unchecked(index) }
     }
 
     /// Move hole to new location
     ///
-    /// Unsafe because index must be within the data slice and not equal to pos.
+    /// # Safety
+    ///
+    /// `index` must be within the data slice and not equal to [`Self::pos`].
     #[inline]
     unsafe fn move_to(&mut self, index: usize) {
         debug_assert!(index != self.pos);
@@ -636,8 +659,30 @@ where
     K: Kind,
     S: VecStorage<T> + ?Sized,
 {
+    /// Non-empty heap.
     heap: &'a mut BinaryHeapInner<T, K, S>,
-    sift: bool,
+    /// Does the peek item has been removed.
+    /// The item can be removed using [`Self::pop`].
+    removed: bool,
+}
+impl<'a, T, K, S> PeekMutInner<'a, T, K, S>
+where
+    T: Ord,
+    K: Kind,
+    S: VecStorage<T> + ?Sized,
+{
+    /// Creates a new instance that allows removing or mutating the first item of `heap`.
+    ///
+    /// # Safety
+    ///
+    /// The heap must not be empty.
+    unsafe fn new(heap: &'a mut BinaryHeapInner<T, K, S>) -> Self {
+        debug_assert!(!heap.is_empty());
+        Self {
+            heap,
+            removed: false,
+        }
+    }
 }
 
 /// Structure wrapping a mutable reference to the greatest item on a
@@ -661,9 +706,12 @@ where
     S: VecStorage<T> + ?Sized,
 {
     fn drop(&mut self) {
-        if self.sift {
-            self.heap.sift_down_to_bottom(0);
+        if self.removed {
+            return;
         }
+        // SAFETY: the heap has at least one item because
+        // `PeekMut` is only instantiated wiforth non-empty heaps and `removed` is still `false`.
+        unsafe { self.heap.sift_down_to_bottom(0) };
     }
 }
 
@@ -676,7 +724,7 @@ where
     type Target = T;
     fn deref(&self) -> &T {
         debug_assert!(!self.heap.is_empty());
-        // SAFE: PeekMut is only instantiated for non-empty heaps
+        // SAFETY: `PeekMut` is only instantiated for non-empty heaps.
         unsafe { self.heap.data.as_slice().get_unchecked(0) }
     }
 }
@@ -689,7 +737,7 @@ where
 {
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(!self.heap.is_empty());
-        // SAFE: PeekMut is only instantiated for non-empty heaps
+        // SAFE: PeekMut is only instantiated for non-empty heaps.
         unsafe { self.heap.data.as_mut_slice().get_unchecked_mut(0) }
     }
 }
@@ -702,8 +750,9 @@ where
 {
     /// Removes the peeked value from the heap and returns it.
     pub fn pop(mut this: Self) -> T {
-        let value = this.heap.pop().unwrap();
-        this.sift = false;
+        // SAFE: PeekMut is only instantiated for non-empty heaps.
+        let value = unsafe { this.heap.pop_unchecked() };
+        this.removed = true;
         value
     }
 }
@@ -1054,7 +1103,7 @@ mod tests {
 
     #[test]
     fn remove_unchecked() {
-        // This test depends on implementation details.
+        // This test depends on private APIs.
 
         let mut heap = BinaryHeap::<_, Max, 16>::new();
         heap.push(1).unwrap();
