@@ -106,31 +106,20 @@ use portable_atomic as atomic;
 
 use atomic::Ordering;
 
-use crate::storage::{OwnedStorage, Storage, ViewStorage};
-
-#[cfg(feature = "mpmc_large")]
-type AtomicTargetSize = atomic::AtomicUsize;
-#[cfg(not(feature = "mpmc_large"))]
-type AtomicTargetSize = atomic::AtomicU8;
-
-#[cfg(feature = "mpmc_large")]
-type UintSize = usize;
-#[cfg(not(feature = "mpmc_large"))]
-type UintSize = u8;
-
-#[cfg(feature = "mpmc_large")]
-type IntSize = isize;
-#[cfg(not(feature = "mpmc_large"))]
-type IntSize = i8;
+use crate::{
+    len_type::{new_atomic_lentype, Atomic},
+    storage::{OwnedStorage, Storage, ViewStorage},
+    LenType,
+};
 
 /// Base struct for [`Queue`] and [`QueueView`], generic over the [`Storage`].
 ///
 /// In most cases you should use [`Queue`] or [`QueueView`] directly. Only use this
 /// struct if you want to write code that's generic over both.
-pub struct QueueInner<T, S: Storage> {
-    dequeue_pos: AtomicTargetSize,
-    enqueue_pos: AtomicTargetSize,
-    buffer: UnsafeCell<S::Buffer<Cell<T>>>,
+pub struct QueueInner<T, LenT: LenType, S: Storage> {
+    dequeue_pos: LenT::Atomic,
+    enqueue_pos: LenT::Atomic,
+    buffer: UnsafeCell<S::Buffer<Cell<T, LenT>>>,
 }
 
 /// A statically allocated multi-producer, multi-consumer queue with a capacity of `N` elements.
@@ -140,17 +129,15 @@ pub struct QueueInner<T, S: Storage> {
 /// `N` must be a power of 2.
 ///
 /// </div>
-///
-/// The maximum value of `N` is 128 if the `mpmc_large` feature is not enabled.
-pub type Queue<T, const N: usize> = QueueInner<T, OwnedStorage<N>>;
+pub type Queue<T, const N: usize, LenT = u8> = QueueInner<T, LenT, OwnedStorage<N>>;
 
 /// A [`Queue`] with dynamic capacity.
 ///
 /// [`Queue`] coerces to `QueueView`. `QueueView` is `!Sized`, meaning it can only ever be used by
 /// reference.
-pub type QueueView<T> = QueueInner<T, ViewStorage>;
+pub type QueueView<T, LenT = u8> = QueueInner<T, LenT, ViewStorage>;
 
-impl<T, const N: usize> Queue<T, N> {
+impl<T, const N: usize, LenT: LenType> Queue<T, N, LenT> {
     #[deprecated(
         note = "See the documentation of Queue::new() for more information: https://docs.rs/heapless/latest/heapless/mpmc/type.Queue.html#method.new"
     )]
@@ -187,35 +174,44 @@ impl<T, const N: usize> Queue<T, N> {
         const {
             assert!(N > 1);
             assert!(N.is_power_of_two());
-            assert!(N < UintSize::MAX as usize);
+            assert!(N < LenT::MAX_USIZE);
         }
 
+        let mut buffer: MaybeUninit<[Cell<T, LenT>; N]> = MaybeUninit::uninit();
         let mut cell_count = 0;
-
-        let mut result_cells: [Cell<T>; N] = [const { Cell::new(0) }; N];
         while cell_count != N {
-            result_cells[cell_count] = Cell::new(cell_count);
+            // SAFETY: we write to each element exactly once before reading
+            unsafe {
+                buffer
+                    .as_mut_ptr()
+                    .cast::<Cell<T, LenT>>()
+                    .add(cell_count)
+                    .write(Cell::new(cell_count));
+            }
             cell_count += 1;
         }
 
+        // SAFETY: all N elements have been initialized
+        let buffer = unsafe { buffer.assume_init() };
+
         Self {
-            buffer: UnsafeCell::new(result_cells),
-            dequeue_pos: AtomicTargetSize::new(0),
-            enqueue_pos: AtomicTargetSize::new(0),
+            buffer: UnsafeCell::new(buffer),
+            dequeue_pos: new_atomic_lentype::<LenT>(0),
+            enqueue_pos: new_atomic_lentype::<LenT>(0),
         }
     }
 
     /// Used in `Storage` implementation.
-    pub(crate) fn as_view_private(&self) -> &QueueView<T> {
+    pub(crate) fn as_view_private(&self) -> &QueueView<T, LenT> {
         self
     }
     /// Used in `Storage` implementation.
-    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T> {
+    pub(crate) fn as_view_mut_private(&mut self) -> &mut QueueView<T, LenT> {
         self
     }
 }
 
-impl<T, S: Storage> QueueInner<T, S> {
+impl<T, LenT: LenType, S: Storage> QueueInner<T, LenT, S> {
     /// Returns the maximum number of elements the queue can hold.
     #[inline]
     pub fn capacity(&self) -> usize {
@@ -240,7 +236,7 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// let view: &QueueView<u8> = &queue;
     /// ```
     #[inline]
-    pub fn as_view(&self) -> &QueueView<T> {
+    pub fn as_view(&self) -> &QueueView<T, LenT> {
         S::as_mpmc_view(self)
     }
 
@@ -263,12 +259,12 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// let view: &mut QueueView<u8> = &mut queue;
     /// ```
     #[inline]
-    pub fn as_mut_view(&mut self) -> &mut QueueView<T> {
+    pub fn as_mut_view(&mut self) -> &mut QueueView<T, LenT> {
         S::as_mpmc_mut_view(self)
     }
 
-    fn mask(&self) -> UintSize {
-        (S::len(self.buffer.get()) - 1) as _
+    fn mask(&self) -> LenT {
+        LenT::from_usize(S::len(self.buffer.get()) - 1)
     }
 
     /// Returns the item in the front of the queue, or `None` if the queue is empty.
@@ -291,55 +287,55 @@ impl<T, S: Storage> QueueInner<T, S> {
     }
 }
 
-impl<T, const N: usize> Default for Queue<T, N> {
+impl<T, const N: usize, LenT: LenType> Default for Queue<T, N, LenT> {
     fn default() -> Self {
         #[allow(deprecated)]
         Self::new()
     }
 }
 
-impl<T, S: Storage> Drop for QueueInner<T, S> {
+impl<T, LenT: LenType, S: Storage> Drop for QueueInner<T, LenT, S> {
     fn drop(&mut self) {
         // Drop all elements currently in the queue.
         while self.dequeue().is_some() {}
     }
 }
 
-unsafe impl<T, S: Storage> Sync for QueueInner<T, S> where T: Send {}
+unsafe impl<T, LenT: LenType, S: Storage> Sync for QueueInner<T, LenT, S> where T: Send {}
 
-struct Cell<T> {
+struct Cell<T, LenT: LenType> {
     data: MaybeUninit<T>,
-    sequence: AtomicTargetSize,
+    sequence: LenT::Atomic,
 }
 
-impl<T> Cell<T> {
+impl<T, LenT: LenType> Cell<T, LenT> {
     const fn new(seq: usize) -> Self {
         Self {
             data: MaybeUninit::uninit(),
-            sequence: AtomicTargetSize::new(seq as UintSize),
+            sequence: new_atomic_lentype::<LenT>(seq),
         }
     }
 }
 
-unsafe fn dequeue<T>(
-    buffer: *mut Cell<T>,
-    dequeue_pos: &AtomicTargetSize,
-    mask: UintSize,
+unsafe fn dequeue<T, LenT: LenType>(
+    buffer: *mut Cell<T, LenT>,
+    dequeue_pos: &LenT::Atomic,
+    mask: LenT,
 ) -> Option<T> {
     let mut pos = dequeue_pos.load(Ordering::Relaxed);
 
     let mut cell;
     loop {
-        cell = buffer.add(usize::from(pos & mask));
+        cell = buffer.add((pos & mask).into_usize());
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as IntSize).wrapping_sub((pos.wrapping_add(1)) as IntSize);
+        let dif = LenT::signed_wrapping_cmp(seq, pos.wrapping_add(LenT::one()));
 
-        match dif.cmp(&0) {
+        match dif {
             core::cmp::Ordering::Equal => {
                 if dequeue_pos
                     .compare_exchange_weak(
                         pos,
-                        pos.wrapping_add(1),
+                        pos.wrapping_add(LenT::one()),
                         Ordering::Relaxed,
                         Ordering::Relaxed,
                     )
@@ -358,32 +354,33 @@ unsafe fn dequeue<T>(
     }
 
     let data = (*cell).data.as_ptr().read();
-    (*cell)
-        .sequence
-        .store(pos.wrapping_add(mask).wrapping_add(1), Ordering::Release);
+    (*cell).sequence.store(
+        pos.wrapping_add(mask).wrapping_add(LenT::one()),
+        Ordering::Release,
+    );
     Some(data)
 }
 
-unsafe fn enqueue<T>(
-    buffer: *mut Cell<T>,
-    enqueue_pos: &AtomicTargetSize,
-    mask: UintSize,
+unsafe fn enqueue<T, LenT: LenType>(
+    buffer: *mut Cell<T, LenT>,
+    enqueue_pos: &LenT::Atomic,
+    mask: LenT,
     item: T,
 ) -> Result<(), T> {
     let mut pos = enqueue_pos.load(Ordering::Relaxed);
 
     let mut cell;
     loop {
-        cell = buffer.add(usize::from(pos & mask));
+        cell = buffer.add((pos & mask).into_usize());
         let seq = (*cell).sequence.load(Ordering::Acquire);
-        let dif = (seq as IntSize).wrapping_sub(pos as IntSize);
+        let dif = LenT::signed_wrapping_cmp(seq, pos);
 
-        match dif.cmp(&0) {
+        match dif {
             core::cmp::Ordering::Equal => {
                 if enqueue_pos
                     .compare_exchange_weak(
                         pos,
-                        pos.wrapping_add(1),
+                        pos.wrapping_add(LenT::one()),
                         Ordering::Relaxed,
                         Ordering::Relaxed,
                     )
@@ -404,7 +401,7 @@ unsafe fn enqueue<T>(
     (*cell).data.as_mut_ptr().write(item);
     (*cell)
         .sequence
-        .store(pos.wrapping_add(1), Ordering::Release);
+        .store(pos.wrapping_add(LenT::one()), Ordering::Release);
     Ok(())
 }
 
@@ -412,7 +409,7 @@ unsafe fn enqueue<T>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::Queue;
+    use super::{LenType, Queue};
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
@@ -430,10 +427,9 @@ mod tests {
         assert_eq!(Droppable::count(), 0);
     }
 
-    #[test]
-    fn sanity() {
+    fn sanity_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
+        let q = Queue::<_, 2, LenT>::new();
         q.enqueue(0).unwrap();
         q.enqueue(1).unwrap();
         assert!(q.enqueue(2).is_err());
@@ -444,23 +440,50 @@ mod tests {
     }
 
     #[test]
-    fn drain_at_pos255() {
+    fn sanity() {
+        sanity_len::<u8>();
+    }
+
+    #[test]
+    fn sanity_u16() {
+        sanity_len::<u16>();
+    }
+
+    #[test]
+    fn sanity_u32() {
+        sanity_len::<u32>();
+    }
+
+    #[test]
+    fn sanity_usize() {
+        sanity_len::<usize>();
+    }
+
+    fn drain_at_wrap_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
-        for _ in 0..255 {
+        let q = Queue::<_, 2, LenT>::new();
+        for _ in 0..LenT::MAX_USIZE {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
         }
-
         // Queue is empty, this should not block forever.
         assert_eq!(q.dequeue(), None);
     }
 
     #[test]
-    fn full_at_wrapped_pos0() {
+    fn drain_at_pos255() {
+        drain_at_wrap_len::<u8>();
+    }
+
+    #[test]
+    fn drain_at_wrap_u16() {
+        drain_at_wrap_len::<u16>();
+    }
+
+    fn full_at_wrapped_pos0_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
-        for _ in 0..254 {
+        let q = Queue::<_, 2, LenT>::new();
+        for _ in 0..LenT::MAX_USIZE - 1 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
         }
@@ -471,23 +494,38 @@ mod tests {
     }
 
     #[test]
-    fn enqueue_full() {
-        #[cfg(not(feature = "mpmc_large"))]
-        const CAPACITY: usize = 128;
+    fn full_at_wrapped_pos0() {
+        full_at_wrapped_pos0_len::<u8>();
+    }
 
-        #[cfg(feature = "mpmc_large")]
-        const CAPACITY: usize = 256;
+    #[test]
+    fn full_at_wrapped_pos0_u16() {
+        full_at_wrapped_pos0_len::<u16>();
+    }
 
+    fn enqueue_full_len<LenT: LenType, const CAP: usize>() {
         #[expect(deprecated)]
-        let q: Queue<u8, CAPACITY> = Queue::new();
-
-        assert_eq!(q.capacity(), CAPACITY);
-
-        for _ in 0..CAPACITY {
+        let q: Queue<u8, CAP, LenT> = Queue::new();
+        assert_eq!(q.capacity(), CAP);
+        for _ in 0..CAP {
             q.enqueue(0xAA).unwrap();
         }
-
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    fn enqueue_full() {
+        enqueue_full_len::<u8, 128>();
+    }
+
+    #[test]
+    fn enqueue_full_usize() {
+        enqueue_full_len::<usize, 256>();
+    }
+
+    #[test]
+    fn enqueue_full_u16_large_capacity() {
+        enqueue_full_len::<u16, 1024>();
     }
 }

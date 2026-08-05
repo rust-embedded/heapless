@@ -192,13 +192,7 @@ pub mod binary_heap;
 mod bytes;
 #[cfg(feature = "defmt")]
 mod defmt;
-#[cfg(any(
-    // assume we have all atomics available if we're using portable-atomic
-    feature = "portable-atomic",
-    // target has native atomic CAS (mpmc_large requires usize, otherwise just u8)
-    all(feature = "mpmc_large", target_has_atomic = "ptr"),
-    all(not(feature = "mpmc_large"), target_has_atomic = "8")
-))]
+#[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
 pub mod mpmc;
 #[cfg(any(
     arm_llsc,
