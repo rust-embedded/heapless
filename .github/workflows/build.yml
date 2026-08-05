@@ -378,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -D warnings
-      MSRV: 1.87.0
+      MSRV: 1.88.0
     defaults:
       run:
         working-directory: cfail
