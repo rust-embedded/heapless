@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed unsoundness in `IndexMap:insert`.
 - Limited max size of `IndexMap` to u16::MAX + 1.
   The implementation for sizes higher than u16::MAX were unsound anyway.
+- Removed `mpmc_large` feature. Targets that need `mpmc` must either support `target_has_atomic =
+  "ptr"` or use `portable-atomic`.
+- Added `LenT` type parameter to `Queue` and `QueueView` with default value `u8`
+- Added `wrapping_add` and `signed_wrapping_cmp` to `LenType` as provided methods
+- Added `LenType::Atomic` and `LenType::Signed` associated types
 
 ## [v0.9.3] 2025-04-15
 
