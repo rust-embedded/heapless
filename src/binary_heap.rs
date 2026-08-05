@@ -512,7 +512,7 @@ where
     /// The length of the heap must be larger than `index`.
     unsafe fn remove_unchecked(&mut self, index: usize) -> T {
         debug_assert!(index < self.len());
-        // SAFETY: the heap is not empty because of the preconiditon.
+        // SAFETY: the heap is not empty because of the precondition.
         let mut item = unsafe { self.data.pop_unchecked() };
         if let Some(item_to_remove) = self.data.get_mut(index) {
             mem::swap(&mut item, item_to_remove);
