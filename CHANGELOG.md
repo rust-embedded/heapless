@@ -11,8 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Deprecated `.remove()` in `IndexMap` and `IndexSet` in favour of `.swap_remove()`.
 - Fixed `IndexMap::truncate` leading to an inconsistent state.
 - Fixed `Deque::make_contigous` leading to an inconsistent state.
-- Added `resize_with` to `Vec`
-- Added `retain_back` (aka `truncate_front`) to `Deque`
+- Added `resize_with` to `Vec`.
+- Added `retain_back` (aka `truncate_front`) to `Deque`.
+- Added `retain` to `BinaryHeap`.
+- Bump MSRV to 1.88 (requires by trybuild dev dependency).
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
 - Added `push_mut` to `Vec`.
 - Fixed unsoundness in `IndexMap:insert`.
