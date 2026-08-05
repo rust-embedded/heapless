@@ -409,7 +409,7 @@ unsafe fn enqueue<T, LenT: LenType>(
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::Queue;
+    use super::{LenType, Queue};
 
     // Ensure a `Queue` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Queue<*const (), 4>: Send);
@@ -427,10 +427,9 @@ mod tests {
         assert_eq!(Droppable::count(), 0);
     }
 
-    #[test]
-    fn sanity() {
+    fn sanity_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
+        let q = Queue::<_, 2, LenT>::new();
         q.enqueue(0).unwrap();
         q.enqueue(1).unwrap();
         assert!(q.enqueue(2).is_err());
@@ -441,23 +440,50 @@ mod tests {
     }
 
     #[test]
-    fn drain_at_pos255() {
+    fn sanity() {
+        sanity_len::<u8>();
+    }
+
+    #[test]
+    fn sanity_u16() {
+        sanity_len::<u16>();
+    }
+
+    #[test]
+    fn sanity_u32() {
+        sanity_len::<u32>();
+    }
+
+    #[test]
+    fn sanity_usize() {
+        sanity_len::<usize>();
+    }
+
+    fn drain_at_wrap_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
-        for _ in 0..255 {
+        let q = Queue::<_, 2, LenT>::new();
+        for _ in 0..LenT::MAX_USIZE {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
         }
-
         // Queue is empty, this should not block forever.
         assert_eq!(q.dequeue(), None);
     }
 
     #[test]
-    fn full_at_wrapped_pos0() {
+    fn drain_at_pos255() {
+        drain_at_wrap_len::<u8>();
+    }
+
+    #[test]
+    fn drain_at_wrap_u16() {
+        drain_at_wrap_len::<u16>();
+    }
+
+    fn full_at_wrapped_pos0_len<LenT: LenType>() {
         #[expect(deprecated)]
-        let q = Queue::<_, 2>::new();
-        for _ in 0..254 {
+        let q = Queue::<_, 2, LenT>::new();
+        for _ in 0..LenT::MAX_USIZE - 1 {
             assert!(q.enqueue(0).is_ok());
             assert_eq!(q.dequeue(), Some(0));
         }
@@ -468,23 +494,38 @@ mod tests {
     }
 
     #[test]
-    fn enqueue_full() {
-        #[cfg(not(feature = "mpmc_large"))]
-        const CAPACITY: usize = 128;
+    fn full_at_wrapped_pos0() {
+        full_at_wrapped_pos0_len::<u8>();
+    }
 
-        #[cfg(feature = "mpmc_large")]
-        const CAPACITY: usize = 256;
+    #[test]
+    fn full_at_wrapped_pos0_u16() {
+        full_at_wrapped_pos0_len::<u16>();
+    }
 
+    fn enqueue_full_len<LenT: LenType, const CAP: usize>() {
         #[expect(deprecated)]
-        let q: Queue<u8, CAPACITY> = Queue::new();
-
-        assert_eq!(q.capacity(), CAPACITY);
-
-        for _ in 0..CAPACITY {
+        let q: Queue<u8, CAP, LenT> = Queue::new();
+        assert_eq!(q.capacity(), CAP);
+        for _ in 0..CAP {
             q.enqueue(0xAA).unwrap();
         }
-
         // Queue is full, this should not block forever.
         q.enqueue(0x55).unwrap_err();
+    }
+
+    #[test]
+    fn enqueue_full() {
+        enqueue_full_len::<u8, 128>();
+    }
+
+    #[test]
+    fn enqueue_full_usize() {
+        enqueue_full_len::<usize, 256>();
+    }
+
+    #[test]
+    fn enqueue_full_u16_large_capacity() {
+        enqueue_full_len::<u16, 1024>();
     }
 }
