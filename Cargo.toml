@@ -53,9 +53,6 @@ zeroize = ["dep:zeroize"]
 # Implement `embedded_io::Write`
 "embedded-io-v0.7" = ["dep:embedded-io"]
 
-# Enable larger MPMC sizes.
-mpmc_large = []
-
 # Implement some alloc Vec interoperability
 alloc = []
 
@@ -86,7 +83,6 @@ features = [
     "ufmt",
     "serde",
     "defmt",
-    "mpmc_large",
     "portable-atomic-critical-section",
     "alloc",
 ]
