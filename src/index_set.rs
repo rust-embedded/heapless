@@ -525,6 +525,23 @@ where
         self.map.swap_remove(value).is_some()
     }
 
+    /// Removes a value from the set. Returns `true` if the value was present in the set.
+    ///
+    /// The value is removed by shifting all of the elements that follow it, preserving the
+    /// insertion order of the remaining elements.
+    ///
+    /// The value may be any borrowed form of the set's value type, but `Hash` and `Eq` on the
+    /// borrowed form must match those for the value type.
+    ///
+    /// Computes in *O*(n) time (average).
+    pub fn shift_remove<Q>(&mut self, value: &Q) -> bool
+    where
+        T: Borrow<Q>,
+        Q: ?Sized + Eq + Hash,
+    {
+        self.map.shift_remove(value).is_some()
+    }
+
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all elements `e` for which `f(&e)` returns `false`.
@@ -720,10 +737,25 @@ where
 mod tests {
     use static_assertions::assert_not_impl_any;
 
-    use super::{BuildHasherDefault, IndexSet};
+    use super::{BuildHasherDefault, FnvIndexSet, IndexSet};
 
     // Ensure a `IndexSet` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(IndexSet<*const (), BuildHasherDefault<()>, 4>: Send);
+
+    #[test]
+    fn shift_remove_preserves_order() {
+        let mut set = FnvIndexSet::<_, 8>::new();
+        for value in 0..5 {
+            set.insert(value).unwrap();
+        }
+
+        assert!(set.shift_remove(&2));
+        assert!(!set.shift_remove(&9));
+        assert_eq!(
+            set.iter().copied().collect::<std::vec::Vec<_>>(),
+            [0, 1, 3, 4]
+        );
+    }
 
     #[test]
     #[cfg(feature = "zeroize")]

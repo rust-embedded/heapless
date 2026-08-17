@@ -403,6 +403,33 @@ where
         (entry.key, entry.value)
     }
 
+    /// SAFETY: found must be a valid entry and probe the index of the corresponding `Pos`
+    unsafe fn shift_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
+        let old_len = self.entries.len();
+        self.indices[probe] = Pos::none();
+        // Unlike `remove_found`, every entry after `found` is shifted towards the front.
+        let entry = self.entries.remove(found);
+
+        // Validate against the old length so a full-capacity `Pos` that shares the empty
+        // sentinel encoding is still updated. The removed probe is the sole empty slot.
+        for (table_index, pos) in self.indices.iter_mut().enumerate() {
+            if table_index == probe {
+                continue;
+            }
+
+            if let Some(valid) = pos.as_valid_mut::<N>(old_len) {
+                let entry_index = valid.index();
+                if entry_index > found {
+                    valid.replace(Pos::new(entry_index - 1, valid.hash()));
+                }
+            }
+        }
+
+        self.backward_shift_after_removal(probe);
+
+        (entry.key, entry.value)
+    }
+
     fn retain_in_order<F>(&mut self, mut keep: F)
     where
         F: FnMut(&mut K, &mut V) -> bool,
@@ -716,6 +743,16 @@ where
         unsafe { self.core.remove_found(self.probe, self.pos) }
     }
 
+    /// Removes this entry from the map and yields its corresponding key and value.
+    ///
+    /// Like `Vec::remove`, the pair is removed by shifting all of the elements that follow it,
+    /// preserving their relative order.
+    pub fn shift_remove_entry(self) -> (K, V) {
+        // SAFETY: We know that `pos` is valid from the creation of the entry
+        // and that cannot have changed since we held a mutable entry to the map
+        unsafe { self.core.shift_remove_found(self.probe, self.pos) }
+    }
+
     /// Gets a reference to the value associated with this entry
     pub fn get(&self) -> &V {
         // SAFETY: Already checked existence at instantiation and the only mutable reference
@@ -767,6 +804,14 @@ where
     /// and popping it off. **This perturbs the position of what used to be the last element!**.
     pub fn swap_remove(self) -> V {
         self.swap_remove_entry().1
+    }
+
+    /// Removes this entry from the map and yields its value.
+    ///
+    /// Like `Vec::remove`, the pair is removed by shifting all of the elements that follow it,
+    /// preserving their relative order.
+    pub fn shift_remove(self) -> V {
+        self.shift_remove_entry().1
     }
 }
 
@@ -1411,6 +1456,93 @@ where
             // SAFETY: Find gives a correct bucket and the corresponding probe
             unsafe { self.core.remove_found(probe, found) }.1
         })
+    }
+
+    /// Remove the key-value pair equivalent to `key` and return its value.
+    ///
+    /// Like `Vec::remove`, the pair is removed by shifting all of the elements that
+    /// follow it, preserving their relative order. **This perturbs the index of all of
+    /// those elements!**
+    ///
+    /// Return `None` if `key` is not in map.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// map.insert(2, "b").unwrap();
+    /// map.insert(3, "c").unwrap();
+    /// map.insert(4, "d").unwrap();
+    /// assert_eq!(map.shift_remove(&2), Some("b"));
+    /// assert_eq!(
+    ///     map.keys().copied().collect::<heapless::Vec<_, 8>>().as_slice(),
+    ///     &[1, 3, 4]
+    /// );
+    /// assert_eq!(map.shift_remove(&2), None);
+    /// ```
+    pub fn shift_remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(probe, found)| {
+            // SAFETY: Find gives a correct bucket and the corresponding probe
+            unsafe { self.core.shift_remove_found(probe, found) }.1
+        })
+    }
+
+    /// Remove and return the key-value pair equivalent to `key`.
+    ///
+    /// Like `Vec::remove`, the pair is removed by shifting all of the elements that
+    /// follow it, preserving their relative order. **This perturbs the index of all of
+    /// those elements!**
+    ///
+    /// Return `None` if `key` is not in map.
+    ///
+    /// Computes in *O*(n) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// map.insert(1, "a").unwrap();
+    /// assert_eq!(map.shift_remove_entry(&1), Some((1, "a")));
+    /// assert_eq!(map.shift_remove_entry(&1), None);
+    /// ```
+    pub fn shift_remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        K: Borrow<Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        self.find(key).map(|(probe, found)| {
+            // SAFETY: Find gives a correct bucket and the corresponding probe
+            unsafe { self.core.shift_remove_found(probe, found) }
+        })
+    }
+
+    /// Remove and return the key-value pair at `index`.
+    ///
+    /// Valid indices are `0 <= index < self.len()`.
+    ///
+    /// The pair is removed by shifting all of the elements that follow it, preserving the
+    /// insertion order of the remaining elements.
+    ///
+    /// Computes in *O*(n) time (average).
+    pub fn shift_remove_index(&mut self, index: usize) -> Option<(K, V)> {
+        let probe = self.core.indices.iter().position(|pos| {
+            pos.as_valid::<N>(self.core.entries.len())
+                .is_some_and(|pos| pos.index() == index)
+        })?;
+
+        // SAFETY: The position search found a valid entry and its corresponding probe
+        Some(unsafe { self.core.shift_remove_found(probe, index) })
     }
 
     /// Retains only the elements specified by the predicate.
@@ -2107,6 +2239,74 @@ mod tests {
             }
         };
         assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn shift_remove_preserves_order() {
+        let mut map = FnvIndexMap::<_, _, 8>::new();
+        for key in 0..5 {
+            map.insert(key, key * 10).unwrap();
+        }
+
+        assert_eq!(map.shift_remove(&2), Some(20));
+        assert_eq!(map.shift_remove(&9), None);
+        assert_eq!(
+            map.keys().copied().collect::<std::vec::Vec<_>>(),
+            [0, 1, 3, 4]
+        );
+        assert_eq!(map.get(&0), Some(&0));
+        assert_eq!(map.get(&1), Some(&10));
+        assert_eq!(map.get(&3), Some(&30));
+        assert_eq!(map.get(&4), Some(&40));
+    }
+
+    #[test]
+    fn shift_remove_entry_preserves_order() {
+        let mut map = FnvIndexMap::<_, _, 8>::new();
+        for key in 0..5 {
+            map.insert(key, key * 10).unwrap();
+        }
+
+        assert_eq!(map.shift_remove_entry(&2), Some((2, 20)));
+        assert_eq!(map.shift_remove_entry(&9), None);
+        assert_eq!(
+            map.keys().copied().collect::<std::vec::Vec<_>>(),
+            [0, 1, 3, 4]
+        );
+    }
+
+    #[test]
+    fn occupied_entry_shift_remove_methods_preserve_order() {
+        let mut map = FnvIndexMap::<_, _, 8>::new();
+        for key in 0..5 {
+            map.insert(key, key * 10).unwrap();
+        }
+
+        let Entry::Occupied(entry) = map.entry(2) else {
+            panic!("Entry not found");
+        };
+        assert_eq!(entry.shift_remove_entry(), (2, 20));
+
+        let Entry::Occupied(entry) = map.entry(1) else {
+            panic!("Entry not found");
+        };
+        assert_eq!(entry.shift_remove(), 10);
+        assert_eq!(map.keys().copied().collect::<std::vec::Vec<_>>(), [0, 3, 4]);
+    }
+
+    #[test]
+    fn shift_remove_index_preserves_order() {
+        let mut map = FnvIndexMap::<_, _, 8>::new();
+        for key in 0..5 {
+            map.insert(key, key * 10).unwrap();
+        }
+
+        assert_eq!(map.shift_remove_index(2), Some((2, 20)));
+        assert_eq!(map.shift_remove_index(4), None);
+        assert_eq!(
+            map.keys().copied().collect::<std::vec::Vec<_>>(),
+            [0, 1, 3, 4]
+        );
     }
 
     #[test]
