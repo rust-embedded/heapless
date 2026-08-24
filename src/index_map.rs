@@ -1316,6 +1316,41 @@ where
         self.find(key).map(|(_, found)| found)
     }
 
+    /// Inserts a key-value pair into the map, returning the index of the pair along with the older
+    /// value.
+    ///
+    /// This behaves like [`insert`](Self::insert), but additionally returns the index of the
+    /// key-value pair in the map's order, which is useful together with the index-based accessors
+    /// such as [`get_index`](Self::get_index).
+    ///
+    /// If an equivalent key already exists in the map: the key remains and retains its place in the
+    /// order, its corresponding value is updated with `value`, and its index together with the
+    /// older value inside `Some(_)` are returned.
+    ///
+    /// If no equivalent key existed in the map: the new key-value pair is inserted, last in order,
+    /// and its index together with `None` are returned.
+    ///
+    /// Computes in *O*(1) time (average).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::index_map::FnvIndexMap;
+    ///
+    /// let mut map = FnvIndexMap::<_, _, 8>::new();
+    /// assert_eq!(map.insert_full(37, "a"), Ok((0, None)));
+    /// assert_eq!(map.insert_full(11, "b"), Ok((1, None)));
+    /// assert_eq!(map.insert_full(37, "c"), Ok((0, Some("a"))));
+    /// assert_eq!(map[&37], "c");
+    /// ```
+    pub fn insert_full(&mut self, key: K, value: V) -> Result<(usize, Option<V>), (K, V)> {
+        let hash = hash_with(&key, &self.build_hasher);
+        match self.core.insert(hash, key, value) {
+            Insert::Success(inserted) => Ok((inserted.index, inserted.old_value)),
+            Insert::Full((k, v)) => Err((k, v)),
+        }
+    }
+
     /// Inserts a key-value pair into the map.
     ///
     /// If an equivalent key already exists in the map: the key remains and retains in its place in
@@ -1344,11 +1379,7 @@ where
     /// assert_eq!(map[&37], "c");
     /// ```
     pub fn insert(&mut self, key: K, value: V) -> Result<Option<V>, (K, V)> {
-        let hash = hash_with(&key, &self.build_hasher);
-        match self.core.insert(hash, key, value) {
-            Insert::Success(inserted) => Ok(inserted.old_value),
-            Insert::Full((k, v)) => Err((k, v)),
-        }
+        self.insert_full(key, value).map(|(_, old_value)| old_value)
     }
 
     /// Removes an element.
@@ -1493,6 +1524,28 @@ where
 {
     fn index_mut(&mut self, key: &Q) -> &mut V {
         self.get_mut(key).expect("key not found")
+    }
+}
+
+impl<K, V, S, const N: usize> ops::Index<usize> for IndexMap<K, V, S, N>
+where
+    K: Eq + Hash,
+    S: BuildHasher,
+{
+    type Output = V;
+
+    fn index(&self, index: usize) -> &V {
+        self.get_index(index).expect("index out of bounds").1
+    }
+}
+
+impl<K, V, S, const N: usize> ops::IndexMut<usize> for IndexMap<K, V, S, N>
+where
+    K: Eq + Hash,
+    S: BuildHasher,
+{
+    fn index_mut(&mut self, index: usize) -> &mut V {
+        self.get_index_mut(index).expect("index out of bounds").1
     }
 }
 
@@ -2439,5 +2492,45 @@ mod tests {
         map.insert(4, 4).unwrap();
         map.insert(8, 8).unwrap();
         map.swap_remove(&0).unwrap(); // never returns
+    }
+
+    #[test]
+    fn insert_full() {
+        let mut map: FnvIndexMap<&str, i32, 4> = FnvIndexMap::new();
+
+        assert_eq!(map.insert_full("a", 1), Ok((0, None)));
+        assert_eq!(map.insert_full("b", 2), Ok((1, None)));
+
+        // Updating an existing key keeps its index and hands back the old value.
+        assert_eq!(map.insert_full("a", 10), Ok((0, Some(1))));
+        assert_eq!(map.get_index(0), Some((&"a", &10)));
+
+        map.insert_full("c", 3).unwrap();
+        map.insert_full("d", 4).unwrap();
+
+        // A full map reports the rejected pair, without perturbing the existing entries.
+        assert_eq!(map.insert_full("e", 5), Err(("e", 5)));
+        assert_eq!(map.len(), 4);
+    }
+
+    #[test]
+    fn index_by_position() {
+        let mut map: FnvIndexMap<&str, i32, 4> = FnvIndexMap::new();
+        map.insert("a", 1).unwrap();
+        map.insert("b", 2).unwrap();
+
+        assert_eq!(map[0], 1);
+        assert_eq!(map[1], 2);
+
+        map[1] = 20;
+        assert_eq!(map[&"b"], 20);
+    }
+
+    #[test]
+    #[should_panic]
+    fn index_by_position_out_of_bounds() {
+        let mut map: FnvIndexMap<&str, i32, 4> = FnvIndexMap::new();
+        map.insert("a", 1).unwrap();
+        let _ = map[1];
     }
 }
