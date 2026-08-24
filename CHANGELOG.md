@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Added `insert_full` and `Index<usize>`/`IndexMut<usize>` to `IndexMap`.
 - Added `swap_remove()` to `IndexMap` and `IndexSet`.
 - Deprecated `.remove()` in `IndexMap` and `IndexSet` in favour of `.swap_remove()`.
 - Fixed `IndexMap::truncate` leading to an inconsistent state.
