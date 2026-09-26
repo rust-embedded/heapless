@@ -51,7 +51,6 @@ jobs:
         run: >
           MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test --features="alloc,
           defmt,
-          mpmc_large,
           portable-atomic-critical-section,
           serde,
           ufmt,
@@ -97,7 +96,6 @@ jobs:
           cargo test --features="
           alloc,
           defmt,
-          mpmc_large,
           portable-atomic-critical-section,
           serde,
           ufmt,
@@ -200,7 +198,6 @@ jobs:
           fi
 
           cargo check --target="${target}" --features="defmt"
-          cargo check --target="${target}" --features="mpmc_large"
           cargo check --target="${target}" --features="portable-atomic-critical-section"
           cargo check --target="${target}" --features="serde"
           cargo check --target="${target}" --features="ufmt"

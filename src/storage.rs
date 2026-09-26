@@ -9,12 +9,8 @@ use core::borrow::{Borrow, BorrowMut};
 ))]
 use crate::spsc;
 
-#[cfg(any(
-    feature = "portable-atomic",
-    all(feature = "mpmc_large", target_has_atomic = "ptr"),
-    all(not(feature = "mpmc_large"), target_has_atomic = "8")
-))]
-use crate::mpmc;
+#[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+use crate::{mpmc, LenType};
 
 pub(crate) trait SealedStorage {
     type Buffer<T>: ?Sized + Borrow<[T]> + BorrowMut<[T]>;
@@ -25,20 +21,16 @@ pub(crate) trait SealedStorage {
     #[allow(unused)]
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T;
 
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_view<T>(this: &mpmc::QueueInner<T, Self>) -> &mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_view<T, LenT: LenType>(
+        this: &mpmc::QueueInner<T, LenT, Self>,
+    ) -> &mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized;
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_mut_view<T>(this: &mut mpmc::QueueInner<T, Self>) -> &mut mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_mut_view<T, LenT: LenType>(
+        this: &mut mpmc::QueueInner<T, LenT, Self>,
+    ) -> &mut mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized;
 
@@ -97,24 +89,18 @@ impl<const N: usize> SealedStorage for OwnedStorage<N> {
     fn as_ptr<T>(this: *mut Self::Buffer<T>) -> *mut T {
         this.cast()
     }
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_view<T>(this: &mpmc::Queue<T, N>) -> &mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_view<T, LenT: LenType>(this: &mpmc::Queue<T, N, LenT>) -> &mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized,
     {
         // Fails to compile without the indirection
         this.as_view_private()
     }
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_mut_view<T>(this: &mut mpmc::Queue<T, N>) -> &mut mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_mut_view<T, LenT: LenType>(
+        this: &mut mpmc::Queue<T, N, LenT>,
+    ) -> &mut mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized,
     {
@@ -162,24 +148,20 @@ impl SealedStorage for ViewStorage {
         this.cast()
     }
 
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_view<T>(this: &mpmc::QueueInner<T, Self>) -> &mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_view<T, LenT: LenType>(
+        this: &mpmc::QueueInner<T, LenT, Self>,
+    ) -> &mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized,
     {
         this
     }
 
-    #[cfg(any(
-        feature = "portable-atomic",
-        all(feature = "mpmc_large", target_has_atomic = "ptr"),
-        all(not(feature = "mpmc_large"), target_has_atomic = "8")
-    ))]
-    fn as_mpmc_mut_view<T>(this: &mut mpmc::QueueInner<T, Self>) -> &mut mpmc::QueueView<T>
+    #[cfg(any(feature = "portable-atomic", target_has_atomic = "ptr",))]
+    fn as_mpmc_mut_view<T, LenT: LenType>(
+        this: &mut mpmc::QueueInner<T, LenT, Self>,
+    ) -> &mut mpmc::QueueView<T, LenT>
     where
         Self: Storage + Sized,
     {

@@ -1,0 +1,15 @@
+error[E0080]: evaluation panicked: assertion failed: N < LenT::MAX_USIZE
+ --> $HEAPLESS/src/mpmc.rs
+  |
+  |             assert!(N < LenT::MAX_USIZE);
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `heapless::mpmc::QueueInner::<u8, u8, heapless::storage::OwnedStorage<256>>::new::{constant#0}` failed here
+
+note: erroneous constant encountered
+ --> $HEAPLESS/src/mpmc.rs
+  |
+  | /         const {
+  | |             assert!(N > 1);
+  | |             assert!(N.is_power_of_two());
+  | |             assert!(N < LenT::MAX_USIZE);
+  | |         }
+  | |_________^
