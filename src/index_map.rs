@@ -365,7 +365,7 @@ where
     }
 
     /// SAFETY: found must be a valid entry and probe the index of the corresponding `Pos`
-    unsafe fn remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
+    unsafe fn swap_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
         // index `probe` and entry `found` is to be removed
         // use swap_remove, but then we need to update the index that points
         // to the other entry that has to move
@@ -407,7 +407,7 @@ where
     unsafe fn shift_remove_found(&mut self, probe: usize, found: usize) -> (K, V) {
         let old_len = self.entries.len();
         self.indices[probe] = Pos::none();
-        // Unlike `remove_found`, every entry after `found` is shifted towards the front.
+        // Unlike `swap_remove_found`, every entry after `found` is shifted towards the front.
         let entry = self.entries.remove(found);
 
         // Validate against the old length so a full-capacity `Pos` that shares the empty
@@ -740,16 +740,18 @@ where
     pub fn swap_remove_entry(self) -> (K, V) {
         // SAFETY: We know that `pos` is valid from the creation of the entry
         // and that cannot have changed since we held a mutable entry to the map
-        unsafe { self.core.remove_found(self.probe, self.pos) }
+        unsafe { self.core.swap_remove_found(self.probe, self.pos) }
     }
 
     /// Removes this entry from the map and yields its corresponding key and value.
     ///
     /// Like `Vec::remove`, the pair is removed by shifting all of the elements that follow it,
     /// preserving their relative order.
+    ///
+    /// Computes in **O(n)** time on average
     pub fn shift_remove_entry(self) -> (K, V) {
         // SAFETY: We know that `pos` is valid from the creation of the entry
-        // and that cannot have changed since we held a mutable entry to the map
+        // and that cannot have changed since we held a mutable reference to the map
         unsafe { self.core.shift_remove_found(self.probe, self.pos) }
     }
 
@@ -810,6 +812,8 @@ where
     ///
     /// Like `Vec::remove`, the pair is removed by shifting all of the elements that follow it,
     /// preserving their relative order.
+    ///
+    /// Computes in **O(n)** time on average
     pub fn shift_remove(self) -> V {
         self.shift_remove_entry().1
     }
@@ -1454,7 +1458,7 @@ where
     {
         self.find(key).map(|(probe, found)| {
             // SAFETY: Find gives a correct bucket and the corresponding probe
-            unsafe { self.core.remove_found(probe, found) }.1
+            unsafe { self.core.swap_remove_found(probe, found) }.1
         })
     }
 
@@ -2632,11 +2636,11 @@ mod tests {
         assert!(map.get(&ControlledHash(0xFFFF, 0)).is_none());
     }
 
-    /// Test that `remove_found` doesn't fail
+    /// Test that `swap_remove_found` doesn't fail
     ///
     /// Ensures that `probe_loop!` works correctly with the `continue` in the body
     #[test]
-    fn remove_found_loop() {
+    fn swap_remove_found_loop() {
         let mut map: FnvIndexMap<u16, u16, 4> = IndexMap::default();
         map.insert(0, 0).unwrap();
         map.insert(4, 4).unwrap();
