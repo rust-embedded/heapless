@@ -83,7 +83,9 @@ static_assertions = "1.1.0"
 [package.metadata.docs.rs]
 features = [
     "bytes",
+    "embedded-io-v0.7",
     "ufmt",
+    "zeroize",
     "serde",
     "defmt",
     "mpmc_large",
