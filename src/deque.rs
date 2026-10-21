@@ -1246,6 +1246,18 @@ impl<'a, T: 'a + Copy, S: VecStorage<T> + ?Sized> Extend<&'a T> for DequeInner<T
     }
 }
 
+impl<T, const N: usize> FromIterator<T> for Deque<T, N> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut deque = Self::new();
+        deque.extend(iter);
+
+        deque
+    }
+}
+
 /// An iterator that moves out of a [`Deque`].
 ///
 /// This struct is created by calling the `into_iter` method.
@@ -1551,6 +1563,30 @@ mod tests {
         let mut v: Deque<i32, 4> = Deque::new();
         // Is too many elements -> should panic
         v.extend(&[1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn from_iter() {
+        // Iterator is empty.
+        let deq: Deque<i32, 4> = core::iter::empty().collect();
+        assert!(deq.is_empty());
+
+        // Iterator is under limit.
+        let deq: Deque<i32, 4> = [1, 2, 3].into_iter().collect();
+        assert!(!deq.is_full());
+        assert_eq!(deq.as_slices(), (&[1, 2, 3][..], &[][..]));
+
+        // Iterator is at limit.
+        let deq: Deque<i32, 4> = [1, 2, 3, 4].into_iter().collect();
+        assert!(deq.is_full());
+        assert_eq!(deq.as_slices(), (&[1, 2, 3, 4][..], &[][..]));
+    }
+
+    #[test]
+    #[should_panic]
+    fn from_iter_panic() {
+        // Too many elements (4 vs 5)
+        let _: Deque<i32, 4> = [1, 2, 3, 4, 5].into_iter().collect();
     }
 
     #[test]
