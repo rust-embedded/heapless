@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Limited max size of `IndexMap` to u16::MAX + 1.
   The implementation for sizes higher than u16::MAX were unsound anyway.
 - Added `shift_remove`, `shift_remove_entry` and `shift_remove_full` to `IndexMap` and `IndexSet`.
+- Implemented `IntoIterator` for `&mut LinearMap` and `&mut LinearMapView`.
 
 ## [v0.9.3] 2025-04-15
 

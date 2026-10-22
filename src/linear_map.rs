@@ -654,6 +654,18 @@ where
     }
 }
 
+impl<'a, K, V, S: LinearMapStorage<K, V> + ?Sized> IntoIterator for &'a mut LinearMapInner<K, V, S>
+where
+    K: Eq,
+{
+    type Item = (&'a K, &'a mut V);
+    type IntoIter = IterMut<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 /// An iterator over the items of a [`LinearMap`]
 ///
 /// This struct is created by calling the [`iter`](LinearMap::iter) method on [`LinearMap`].
@@ -1158,5 +1170,25 @@ mod test {
             }
         };
         assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn into_iter_mut() {
+        let mut map = LinearMap::<_, _, 8>::new();
+        map.insert(1, 10).unwrap();
+        map.insert(2, 20).unwrap();
+
+        for (_, v) in &mut map {
+            *v += 1;
+        }
+        assert_eq!(map.get(&1), Some(&11));
+        assert_eq!(map.get(&2), Some(&21));
+
+        let view: &mut LinearMapView<_, _> = &mut map;
+        for (_, v) in view {
+            *v *= 2;
+        }
+        assert_eq!(map.get(&1), Some(&22));
+        assert_eq!(map.get(&2), Some(&42));
     }
 }
