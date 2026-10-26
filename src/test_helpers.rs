@@ -1,15 +1,17 @@
 macro_rules! droppable {
     () => {
         static COUNT: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
+        static CREATED_COUNT: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
 
         #[derive(Eq, Ord, PartialEq, PartialOrd, Debug, Hash)]
         struct Droppable(i32);
         impl Droppable {
             fn new() -> Self {
                 COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
-                Droppable(Self::count())
+                Droppable(CREATED_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed))
             }
 
+            #[allow(unused)]
             fn count() -> i32 {
                 COUNT.load(core::sync::atomic::Ordering::Relaxed)
             }

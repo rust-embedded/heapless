@@ -205,12 +205,12 @@ mod tests {
         assert_eq!(Droppable::count(), 4);
 
         let mut iter = vec.drain(2..);
-        assert_eq!(iter.next().unwrap().0, 3);
+        assert_eq!(iter.next().unwrap().0, 2);
         drop(iter);
         assert_eq!(Droppable::count(), 2);
 
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec.remove(0).0, 1);
+        assert_eq!(vec.remove(0).0, 0);
         assert_eq!(Droppable::count(), 1);
 
         drop(vec);
