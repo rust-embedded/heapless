@@ -1813,6 +1813,28 @@ where
     }
 }
 
+impl<T, I, LenT: LenType, S: VecStorage<T> + ?Sized> ops::Index<I> for VecInner<T, LenT, S>
+where
+    I: slice::SliceIndex<[T]>,
+{
+    type Output = I::Output;
+
+    #[inline]
+    fn index(&self, index: I) -> &Self::Output {
+        ops::Index::index(self.as_slice(), index)
+    }
+}
+
+impl<T, I, LenT: LenType, S: VecStorage<T> + ?Sized> ops::IndexMut<I> for VecInner<T, LenT, S>
+where
+    I: slice::SliceIndex<[T]>,
+{
+    #[inline]
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        ops::IndexMut::index_mut(self.as_mut_slice(), index)
+    }
+}
+
 impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> ops::Deref for VecInner<T, LenT, S> {
     type Target = [T];
 
@@ -1898,6 +1920,37 @@ mod tests {
     #[test]
     fn stack_new() {
         let mut _v: Vec<i32, 4> = Vec::new();
+    }
+
+    #[test]
+    fn index() {
+        let mut v: Vec<i32, 4> = Vec::from_array([1, 2, 3]);
+        assert_eq!(v[1], 2);
+        v[1] = 9;
+        assert_eq!(v[1], 9);
+
+        // Now we test if code using `Index` and `IndexMut` trait bounds
+        // actually works.
+
+        fn increment<C>(container: &mut C, index: usize)
+        where
+            C: std::ops::IndexMut<usize>,
+            C::Output: std::ops::AddAssign<i32>,
+        {
+            container[index] += 1;
+        }
+
+        increment(&mut v, 1);
+        assert_eq!(v[1], 10);
+
+        fn get<C>(container: &mut C, index: usize) -> &<C as core::ops::Index<usize>>::Output
+        where
+            C: std::ops::Index<usize>,
+        {
+            &container[index]
+        }
+
+        assert_eq!(*get(&mut v, 1), 10);
     }
 
     #[test]
