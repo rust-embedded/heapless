@@ -1943,14 +1943,14 @@ mod tests {
         increment(&mut v, 1);
         assert_eq!(v[1], 10);
 
-        fn get<C>(container: &mut C, index: usize) -> &<C as core::ops::Index<usize>>::Output
+        fn get<C>(container: &C, index: usize) -> &<C as core::ops::Index<usize>>::Output
         where
             C: std::ops::Index<usize>,
         {
             &container[index]
         }
 
-        assert_eq!(*get(&mut v, 1), 10);
+        assert_eq!(*get(&v, 1), 10);
     }
 
     #[test]
