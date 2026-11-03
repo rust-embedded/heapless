@@ -43,7 +43,7 @@ use core::{
     iter::FusedIterator,
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
-    ptr, slice,
+    ops, ptr, slice,
 };
 
 #[cfg(feature = "zeroize")]
@@ -1364,6 +1364,22 @@ where
 
 impl<T: Eq, const N: usize> Eq for Deque<T, N> {}
 
+impl<T, S: VecStorage<T> + ?Sized> ops::Index<usize> for DequeInner<T, S> {
+    type Output = T;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).expect("out of bounds access")
+    }
+}
+
+impl<T, S: VecStorage<T> + ?Sized> ops::IndexMut<usize> for DequeInner<T, S> {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index).expect("out of bounds access")
+    }
+}
+
 impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// Converts a `[T; NS]` into a `Deque<T, ND>`.
     ///
@@ -1869,6 +1885,37 @@ mod tests {
         assert_eq!(q.pop_front(), Some(42));
         assert_eq!(q.pop_front(), Some(43));
         assert_eq!(q.pop_front(), None);
+    }
+
+    #[test]
+    fn index() {
+        let mut q = Deque::<_, 4>::try_from([1, 2, 3]).unwrap();
+        assert_eq!(q[1], 2);
+        q[1] = 9;
+        assert_eq!(q[1], 9);
+
+        // Now we test if code using `Index` and `IndexMut` trait bounds
+        // actually works.
+
+        fn increment<C>(container: &mut C, index: usize)
+        where
+            C: std::ops::IndexMut<usize>,
+            C::Output: std::ops::AddAssign<i32>,
+        {
+            container[index] += 1;
+        }
+
+        increment(&mut q, 1);
+        assert_eq!(q[1], 10);
+
+        fn get<C>(container: &C, index: usize) -> &<C as core::ops::Index<usize>>::Output
+        where
+            C: std::ops::Index<usize>,
+        {
+            &container[index]
+        }
+
+        assert_eq!(*get(&q, 1), 10);
     }
 
     #[test]
