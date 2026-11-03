@@ -43,7 +43,7 @@ use core::{
     iter::FusedIterator,
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
-    ptr, slice,
+    ops, ptr, slice,
 };
 
 #[cfg(feature = "zeroize")]
@@ -1364,6 +1364,22 @@ where
 
 impl<T: Eq, const N: usize> Eq for Deque<T, N> {}
 
+impl<T, S: VecStorage<T> + ?Sized> ops::Index<usize> for DequeInner<T, S> {
+    type Output = T;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).expect("out of bounds access")
+    }
+}
+
+impl<T, S: VecStorage<T> + ?Sized> ops::IndexMut<usize> for DequeInner<T, S> {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index).expect("out of bounds access")
+    }
+}
+
 impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
     /// Converts a `[T; NS]` into a `Deque<T, ND>`.
     ///
@@ -1869,6 +1885,16 @@ mod tests {
         assert_eq!(q.pop_front(), Some(42));
         assert_eq!(q.pop_front(), Some(43));
         assert_eq!(q.pop_front(), None);
+    }
+
+    #[test]
+    fn index() {
+        let mut q = Deque::<_, 4>::try_from([1, 2, 3]).unwrap();
+        assert_eq!(q[1], 2);
+        q[1] = 9;
+        assert_eq!(q[1], 9);
+        q[2] += 1;
+        assert_eq!(q[2], 4);
     }
 
     #[test]
