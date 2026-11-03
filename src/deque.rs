@@ -406,25 +406,26 @@ impl<T, S: VecStorage<T> + ?Sized> DequeInner<T, S> {
             // this means that we first shift the head forwards, and then
             // copy the tail to the correct position.
             //
-            // from: FGH....ABCDE
-            // to:   ...ABCDEFGH.
+            // from: FGHxxxxABCDE  or: FGxxxxxABCDE.
+            // to:   xxxxABCDEFGH  or: xxxxABCDEFGx.
+            //
             unsafe {
                 ptr::copy(
                     buffer_ptr.add(self.front),
                     buffer_ptr.add(self.back),
                     front_len,
                 );
-                // FGHABCDE....
+                // FGHABCDExxxx or: FGABCDExxxxx.
                 ptr::copy_nonoverlapping(
                     buffer_ptr,
                     buffer_ptr.add(self.back + front_len),
                     back_len,
                 );
-                // ...ABCDEFGH.
+                // xxxxABCDEFGH or: xxxxABCDEFGx.
             }
 
             self.front = back;
-            self.back = 0;
+            self.back = self.to_physical_index(len);
         } else {
             // `free` is smaller than both `head_len` and `tail_len`.
             // the general algorithm for this first moves the slices
@@ -2672,5 +2673,26 @@ mod tests {
         assert_eq!(deque.len(), 0);
         deque.clear();
         assert_eq!(Dropper::count(), 0);
+    }
+
+    // test for https://github.com/rust-embedded/heapless/issues/694
+    #[test]
+    fn make_contiguous_not_full_694() {
+        droppable!();
+        let mut dq: Deque<Droppable, 8> = Deque::new();
+
+        // move `front` to slot 4
+        for _ in 0..4 {
+            dq.push_back(Droppable::new()).unwrap();
+            dq.pop_front();
+        }
+        // 5 elements in slots 4,5,6,7,0: wrapped, not full
+        for _ in 0..5 {
+            dq.push_back(Droppable::new()).unwrap();
+        }
+
+        dq.make_contiguous();
+        drop(dq);
+        assert_eq!(Droppable::count(), 0);
     }
 }

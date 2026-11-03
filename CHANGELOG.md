@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Fix unsoundness in `Deque::mak_contiguous` when the `Deque` is not full
 - Fixed unsoundness in `IndexMap::retain` in the context of panicking predicate.
 - Added `swap_remove()` to `IndexMap` and `IndexSet`.
 - Deprecated `.remove()` in `IndexMap` and `IndexSet` in favour of `.swap_remove()`.
