@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `shift_remove`, `shift_remove_entry` and `shift_remove_full` to `IndexMap` and `IndexSet`.
 - Implemented `Index` and `IndexMut` for `Vec`.
 - Made `String::from_utf8_unchecked` const. The v0.9.0 changelog already listed this, but the change was undone before that release.
+- Made `len` and `is_empty` of `Vec`, `VecView`, `String` and `StringView` usable in const contexts.
 
 ## [v0.9.3] 2025-04-15
 
