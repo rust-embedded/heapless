@@ -327,6 +327,27 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         }
     }
 
+    /// Constructs a new vector by moving in the `len` elements at `src`, without the capacity
+    /// check.
+    ///
+    /// # Safety
+    ///
+    /// - `len` must be at most `N`.
+    /// - `src` must be valid for reading `len` initialized elements.
+    /// - The elements are moved into the returned `Vec`. Unless `T` is [`Copy`], the caller must
+    ///   not use or drop them afterwards.
+    pub(crate) const unsafe fn from_ptr_unchecked(src: *const T, len: usize) -> Self {
+        let mut v = Self::new();
+
+        // SAFETY: The caller guarantees that `src` holds `len` initialized elements and that
+        // `len <= N`, so the buffer of the new `v` has room for them. A buffer we just created
+        // can't overlap `src`. The caller hands ownership of the elements to `v`.
+        unsafe { ptr::copy_nonoverlapping(src, v.buffer.buffer.as_mut_ptr().cast::<T>(), len) };
+        v.len = to_len_type(len);
+
+        v
+    }
+
     /// Const version of [`from_slice`](Self::from_slice) for [`Copy`] elements, without the
     /// capacity check.
     ///
@@ -337,21 +358,9 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
     where
         T: Copy,
     {
-        let mut v = Self::new();
-
-        // SAFETY: `src` holds `src.len()` initialized elements, and the buffer of the new `v` has
-        // room for them, since the caller guarantees `src.len() <= N`. A buffer we just created
-        // can't overlap `src`.
-        unsafe {
-            ptr::copy_nonoverlapping(
-                src.as_ptr(),
-                v.buffer.buffer.as_mut_ptr().cast::<T>(),
-                src.len(),
-            );
-        }
-        v.len = to_len_type(src.len());
-
-        v
+        // SAFETY: The caller guarantees `src.len() <= N`. A slice is valid for reading its
+        // elements, and `T` is `Copy`, so `src` stays usable.
+        unsafe { Self::from_ptr_unchecked(src.as_ptr(), src.len()) }
     }
 
     /// Constructs a new vector with a fixed capacity of `N` and fills it
@@ -391,24 +400,10 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         // any Drop code for T.
         let src = ManuallyDrop::new(src);
 
-        let len: LenT = to_len_type(M);
-
-        let mut v = Self::new();
-
-        // MaybeUninit::deref is non-const, so we just cast to it's internal value.
-        let src_ptr: *const T = ptr::from_ref(&src).cast();
-
-        // Cast from buffer's [MaybeUninit<T>] to [T].
-        let dst_ptr: *mut T = v.buffer.buffer.as_mut_ptr().cast();
-
-        // SAFETY: Move/copy data from src to v's internal buffer.
-        // * Using src_ptr as `*const T` is safe since src's ManuallyDrop<[T; M]> is transparent.
-        // * Using dst_ptr as `*mut T` is safe since v's [MaybeUninit<T>; N] is an array of
-        //   transparent types.
-        unsafe { ptr::copy_nonoverlapping(src_ptr, dst_ptr, M) };
-        v.len = len;
-
-        v
+        // SAFETY: `M <= N` by the assertion above. `ManuallyDrop<[T; M]>` is `repr(transparent)`
+        // around `[T; M]`, so the pointer is valid for reading its `M` elements, and `src` is never
+        // used or dropped again.
+        unsafe { Self::from_ptr_unchecked(ptr::from_ref(&src).cast::<T>(), M) }
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
@@ -2488,6 +2483,17 @@ mod tests {
         assert_eq!(v[0].0, Some(1));
         assert_eq!(v[1].0, Some(2));
         assert_eq!(v[2].0, Some(3));
+    }
+
+    #[test]
+    fn from_array_drops_once() {
+        droppable!();
+
+        let v: Vec<Droppable, 3> = Vec::from_array([Droppable::new(), Droppable::new()]);
+        assert_eq!(Droppable::count(), 2);
+
+        drop(v);
+        assert_eq!(Droppable::count(), 0);
     }
 
     #[test]
