@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed `SortedLinkedList` Zeroize implementation.
 - Fixed possible integer overflow in `VecInner::extend_from_slice`.
 - Allow `bytes::BufMut::advance_mut` implementation on `VecInner` to advance to the end of the buffer.
+- Added `String::try_from_const`, a const version of `String::try_from(&str)` that returns an `Option`.
 
 ## [v0.9.3] 2025-04-15
 

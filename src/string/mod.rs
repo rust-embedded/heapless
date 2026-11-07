@@ -180,6 +180,31 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
         Self { vec: Vec::new() }
     }
 
+    /// Creates a `String` from a `&str`, returning [`None`] if `s` doesn't fit.
+    ///
+    /// Unlike [`String::try_from`], this can be used in const contexts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// static S: String<8> = String::try_from_const("abcd").expect("fits in 8 bytes");
+    /// assert_eq!(S, "abcd");
+    ///
+    /// assert!(String::<2>::try_from_const("abcd").is_none());
+    /// ```
+    pub const fn try_from_const(s: &str) -> Option<Self> {
+        if s.len() > N {
+            return None;
+        }
+
+        // SAFETY: We just checked that `s.len() <= N`.
+        let vec = unsafe { Vec::from_slice_unchecked(s.as_bytes()) };
+
+        Some(Self { vec })
+    }
+
     /// Decodes a UTF-16–encoded slice `v` into a `String`, returning [`Err`]
     /// if `v` contains any invalid data.
     ///
@@ -1216,6 +1241,27 @@ mod tests {
     #[should_panic]
     fn from_panic() {
         let _: String<4> = String::try_from("12345").unwrap();
+    }
+
+    #[test]
+    fn try_from_const() {
+        static S_U8: String<4, u8> = String::try_from_const("ab").unwrap();
+        static S_U16: String<4, u16> = String::try_from_const("ab").unwrap();
+        static S_U32: String<4, u32> = String::try_from_const("ab").unwrap();
+        static S_USIZE: String<4, usize> = String::try_from_const("ab").unwrap();
+        static EMPTY: String<0> = String::try_from_const("").unwrap();
+        // Capacity counts bytes: "Ω" is 2 bytes, so "Ωab" fills 4 bytes exactly and "Ωabc"
+        // doesn't fit.
+        static FULL: String<4> = String::try_from_const("Ωab").unwrap();
+        static TOO_LONG: Option<String<4>> = String::try_from_const("Ωabc");
+
+        assert_eq!(S_U8, "ab");
+        assert_eq!(S_U16, "ab");
+        assert_eq!(S_U32, "ab");
+        assert_eq!(S_USIZE, "ab");
+        assert_eq!(EMPTY, "");
+        assert_eq!(FULL, "Ωab");
+        assert!(TOO_LONG.is_none());
     }
 
     #[test]
