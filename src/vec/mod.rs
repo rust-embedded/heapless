@@ -327,6 +327,33 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
         }
     }
 
+    /// Const version of [`from_slice`](Self::from_slice) for [`Copy`] elements, without the
+    /// capacity check.
+    ///
+    /// # Safety
+    ///
+    /// `src.len()` must be at most `N`.
+    pub(crate) const unsafe fn from_slice_unchecked(src: &[T]) -> Self
+    where
+        T: Copy,
+    {
+        let mut v = Self::new();
+
+        // SAFETY: `src` holds `src.len()` initialized elements, and the buffer of the new `v` has
+        // room for them, since the caller guarantees `src.len() <= N`. A buffer we just created
+        // can't overlap `src`.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                src.as_ptr(),
+                v.buffer.buffer.as_mut_ptr().cast::<T>(),
+                src.len(),
+            );
+        }
+        v.len = to_len_type(src.len());
+
+        v
+    }
+
     /// Constructs a new vector with a fixed capacity of `N` and fills it
     /// with the provided slice.
     ///
