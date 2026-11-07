@@ -456,7 +456,8 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
+        // SAFETY: `self.vec` always holds valid UTF-8.
         unsafe { str::from_utf8_unchecked(self.vec.as_slice()) }
     }
 
@@ -475,7 +476,8 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
     /// # Ok::<(), heapless::CapacityError>(())
     /// ```
     #[inline]
-    pub fn as_mut_str(&mut self) -> &mut str {
+    pub const fn as_mut_str(&mut self) -> &mut str {
+        // SAFETY: `self.vec` always holds valid UTF-8.
         unsafe { str::from_utf8_unchecked_mut(self.vec.as_mut_slice()) }
     }
 
@@ -1166,7 +1168,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{string::StringView, CapacityError, String, Vec};
+    use crate::{string::StringView, CapacityError, LenType, String, Vec};
 
     #[test]
     fn static_new() {
@@ -1414,6 +1416,35 @@ mod tests {
             assert!(S_USIZE.len() == 4 && !S_USIZE.is_empty());
             assert!(VIEW.len() == 4 && !VIEW.is_empty());
             assert!(EMPTY.is_empty());
+        }
+    }
+
+    #[test]
+    fn const_as_str() {
+        /// Builds "ab" and uppercases it to "AB" through `as_mut_str`, so the result shows that
+        /// `as_mut_str` writes through.
+        const fn upper<LenT: LenType>() -> String<4, LenT> {
+            let mut s = String::try_from_str("ab").unwrap();
+            s.as_mut_str().make_ascii_uppercase();
+            s
+        }
+        // Statics are computed at compile time, so these require `as_mut_str` to be const.
+        static S_U8: String<4, u8> = upper();
+        static S_U16: String<4, u16> = upper();
+        static S_U32: String<4, u32> = upper();
+        static S_USIZE: String<4, usize> = upper();
+        static VIEW: &StringView<u8> = &S_U8;
+        static EMPTY: String<4> = String::new();
+        // Checked at compile time, so this requires `as_str` to be const, on both `String` and
+        // `StringView`. Rust doesn't allow matching on `str` in const yet, so these compare the
+        // bytes.
+        const {
+            assert!(matches!(S_U8.as_str().as_bytes(), b"AB"));
+            assert!(matches!(S_U16.as_str().as_bytes(), b"AB"));
+            assert!(matches!(S_U32.as_str().as_bytes(), b"AB"));
+            assert!(matches!(S_USIZE.as_str().as_bytes(), b"AB"));
+            assert!(matches!(VIEW.as_str().as_bytes(), b"AB"));
+            assert!(EMPTY.as_str().is_empty());
         }
     }
 

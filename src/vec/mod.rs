@@ -62,7 +62,11 @@ mod storage {
     #[allow(private_bounds)]
     pub trait VecStorage<T>: VecSealedStorage<T> {}
 
-    pub trait VecSealedStorage<T> {
+    /// # Safety
+    ///
+    /// A pointer to `Self` must point to the first element of the buffer that `borrow` and
+    /// `borrow_mut` return.
+    pub unsafe trait VecSealedStorage<T> {
         // part of the sealed trait so that no trait is publicly implemented by `OwnedVecStorage`
         // besides `Storage`
         fn borrow(&self) -> &[MaybeUninit<T>];
@@ -98,7 +102,10 @@ mod storage {
     use zeroize::Zeroize;
 
     // One sealed layer of indirection to hide the internal details (The MaybeUninit).
+    //
+    // `repr(transparent)` makes a pointer to this struct also a pointer to the start of `buffer`.
     #[cfg_attr(feature = "zeroize", derive(Zeroize))]
+    #[repr(transparent)]
     pub struct VecStorageInner<T: ?Sized> {
         pub(crate) buffer: T,
     }
@@ -109,7 +116,9 @@ mod storage {
     /// Implementation of [`VecStorage`] that stores the data in an unsized `[T]`.
     pub type ViewVecStorage<T> = VecStorageInner<[MaybeUninit<T>]>;
 
-    impl<T, const N: usize> VecSealedStorage<T> for OwnedVecStorage<T, N> {
+    // SAFETY: `VecStorageInner` is `repr(transparent)` around `buffer`, which `borrow` and
+    // `borrow_mut` return.
+    unsafe impl<T, const N: usize> VecSealedStorage<T> for OwnedVecStorage<T, N> {
         fn borrow(&self) -> &[MaybeUninit<T>] {
             &self.buffer
         }
@@ -161,7 +170,9 @@ mod storage {
     }
     impl<T, const N: usize> VecStorage<T> for OwnedVecStorage<T, N> {}
 
-    impl<T> VecSealedStorage<T> for ViewVecStorage<T> {
+    // SAFETY: `VecStorageInner` is `repr(transparent)` around `buffer`, which `borrow` and
+    // `borrow_mut` return.
+    unsafe impl<T> VecSealedStorage<T> for ViewVecStorage<T> {
         fn borrow(&self) -> &[MaybeUninit<T>] {
             &self.buffer
         }
@@ -574,13 +585,15 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     }
 
     /// Returns a raw pointer to the vector’s buffer.
-    pub fn as_ptr(&self) -> *const T {
-        self.buffer.borrow().as_ptr().cast::<T>()
+    pub const fn as_ptr(&self) -> *const T {
+        // The safety contract of `VecSealedStorage` makes this point to the buffer's first element.
+        ptr::from_ref(&self.buffer).cast::<T>()
     }
 
     /// Returns a raw pointer to the vector’s buffer, which may be mutated through.
-    pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.buffer.borrow_mut().as_mut_ptr().cast::<T>()
+    pub const fn as_mut_ptr(&mut self) -> *mut T {
+        // The safety contract of `VecSealedStorage` makes this point to the buffer's first element.
+        ptr::from_mut(&mut self.buffer).cast::<T>()
     }
 
     /// Extracts a slice containing the entire vector.
@@ -594,15 +607,10 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// let buffer: Vec<u8, 5> = Vec::from_slice(&[1, 2, 3, 5, 8]).unwrap();
     /// assert_eq!(buffer.as_slice(), &[1, 2, 3, 5, 8]);
     /// ```
-    pub fn as_slice(&self) -> &[T] {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &buffer[..self.len]
-        unsafe {
-            slice::from_raw_parts(
-                self.buffer.borrow().as_ptr().cast::<T>(),
-                self.len.into_usize(),
-            )
-        }
+    pub const fn as_slice(&self) -> &[T] {
+        // SAFETY: `as_ptr` points to the buffer's first element, and the first `len` elements are
+        // initialized.
+        unsafe { slice::from_raw_parts(self.as_ptr(), as_usize(self.len)) }
     }
 
     /// Extracts a mutable slice containing the entire vector.
@@ -618,15 +626,10 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
     /// buffer_slice[0] = 9;
     /// assert_eq!(buffer.as_slice(), &[9, 2, 3, 5, 8]);
     /// ```
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        // NOTE(unsafe) avoid bound checks in the slicing operation
-        // &mut buffer[..self.len]
-        unsafe {
-            slice::from_raw_parts_mut(
-                self.buffer.borrow_mut().as_mut_ptr().cast::<T>(),
-                self.len.into_usize(),
-            )
-        }
+    pub const fn as_mut_slice(&mut self) -> &mut [T] {
+        // SAFETY: `as_mut_ptr` points to the buffer's first element, and the first `len` elements
+        // are initialized. `&mut self` ensures nothing else accesses them while the slice exists.
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), as_usize(self.len)) }
     }
 
     /// Returns the maximum number of elements the vector can hold.
@@ -1942,6 +1945,7 @@ mod tests {
     use static_assertions::assert_not_impl_any;
 
     use super::{Vec, VecView};
+    use crate::LenType;
 
     // Ensure a `Vec` containing `!Send` values stays `!Send` itself.
     assert_not_impl_any!(Vec<*const (), 4>: Send);
@@ -2026,6 +2030,38 @@ mod tests {
             assert!(V_USIZE.len() == 2 && !V_USIZE.is_empty());
             assert!(VIEW.len() == 2 && !VIEW.is_empty());
             assert!(EMPTY.is_empty());
+        }
+    }
+
+    #[test]
+    fn const_as_slice() {
+        /// Builds `[1, 2]`, swaps it through a `VecView` and sets the first element through the
+        /// `Vec`, giving `[3, 1]`. If the swap had no effect, the result would be `[3, 2]`, and if
+        /// the write had no effect, `[2, 1]`.
+        const fn mutated<LenT: LenType>() -> Vec<i32, 4, LenT> {
+            let mut v = Vec::from_array([1, 2]);
+            let view: &mut VecView<i32, LenT> = &mut v;
+            view.as_mut_slice().swap(0, 1);
+            v.as_mut_slice()[0] = 3;
+            v
+        }
+        // Statics are computed at compile time, so these require `as_mut_slice` to be const.
+        static V_U8: Vec<i32, 4, u8> = mutated();
+        static V_U16: Vec<i32, 4, u16> = mutated();
+        static V_U32: Vec<i32, 4, u32> = mutated();
+        static V_USIZE: Vec<i32, 4, usize> = mutated();
+        static VIEW: &VecView<i32, u8> = &V_U8;
+        static EMPTY: Vec<i32, 4> = Vec::new();
+        // Checked at compile time, so this requires `as_slice` to be const, on both `Vec` and
+        // `VecView`. `[3, 1]` only matches a slice of exactly two elements, so this also fails if
+        // `as_slice` returns more elements than `len`.
+        const {
+            assert!(matches!(V_U8.as_slice(), [3, 1]));
+            assert!(matches!(V_U16.as_slice(), [3, 1]));
+            assert!(matches!(V_U32.as_slice(), [3, 1]));
+            assert!(matches!(V_USIZE.as_slice(), [3, 1]));
+            assert!(matches!(VIEW.as_slice(), [3, 1]));
+            assert!(matches!(EMPTY.as_slice(), []));
         }
     }
 
