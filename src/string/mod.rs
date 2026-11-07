@@ -846,9 +846,7 @@ impl<'a, LenT: LenType, const N: usize> TryFrom<&'a str> for String<N, LenT> {
     type Error = CapacityError;
 
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        let mut new = Self::new();
-        new.push_str(s)?;
-        Ok(new)
+        Self::try_from_str(s).ok_or(CapacityError)
     }
 }
 
@@ -856,9 +854,7 @@ impl<LenT: LenType, const N: usize> str::FromStr for String<N, LenT> {
     type Err = CapacityError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut new = Self::new();
-        new.push_str(s)?;
-        Ok(new)
+        Self::try_from_str(s).ok_or(CapacityError)
     }
 }
 
