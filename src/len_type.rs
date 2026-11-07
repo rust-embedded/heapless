@@ -130,6 +130,24 @@ pub const fn as_len_type<L: LenType>(n: usize) -> L {
     }
 }
 
+/// Const cast from [`LenType`] to [`usize`].
+///
+/// This never truncates, since every [`LenType`] fits in a [`usize`].
+#[inline]
+pub const fn as_usize<L: LenType>(n: L) -> usize {
+    // SAFETY: `L::TYPE` names the concrete type of `L`, so each arm reads `n` as its own type.
+    unsafe {
+        // `L::TYPE` is a constant for each concrete `L`, so the optimizer keeps only the
+        // matching arm.
+        match L::TYPE {
+            TypeEnum::u8 => mem::transmute_copy::<L, u8>(&n) as usize,
+            TypeEnum::u16 => mem::transmute_copy::<L, u16>(&n) as usize,
+            TypeEnum::u32 => mem::transmute_copy::<L, u32>(&n) as usize,
+            TypeEnum::usize => mem::transmute_copy::<L, usize>(&n),
+        }
+    }
+}
+
 /// Checked cast to [`LenType`].
 ///
 /// # Panic
@@ -171,6 +189,30 @@ mod tests {
                 let n = i * (T::MAX_USIZE / COUNT);
                 assert_eq!(to_len_type::<T>(n).into_usize(), n);
             }
+        }
+        check::<u8>();
+        check::<u16>();
+        check::<u32>();
+        check::<usize>();
+    }
+
+    #[test]
+    fn test_as_usize() {
+        // 1. Check constness
+        const {
+            assert!(as_usize(u8::MAX) == u8::MAX as usize);
+            assert!(as_usize(u16::MAX) == u16::MAX as usize);
+            assert!(as_usize(u32::MAX) == u32::MAX as usize);
+            assert!(as_usize(usize::MAX) == usize::MAX);
+        }
+        // 2. Check correctness
+        fn check<T: LenType>() {
+            const COUNT: usize = 100;
+            for i in 0..COUNT {
+                let n = to_len_type::<T>(i * (T::MAX_USIZE / COUNT));
+                assert_eq!(as_usize(n), n.into_usize());
+            }
+            assert_eq!(as_usize(T::MAX), T::MAX_USIZE);
         }
         check::<u8>();
         check::<u16>();

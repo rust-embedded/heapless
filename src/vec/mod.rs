@@ -16,7 +16,7 @@ use core::{
 use zeroize::Zeroize;
 
 use crate::{
-    len_type::{check_capacity_fits, to_len_type, LenType},
+    len_type::{as_usize, check_capacity_fits, to_len_type, LenType},
     CapacityError,
 };
 
@@ -1023,14 +1023,28 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         value
     }
 
+    /// Returns the number of elements in the vector.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::Vec;
+    ///
+    /// let v: Vec<u8, 8> = Vec::from_array([1, 2, 3]);
+    /// assert_eq!(v.len(), 3);
+    /// ```
+    pub const fn len(&self) -> usize {
+        as_usize(self.len)
+    }
+
     /// Returns true if the vec is full
     pub fn is_full(&self) -> bool {
         self.len() == self.capacity()
     }
 
     /// Returns true if the vec is empty
-    pub fn is_empty(&self) -> bool {
-        self.len == LenT::ZERO
+    pub const fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns `true` if `needle` is a prefix of the Vec.
@@ -1975,6 +1989,24 @@ mod tests {
         v.push(1).unwrap();
         assert!(!v.is_empty());
         assert!(v.is_full());
+    }
+
+    #[test]
+    fn const_len_is_empty() {
+        static V_U8: Vec<i32, 4, u8> = Vec::from_array([1, 2]);
+        static V_U16: Vec<i32, 4, u16> = Vec::from_array([1, 2]);
+        static V_U32: Vec<i32, 4, u32> = Vec::from_array([1, 2]);
+        static V_USIZE: Vec<i32, 4, usize> = Vec::from_array([1, 2]);
+        static VIEW: &VecView<i32, u8> = &V_U8;
+        static EMPTY: Vec<i32, 4> = Vec::new();
+        const {
+            assert!(V_U8.len() == 2 && !V_U8.is_empty());
+            assert!(V_U16.len() == 2 && !V_U16.is_empty());
+            assert!(V_U32.len() == 2 && !V_U32.is_empty());
+            assert!(V_USIZE.len() == 2 && !V_USIZE.is_empty());
+            assert!(VIEW.len() == 2 && !VIEW.is_empty());
+            assert!(EMPTY.is_empty());
+        }
     }
 
     #[test]
