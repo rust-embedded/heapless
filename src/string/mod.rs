@@ -277,7 +277,7 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
     /// assert_eq!("💖", sparkle_heart);
     /// ```
     #[inline]
-    pub unsafe fn from_utf8_unchecked(vec: Vec<u8, N, LenT>) -> Self {
+    pub const unsafe fn from_utf8_unchecked(vec: Vec<u8, N, LenT>) -> Self {
         Self { vec }
     }
 
@@ -1114,6 +1114,13 @@ mod tests {
     #[test]
     fn static_new() {
         static mut _S: String<8> = String::new();
+    }
+
+    #[test]
+    fn static_from_utf8_unchecked() {
+        // SAFETY: `b"abcd"` is valid UTF-8.
+        static S: String<8> = unsafe { String::from_utf8_unchecked(Vec::from_array(*b"abcd")) };
+        assert_eq!(S, "abcd");
     }
 
     #[test]
