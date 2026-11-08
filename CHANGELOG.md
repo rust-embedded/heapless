@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Bump MSRV to 1.88 (requires by trybuild dev dependency).
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
 - Added `push_mut` to `Vec`.
+- Implemented `FromIterator` for `Deque`.
 - Fixed unsoundness in `IndexMap:insert`.
 - Limited max size of `IndexMap` to u16::MAX + 1.
   The implementation for sizes higher than u16::MAX were unsound anyway.
