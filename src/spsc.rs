@@ -274,10 +274,11 @@ impl<T, S: Storage> QueueInner<T, S> {
     /// assert_eq!(None, consumer.peek());
     /// ```
     pub fn peek(&self) -> Option<&T> {
-        if self.is_empty() {
+        let head = self.head.load(Ordering::Relaxed);
+        let tail = self.tail.load(Ordering::Acquire);
+        if head == tail {
             None
         } else {
-            let head = self.head.load(Ordering::Relaxed);
             Some(unsafe { &*(self.buffer.borrow().get_unchecked(head).get() as *const T) })
         }
     }
@@ -1404,5 +1405,21 @@ mod tests {
 
         let collected: Vec<_> = queue.iter_mut().rev().collect();
         assert_eq!(&collected, &[&(); 4]);
+    }
+
+    #[test]
+    fn peek_concurrency() {
+        let mut queue = Queue::<u64, 2>::new();
+        let (mut producer, consumer) = queue.split();
+        std::thread::scope(|scope| {
+            scope.spawn(move || producer.enqueue(0x12345678).unwrap());
+            loop {
+                if let Some(value) = consumer.peek() {
+                    assert_eq!(*value, 0x12345678);
+                    break;
+                }
+                std::thread::yield_now();
+            }
+        });
     }
 }
