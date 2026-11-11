@@ -902,6 +902,22 @@ where
         for elem in buffer {
             elem.zeroize();
         }
+
+        // Re-initialize the linked list
+        self.head = Idx::MAX;
+        if self.list.borrow().is_empty() {
+            self.free = Idx::MAX;
+            return;
+        } else {
+            self.free = Idx::ZERO;
+        }
+
+        let len = self.list.borrow().len();
+
+        for i in 0..len - 1 {
+            self.list.borrow_mut()[i].next = Idx::from_usize(i) + Idx::one();
+        }
+        self.list.borrow_mut()[len - 1].next = Idx::MAX;
     }
 }
 
@@ -1073,6 +1089,28 @@ mod tests {
                 assert_eq!(node.val.assume_init(), 0);
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn zeroize_free_list_terminator() {
+        use zeroize::Zeroize;
+        let mut list: SortedLinkedList<u8, Max, 1, u8> = SortedLinkedList::new_u8();
+        list.zeroize();
+        list.push(0).unwrap();
+        assert!(list.is_full());
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn zeroize_soundness() {
+        use zeroize::Zeroize;
+        let mut list: SortedLinkedList<String, Max, 2, u8> = SortedLinkedList::new_u8();
+        list.zeroize();
+        list.push(String::from("first")).unwrap();
+        list.push(String::from("second")).unwrap();
+        drop(list.pop());
+        drop(list.pop());
     }
 
     fn _test_variance<'a: 'b, 'b>(
