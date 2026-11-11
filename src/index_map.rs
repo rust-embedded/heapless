@@ -1584,16 +1584,23 @@ where
     /// assert_eq!(iter.next(), None);
     /// ```
     pub fn truncate(&mut self, len: usize) {
-        self.core.entries.truncate(len);
-
-        if N > self.core.entries.len() {
-            for pos in self.core.indices.iter_mut() {
-                if pos.maybe_valid.index() >= len {
-                    *pos = Pos::none();
+        struct DropGuard<'a, K: Eq + Hash, V, S: BuildHasher, const N: usize>(
+            &'a mut IndexMap<K, V, S, N>,
+        );
+        impl<'a, K: Eq + Hash, V, S: BuildHasher, const N: usize> Drop for DropGuard<'a, K, V, S, N> {
+            fn drop(&mut self) {
+                let len = self.0.core.entries.len();
+                if N > self.0.core.entries.len() {
+                    for pos in self.0.core.indices.iter_mut() {
+                        if pos.maybe_valid.index() >= len {
+                            *pos = Pos::none();
+                        }
+                    }
                 }
+                self.0.core.reinsert_all();
             }
         }
-        self.core.reinsert_all();
+        DropGuard(self).0.core.entries.truncate(len);
     }
 
     /* Private API */
@@ -2685,5 +2692,47 @@ mod tests {
         }
 
         println!("survived; map.len={}", map.len());
+    }
+
+    #[test]
+    fn truncate_exception_safe() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct Item {
+            data: Box<u64>,
+            bomb: bool,
+        }
+        impl Drop for Item {
+            fn drop(&mut self) {
+                if self.bomb {
+                    panic!("controlled drop panic");
+                }
+            }
+        }
+        let mut map = FnvIndexMap::<u8, Item, 4>::new();
+        map.insert(
+            1,
+            Item {
+                data: Box::new(11),
+                bomb: false,
+            },
+        )
+        .unwrap();
+        map.insert(
+            2,
+            Item {
+                data: Box::new(22),
+                bomb: true,
+            },
+        )
+        .unwrap();
+        assert!(catch_unwind(AssertUnwindSafe(|| map.truncate(1))).is_err());
+        assert_eq!(map.get(&2), None);
+        assert_eq!(
+            map.get(&1),
+            Some(&Item {
+                data: Box::new(11),
+                bomb: false
+            })
+        );
     }
 }
