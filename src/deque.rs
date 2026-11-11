@@ -1401,8 +1401,8 @@ impl<T, const NS: usize, const ND: usize> TryFrom<[T; NS]> for Deque<T, ND> {
         }
 
         deq.front = 0;
-        deq.back = NS;
         deq.full = NS == ND;
+        deq.back = if deq.full { 0 } else { NS };
 
         Ok(deq)
     }
@@ -2672,5 +2672,13 @@ mod tests {
         assert_eq!(deque.len(), 0);
         deque.clear();
         assert_eq!(Dropper::count(), 0);
+    }
+
+    #[test]
+    fn full_array_out_of_bounds() {
+        let mut deque = Deque::<Box<u64>, 2>::try_from([Box::new(10), Box::new(20)]).unwrap();
+        assert_eq!(*deque.pop_front().unwrap(), 10);
+        deque.push_back(Box::new(30)).unwrap();
+        assert_eq!(deque.iter().map(|v| **v).collect::<Vec<_>>(), [20, 30]);
     }
 }
