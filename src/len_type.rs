@@ -15,6 +15,12 @@ pub enum TypeEnum {
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
+pub trait SequenceCreator<const N: usize, T>: Sized {
+    /// An array of value `[1, 2, 3, ..]` of use
+    /// in the initializer of `sorted_linked_list`
+    const SEQUENCE: [T; N];
+}
+
 pub trait Sealed:
     Send
     + Sync
@@ -38,6 +44,8 @@ pub trait Sealed:
     const MAX_USIZE: usize;
     /// This type as an enum.
     const TYPE: TypeEnum;
+
+    type Sequence<const N: usize>: SequenceCreator<N, Self>;
 
     /// The one value of the integer type.
     ///
@@ -77,9 +85,23 @@ macro_rules! impl_lentype {
             const MAX_USIZE: usize = Self::MAX as _;
             const TYPE: TypeEnum = TypeEnum::$LenT;
 
+            type Sequence<const N:usize> = $LenT;
+
             fn one() -> Self {
                 1
             }
+        }
+
+        impl<const N:usize> SequenceCreator<N, $LenT> for $LenT {
+            const SEQUENCE: [Self; N] = {
+                let mut free = 0;
+                let mut ret = [0;N];
+                while free + 1 < N {
+                    ret[free] = free as $LenT + 1;
+                    free +=1;
+                }
+                ret
+            };
         }
 
         $(#[$meta])*

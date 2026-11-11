@@ -238,50 +238,73 @@ macro_rules! impl_const_new {
     ($ty:ty, $new_name:ident) => {
         impl<T, K, const N: usize> SortedLinkedList<T, K, N, $ty> {
             /// Create a new linked list.
+            ///
+            /// The generic [`new`](Self::new) function is now const
+            /// and is probably more relevant.
             pub const fn $new_name() -> Self {
-                const {
-                    assert!(
-                        (<$ty>::MAX as usize) >= (N + 1),
-                        "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity"
-                    );
-                }
-
-                let mut list = SortedLinkedList {
-                    list: OwnedSortedLinkedListStorage {
-                        buffer: [const {
-                            Node {
-                                val: MaybeUninit::uninit(),
-                                next: <$ty>::MAX,
-                            }
-                        }; N],
-                    },
-                    head: <$ty>::MAX,
-                    free: 0,
-                    phantom: PhantomData,
-                };
-
-                if N == 0 {
-                    list.free = <$ty>::MAX;
-                    return list;
-                }
-
-                let mut free = 0;
-
-                // Initialize indexes
-                while free < N - 1 {
-                    list.list.buffer[free].next = free as $ty + 1;
-                    free += 1;
-                }
-
-                list
+                Self::new()
             }
         }
     };
 }
 
+impl<T, Idx, K, const N: usize> Default for SortedLinkedList<T, K, N, Idx>
+where
+    Idx: LenType,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl_const_new!(u8, new_u8);
 impl_const_new!(u16, new_u16);
 impl_const_new!(usize, new_usize);
+impl<T, Idx, K, const N: usize> SortedLinkedList<T, K, N, Idx>
+where
+    Idx: LenType,
+{
+    /// Create a new linked list.
+    pub const fn new() -> Self {
+        const {
+            assert!(
+                        Idx::MAX_USIZE >= (N + 1),
+                        "The capacity is larger than `LenT` can hold, increase the size of `LenT` or reduce the capacity"
+                    );
+        }
+
+        let mut list = SortedLinkedList {
+            list: OwnedSortedLinkedListStorage {
+                buffer: [const {
+                    Node {
+                        val: MaybeUninit::uninit(),
+                        next: Idx::MAX,
+                    }
+                }; N],
+            },
+            head: Idx::MAX,
+            free: Idx::ZERO,
+            phantom: PhantomData,
+        };
+
+        if N == 0 {
+            list.free = Idx::MAX;
+            return list;
+        }
+
+        let mut free = 0;
+        let reference_array =
+            <Idx::Sequence<N> as crate::len_type::SequenceCreator<N, Idx>>::SEQUENCE;
+
+        // Initialize indexes
+        while free < N - 1 {
+            list.list.buffer[free].next = reference_array[free];
+            free += 1;
+        }
+
+        list
+    }
+}
 
 impl<T, Idx, K, S> SortedLinkedListInner<T, Idx, K, S>
 where
