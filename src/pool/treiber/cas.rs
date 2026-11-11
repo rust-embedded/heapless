@@ -202,12 +202,8 @@ where
     let mut top = stack.top.load(Ordering::Relaxed);
 
     loop {
-        new_top
-            .non_null()
-            .as_ref()
-            // SAFETY: Caller ensures that it is safe to call `next`
-            .next()
-            .store(top, Ordering::Relaxed);
+        // SAFETY: Caller ensures that it is safe to call `next`
+        unsafe { &*N::next(new_top.non_null().as_ptr()) }.store(top, Ordering::Relaxed);
 
         if let Err(p) = stack.top.compare_and_exchange_weak(
             top,
@@ -228,7 +224,9 @@ where
 {
     loop {
         let mut top = stack.top.load(Ordering::Acquire)?;
-        let next = unsafe { top.non_null().as_ref().next().load(Ordering::Relaxed) };
+        // TODO: This should not create a reference to the full node, and instead use `addr_of!`
+        // The same appiles to other accesses to the node I think
+        let next = unsafe { &*N::next(top.non_null().as_ref()) }.load(Ordering::Relaxed);
 
         if stack
             .top

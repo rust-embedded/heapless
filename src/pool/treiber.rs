@@ -1,4 +1,7 @@
-use core::mem::ManuallyDrop;
+use core::{
+    cell::UnsafeCell,
+    mem::{ManuallyDrop, MaybeUninit},
+};
 
 #[cfg_attr(not(arm_llsc), path = "treiber/cas.rs")]
 #[cfg_attr(arm_llsc, path = "treiber/llsc.rs")]
@@ -47,7 +50,7 @@ pub trait Node: Sized {
     ///
     /// It must be valid to obtain a reference to the next link pointer, e.g. in the case of
     /// `UnionNode`, the `next` field must be properly initialized when calling this function
-    unsafe fn next(&self) -> &AtomicPtr<Self>;
+    unsafe fn next(this: *const Self) -> *const AtomicPtr<Self>;
 
     /// Returns a mutable reference to the atomic pointer that stores the link to the next `Node`
     ///
@@ -56,13 +59,12 @@ pub trait Node: Sized {
     /// It must be valid to obtain a reference to the next link pointer, e.g. in the case of
     /// `UnionNode`, the `next` field must be properly initialized when calling this function
     #[allow(dead_code)] // used conditionally
-    unsafe fn next_mut(&mut self) -> &mut AtomicPtr<Self>;
+    unsafe fn next_mut(this: *mut Self) -> *mut AtomicPtr<Self>;
 }
 
-#[repr(C)]
-pub union UnionNode<T> {
-    next: ManuallyDrop<AtomicPtr<UnionNode<T>>>,
-    pub data: ManuallyDrop<T>,
+pub struct UnionNode<T> {
+    pub next: AtomicPtr<Self>,
+    pub data: UnsafeCell<MaybeUninit<T>>,
 }
 
 impl<T> UnionNode<T> {
@@ -72,7 +74,8 @@ impl<T> UnionNode<T> {
     /// list
     pub const fn unlinked() -> Self {
         Self {
-            next: ManuallyDrop::new(AtomicPtr::null()),
+            next: AtomicPtr::null(),
+            data: UnsafeCell::new(MaybeUninit::uninit()),
         }
     }
 }
@@ -80,31 +83,29 @@ impl<T> UnionNode<T> {
 impl<T> Node for UnionNode<T> {
     type Data = T;
 
-    unsafe fn next(&self) -> &AtomicPtr<Self> {
-        // SAFETY: Caller ensures that `self.next` is properly initialized
-        unsafe { &self.next }
+    unsafe fn next(this: *const Self) -> *const AtomicPtr<Self> {
+        &raw const (*this).next
     }
 
-    unsafe fn next_mut(&mut self) -> &mut AtomicPtr<Self> {
-        // SAFETY: Caller ensures that `self.next` is properly initialized
-        unsafe { &mut self.next }
+    unsafe fn next_mut(this: *mut Self) -> *mut AtomicPtr<Self> {
+        &raw mut (*this).next
     }
 }
 
 pub struct StructNode<T> {
-    pub next: ManuallyDrop<AtomicPtr<Self>>,
+    pub next: AtomicPtr<Self>,
     pub data: ManuallyDrop<T>,
 }
 
 impl<T> Node for StructNode<T> {
     type Data = T;
 
-    unsafe fn next(&self) -> &AtomicPtr<Self> {
-        &self.next
+    unsafe fn next(this: *const Self) -> *const AtomicPtr<Self> {
+        &raw const (*this).next
     }
 
-    unsafe fn next_mut(&mut self) -> &mut AtomicPtr<Self> {
-        &mut self.next
+    unsafe fn next_mut(this: *mut Self) -> *mut AtomicPtr<Self> {
+        &raw mut (*this).next
     }
 }
 

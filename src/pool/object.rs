@@ -324,7 +324,7 @@ impl<T> ObjectBlock<T> {
     pub const fn new(initial_value: T) -> Self {
         Self {
             node: StructNode {
-                next: ManuallyDrop::new(AtomicPtr::null()),
+                next: AtomicPtr::null(),
                 data: ManuallyDrop::new(initial_value),
             },
         }

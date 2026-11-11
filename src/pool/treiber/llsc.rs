@@ -83,10 +83,8 @@ where
     loop {
         let top = arch::load_link(top_addr);
 
-        node.inner
-            .as_mut()
-            // SAFETY: Caller guarantees that it is valid to call `next_mut`
-            .next_mut()
+        // SAFETY: Caller guarantees that it is valid to call `next_mut`
+        (&mut *N::next_mut(node.inner.as_mut()))
             .inner
             .get()
             // SAFETY: The pointer comes from `AtomicPtr::inner`, which is valid for writes
@@ -109,7 +107,7 @@ where
             let top = arch::load_link(top_addr);
 
             if let Some(top) = NonNull::new(top as *mut N) {
-                let next = &top.as_ref().next();
+                let next = &*N::next(top.as_ptr());
 
                 if arch::store_conditional(
                     next.inner
