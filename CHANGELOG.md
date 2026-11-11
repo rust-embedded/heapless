@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed unsoundness in `IndexMap::retain` in the context of panicking predicate.
 - Added `swap_remove()` to `IndexMap` and `IndexSet`.
 - Deprecated `.remove()` in `IndexMap` and `IndexSet` in favour of `.swap_remove()`.
-- Fixed `IndexMap::truncate` leading to an inconsistent state.
+- Fixed `IndexMap::truncate` leading to an inconsistent state and not being exception-safe.
 - Fixed `Deque::make_contigous` leading to an inconsistent state.
 - Added `resize_with` to `Vec`.
 - Added `retain_back` (aka `truncate_front`) to `Deque`.
