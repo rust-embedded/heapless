@@ -2421,6 +2421,13 @@ mod tests {
     }
 
     #[test]
+    fn extend_beyond_usize_max() {
+        let mut v: Vec<(), 1> = Vec::new();
+        v.push(()).unwrap();
+        assert!(v.extend_from_slice(&[(); usize::MAX]).is_err());
+    }
+
+    #[test]
     fn from_slice() {
         // Successful construction
         let v: Vec<u8, 4> = Vec::from_slice(&[1, 2, 3]).unwrap();
