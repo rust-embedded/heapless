@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `retain` to `BinaryHeap`.
 - Bump MSRV to 1.88 (requires by trybuild dev dependency).
 - Fixed unsoundness in `Vec::IntoIter::drop` and `HistoryBuf::write`in the context of panicking drop implementations.
+- `FindMutView::pop`: fix UB if used after mutating the value.
 - Added `push_mut` to `Vec`.
 - Fixed unsoundness in `IndexMap:insert`.
 - Limited max size of `IndexMap` to u16::MAX + 1.
