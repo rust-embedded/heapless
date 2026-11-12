@@ -83,7 +83,7 @@ use portable_atomic as atomic;
 
 use atomic::{AtomicUsize, Ordering};
 
-use super::treiber::{NonNullPtr, Stack, UnionNode};
+use super::treiber::{Node, NonNullPtr, Stack};
 
 /// Creates a new `ArcPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
@@ -158,7 +158,7 @@ pub trait ArcPool: Sized {
 // newtype to avoid having to make field types public
 #[doc(hidden)]
 pub struct ArcPoolImpl<T> {
-    stack: Stack<UnionNode<MaybeUninit<ArcInner<T>>>>,
+    stack: Stack<MaybeUninit<ArcInner<T>>>,
 }
 
 impl<T> ArcPoolImpl<T> {
@@ -171,7 +171,7 @@ impl<T> ArcPoolImpl<T> {
         }
     }
 
-    fn alloc(&self, value: T) -> Result<NonNullPtr<UnionNode<MaybeUninit<ArcInner<T>>>>, T> {
+    fn alloc(&self, value: T) -> Result<NonNullPtr<Node<MaybeUninit<ArcInner<T>>>>, T> {
         if let Some(node_ptr) = self.stack.try_pop() {
             let inner = ArcInner {
                 data: value,
@@ -204,7 +204,7 @@ pub struct Arc<P>
 where
     P: ArcPool,
 {
-    node_ptr: NonNullPtr<UnionNode<MaybeUninit<ArcInner<P::Data>>>>,
+    node_ptr: NonNullPtr<Node<MaybeUninit<ArcInner<P::Data>>>>,
 }
 
 impl<P> Arc<P>
@@ -215,7 +215,7 @@ where
         unsafe { &*self.node_ptr.as_ptr().cast::<ArcInner<P::Data>>() }
     }
 
-    fn from_inner(node_ptr: NonNullPtr<UnionNode<MaybeUninit<ArcInner<P::Data>>>>) -> Self {
+    fn from_inner(node_ptr: NonNullPtr<Node<MaybeUninit<ArcInner<P::Data>>>>) -> Self {
         Self { node_ptr }
     }
 
@@ -381,14 +381,14 @@ struct ArcInner<T> {
 
 /// A chunk of memory that an `ArcPool` can manage
 pub struct ArcBlock<T> {
-    node: UnionNode<MaybeUninit<ArcInner<T>>>,
+    node: Node<MaybeUninit<ArcInner<T>>>,
 }
 
 impl<T> ArcBlock<T> {
     /// Creates a new memory block
     pub const fn new() -> Self {
         Self {
-            node: UnionNode::unlinked(),
+            node: Node::unlinked(),
         }
     }
 }

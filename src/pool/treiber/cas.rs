@@ -35,18 +35,12 @@ mod types {
 
 use types::*;
 
-pub struct AtomicPtr<N>
-where
-    N: Node,
-{
+pub struct AtomicPtr<N> {
     inner: InnerAtomic,
     _marker: PhantomData<*mut N>,
 }
 
-impl<N> AtomicPtr<N>
-where
-    N: Node,
-{
+impl<N> AtomicPtr<N> {
     #[inline]
     pub const fn null() -> Self {
         Self {
@@ -91,29 +85,20 @@ where
     }
 }
 
-pub struct NonNullPtr<N>
-where
-    N: Node,
-{
+pub struct NonNullPtr<N> {
     inner: InnerNonZero,
     _marker: PhantomData<*mut N>,
 }
 
-impl<N> Clone for NonNullPtr<N>
-where
-    N: Node,
-{
+impl<N> Clone for NonNullPtr<N> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<N> Copy for NonNullPtr<N> where N: Node {}
+impl<N> Copy for NonNullPtr<N> {}
 
-impl<N> NonNullPtr<N>
-where
-    N: Node,
-{
+impl<N> NonNullPtr<N> {
     #[inline]
     pub fn as_ptr(&self) -> *mut N {
         self.inner.get() as *mut N
@@ -195,15 +180,12 @@ const fn initial_tag() -> Tag {
 /// - `new_top` must point to a node that is properly initialized for linking, i.e.
 ///   `new_top.as_ref().next()` must be valid to call (see [`Node::next`])
 /// - `new_top` must be convertible to a reference (see [`NonNull::as_ref`])
-pub unsafe fn push<N>(stack: &Stack<N>, new_top: NonNullPtr<N>)
-where
-    N: Node,
-{
+pub unsafe fn push<T>(stack: &Stack<T>, new_top: NonNullPtr<Node<T>>) {
     let mut top = stack.top.load(Ordering::Relaxed);
 
     loop {
         // SAFETY: Caller ensures that it is safe to call `next`
-        unsafe { &*N::next(new_top.non_null().as_ptr()) }.store(top, Ordering::Relaxed);
+        unsafe { &*Node::next(new_top.non_null().as_ptr()) }.store(top, Ordering::Relaxed);
 
         if let Err(p) = stack.top.compare_and_exchange_weak(
             top,
@@ -218,15 +200,14 @@ where
     }
 }
 
-pub fn try_pop<N>(stack: &Stack<N>) -> Option<NonNullPtr<N>>
+pub fn try_pop<T>(stack: &Stack<T>) -> Option<NonNullPtr<Node<T>>>
 where
-    N: Node,
 {
     loop {
         let mut top = stack.top.load(Ordering::Acquire)?;
         // TODO: This should not create a reference to the full node, and instead use `addr_of!`
         // The same appiles to other accesses to the node I think
-        let next = unsafe { &*N::next(top.non_null().as_ref()) }.load(Ordering::Relaxed);
+        let next = unsafe { &*Node::next(top.non_null().as_ref()) }.load(Ordering::Relaxed);
 
         if stack
             .top
