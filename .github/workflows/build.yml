@@ -44,7 +44,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-10-11
+          toolchain: nightly-2026-09-26
           components: miri
 
       - name: Run miri
@@ -255,7 +255,7 @@ jobs:
       - name: Install nightly Rust with targets (${{ steps.metadata.outputs.targets }})
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-10-11
+          toolchain: nightly-2026-09-26
           targets: ${{ steps.metadata.outputs.targets }}
 
       - name: cargo rustdoc
@@ -359,7 +359,7 @@ jobs:
       - name: Install Rust nightly with target (${{ matrix.target }})
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-10-11
+          toolchain: nightly-2026-09-26
           target: ${{ matrix.target }}
           components: rust-src
 
@@ -378,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUSTFLAGS: -D warnings
-      MSRV: 1.88.0
+      MSRV: 1.95.0
     defaults:
       run:
         working-directory: cfail
