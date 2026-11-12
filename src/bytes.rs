@@ -59,6 +59,17 @@ mod tests {
     }
 
     #[test]
+    fn buf_mut_chunk_mut_fill() {
+        let eight_zeros: [u8; 8] = [0; 8];
+        let mut vec: Vec<u8, 8> = Vec::new();
+        let chunk = vec.chunk_mut();
+        assert_eq!(chunk.len(), 8);
+        chunk.copy_from_slice(&eight_zeros);
+        unsafe { vec.advance_mut(8) }
+        assert_eq!(vec.chunk_mut().len(), 0);
+    }
+
+    #[test]
     #[should_panic]
     fn buf_mut_advance_mut_out_of_bounds_view() {
         let vec: &mut VecView<u8, u8> = &mut Vec::<u8, 8, u8>::new();
