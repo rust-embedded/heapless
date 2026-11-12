@@ -5,17 +5,11 @@ use core::{
 
 use super::{Node, Stack};
 
-pub struct AtomicPtr<N>
-where
-    N: Node,
-{
+pub struct AtomicPtr<N> {
     inner: UnsafeCell<Option<NonNull<N>>>,
 }
 
-impl<N> AtomicPtr<N>
-where
-    N: Node,
-{
+impl<N> AtomicPtr<N> {
     #[inline]
     pub const fn null() -> Self {
         Self {
@@ -24,17 +18,11 @@ where
     }
 }
 
-pub struct NonNullPtr<N>
-where
-    N: Node,
-{
+pub struct NonNullPtr<N> {
     inner: NonNull<N>,
 }
 
-impl<N> NonNullPtr<N>
-where
-    N: Node,
-{
+impl<N> NonNullPtr<N> {
     #[inline]
     pub fn as_ptr(&self) -> *mut N {
         self.inner.as_ptr().cast()
@@ -56,16 +44,13 @@ where
     }
 }
 
-impl<N> Clone for NonNullPtr<N>
-where
-    N: Node,
-{
+impl<N> Clone for NonNullPtr<N> {
     fn clone(&self) -> Self {
         Self { inner: self.inner }
     }
 }
 
-impl<N> Copy for NonNullPtr<N> where N: Node {}
+impl<N> Copy for NonNullPtr<N> {}
 
 /// Pushes the given node on top of the stack
 ///
@@ -74,17 +59,14 @@ impl<N> Copy for NonNullPtr<N> where N: Node {}
 /// - `node` must point to a node that is properly initialized for linking, i.e.
 ///   `node.as_mut().next_mut()` must be valid to call (see [`Node::next_mut`])
 /// - `node` must be convertible to a reference (see [`NonNull::as_mut`])
-pub unsafe fn push<N>(stack: &Stack<N>, mut node: NonNullPtr<N>)
-where
-    N: Node,
-{
+pub unsafe fn push<T>(stack: &Stack<T>, mut node: NonNullPtr<Node<T>>) {
     let top_addr = ptr::addr_of!(stack.top) as *mut usize;
 
     loop {
         let top = arch::load_link(top_addr);
 
         // SAFETY: Caller guarantees that it is valid to call `next_mut`
-        (&mut *N::next_mut(node.inner.as_mut()))
+        (&mut *Node::next_mut(node.inner.as_mut()))
             .inner
             .get()
             // SAFETY: The pointer comes from `AtomicPtr::inner`, which is valid for writes
@@ -96,18 +78,15 @@ where
     }
 }
 
-pub fn try_pop<N>(stack: &Stack<N>) -> Option<NonNullPtr<N>>
-where
-    N: Node,
-{
+pub fn try_pop<T>(stack: &Stack<T>) -> Option<NonNullPtr<Node<T>>> {
     unsafe {
         let top_addr = ptr::addr_of!(stack.top) as *mut usize;
 
         loop {
             let top = arch::load_link(top_addr);
 
-            if let Some(top) = NonNull::new(top as *mut N) {
-                let next = &*N::next(top.as_ptr());
+            if let Some(top) = NonNull::new(top as *mut Node<T>) {
+                let next = &*Node::next(top.as_ptr());
 
                 if arch::store_conditional(
                     next.inner

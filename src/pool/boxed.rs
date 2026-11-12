@@ -89,7 +89,7 @@ use core::{
 };
 use stable_deref_trait::StableDeref;
 
-use super::treiber::{NonNullPtr, Stack, UnionNode};
+use super::treiber::{Node, NonNullPtr, Stack};
 
 /// Creates a new `BoxPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
@@ -177,7 +177,7 @@ pub struct Box<P>
 where
     P: BoxPool,
 {
-    node_ptr: NonNullPtr<UnionNode<MaybeUninit<P::Data>>>,
+    node_ptr: NonNullPtr<Node<MaybeUninit<P::Data>>>,
 }
 
 impl<P> Box<P>
@@ -201,15 +201,15 @@ where
         // SAFETY: caller must guarantee that `ptr` is valid and was allocated by `P`
         debug_assert!(!ptr.is_null(), "Pointer must be non-null");
 
-        // Calculate the offset of the `data` field within `UnionNode` (with the current layout
+        // Calculate the offset of the `data` field within `Node` (with the current layout
         // tha data is at the beginning so offset is zero, but this may change in the future)
-        let uninit_union_node = MaybeUninit::<UnionNode<MaybeUninit<P::Data>>>::uninit();
+        let uninit_union_node = MaybeUninit::<Node<MaybeUninit<P::Data>>>::uninit();
         let data_ptr = unsafe { addr_of!((*uninit_union_node.as_ptr()).data) };
         let data_offset = (data_ptr as usize) - (uninit_union_node.as_ptr() as usize);
         let union_node_ptr = ptr
             .cast::<u8>()
             .sub(data_offset)
-            .cast::<UnionNode<MaybeUninit<P::Data>>>();
+            .cast::<Node<MaybeUninit<P::Data>>>();
 
         Self {
             node_ptr: NonNullPtr::from_ptr_unchecked(union_node_ptr),
@@ -352,7 +352,7 @@ where
 // newtype to avoid having to make field types public
 #[doc(hidden)]
 pub struct BoxPoolImpl<T> {
-    stack: Stack<UnionNode<MaybeUninit<T>>>,
+    stack: Stack<MaybeUninit<T>>,
 }
 
 impl<T> BoxPoolImpl<T> {
@@ -363,7 +363,7 @@ impl<T> BoxPoolImpl<T> {
         }
     }
 
-    fn alloc(&self, value: T) -> Result<NonNullPtr<UnionNode<MaybeUninit<T>>>, T> {
+    fn alloc(&self, value: T) -> Result<NonNullPtr<Node<MaybeUninit<T>>>, T> {
         if let Some(node_ptr) = self.stack.try_pop() {
             unsafe { node_ptr.as_ptr().cast::<T>().write(value) }
 
@@ -389,14 +389,14 @@ unsafe impl<T> Sync for BoxPoolImpl<T> {}
 
 /// A chunk of memory that a `BoxPool` singleton can manage
 pub struct BoxBlock<T> {
-    node: UnionNode<MaybeUninit<T>>,
+    node: Node<MaybeUninit<T>>,
 }
 
 impl<T> BoxBlock<T> {
     /// Creates a new memory block
     pub const fn new() -> Self {
         Self {
-            node: UnionNode::unlinked(),
+            node: Node::unlinked(),
         }
     }
 }
