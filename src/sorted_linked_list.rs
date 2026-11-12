@@ -726,6 +726,8 @@ where
     /// ```
     #[inline]
     pub fn pop(mut self) -> T {
+        // prevent the destructor from trying to re-insert self.
+        self.maybe_changed = false;
         self.pop_internal()
     }
 
@@ -961,29 +963,38 @@ mod tests {
 
     #[test]
     fn test_updating() {
-        let mut ll: SortedLinkedList<u32, Max, 3, u8> = SortedLinkedList::new_u8();
-        ll.push(1).unwrap();
-        ll.push(2).unwrap();
-        ll.push(3).unwrap();
+        let mut ll: SortedLinkedList<Box<u32>, Max, 3, u8> = SortedLinkedList::new_u8();
+        ll.push(Box::new(1)).unwrap();
+        ll.push(Box::new(2)).unwrap();
+        ll.push(Box::new(3)).unwrap();
 
-        let mut find = ll.find_mut(|v| *v == 2).unwrap();
+        let mut find = ll.find_mut(|v| **v == 2).unwrap();
 
-        *find += 1000;
+        **find += 1000;
         find.finish();
 
-        assert_eq!(ll.peek().unwrap(), &1002);
+        assert_eq!(**ll.peek().unwrap(), 1002);
 
-        let mut find = ll.find_mut(|v| *v == 3).unwrap();
+        let mut find = ll.find_mut(|v| **v == 3).unwrap();
 
-        *find += 1000;
+        **find += 1000;
         find.finish();
 
-        assert_eq!(ll.peek().unwrap(), &1003);
+        assert_eq!(**ll.peek().unwrap(), 1003);
 
         // Remove largest element
-        ll.find_mut(|v| *v == 1003).unwrap().pop();
+        ll.find_mut(|v| **v == 1003).unwrap().pop();
 
-        assert_eq!(ll.peek().unwrap(), &1002);
+        assert_eq!(**ll.peek().unwrap(), 1002);
+    }
+    #[test]
+    fn test_updating_pop() {
+        let mut list: SortedLinkedList<Box<u32>, Max, 2, u8> = SortedLinkedList::new_u8();
+        list.push(Box::new(1)).unwrap();
+        let mut item = list.find_mut(|_| true).unwrap();
+        **item = 2;
+        assert_eq!(*item.pop(), 2);
+        assert!(list.is_empty());
     }
 
     #[test]
