@@ -14,11 +14,11 @@ unsafe impl<S: VecStorage<u8> + ?Sized, LenT: LenType> BufMut for VecInner<u8, L
 
     #[inline]
     unsafe fn advance_mut(&mut self, cnt: usize) {
-        let len = self.len();
-        let pos = len + cnt;
-        if pos >= self.capacity() {
+        if cnt > self.remaining_mut() {
             panic!("Advance out of range");
         }
+        let len = self.len();
+        let pos = len + cnt;
         self.set_len(pos);
     }
 

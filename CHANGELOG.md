@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added `SortedLinkedList::new` generic const creator.
 - Fixed `SortedLinkedList` Zeroize implementation.
 - Fixed possible integer overflow in `VecInner::extend_from_slice`.
+- Allow `bytes::BufMut::advance_mut` implementation on `VecInner` to advance to the end of the buffer
 
 ## [v0.9.3] 2025-04-15
 
