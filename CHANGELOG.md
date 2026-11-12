@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Made `String::from_utf8_unchecked` const. The v0.9.0 changelog already listed this, but the change was undone before that release.
 - Deque: Fix unsoundness in `TryFrom` implementation when the deque ends up full
 - Fixed atomic ordering bug in `Spsc::peek`.
+- Added `SortedLinkedList::new` generic const creator.
+- Fixed `SortedLinkedList` Zeroize implementation.
 
 ## [v0.9.3] 2025-04-15
 

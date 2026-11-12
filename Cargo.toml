@@ -79,6 +79,8 @@ stable_deref_trait = { version = "1", default-features = false }
 [dev-dependencies]
 critical-section = { version = "1.1", features = ["std"] }
 static_assertions = "1.1.0"
+# For testing with Box
+zeroize = {version = "1.8", default-features = true }
 
 [package.metadata.docs.rs]
 features = [
