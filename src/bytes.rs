@@ -14,11 +14,11 @@ unsafe impl<S: VecStorage<u8> + ?Sized, LenT: LenType> BufMut for VecInner<u8, L
 
     #[inline]
     unsafe fn advance_mut(&mut self, cnt: usize) {
-        let len = self.len();
-        let pos = len + cnt;
-        if pos >= self.capacity() {
+        if cnt > self.remaining_mut() {
             panic!("Advance out of range");
         }
+        let len = self.len();
+        let pos = len + cnt;
         self.set_len(pos);
     }
 
@@ -56,6 +56,17 @@ mod tests {
         assert_eq!(vec.chunk_mut().len(), 8);
         unsafe { vec.advance_mut(1) };
         assert_eq!(vec.chunk_mut().len(), 7);
+    }
+
+    #[test]
+    fn buf_mut_chunk_mut_fill() {
+        let eight_zeros: [u8; 8] = [0; 8];
+        let mut vec: Vec<u8, 8> = Vec::new();
+        let chunk = vec.chunk_mut();
+        assert_eq!(chunk.len(), 8);
+        chunk.copy_from_slice(&eight_zeros);
+        unsafe { vec.advance_mut(8) }
+        assert_eq!(vec.chunk_mut().len(), 0);
     }
 
     #[test]
