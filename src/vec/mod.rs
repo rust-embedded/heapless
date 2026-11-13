@@ -661,7 +661,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         where
             T: Clone,
         {
-            if len.into_usize() + other.len() > buf.len() {
+            let available = buf.len() - len.into_usize();
+            if other.len() > available {
                 // won't fit in the `Vec`; don't modify anything and return an error
                 Err(CapacityError)
             } else {
@@ -2418,6 +2419,16 @@ mod tests {
         assert!(v.extend_from_slice(&[4, 5]).is_err());
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
+        v.extend_from_slice(&[4]).unwrap();
+        assert_eq!(v.len(), 4);
+        assert_eq!(v.as_slice(), &[1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn extend_beyond_usize_max() {
+        let mut v: Vec<(), 1> = Vec::new();
+        v.push(()).unwrap();
+        assert!(v.extend_from_slice(&[(); usize::MAX]).is_err());
     }
 
     #[test]
