@@ -30,8 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed atomic ordering bug in `Spsc::peek`.
 - Added `SortedLinkedList::new` generic const creator.
 - Fixed `SortedLinkedList` Zeroize implementation.
-- Allow `bytes::BufMut::advance_mut` implementation on `VecInner` to advance to the end of the buffer
-
+- Allow `bytes::BufMut::advance_mut` implementation on `VecInner` to advance to the end of the buffer.
 ## [v0.9.3] 2025-04-15
 
 - Fixed unsoundness in `Deque::clear`, `HistoryBuf::clear` and `IndexMap::clear` in the context of panicking drop implementations.
