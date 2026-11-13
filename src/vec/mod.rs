@@ -2419,6 +2419,9 @@ mod tests {
         assert!(v.extend_from_slice(&[4, 5]).is_err());
         assert_eq!(v.len(), 3);
         assert_eq!(v.as_slice(), &[1, 2, 3]);
+        v.extend_from_slice(&[4]).unwrap();
+        assert_eq!(v.len(), 4);
+        assert_eq!(v.as_slice(), &[1, 2, 3, 4]);
     }
 
     #[test]
