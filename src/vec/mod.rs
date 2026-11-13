@@ -661,7 +661,8 @@ impl<T, LenT: LenType, S: VecStorage<T> + ?Sized> VecInner<T, LenT, S> {
         where
             T: Clone,
         {
-            if len.into_usize() + other.len() > buf.len() {
+            let available = buf.len() - len.into_usize();
+            if other.len() > available {
                 // won't fit in the `Vec`; don't modify anything and return an error
                 Err(CapacityError)
             } else {

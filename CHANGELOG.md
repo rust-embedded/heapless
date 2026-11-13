@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed atomic ordering bug in `Spsc::peek`.
 - Added `SortedLinkedList::new` generic const creator.
 - Fixed `SortedLinkedList` Zeroize implementation.
+- Fixed possible integer overflow in `VecInner::extend_from_slice`.
 
 ## [v0.9.3] 2025-04-15
 
