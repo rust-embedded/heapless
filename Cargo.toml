@@ -97,3 +97,8 @@ features = [
 # for the pool module
 targets = ["i686-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.cargo]
+# stable_deref_trait is dependended on but not always used
+# The cfg under which it is used cannot be encoded accurately in Cargo.toml.
+unused_dependencies = "allow"
