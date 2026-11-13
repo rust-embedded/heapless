@@ -201,8 +201,7 @@ where
         // SAFETY: caller must guarantee that `ptr` is valid and was allocated by `P`
         debug_assert!(!ptr.is_null(), "Pointer must be non-null");
 
-        // Calculate the offset of the `data` field within `Node` (with the current layout
-        // tha data is at the beginning so offset is zero, but this may change in the future)
+        // Calculate the offset of the `data` field within `Node`
         let uninit_union_node = MaybeUninit::<Node<MaybeUninit<P::Data>>>::uninit();
         let data_ptr = unsafe { addr_of!((*uninit_union_node.as_ptr()).data) };
         let data_offset = (data_ptr as usize) - (uninit_union_node.as_ptr() as usize);
@@ -244,7 +243,7 @@ where
     type Target = P::Data;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*self.node_ptr.as_ptr().cast::<P::Data>() }
+        unsafe { &*addr_of!((*self.node_ptr.as_ptr()).data).cast::<P::Data>() }
     }
 }
 
@@ -253,7 +252,7 @@ where
     P: BoxPool,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *self.node_ptr.as_ptr().cast::<P::Data>() }
+        unsafe { &mut *addr_of_mut!((*self.node_ptr.as_ptr()).data).cast::<P::Data>() }
     }
 }
 
@@ -276,7 +275,7 @@ where
     fn drop(&mut self) {
         let node = self.node_ptr;
 
-        unsafe { ptr::drop_in_place(node.as_ptr().cast::<P::Data>()) }
+        unsafe { ptr::drop_in_place(addr_of_mut!((*node.as_ptr()).data).cast::<P::Data>()) }
 
         unsafe { P::singleton().stack.push(node) }
     }
@@ -365,7 +364,11 @@ impl<T> BoxPoolImpl<T> {
 
     fn alloc(&self, value: T) -> Result<NonNullPtr<Node<MaybeUninit<T>>>, T> {
         if let Some(node_ptr) = self.stack.try_pop() {
-            unsafe { node_ptr.as_ptr().cast::<T>().write(value) }
+            unsafe {
+                addr_of_mut!((*node_ptr.as_ptr()).data)
+                    .cast::<T>()
+                    .write(value);
+            }
 
             Ok(node_ptr)
         } else {
@@ -633,19 +636,17 @@ mod tests {
             addr_of_mut!(BLOCK).as_mut().unwrap()
         });
 
-        let raw = {
-            let boxed = MyBoxPool
-                .alloc(MyStruct { value: [0xA5; 64] })
-                .ok()
-                .unwrap();
-            Box::into_raw(boxed)
-        };
+        let boxed = MyBoxPool
+            .alloc(MyStruct { value: [0xA5; 64] })
+            .ok()
+            .unwrap();
+        let addr_1 = boxed.node_ptr.as_ptr().addr();
+        let raw = Box::into_raw(boxed);
         assert_eq!(0, NUM_DROP_CALLS.load(Ordering::Acquire));
-        let addr_1 = raw as usize;
 
         {
             let boxed_again: Box<MyBoxPool> = unsafe { Box::from_raw(raw) };
-            let addr_2 = boxed_again.node_ptr.as_ptr() as usize;
+            let addr_2 = boxed_again.node_ptr.as_ptr().addr();
             assert_eq!([0xA5; 64], boxed_again.value);
             assert_eq!(addr_1, addr_2);
         }
@@ -656,8 +657,22 @@ mod tests {
             .alloc(MyStruct { value: [0xEF; 64] })
             .ok()
             .unwrap();
-        let addr_2 = boxed_2.node_ptr.as_ptr() as usize;
+        let addr_2 = boxed_2.node_ptr.as_ptr().addr();
         assert_eq!([0xEF; 64], boxed_2.value);
         assert_eq!(addr_1, addr_2);
+    }
+
+    #[test]
+    fn into_raw_from_raw_small_type() {
+        box_pool!(MyBoxPool: u8);
+
+        MyBoxPool.manage(std::boxed::Box::leak(std::boxed::Box::new(BoxBlock::new())));
+
+        let raw = Box::into_raw(MyBoxPool.alloc(0xAB).unwrap());
+        let roundtrip = Box::into_raw(unsafe { Box::<MyBoxPool>::from_raw(raw) }) as usize;
+        assert_eq!(
+            roundtrip, raw as usize,
+            "from_raw moved the pointer by offsetof(Node, data)"
+        );
     }
 }
