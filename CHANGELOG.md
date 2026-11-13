@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.9.4] 2026-18
+
 - Fix unsoundness in `Deque::make_contiguous` when the `Deque` is not full
 - Fixed unsoundness in `IndexMap::retain` in the context of panicking predicate.
 - Added `swap_remove()` to `IndexMap` and `IndexSet`.
@@ -767,7 +769,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Initial release
 
-[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/rust-embedded/heapless/compare/v0.9.4...HEAD
+[v0.9.4]: https://github.com/rust-embedded/heapless/compare/v0.9.3...v0.9.4
 [v0.9.3]: https://github.com/rust-embedded/heapless/compare/v0.9.2...v0.9.3
 [v0.9.2]: https://github.com/rust-embedded/heapless/compare/v0.9.1...v0.9.2
 [v0.9.1]: https://github.com/rust-embedded/heapless/compare/v0.9.0...v0.9.1
