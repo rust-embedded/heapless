@@ -83,7 +83,7 @@ use portable_atomic as atomic;
 
 use atomic::{AtomicUsize, Ordering};
 
-use super::treiber::{NonNullPtr, Stack, UnionNode};
+use super::treiber::{Node, NonNullPtr, Stack};
 
 /// Creates a new `ArcPool` singleton with the given `$name` that manages the specified `$data_type`
 ///
@@ -158,7 +158,7 @@ pub trait ArcPool: Sized {
 // newtype to avoid having to make field types public
 #[doc(hidden)]
 pub struct ArcPoolImpl<T> {
-    stack: Stack<UnionNode<MaybeUninit<ArcInner<T>>>>,
+    stack: Stack<MaybeUninit<ArcInner<T>>>,
 }
 
 impl<T> ArcPoolImpl<T> {
@@ -171,13 +171,17 @@ impl<T> ArcPoolImpl<T> {
         }
     }
 
-    fn alloc(&self, value: T) -> Result<NonNullPtr<UnionNode<MaybeUninit<ArcInner<T>>>>, T> {
+    fn alloc(&self, value: T) -> Result<NonNullPtr<Node<MaybeUninit<ArcInner<T>>>>, T> {
         if let Some(node_ptr) = self.stack.try_pop() {
             let inner = ArcInner {
                 data: value,
                 strong: AtomicUsize::new(1),
             };
-            unsafe { node_ptr.as_ptr().cast::<ArcInner<T>>().write(inner) }
+            unsafe {
+                ptr::addr_of_mut!((*node_ptr.as_ptr()).data)
+                    .cast::<ArcInner<T>>()
+                    .write(inner);
+            }
 
             Ok(node_ptr)
         } else {
@@ -204,7 +208,7 @@ pub struct Arc<P>
 where
     P: ArcPool,
 {
-    node_ptr: NonNullPtr<UnionNode<MaybeUninit<ArcInner<P::Data>>>>,
+    node_ptr: NonNullPtr<Node<MaybeUninit<ArcInner<P::Data>>>>,
 }
 
 impl<P> Arc<P>
@@ -212,15 +216,17 @@ where
     P: ArcPool,
 {
     fn inner(&self) -> &ArcInner<P::Data> {
-        unsafe { &*self.node_ptr.as_ptr().cast::<ArcInner<P::Data>>() }
+        unsafe { &*ptr::addr_of!((*self.node_ptr.as_ptr()).data).cast::<ArcInner<P::Data>>() }
     }
 
-    fn from_inner(node_ptr: NonNullPtr<UnionNode<MaybeUninit<ArcInner<P::Data>>>>) -> Self {
+    fn from_inner(node_ptr: NonNullPtr<Node<MaybeUninit<ArcInner<P::Data>>>>) -> Self {
         Self { node_ptr }
     }
 
     unsafe fn get_mut_unchecked(this: &mut Self) -> &mut P::Data {
-        &mut *ptr::addr_of_mut!((*this.node_ptr.as_ptr().cast::<ArcInner<P::Data>>()).data)
+        &mut *ptr::addr_of_mut!(
+            (*ptr::addr_of_mut!((*this.node_ptr.as_ptr()).data).cast::<ArcInner<P::Data>>()).data
+        )
     }
 
     #[inline(never)]
@@ -277,7 +283,7 @@ where
     type Target = P::Data;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*ptr::addr_of!((*self.node_ptr.as_ptr().cast::<ArcInner<P::Data>>()).data) }
+        &self.inner().data
     }
 }
 
@@ -374,6 +380,7 @@ where
 
 impl<A> Unpin for Arc<A> where A: ArcPool {}
 
+#[repr(C)]
 struct ArcInner<T> {
     data: T,
     strong: AtomicUsize,
@@ -381,14 +388,14 @@ struct ArcInner<T> {
 
 /// A chunk of memory that an `ArcPool` can manage
 pub struct ArcBlock<T> {
-    node: UnionNode<MaybeUninit<ArcInner<T>>>,
+    node: Node<MaybeUninit<ArcInner<T>>>,
 }
 
 impl<T> ArcBlock<T> {
     /// Creates a new memory block
     pub const fn new() -> Self {
         Self {
-            node: UnionNode::unlinked(),
+            node: Node::unlinked(),
         }
     }
 }
@@ -402,7 +409,7 @@ impl<T> Default for ArcBlock<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ptr::addr_of_mut;
+    use std::ptr::{self, addr_of_mut};
 
     #[test]
     fn cannot_alloc_if_empty() {
@@ -544,5 +551,37 @@ mod tests {
 
         let raw = std::ptr::from_ref::<Zst4096>(&*arc);
         assert_eq!(0, raw as usize % 4096);
+    }
+
+    #[test]
+    fn addr_small() {
+        arc_pool!(MyArcPool: u8);
+
+        static mut BLOCK: ArcBlock<u8> = ArcBlock::new();
+        let block_addr = addr_of_mut!(BLOCK).addr();
+        let data_addr = unsafe { addr_of_mut!(BLOCK.node.data).addr() };
+        let block = unsafe { addr_of_mut!(BLOCK).as_mut().unwrap() };
+        MyArcPool.manage(block);
+
+        let arc = MyArcPool.alloc(123).ok().unwrap();
+        assert_eq!(*arc, 123);
+        assert_eq!(arc.node_ptr.as_ptr().addr(), block_addr);
+        assert_eq!(ptr::from_ref(&*arc).addr(), data_addr);
+    }
+
+    #[test]
+    fn addr_large() {
+        arc_pool!(MyArcPool: u64);
+
+        static mut BLOCK: ArcBlock<u64> = ArcBlock::new();
+        let block_addr = addr_of_mut!(BLOCK).addr();
+        let data_addr = unsafe { addr_of_mut!(BLOCK.node.data).addr() };
+        let block = unsafe { addr_of_mut!(BLOCK).as_mut().unwrap() };
+        MyArcPool.manage(block);
+
+        let arc = MyArcPool.alloc(123).ok().unwrap();
+        assert_eq!(*arc, 123);
+        assert_eq!(arc.node_ptr.as_ptr().addr(), block_addr);
+        assert_eq!(ptr::from_ref(&*arc).addr(), data_addr);
     }
 }

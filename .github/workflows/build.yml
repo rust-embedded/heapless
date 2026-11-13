@@ -332,6 +332,9 @@ jobs:
         buildtype:
           - ""
           - "--release"
+        features:
+          - ""
+          - "portable-atomic"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

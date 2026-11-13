@@ -231,3 +231,36 @@ fn iterator_properly_wraps() {
     }
     assert_eq!(expected, actual);
 }
+
+#[cfg(any(
+    arm_llsc,
+    all(
+        target_pointer_width = "32",
+        any(target_has_atomic = "64", feature = "portable-atomic")
+    ),
+    all(
+        target_pointer_width = "64",
+        any(
+            all(target_has_atomic = "128", feature = "nightly"),
+            feature = "portable-atomic"
+        )
+    )
+))]
+#[test]
+fn pool_bug() {
+    heapless::box_pool!(Pool: [u64; 4]);
+    Pool.manage(Box::leak(Box::new(heapless::pool::boxed::BoxBlock::new())));
+    let iterations = if cfg!(miri) { 100 } else { 100000 };
+    std::thread::scope(|scope| {
+        for _ in 0..4 {
+            scope.spawn(|| {
+                for _ in 0..iterations {
+                    if let Ok(mut value) = Pool.alloc([42; 4]) {
+                        value[0] = 7;
+                        std::thread::yield_now();
+                    }
+                }
+            });
+        }
+    });
+}
