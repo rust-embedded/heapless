@@ -13,7 +13,11 @@ use crate::{
 };
 
 /// Base struct for [`LinearSet`] and [`LinearSetView`]
-#[cfg_attr(feature = "zeroize", derive(Zeroize), zeroize(bound = "T: Zeroize"))]
+#[cfg_attr(
+    feature = "zeroize",
+    derive(Zeroize),
+    zeroize(bound = "S: Zeroize, T: Zeroize")
+)]
 pub struct LinearSetInner<T, S: LinearMapStorage<T, ()> + ?Sized> {
     pub(crate) map: LinearMapInner<T, (), S>,
 }
@@ -127,8 +131,8 @@ where
     {
         self.map
             .iter()
-            .find(|&(k, _)| k.borrow() == value)
-            .map(|(k, _)| k)
+            .find(|&(k, ())| k.borrow() == value)
+            .map(|(k, ())| k)
     }
 
     /// Returns the number of elements in this set.
@@ -149,9 +153,9 @@ where
         self.map.len()
     }
 
-    /// Inserts a key-value pair into the set.
+    /// Inserts a value into the set.
     ///
-    /// If the set did not have this key present, `true` is returned.
+    /// If the set did not have this value present, `true` is returned.
     ///
     /// If the set did have this value present, `false` is returned.
     ///
@@ -172,10 +176,10 @@ where
         self.map
             .insert(value, ())
             .map(|old| old.is_none())
-            .map_err(|(k, _)| k)
+            .map_err(|(k, ())| k)
     }
 
-    /// Returns true if the map contains no elements.
+    /// Returns true if the set contains no elements.
     ///
     /// Computes in *O*(1) time.
     ///
@@ -193,7 +197,7 @@ where
         self.map.is_empty()
     }
 
-    /// Returns true if the map is full.
+    /// Returns true if the set is full.
     ///
     /// Computes in *O*(1) time.
     ///
@@ -214,7 +218,7 @@ where
         self.map.is_full()
     }
 
-    /// Return an iterator over the values of the set, in insertion order
+    /// An iterator visiting all values in arbitrary order.
     ///
     /// # Examples
     ///
@@ -225,7 +229,6 @@ where
     /// set.insert("a").unwrap();
     /// set.insert("b").unwrap();
     ///
-    /// // Will print in insertion order: a, b
     /// for x in set.iter() {
     ///     println!("{}", x);
     /// }
@@ -236,7 +239,7 @@ where
         }
     }
 
-    /// Removes a key from the set. Returns `true` if the value was present in
+    /// Removes a value from the set. Returns `true` if the value was present in
     /// the set.
     ///
     /// Computes in *O*(n) time
@@ -266,7 +269,7 @@ where
     where
         F: FnMut(&T) -> bool,
     {
-        self.map.retain(move |k, _| f(k));
+        self.map.retain(move |k, ()| f(k));
     }
 }
 
@@ -324,7 +327,7 @@ where
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|(k, _)| k)
+        self.iter.next().map(|(k, ())| k)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -383,7 +386,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|(k, _)| k)
+        self.iter.next().map(|(k, ())| k)
     }
 }
 
@@ -401,3 +404,168 @@ where
 }
 
 impl<T, S: LinearMapStorage<T, ()> + ?Sized> Eq for LinearSetInner<T, S> where T: Eq {}
+
+#[cfg(test)]
+mod test {
+    use static_assertions::assert_not_impl_any;
+
+    use crate::LinearSet;
+
+    // Ensure a `LinearSet` containing `!Send` keys stays `!Send` itself.
+    assert_not_impl_any!(LinearSet<*const (),  4>: Send);
+    // Ensure a `LinearSet` containing `!Send` values stays `!Send` itself.
+    assert_not_impl_any!(LinearSet<*const (), 4>: Send);
+
+    #[test]
+    fn static_new() {
+        static mut _L: LinearSet<i32, 8> = LinearSet::new();
+    }
+
+    #[test]
+    fn borrow() {
+        use crate::String;
+
+        let mut set = LinearSet::<_, 8>::new();
+
+        let s = String::<64>::try_from("Hello, world!").unwrap();
+        set.insert(s).unwrap();
+
+        assert_eq!(set.get("Hello, world!").unwrap(), &"Hello, world!");
+    }
+
+    #[test]
+    fn partial_eq() {
+        {
+            let mut a = LinearSet::<_, 1>::new();
+            a.insert("v1").unwrap();
+
+            let mut b = LinearSet::<_, 2>::new();
+            b.insert("v1").unwrap();
+
+            assert!(a == b);
+
+            b.insert("v2").unwrap();
+
+            assert!(a != b);
+        }
+
+        {
+            let mut a = LinearSet::<_, 2>::new();
+            a.insert("v1").unwrap();
+            a.insert("v2").unwrap();
+
+            let mut b = LinearSet::<_, 2>::new();
+            b.insert("v2").unwrap();
+            b.insert("v1").unwrap();
+
+            assert!(a == b);
+        }
+    }
+
+    #[test]
+    fn into_iter() {
+        let mut src: LinearSet<_, 4> = LinearSet::new();
+        src.insert("v1").unwrap();
+        src.insert("v2").unwrap();
+        src.insert("v3").unwrap();
+        src.insert("v4").unwrap();
+        let clone = src.clone();
+        for v in clone.into_iter() {
+            src.remove(v);
+        }
+        assert!(src.is_empty());
+    }
+
+    #[test]
+    fn into_iter_len() {
+        let mut src: LinearSet<_, 2> = LinearSet::new();
+        src.insert("v1").unwrap();
+        src.insert("v2").unwrap();
+        let mut items = src.into_iter();
+        assert_eq!(items.len(), 2);
+        let _ = items.next();
+        assert_eq!(items.len(), 1);
+        let _ = items.next();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[test]
+    fn partial_eq_floats() {
+        // Make sure `PartialEq` is implemented even if `V` doesn't implement `Eq`.
+        let set: LinearSet<usize, 4> = Default::default();
+        assert_eq!(set, set);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    fn test_linear_map_zeroize() {
+        use zeroize::Zeroize;
+
+        let mut set: LinearSet<u8, 8> = LinearSet::new();
+        for i in 1..=8 {
+            set.insert(i).unwrap();
+        }
+
+        assert_eq!(set.len(), 8);
+        assert_eq!(set.get(&5), Some(&5));
+
+        // zeroized using Vec's implementation
+        set.zeroize();
+
+        assert_eq!(set.len(), 0);
+        assert!(set.is_empty());
+    }
+
+    // tests that use this constant take too long to run under miri, specially on CI, with a map of
+    // this size so make the map smaller when using miri
+    #[cfg(not(miri))]
+    const SET_SLOTS: usize = 4096;
+    #[cfg(miri)]
+    const SET_SLOTS: usize = 64;
+    fn almost_filled_set() -> LinearSet<usize, SET_SLOTS> {
+        let mut almost_filled = LinearSet::new();
+        for i in 1..SET_SLOTS {
+            almost_filled.insert(i).unwrap();
+        }
+        almost_filled
+    }
+
+    #[test]
+    fn remove() {
+        let mut src = almost_filled_set();
+        // value doesn't exist
+        let v = 0;
+        let r = src.remove(&v);
+        assert!(!r);
+
+        let v = 5;
+        let r = src.remove(&v);
+        assert!(r);
+        let r = src.remove(&v);
+        assert!(!r);
+        assert_eq!(src.len(), SET_SLOTS - 2);
+    }
+
+    #[test]
+    fn retain() {
+        let mut src = almost_filled_set();
+        src.retain(|v| v % 2 == 0);
+        src.retain(|v| v % 3 == 0);
+
+        for v in src.iter() {
+            assert_eq!(v % 2, 0);
+            assert_eq!(v % 3, 0);
+        }
+
+        let mut src = almost_filled_set();
+        src.retain(|_v| false);
+        assert!(src.is_empty());
+
+        let mut src = almost_filled_set();
+        src.retain(|_v| true);
+        assert_eq!(src.len(), SET_SLOTS - 1);
+        src.insert(0).unwrap();
+        src.retain(|_v| true);
+        assert_eq!(src.len(), SET_SLOTS);
+    }
+}
