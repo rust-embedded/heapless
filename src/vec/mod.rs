@@ -398,12 +398,10 @@ impl<T, LenT: LenType, const N: usize> Vec<T, N, LenT> {
 
         // We've got to copy `src`, but we're functionally moving it. Don't run
         // any Drop code for T.
-        let src = ManuallyDrop::new(src);
-
-        // SAFETY: `M <= N` by the assertion above. `ManuallyDrop<[T; M]>` is `repr(transparent)`
-        // around `[T; M]`, so the pointer is valid for reading its `M` elements, and `src` is never
-        // used or dropped again.
-        unsafe { Self::from_ptr_unchecked(ptr::from_ref(&src).cast::<T>(), M) }
+        // SAFETY: `M <= N` by the assertion above. `src` is forgotten without `drop` just afterwards.
+        let this = unsafe { Self::from_ptr_unchecked(src.as_ptr(), M) };
+        core::mem::forget(src);
+        this
     }
 
     /// Returns the contents of the vector as an array of length `M` if the length
