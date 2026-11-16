@@ -180,7 +180,7 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
         Self { vec: Vec::new() }
     }
 
-    /// Creates a `String` from a `&str`, returning [`None`] if `s` doesn't fit.
+    /// Creates a `String` from a `&str`, returning [`None`] if it doesn't fit.
     ///
     /// Unlike [`String::try_from`], this can be used in const contexts.
     ///
