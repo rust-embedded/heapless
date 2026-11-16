@@ -199,7 +199,7 @@ impl<LenT: LenType, const N: usize> String<N, LenT> {
             return None;
         }
 
-        // SAFETY: We just checked that `s.len() <= N`.
+        // SAFETY: We just checked that `s.len() <= N`, and `s.as_bytes()` is known to be valid UTF-8.
         let vec = unsafe { Vec::from_slice_unchecked(s.as_bytes()) };
 
         Some(Self { vec })
