@@ -66,16 +66,17 @@
 //! ```
 
 use core::{
+    cell::UnsafeCell,
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    mem::ManuallyDrop,
+    mem::MaybeUninit,
     ops, ptr,
 };
 
 use stable_deref_trait::StableDeref;
 
-use super::treiber::{AtomicPtr, NonNullPtr, Stack, StructNode};
+use super::treiber::{AtomicPtr, Node, NonNullPtr, Stack};
 
 /// Creates a new `ObjectPool` singleton with the given `$name` that manages the specified
 /// `$data_type`
@@ -144,7 +145,7 @@ pub trait ObjectPool: Sized {
 /// `object_pool!` implementation detail
 #[doc(hidden)]
 pub struct ObjectPoolImpl<T> {
-    stack: Stack<StructNode<T>>,
+    stack: Stack<T>,
 }
 
 impl<T> ObjectPoolImpl<T> {
@@ -156,7 +157,7 @@ impl<T> ObjectPoolImpl<T> {
         }
     }
 
-    fn request(&self) -> Option<NonNullPtr<StructNode<T>>> {
+    fn request(&self) -> Option<NonNullPtr<Node<T>>> {
         self.stack.try_pop()
     }
 
@@ -176,7 +177,7 @@ pub struct Object<P>
 where
     P: ObjectPool,
 {
-    node_ptr: NonNullPtr<StructNode<P::Data>>,
+    node_ptr: NonNullPtr<Node<P::Data>>,
 }
 
 impl<A, T, const N: usize> AsMut<[T]> for Object<A>
@@ -214,7 +215,7 @@ where
     type Target = A::Data;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*ptr::addr_of!((*self.node_ptr.as_ptr()).data) }
+        unsafe { &*ptr::addr_of!((*self.node_ptr.as_ptr()).data).cast::<Self::Target>() }
     }
 }
 
@@ -223,7 +224,7 @@ where
     A: ObjectPool,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *ptr::addr_of_mut!((*self.node_ptr.as_ptr()).data) }
+        unsafe { &mut *ptr::addr_of_mut!((*self.node_ptr.as_ptr()).data).cast::<Self::Target>() }
     }
 }
 
@@ -316,16 +317,16 @@ where
 
 /// An object "block" of data type `T` that has not yet been associated to an `ObjectPool`
 pub struct ObjectBlock<T> {
-    node: StructNode<T>,
+    node: Node<T>,
 }
 
 impl<T> ObjectBlock<T> {
     /// Creates a new object block with the given `initial_value`
     pub const fn new(initial_value: T) -> Self {
         Self {
-            node: StructNode {
-                next: ManuallyDrop::new(AtomicPtr::null()),
-                data: ManuallyDrop::new(initial_value),
+            node: Node {
+                next: AtomicPtr::null(),
+                data: UnsafeCell::new(MaybeUninit::new(initial_value)),
             },
         }
     }
