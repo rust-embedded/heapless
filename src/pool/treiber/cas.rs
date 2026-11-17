@@ -200,9 +200,7 @@ pub unsafe fn push<T>(stack: &Stack<T>, new_top: NonNullPtr<Node<T>>) {
     }
 }
 
-pub fn try_pop<T>(stack: &Stack<T>) -> Option<NonNullPtr<Node<T>>>
-where
-{
+pub fn try_pop<T>(stack: &Stack<T>) -> Option<NonNullPtr<Node<T>>> {
     loop {
         let mut top = stack.top.load(Ordering::Acquire)?;
         // TODO: This should not create a reference to the full node, and instead use `addr_of!`
