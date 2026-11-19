@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- Fix `BinaryHeap::retain` leading to an inconsistent state.
+
 ## [v0.9.4] 2026-11-18
 
 - Fix unsoundness in `Deque::make_contiguous` when the `Deque` is not full

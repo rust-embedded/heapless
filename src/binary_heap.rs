@@ -32,17 +32,31 @@ pub enum Max {}
 pub trait Kind: private::Sealed {
     #[doc(hidden)]
     fn ordering() -> Ordering;
+
+    #[doc(hidden)]
+    #[cfg(test)]
+    fn cmp<T: Ord>(l: &T, r: &T) -> Ordering;
 }
 
 impl Kind for Min {
     fn ordering() -> Ordering {
         Ordering::Less
     }
+
+    #[cfg(test)]
+    fn cmp<T: Ord>(l: &T, r: &T) -> Ordering {
+        l.cmp(r)
+    }
 }
 
 impl Kind for Max {
     fn ordering() -> Ordering {
         Ordering::Greater
+    }
+
+    #[cfg(test)]
+    fn cmp<T: Ord>(l: &T, r: &T) -> Ordering {
+        l.cmp(r).reverse()
     }
 }
 
@@ -194,7 +208,7 @@ impl<T, K, const N: usize> BinaryHeap<T, K, N> {
     }
 }
 
-impl<T, K, S: VecStorage<T>> BinaryHeapInner<T, K, S> {
+impl<T, K, S: VecStorage<T> + ?Sized> BinaryHeapInner<T, K, S> {
     /// Get a reference to the `BinaryHeap`, erasing the `N` const-generic.
     pub fn as_view(&self) -> &BinaryHeapView<T, K> {
         S::as_binary_heap_view(self)
@@ -438,17 +452,32 @@ where
     /// assert_eq!(iter.next(), Some(&2));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn retain<F>(&mut self, mut f: F)
+    pub fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&T) -> bool,
     {
-        let mut index = 0;
-        while let Some(item) = self.data.get(index) {
-            if f(item) {
-                index += 1;
-            } else {
-                // SAFETY: `index` is valid because of the loop condition.
-                unsafe { self.remove_unchecked(index) };
+        struct DropGuard<'a, T: Ord, K: Kind> {
+            inner: &'a mut BinaryHeapView<T, K>,
+        }
+        impl<'a, T: Ord, K: Kind> Drop for DropGuard<'a, T, K> {
+            fn drop(&mut self) {
+                self.inner.rebuild();
+            }
+        }
+
+        let this = DropGuard {
+            inner: self.as_mut_view(),
+        };
+
+        this.inner.data.retain(f);
+    }
+
+    fn rebuild(&mut self) {
+        let mut n = self.len() / 2;
+        while n > 0 {
+            n -= 1;
+            unsafe {
+                self.sift_down_to_bottom(n);
             }
         }
     }
@@ -516,6 +545,9 @@ where
         let mut item = unsafe { self.data.pop_unchecked() };
         if let Some(item_to_remove) = self.data.get_mut(index) {
             mem::swap(&mut item, item_to_remove);
+            // SAFETY: `index` was just swapped,
+            // so we know it's in the data slice
+            unsafe { self.sift_up(0, index) };
             // SAFETY: `index` is within the data slice because of the condition.
             unsafe { self.sift_down_to_bottom(index) };
         }
@@ -819,6 +851,10 @@ where
 #[cfg(test)]
 mod tests {
     use static_assertions::assert_not_impl_any;
+
+    use proptest::prelude::*;
+
+    use crate::binary_heap::Kind;
 
     use super::{BinaryHeap, BinaryHeapView, Max, Min};
 
@@ -1178,6 +1214,94 @@ mod tests {
                 .as_slice(),
             &[25, 3, 7, 1],
         );
+    }
+
+    fn vec_and_index() -> impl Strategy<Value = (Vec<i32>, usize)> {
+        prop::collection::vec(any::<i32>(), 1..=8).prop_flat_map(|vec| {
+            let len = vec.len();
+            (Just(vec), 0..len)
+        })
+    }
+
+    fn vec_and_indexes() -> impl Strategy<Value = (Vec<i32>, usize, usize)> {
+        prop::collection::vec(any::<i32>(), 1..=8).prop_flat_map(|vec| {
+            let len = vec.len();
+            (Just(vec), 0..len, 0..len)
+        })
+    }
+
+    fn remove_unchecked_proptest_parametrized<K: Kind>(mut values: Vec<i32>, removal_index: usize) {
+        // Tests that removing an arbitrary value with `remove_unchecked` leaves
+        // a valid state
+
+        let mut heap: BinaryHeap<i32, K, 8> = BinaryHeap::new();
+        for i in &values {
+            heap.push(*i).unwrap();
+        }
+
+        values.sort_by(K::cmp);
+        let removed = unsafe { heap.remove_unchecked(removal_index) };
+        let elements: Vec<_> = core::iter::from_fn(|| heap.pop()).collect();
+        values.retain(|e| *e != removed);
+        assert_eq!(elements, values);
+    }
+
+    fn rebuild_parametrized<K: Kind>(mut values: Vec<i32>) {
+        // Tests rebuilding from an arbitrary heap leads to a valid state
+        let mut heap: BinaryHeap<i32, K, 8> = BinaryHeap::new();
+
+        heap.data.extend_from_slice(&values).unwrap();
+
+        heap.rebuild();
+
+        values.sort_by(K::cmp);
+
+        let elements: Vec<_> = core::iter::from_fn(|| heap.pop()).collect();
+        assert_eq!(elements, values);
+    }
+
+    fn retain_order_parametrized<K: Kind>(
+        mut values: Vec<i32>,
+        remove_index1: usize,
+        remove_index2: usize,
+    ) {
+        // Tests that retaining arbitrary values lead to a valid state
+
+        let remove_value1 = values[remove_index1];
+        let remove_value2 = values[remove_index2];
+
+        let mut heap: BinaryHeap<i32, K, 8> = BinaryHeap::new();
+        for v in &values {
+            heap.push(*v).unwrap();
+        }
+
+        values.retain(|e| ![remove_value1, remove_value2].contains(e));
+        values.sort_by(K::cmp);
+
+        heap.retain(|e| ![remove_value1, remove_value2].contains(e));
+
+        let elements: Vec<_> = core::iter::from_fn(|| heap.pop()).collect();
+        assert_eq!(elements, values);
+    }
+
+    proptest! {
+        #[test]
+        fn remove_unchecked_proptest((values, removal_index) in vec_and_index()) {
+            remove_unchecked_proptest_parametrized::<Max>(values.clone(),removal_index);
+            remove_unchecked_proptest_parametrized::<Min>(values,removal_index);
+        }
+
+        #[test]
+        fn rebuild(values in prop::collection::vec(any::<i32>(), 1..=8)) {
+            rebuild_parametrized::<Max>(values.clone());
+            rebuild_parametrized::<Min>(values);
+        }
+
+        #[test]
+        fn retain_order((values,remove_index1, remove_index2) in vec_and_indexes()) {
+            retain_order_parametrized::<Max>(values.clone(), remove_index1, remove_index2);
+            retain_order_parametrized::<Min>(values, remove_index1, remove_index2);
+        }
     }
 
     #[test]
