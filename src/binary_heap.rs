@@ -516,6 +516,9 @@ where
         let mut item = unsafe { self.data.pop_unchecked() };
         if let Some(item_to_remove) = self.data.get_mut(index) {
             mem::swap(&mut item, item_to_remove);
+            // SAFETY: `index` was just swapped,
+            // so we know it's in the data slice
+            unsafe { self.sift_up(0, index) };
             // SAFETY: `index` is within the data slice because of the condition.
             unsafe { self.sift_down_to_bottom(index) };
         }
