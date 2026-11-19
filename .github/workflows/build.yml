@@ -48,8 +48,10 @@ jobs:
           components: miri
 
       - name: Run miri
+        env:
+          PROPTEST_DISABLE_FAILURE_PERSISTENCE: "true"
         run: >
-          MIRIFLAGS=-Zmiri-ignore-leaks cargo miri test --features="alloc,
+          MIRIFLAGS="-Zmiri-ignore-leaks -Zmiri-env-forward=PROPTEST_DISABLE_FAILURE_PERSISTENCE" cargo miri test --features="alloc,
           defmt,
           mpmc_large,
           portable-atomic-critical-section,
