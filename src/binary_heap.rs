@@ -1178,6 +1178,44 @@ mod tests {
                 .as_slice(),
             &[25, 3, 7, 1],
         );
+
+        for removal_index in 0..7 {
+            let mut heap: BinaryHeap<i32, Max, 8> = BinaryHeap::new();
+            for i in 1..8 {
+                heap.push(i).unwrap();
+            }
+
+            let removed = unsafe { heap.remove_unchecked(removal_index) };
+            let elements: Vec<_> = core::iter::from_fn(|| heap.pop()).collect();
+            assert_eq!(
+                elements,
+                (1..8).rev().filter(|e| *e != removed).collect::<Vec<i32>>()
+            );
+        }
+    }
+
+    #[test]
+    fn retain_order() {
+        for remove_value1 in 0..7 {
+            for remove_value2 in 0..7 {
+                let mut heap: BinaryHeap<i32, Max, 8> = BinaryHeap::new();
+                for i in 1..8 {
+                    heap.push(i).unwrap();
+                }
+
+                heap.retain(|e| ![remove_value1, remove_value2].contains(e));
+
+                let elements: Vec<_> = core::iter::from_fn(|| heap.pop()).collect();
+                assert_eq!(
+                    elements,
+                    (1..8)
+                        .rev()
+                        .filter(|e| ![remove_value1, remove_value2].contains(e))
+                        .collect::<Vec<i32>>(),
+                    "Removed: {remove_value1} {remove_value2}"
+                );
+            }
+        }
     }
 
     #[test]
