@@ -29,7 +29,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // AArch64 instruction set contains `clrex` but not `ldrex` or `strex`; the
     // probe will succeed when we already know to deny this target from LLSC.
-    if !target.starts_with("aarch64") {
+    // Under Miri, `RUSTC` is Miri itself, which doesn't do codegen, so the
+    // probe would succeed on any target.
+    if !target.starts_with("aarch64") && env::var_os("CARGO_CFG_MIRI").is_none() {
         match compile_probe(ARM_LLSC_PROBE) {
             Some(status) if status.success() => println!("cargo:rustc-cfg=arm_llsc"),
             _ => {}
