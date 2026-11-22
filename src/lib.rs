@@ -157,6 +157,7 @@ pub use index_map::IndexMap;
 pub use index_set::IndexSet;
 pub use len_type::LenType;
 pub use linear_map::LinearMap;
+pub use linear_set::LinearSet;
 pub use string::String;
 
 pub use vec::{Vec, VecView};
@@ -172,6 +173,7 @@ pub mod index_map;
 pub mod index_set;
 mod len_type;
 pub mod linear_map;
+pub mod linear_set;
 mod slice;
 pub mod storage;
 pub mod string;
