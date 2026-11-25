@@ -78,6 +78,7 @@ stable_deref_trait = { version = "1", default-features = false }
 
 [dev-dependencies]
 critical-section = { version = "1.1", features = ["std"] }
+proptest = "1.12.0"
 static_assertions = "1.1.0"
 # For testing with Box
 zeroize = {version = "1.8", default-features = true }
