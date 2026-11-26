@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed possible integer overflow in `VecInner::extend_from_slice`.
 - Allow `bytes::BufMut::advance_mut` implementation on `VecInner` to advance to the end of the buffer.
 - Added `String::try_from_str`, a const version of `String::try_from(&str)` that returns an `Option`.
+- Made `len` and `is_empty` of `Vec`, `VecView`, `String` and `StringView` usable in const contexts.
+- Made `as_ptr`, `as_mut_ptr`, `as_slice` and `as_mut_slice` of `Vec` and `VecView`, and `as_str` and `as_mut_str` of `String` and `StringView`, usable in const contexts.
 
 ## [v0.9.3] 2025-04-15
 
