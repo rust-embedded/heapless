@@ -533,6 +533,41 @@ impl<LenT: LenType, S: StringStorage + ?Sized> StringInner<LenT, S> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
+    /// Returns the length of this `String`, in bytes, not [`char`]s or graphemes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let s: String<8> = String::try_from("foo")?;
+    /// assert_eq!(s.len(), 3);
+    /// # Ok::<(), heapless::CapacityError>(())
+    /// ```
+    #[inline]
+    pub const fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    /// Returns `true` if this `String` has a length of zero, and `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::String;
+    ///
+    /// let mut s: String<8> = String::new();
+    /// assert!(s.is_empty());
+    ///
+    /// s.push('a')?;
+    /// assert!(!s.is_empty());
+    /// # Ok::<(), heapless::CapacityError>(())
+    /// ```
+    #[inline]
+    pub const fn is_empty(&self) -> bool {
+        self.vec.is_empty()
+    }
+
     /// Returns the maximum number of elements the String can hold.
     ///
     /// # Examples
@@ -1131,7 +1166,7 @@ impl_try_from_num!(u64, 20);
 
 #[cfg(test)]
 mod tests {
-    use crate::{CapacityError, String, Vec};
+    use crate::{string::StringView, CapacityError, String, Vec};
 
     #[test]
     fn static_new() {
@@ -1361,6 +1396,25 @@ mod tests {
         assert!(v.is_empty());
         let _ = v.push('a');
         assert!(!v.is_empty());
+    }
+
+    #[test]
+    fn const_len_is_empty() {
+        // "Ωab" is 3 chars but 4 bytes, and `len` counts bytes.
+        static S_U8: String<8, u8> = String::try_from_str("Ωab").unwrap();
+        static S_U16: String<8, u16> = String::try_from_str("Ωab").unwrap();
+        static S_U32: String<8, u32> = String::try_from_str("Ωab").unwrap();
+        static S_USIZE: String<8, usize> = String::try_from_str("Ωab").unwrap();
+        static VIEW: &StringView<u8> = &S_U8;
+        static EMPTY: String<8> = String::new();
+        const {
+            assert!(S_U8.len() == 4 && !S_U8.is_empty());
+            assert!(S_U16.len() == 4 && !S_U16.is_empty());
+            assert!(S_U32.len() == 4 && !S_U32.is_empty());
+            assert!(S_USIZE.len() == 4 && !S_USIZE.is_empty());
+            assert!(VIEW.len() == 4 && !VIEW.is_empty());
+            assert!(EMPTY.is_empty());
+        }
     }
 
     #[test]
